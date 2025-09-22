@@ -12,3 +12,193 @@ body {
   padding: 0;
   margin: 0;
 }
+
+/* ========================================
+   RESPONSIVE FONT   SIZE SYSTEM
+   ======================================== */
+
+/* Base font size cho mobile (xs) */
+html {
+  font-size: 12px;
+  /* 1rem = 12px */
+}
+
+/* Mobile lớn (sm) - 576px+ */
+@media (min-width: 576px) {
+  html {
+    font-size: 12px;
+    /* 1rem = 12px */
+  }
+}
+
+/* Tablet nhỏ (md) - 768px+ */
+@media (min-width: 768px) {
+  html {
+    font-size: 12px;
+    /* 1rem = 12px */
+  }
+}
+
+/* Tablet lớn (lg) - 992px+ */
+@media (min-width: 992px) {
+  html {
+    font-size: 14px;
+    /* 1rem = 14px */
+  }
+}
+
+/* Desktop nhỏ (xl) - 1200px+ */
+@media (min-width: 1200px) {
+  html {
+    font-size: 16px;
+    /* 1rem = 16px */
+  }
+}
+
+/* Desktop lớn (xxl) - 1600px+ */
+@media (min-width: 1600px) {
+  html {
+    font-size: 18px;
+    /* 1rem = 18px */
+  }
+}
+
+/* ========================================
+   CUSTOM SCROLLBAR STYLES
+   ======================================== */
+
+/* Custom scrollbar cho menu sidebar */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f3f4f6;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: calc(100vh - 120px) !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Force scroll for menu container */
+.ant-layout-sider .custom-scrollbar {
+  height: auto !important;
+  max-height: calc(100vh - 120px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* ========================================
+   ADMIN MENU STYLES
+   ======================================== */
+
+/* Menu item styling */
+.ant-menu-item {
+  margin: 2px 0 !important;
+  border-radius: 6px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+}
+
+.ant-menu-submenu-title {
+  margin: 2px 0 !important;
+  border-radius: 6px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+}
+
+.ant-menu-submenu .ant-menu-item {
+  margin: 1px 0 !important;
+  padding-left: 24px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 0.85rem !important;
+}
+
+/* Selected menu item */
+.ant-menu-item-selected {
+  background-color: #e6f7ff !important;
+  color: #1890ff !important;
+  font-weight: 500 !important;
+}
+
+.ant-menu-item-selected::after {
+  border-right: 3px solid #1890ff !important;
+}
+
+/* Hover effects */
+.ant-menu-item:hover {
+  background-color: #f5f5f5 !important;
+  color: #1890ff !important;
+}
+
+.ant-menu-submenu-title:hover {
+  background-color: #f5f5f5 !important;
+  color: #1890ff !important;
+}
+
+/* Submenu styling */
+.ant-menu-submenu .ant-menu {
+  background-color: #fafafa !important;
+}
+
+.ant-menu-submenu-open > .ant-menu-submenu-title {
+  color: #1890ff !important;
+  background-color: #f0f8ff !important;
+}
+
+/* Icon spacing */
+.ant-menu-item .anticon,
+.ant-menu-submenu-title .anticon {
+  margin-right: 8px !important;
+  font-size: 14px !important;
+}
+
+/* Menu group styling */
+.ant-menu-item-group-title {
+  padding: 8px 16px 4px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  color: #6b7280 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Force menu to allow scrolling */
+.ant-menu {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.ant-menu-inline {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* Ensure menu container can scroll */
+.ant-layout-sider .ant-menu {
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* Menu scroll container */
+.custom-scrollbar .ant-menu {
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
