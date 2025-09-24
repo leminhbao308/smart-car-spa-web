@@ -7,6 +7,7 @@ import {
   Button,
   Typography,
   Dropdown,
+  App,
 } from "antd";
 import { Header } from "antd/es/layout/layout";
 import {
@@ -20,14 +21,19 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from "@ant-design/icons";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSiderContext } from "@/components/providers/SiderContext";
+import { useAuth } from "@/lib/api/hooks/useAuth";
+import { ROUTES } from "@/components/utils/constant/path.route";
 
 const { Title, Text } = Typography;
 
 const AdminHeader = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const { collapsed, toggleCollapsed } = useSiderContext();
+  const { user, logout, isLoading } = useAuth();
+  const { modal, message: messageApi } = App.useApp();
 
   // Function to generate breadcrumb items based on pathname
   const generateBreadcrumbItems = () => {
@@ -150,16 +156,44 @@ const AdminHeader = () => {
     return titleMap[lastSegment] || "Dashboard";
   };
 
+  // Handle logout with confirmation
+  const handleLogout = () => {
+    modal.confirm({
+      title: "Xác nhận đăng xuất",
+      content: "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?",
+      okText: "Đăng xuất",
+      cancelText: "Hủy",
+      okType: "danger",
+      onOk: async () => {
+        try {
+          await logout();
+          messageApi.success("Đăng xuất thành công!");
+          router.push(ROUTES.HOME);
+        } catch (error) {
+          console.error("Logout error:", error);
+          messageApi.error("Có lỗi xảy ra khi đăng xuất. Vui lòng thử lại.");
+        }
+      },
+    });
+  };
+
   const userMenuItems = [
     {
       key: "profile",
       icon: <UserOutlined />,
       label: "Thông tin cá nhân",
+      onClick: () => {
+        // Navigate to profile page if available
+        // router.push(ROUTES.MEMBER_PROFILE);
+      },
     },
     {
       key: "settings",
       icon: <InfoCircleOutlined />,
       label: "Cài đặt",
+      onClick: () => {
+        // Handle settings navigation
+      },
     },
     {
       type: "divider" as const,
@@ -168,6 +202,7 @@ const AdminHeader = () => {
       key: "logout",
       label: "Đăng xuất",
       danger: true,
+      onClick: handleLogout,
     },
   ];
 
@@ -358,19 +393,23 @@ const AdminHeader = () => {
           menu={{ items: userMenuItems }}
           trigger={["click"]}
           placement="bottomRight"
+          disabled={isLoading}
         >
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              cursor: "pointer",
+              cursor: isLoading ? "not-allowed" : "pointer",
               padding: "4px 8px",
               borderRadius: "20px",
               transition: "background-color 0.2s",
+              opacity: isLoading ? 0.6 : 1,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.05)";
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = "rgba(0,0,0,0.05)";
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = "transparent";
@@ -379,6 +418,7 @@ const AdminHeader = () => {
             <Avatar
               size={40}
               icon={<UserOutlined />}
+              src={user?.avatar}
               style={{
                 backgroundColor: "rgba(0, 0, 0, 0.8)",
                 color: "#ffffff",
@@ -401,7 +441,7 @@ const AdminHeader = () => {
                   lineHeight: 1.2,
                 }}
               >
-                Admin User
+                {user?.full_name || "Admin User"}
               </Text>
               <Text
                 style={{
@@ -410,7 +450,7 @@ const AdminHeader = () => {
                   lineHeight: 1.2,
                 }}
               >
-                Quản trị viên
+                {user?.role?.role_name || "Quản trị viên"}
               </Text>
             </div>
             <DownOutlined
