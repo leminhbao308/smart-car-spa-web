@@ -26,7 +26,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
   // Mock data for modules
   const modules = [
     "Dashboard",
-    "User Management", 
+    "User Management",
     "Booking",
     "Product",
     "Service",
@@ -35,7 +35,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
     "Report",
     "Vehicle Management",
     "Promotion",
-    "Center Management"
+    "Center Management",
   ];
 
   useEffect(() => {
@@ -54,7 +54,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
       const values = await form.validateFields();
 
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const permissionData: Permission = {
         permission_id: editData?.permission_id || `perm_${Date.now()}`,
@@ -64,7 +64,11 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
         description: values.description,
       };
 
-      message.success(editData ? "Cập nhật quyền hạn thành công!" : "Tạo quyền hạn thành công!");
+      message.success(
+        editData
+          ? "Cập nhật quyền hạn thành công!"
+          : "Tạo quyền hạn thành công!"
+      );
       onSuccess(permissionData);
       onCancel();
     } catch (error) {
@@ -93,7 +97,6 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
           {editData ? "Cập nhật" : "Tạo mới"}
         </Button>,
       ]}
-      destroyOnClose
     >
       <Form
         form={form}
@@ -117,15 +120,15 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
           label="Mã quyền hạn"
           rules={[
             { required: true, message: "Vui lòng nhập mã quyền hạn!" },
-            { 
-              pattern: /^[A-Z_]+$/, 
-              message: "Mã quyền hạn chỉ được chứa chữ hoa và dấu gạch dưới!" 
+            {
+              pattern: /^[A-Z_]+$/,
+              message: "Mã quyền hạn chỉ được chứa chữ hoa và dấu gạch dưới!",
             },
             { max: 50, message: "Mã quyền hạn không được quá 50 ký tự!" },
           ]}
         >
-          <Input 
-            placeholder="VD: USER_MANAGE, DASHBOARD_VIEW" 
+          <Input
+            placeholder="VD: USER_MANAGE, DASHBOARD_VIEW"
             style={{ fontFamily: "monospace" }}
           />
         </Form.Item>
@@ -141,7 +144,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
             filterOption={(input, option) =>
               (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }
-            options={modules.map(module => ({
+            options={modules.map((module) => ({
               value: module,
               label: module,
             }))}
