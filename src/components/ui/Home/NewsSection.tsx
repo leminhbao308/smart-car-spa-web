@@ -28,7 +28,11 @@ const NewsCard: React.FC<NewsCardProps> = ({
       boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       transition: "all 0.3s ease",
     }}
-    bodyStyle={{ padding: 0 }}
+    styles={{
+      body: {
+        padding: 0,
+      },
+    }}
   >
     {/* News Image */}
     <div

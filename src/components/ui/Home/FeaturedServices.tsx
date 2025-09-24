@@ -27,7 +27,12 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
       transition: "all 0.3s ease",
       boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
     }}
-    bodyStyle={{ padding: 0, height: "100%" }}
+    styles={{
+      body: {
+        padding: 0,
+        height: "100%",
+      },
+    }}
   >
     <div
       style={{
@@ -144,10 +149,7 @@ const FeaturedServices: React.FC = () => {
       </div>
 
       {/* Services Grid */}
-      <Row
-        gutter={[24, 24]}
-        justify="center"
-      >
+      <Row gutter={[24, 24]} justify="center">
         {services.map((service, index) => (
           <Col key={index} xs={24} sm={24} md={12} lg={8} xl={8}>
             <ServiceCard

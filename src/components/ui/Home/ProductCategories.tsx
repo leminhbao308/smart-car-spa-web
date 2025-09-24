@@ -39,7 +39,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
         transition: "all 0.3s ease",
         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       }}
-      bodyStyle={{ padding: "16px" }}
+      styles={{
+        body: {
+          padding: "16px",
+        },
+      }}
     >
       {/* Product Image */}
       <div
