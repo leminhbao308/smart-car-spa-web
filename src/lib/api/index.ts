@@ -15,6 +15,7 @@ export * from './hooks/useAuth';
 // Utils
 export { TokenManager } from './utils/token.manager';
 export * from './utils/api.helpers';
+export * from './utils/auth.helpers';
 
 // Axios client
 export { default as apiClient } from './axios';

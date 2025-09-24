@@ -80,6 +80,9 @@ export class AuthService {
         TokenManager.setAccessToken(access_token);
         TokenManager.setRefreshToken(refresh_token);
         
+        // Update cookies
+        TokenManager.updateCookies(access_token, refresh_token);
+        
         return response.data.data;
       } else {
         throw new Error(response.data.message || 'Token refresh failed');
@@ -185,7 +188,8 @@ export class AuthService {
    * Get current user info from storage
    */
   static getCurrentUserFromStorage(): UserInfo | null {
-    return TokenManager.getUserInfo();
+    const userInfo = TokenManager.getUserInfo();
+    return userInfo as UserInfo | null;
   }
 
   /**

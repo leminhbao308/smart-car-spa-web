@@ -11,7 +11,7 @@ const TOKEN_KEYS = {
 } as const;
 
 // Token expiration buffer (5 minutes before actual expiration)
-const TOKEN_EXPIRATION_BUFFER = 5 * 60 * 1000;
+// const TOKEN_EXPIRATION_BUFFER = 5 * 60 * 1000;
 
 export class TokenManager {
   /**
@@ -52,7 +52,7 @@ export class TokenManager {
   /**
    * Get user info from localStorage
    */
-  static getUserInfo(): any | null {
+  static getUserInfo(): unknown | null {
     if (!this.isBrowser()) return null;
     
     try {
@@ -93,7 +93,7 @@ export class TokenManager {
   /**
    * Set user info in localStorage
    */
-  static setUserInfo(userInfo: any): void {
+  static setUserInfo(userInfo: unknown): void {
     if (!this.isBrowser()) return;
     
     try {
@@ -106,10 +106,13 @@ export class TokenManager {
   /**
    * Set all tokens and user info
    */
-  static setTokens(accessToken: string, refreshToken: string, userInfo: any): void {
+  static setTokens(accessToken: string, refreshToken: string, userInfo: unknown): void {
     this.setAccessToken(accessToken);
     this.setRefreshToken(refreshToken);
     this.setUserInfo(userInfo);
+    
+    // Đồng bộ với cookies để middleware có thể đọc được
+    this.syncToCookies(accessToken, refreshToken, userInfo);
   }
 
   /**
@@ -158,6 +161,9 @@ export class TokenManager {
     this.removeAccessToken();
     this.removeRefreshToken();
     this.removeUserInfo();
+    
+    // Xóa cookies
+    this.clearCookies();
   }
 
   /**
@@ -205,5 +211,81 @@ export class TokenManager {
   static getAuthHeader(): string | null {
     const token = this.getAccessToken();
     return token ? `Bearer ${token}` : null;
+  }
+
+  /**
+   * Đồng bộ tokens và user info với cookies
+   * Để middleware có thể đọc được thông tin authentication
+   */
+  static syncToCookies(accessToken: string, refreshToken: string, userInfo: unknown): void {
+    if (!this.isBrowser()) return;
+    
+    try {
+      // Set cookies với các options phù hợp
+      const cookieOptions = {
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        httpOnly: false, // Cần false để client có thể đọc được
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax' as const,
+        path: '/'
+      };
+      
+      // Set access token cookie
+      document.cookie = `access_token=${accessToken}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${cookieOptions.secure ? '; secure' : ''}`;
+      
+      // Set refresh token cookie
+      document.cookie = `refresh_token=${refreshToken}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${cookieOptions.secure ? '; secure' : ''}`;
+      
+      // Set user info cookie
+      document.cookie = `user_info=${JSON.stringify(userInfo)}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${cookieOptions.secure ? '; secure' : ''}`;
+    } catch (error) {
+      console.error('Error syncing to cookies:', error);
+    }
+  }
+
+  /**
+   * Xóa tất cả cookies liên quan đến authentication
+   */
+  static clearCookies(): void {
+    if (!this.isBrowser()) return;
+    
+    try {
+      // Xóa access token cookie
+      document.cookie = 'access_token=; max-age=0; path=/';
+      
+      // Xóa refresh token cookie
+      document.cookie = 'refresh_token=; max-age=0; path=/';
+      
+      // Xóa user info cookie
+      document.cookie = 'user_info=; max-age=0; path=/';
+    } catch (error) {
+      console.error('Error clearing cookies:', error);
+    }
+  }
+
+  /**
+   * Cập nhật cookies khi token được refresh
+   */
+  static updateCookies(accessToken: string, refreshToken?: string): void {
+    if (!this.isBrowser()) return;
+    
+    try {
+      const cookieOptions = {
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+        path: '/',
+        sameSite: 'lax' as const,
+        secure: process.env.NODE_ENV === 'production'
+      };
+      
+      // Update access token
+      document.cookie = `access_token=${accessToken}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${cookieOptions.secure ? '; secure' : ''}`;
+      
+      // Update refresh token nếu có
+      if (refreshToken) {
+        document.cookie = `refresh_token=${refreshToken}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${cookieOptions.secure ? '; secure' : ''}`;
+      }
+    } catch (error) {
+      console.error('Error updating cookies:', error);
+    }
   }
 }

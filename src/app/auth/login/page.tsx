@@ -55,6 +55,31 @@ const LoginPage = () => {
     }
   }, [isAuthenticated, router]);
 
+  // Kiểm tra redirect_after_login cookie
+  useEffect(() => {
+    const checkRedirectAfterLogin = () => {
+      if (typeof document !== 'undefined') {
+        const cookies = document.cookie.split(';');
+        const redirectCookie = cookies.find(cookie => 
+          cookie.trim().startsWith('redirect_after_login=')
+        );
+        
+        if (redirectCookie) {
+          const redirectPath = redirectCookie.split('=')[1];
+          // Xóa cookie sau khi đọc
+          document.cookie = 'redirect_after_login=; max-age=0; path=/';
+          return redirectPath;
+        }
+      }
+      return null;
+    };
+
+    const redirectPath = checkRedirectAfterLogin();
+    if (redirectPath && isAuthenticated) {
+      router.push(redirectPath);
+    }
+  }, [isAuthenticated, router]);
+
   /**
    * Handle form submit
    * @param values Form values
