@@ -4,12 +4,16 @@ import "./globals.css";
 import "@ant-design/v5-patch-for-react-19";
 
 // Suppress specific React warnings that are false positives
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   const originalWarn = console.warn;
   console.warn = (...args) => {
     const message = args[0];
-    if (typeof message === 'string' && 
-        message.includes('Instance created by `useForm` is not connected to any Form element')) {
+    if (
+      typeof message === "string" &&
+      message.includes(
+        "Instance created by `useForm` is not connected to any Form element"
+      )
+    ) {
       return; // Suppress this specific warning
     }
     originalWarn.apply(console, args);
@@ -19,13 +23,6 @@ if (typeof window !== 'undefined') {
 export const metadata: Metadata = {
   title: "Smart Car Spa",
   description: "A web application for managing smart car services",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: "cover",
-  },
 };
 
 export default function RootLayout({
