@@ -2,7 +2,7 @@
 import CustomerHeader from "@/components/layout/Header/customer.header";
 import InputPassword from "@/components/ui/Input/input.password";
 import { ROUTES } from "@/components/utils/constant/path.route";
-import { AuthService } from "@/lib/api/services/auth.service";
+import { useAuth, AuthService } from "@/lib/api";
 import { GoogleOutlined } from "@ant-design/icons";
 import {
   Button,
@@ -30,7 +30,7 @@ const MIN_PASSWORD_LENGTH = 3;
 
 // Helper function to determine redirect path based on user role
 const getRedirectPath = (roleCode?: string): string => {
-  if (roleCode !== "member") {
+  if (roleCode !== "CUSTOMER") {
     return ROUTES.DASHBOARD;
   }
   return ROUTES.HOME;
@@ -40,70 +40,58 @@ const LoginPage = () => {
   const [form] = Form.useForm();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isAuthenticated, isLoading, error, clearError } = useAuth();
   const router = useRouter();
 
   // Kiểm tra nếu user đã đăng nhập thì redirect
   useEffect(() => {
-    if (AuthService.isAuthenticated()) {
-      const userInfo = AuthService.getCurrentUserInfo();
+    if (isAuthenticated) {
+      const userInfo = AuthService.getCurrentUserFromStorage();
       if (userInfo) {
-        // Redirect dựa trên role
-        const role = (userInfo as { role?: { role_code?: string } })?.role
-          ?.role_code;
-        router.push(getRedirectPath(role));
+        const role = userInfo.role?.role_code;
+        const redirectPath = getRedirectPath(role);
+        router.push(redirectPath);
       }
     }
-  }, [router]);
+  }, [isAuthenticated, router]);
+
   /**
    * Handle form submit
    * @param values Form values
    */
   const onFinish = async (values: LoginFormValues) => {
-    setIsLoading(true);
     try {
-      const response = await AuthService.login({
+      clearError(); // Clear any previous errors
+
+      await login({
         email: values.email,
         password: values.password,
       });
 
-      if (response.success && response.data) {
-        message.success("Đăng nhập thành công!");
+      message.success("Đăng nhập thành công!");
 
-        // Lưu thông tin remember me nếu được chọn
-        if (values.remember) {
-          localStorage.setItem(REMEMBERED_EMAIL_KEY, values.email);
-        } else {
-          localStorage.removeItem(REMEMBERED_EMAIL_KEY);
-        }
-
-        // Redirect dựa trên role
-        const role = response.data.user_info?.role?.role_code;
-        router.push(getRedirectPath(role));
+      // Lưu thông tin remember me nếu được chọn
+      if (values.remember) {
+        localStorage.setItem(REMEMBERED_EMAIL_KEY, values.email);
       } else {
-        message.error(response.message || "Đăng nhập thất bại!");
+        localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+      }
+
+      // Redirect dựa trên role của user
+      const userInfo = AuthService.getCurrentUserFromStorage();
+      if (userInfo) {
+        const role = userInfo.role?.role_code;
+        const redirectPath = getRedirectPath(role);
+        router.push(redirectPath);
+      } else {
+        // Fallback redirect
+        router.push(ROUTES.DASHBOARD);
       }
     } catch (error) {
-      console.log("Login error:", error); 
+      console.log("Login error:", error);
 
-      // Hiển thị thông báo lỗi chi tiết
-      if (error && typeof error === "object" && "response" in error) {
-        const apiError = error as {
-          response?: { data?: { message?: string } };
-        };
-        if (apiError.response?.data?.message) {
-          message.error(apiError.response.data.message);
-        } else {
-          message.error("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
-        }
-      } else if (error && typeof error === "object" && "message" in error) {
-        const errorWithMessage = error as { message: string };
-        message.error(errorWithMessage.message);
-      } else {
-        message.error("Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin!");
-      }
-    } finally {
-      setIsLoading(false);
+      // Error message sẽ được hiển thị tự động từ useAuth hook
+      // Không cần xử lý thêm ở đây
     }
   };
 
@@ -249,6 +237,23 @@ const LoginPage = () => {
               style={{ width: "100%" }}
               disabled={isLoading}
             >
+              {/* Error Display */}
+              {error && (
+                <div
+                  style={{
+                    backgroundColor: "#fff2f0",
+                    border: "1px solid #ffccc7",
+                    borderRadius: "6px",
+                    padding: "12px",
+                    marginBottom: "16px",
+                    color: "#ff4d4f",
+                    fontSize: "14px",
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
               {/* Email Input */}
               <Form.Item
                 label={
