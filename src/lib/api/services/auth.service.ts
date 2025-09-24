@@ -3,7 +3,7 @@
  * Handles all authentication-related API calls
  */
 
-import { enhancedApiClient } from '../axios';
+import apiClient from '../axios';
 import { TokenManager } from '../utils/token.manager';
 import {
   LoginRequest,
@@ -22,17 +22,17 @@ export class AuthService {
    */
   static async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      const response = await enhancedApiClient.post<LoginResponse>('/auth/login', credentials);
+      const response = await apiClient.post('/auth/login', credentials);
       
-      if (response.success && response.data) {
-        const { access_token, refresh_token, user_info } = response.data;
+      if (response.data.success && response.data.data) {
+        const { access_token, refresh_token, user_info } = response.data.data;
         
         // Store tokens and user info
         TokenManager.setTokens(access_token, refresh_token, user_info);
         
-        return response.data;
+        return response.data.data;
       } else {
-        throw new Error(response.message || 'Login failed');
+        throw new Error(response.data.message || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -46,7 +46,7 @@ export class AuthService {
   static async logout(): Promise<void> {
     try {
       // Call logout endpoint to invalidate tokens on server
-      await enhancedApiClient.post('/auth/logout');
+      await apiClient.post('/auth/logout');
     } catch (error) {
       console.error('Logout API error:', error);
       // Continue with local logout even if API call fails
@@ -71,21 +71,18 @@ export class AuthService {
         refresh_token: refreshToken,
       };
 
-      const response = await enhancedApiClient.post<RefreshTokenResponse>(
-        '/auth/refresh-token',
-        request
-      );
+      const response = await apiClient.post('/auth/refresh-token', request);
 
-      if (response.success && response.data) {
-        const { access_token, refresh_token } = response.data;
+      if (response.data.success && response.data.data) {
+        const { access_token, refresh_token } = response.data.data;
         
         // Update tokens
         TokenManager.setAccessToken(access_token);
         TokenManager.setRefreshToken(refresh_token);
         
-        return response.data;
+        return response.data.data;
       } else {
-        throw new Error(response.message || 'Token refresh failed');
+        throw new Error(response.data.message || 'Token refresh failed');
       }
     } catch (error) {
       console.error('Token refresh error:', error);
@@ -101,8 +98,8 @@ export class AuthService {
    */
   static async verifyToken(): Promise<boolean> {
     try {
-      const response = await enhancedApiClient.get('/auth/verify-token');
-      return response.success;
+      const response = await apiClient.get('/auth/verify-token');
+      return response.data.success;
     } catch (error) {
       console.error('Token verification error:', error);
       return false;
@@ -114,12 +111,12 @@ export class AuthService {
    */
   static async getCurrentUser(): Promise<UserInfo | null> {
     try {
-      const response = await enhancedApiClient.get<UserInfo>('/auth/me');
+      const response = await apiClient.get('/auth/me');
       
-      if (response.success && response.data) {
+      if (response.data.success && response.data.data) {
         // Update user info in storage
-        TokenManager.setUserInfo(response.data);
-        return response.data;
+        TokenManager.setUserInfo(response.data.data);
+        return response.data.data;
       }
       
       return null;
@@ -134,10 +131,10 @@ export class AuthService {
    */
   static async forgotPassword(request: ForgotPasswordRequest): Promise<void> {
     try {
-      const response = await enhancedApiClient.post('/auth/forgot-password', request);
+      const response = await apiClient.post('/auth/forgot-password', request);
       
-      if (!response.success) {
-        throw new Error(response.message || 'Failed to send reset email');
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Failed to send reset email');
       }
     } catch (error) {
       console.error('Forgot password error:', error);
@@ -150,10 +147,10 @@ export class AuthService {
    */
   static async resetPassword(request: ResetPasswordRequest): Promise<void> {
     try {
-      const response = await enhancedApiClient.post('/auth/reset-password', request);
+      const response = await apiClient.post('/auth/reset-password', request);
       
-      if (!response.success) {
-        throw new Error(response.message || 'Password reset failed');
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Password reset failed');
       }
     } catch (error) {
       console.error('Reset password error:', error);
@@ -166,10 +163,10 @@ export class AuthService {
    */
   static async changePassword(request: ChangePasswordRequest): Promise<void> {
     try {
-      const response = await enhancedApiClient.post('/auth/change-password', request);
+      const response = await apiClient.post('/auth/change-password', request);
       
-      if (!response.success) {
-        throw new Error(response.message || 'Password change failed');
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Password change failed');
       }
     } catch (error) {
       console.error('Change password error:', error);

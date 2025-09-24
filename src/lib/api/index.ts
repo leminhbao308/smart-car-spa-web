@@ -17,8 +17,7 @@ export { TokenManager } from './utils/token.manager';
 export * from './utils/api.helpers';
 
 // Axios client
-export { apiClient, enhancedApiClient } from './axios';
-export { default as defaultApiClient } from './axios';
+export { default as apiClient } from './axios';
 
 // Re-export commonly used items for convenience
 export { AuthService } from './services/auth.service';
