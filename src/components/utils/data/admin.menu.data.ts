@@ -39,11 +39,6 @@ export const adminMenuItems: MenuItem[] = [
     icon: React.createElement(UserOutlined),
     children: [
       {
-        key: "user-accounts",
-        label: "Tài khoản người dùng",
-        icon: React.createElement(UserOutlined),
-      },
-      {
         key: "permissions",
         label: "Phân quyền",
         icon: React.createElement(SafetyOutlined),
@@ -256,7 +251,6 @@ export const menuKeyToPath: Record<string, string> = {
   "customer-service": "/dashboard/customer-service",
   "care-processes": "/dashboard/care-processes",
   "vehicles-in-care": "/dashboard/vehicles-in-care",
-  "user-accounts": "/dashboard/accounts",
   permissions: "/dashboard/permissions",
   employees: "/dashboard/staff",
   customers: "/dashboard/members",

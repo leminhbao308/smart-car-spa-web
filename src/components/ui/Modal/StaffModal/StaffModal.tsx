@@ -21,14 +21,15 @@ import {
   HomeOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
+import { User, Role } from "@/lib/api/types";
 
 const { TextArea } = Input;
 
 interface StaffModalProps {
   visible: boolean;
   onCancel: () => void;
-  onSuccess: (data: Record<string, unknown>) => void;
-  editData?: Record<string, unknown>;
+  onSuccess: (data: User) => void;
+  editData?: User | null;
   title?: string;
 }
 
@@ -42,27 +43,44 @@ const StaffModal: React.FC<StaffModalProps> = ({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  // Mock data for positions and departments
-  const positions = [
-    { value: "Quản lý", label: "Quản lý", color: "red" },
-    { value: "Trưởng phòng", label: "Trưởng phòng", color: "orange" },
-    { value: "Nhân viên", label: "Nhân viên", color: "blue" },
-    { value: "Kỹ thuật viên", label: "Kỹ thuật viên", color: "green" },
+  // Mock data for roles (non-customer roles)
+  const staffRoles: Role[] = [
     {
-      value: "Nhân viên kinh doanh",
-      label: "Nhân viên kinh doanh",
-      color: "purple",
+      role_id: "91cc1277-709a-4312-98a2-db8c47d7efb1",
+      role_name: "Administrator",
+      role_code: "ADMIN",
+      description: "Full system access"
     },
-    { value: "Kế toán", label: "Kế toán", color: "cyan" },
-    { value: "Nhân viên kho", label: "Nhân viên kho", color: "lime" },
-  ];
-
-  const departments = [
-    { value: "Kỹ thuật", label: "Kỹ thuật", color: "blue" },
-    { value: "Kinh doanh", label: "Kinh doanh", color: "green" },
-    { value: "Kế toán", label: "Kế toán", color: "purple" },
-    { value: "Kho", label: "Kho", color: "orange" },
-    { value: "Hành chính", label: "Hành chính", color: "cyan" },
+    {
+      role_id: "eee6cddd-f7d8-463a-a2ca-c6784a4282d5",
+      role_name: "Manager",
+      role_code: "MANAGER",
+      description: "Branch management access"
+    },
+    {
+      role_id: "8ed98905-0562-4dba-af32-27839d86a087",
+      role_name: "Technician",
+      role_code: "TECHNICIAN",
+      description: "Service technician access"
+    },
+    {
+      role_id: "af686f51-4781-4fc2-8176-8ada13495db9",
+      role_name: "Cashier",
+      role_code: "CASHIER",
+      description: "Sales and payment processing"
+    },
+    {
+      role_id: "6250fd0d-dbce-4d59-881c-005a43f6a039",
+      role_name: "Customer Service",
+      role_code: "CS",
+      description: "Customer support access"
+    },
+    {
+      role_id: "10b82023-96c8-4d6e-8f35-d01d59663538",
+      role_name: "Inventory Manager",
+      role_code: "INV_MGR",
+      description: "Inventory management access"
+    }
   ];
 
   const genders = [
@@ -74,10 +92,15 @@ const StaffModal: React.FC<StaffModalProps> = ({
     if (visible) {
       if (editData) {
         form.setFieldsValue({
-          ...editData,
-          joinDate: editData.joinDate
-            ? dayjs(editData.joinDate as string)
+          full_name: editData.full_name,
+          email: editData.email,
+          phone_number: editData.phone_number,
+          date_of_birth: editData.date_of_birth
+            ? dayjs(editData.date_of_birth)
             : null,
+          gender: editData.gender,
+          address: editData.address,
+          role_id: editData.role.role_id,
         });
       } else {
         form.resetFields();
@@ -93,12 +116,19 @@ const StaffModal: React.FC<StaffModalProps> = ({
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const staffData = {
-        ...values,
-        id: editData?.id || Date.now(),
-        joinDate: values.joinDate ? values.joinDate.format("YYYY-MM-DD") : null,
-        status: editData?.status || "active",
-        hasAccount: editData?.hasAccount || false,
+      const selectedRole = staffRoles.find(role => role.role_id === values.role_id);
+      
+      const staffData: User = {
+        user_id: editData?.user_id || `user_${Date.now()}`,
+        email: values.email,
+        full_name: values.full_name,
+        phone_number: values.phone_number,
+        date_of_birth: values.date_of_birth ? values.date_of_birth.format("YYYY-MM-DD HH:mm:ss") : null,
+        gender: values.gender,
+        address: values.address,
+        avatar_url: null,
+        is_active: true,
+        role: selectedRole || staffRoles[0],
       };
 
       message.success(
@@ -152,7 +182,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
           <Col span={12}>
             <Form.Item
               label="Họ và tên"
-              name="name"
+              name="full_name"
               rules={[
                 { required: true, message: "Vui lòng nhập họ và tên!" },
                 { min: 2, message: "Họ và tên phải có ít nhất 2 ký tự!" },
@@ -179,7 +209,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
           <Col span={12}>
             <Form.Item
               label="Số điện thoại"
-              name="phone"
+              name="phone_number"
               rules={[
                 { required: true, message: "Vui lòng nhập số điện thoại!" },
                 {
@@ -196,15 +226,12 @@ const StaffModal: React.FC<StaffModalProps> = ({
           </Col>
           <Col span={12}>
             <Form.Item
-              label="Ngày vào làm"
-              name="joinDate"
-              rules={[
-                { required: true, message: "Vui lòng chọn ngày vào làm!" },
-              ]}
+              label="Ngày sinh"
+              name="date_of_birth"
             >
               <DatePicker
                 style={{ width: "100%" }}
-                placeholder="Chọn ngày vào làm"
+                placeholder="Chọn ngày sinh"
                 format="DD/MM/YYYY"
               />
             </Form.Item>
@@ -220,7 +247,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
             >
               <Radio.Group>
                 {genders.map((gender) => (
-                  <Radio key={gender.value} value={gender.value}>
+                  <Radio key={gender.value} value={gender.value.toUpperCase()}>
                     {gender.label}
                   </Radio>
                 ))}
@@ -229,21 +256,24 @@ const StaffModal: React.FC<StaffModalProps> = ({
           </Col>
           <Col span={12}>
             <Form.Item
-              label="Chức vụ"
-              name="position"
-              rules={[{ required: true, message: "Vui lòng chọn chức vụ!" }]}
+              label="Vai trò"
+              name="role_id"
+              rules={[{ required: true, message: "Vui lòng chọn vai trò!" }]}
             >
               <Select
-                placeholder="Chọn chức vụ"
-                options={positions.map((pos) => ({
-                  value: pos.value,
+                placeholder="Chọn vai trò"
+                options={staffRoles.map((role) => ({
+                  value: role.role_id,
                   label: (
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 8 }}
                     >
-                      <Tag color={pos.color} style={{ margin: 0 }}>
-                        {pos.label}
+                      <Tag color="blue" style={{ margin: 0 }}>
+                        {role.role_name}
                       </Tag>
+                      <span style={{ fontSize: 12, color: "#666" }}>
+                        ({role.role_code})
+                      </span>
                     </div>
                   ),
                 }))}
@@ -252,44 +282,10 @@ const StaffModal: React.FC<StaffModalProps> = ({
           </Col>
         </Row>
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              label="Phòng ban"
-              name="department"
-              rules={[{ required: true, message: "Vui lòng chọn phòng ban!" }]}
-            >
-              <Select
-                placeholder="Chọn phòng ban"
-                options={departments.map((dept) => ({
-                  value: dept.value,
-                  label: (
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 8 }}
-                    >
-                      <Tag color={dept.color} style={{ margin: 0 }}>
-                        {dept.label}
-                      </Tag>
-                    </div>
-                  ),
-                }))}
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item label="Địa chỉ" name="address">
-              <Input
-                prefix={<HomeOutlined />}
-                placeholder="Nhập địa chỉ (tùy chọn)"
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item label="Ghi chú" name="notes">
-          <TextArea
-            rows={3}
-            placeholder="Nhập ghi chú về nhân viên (tùy chọn)..."
+        <Form.Item label="Địa chỉ" name="address">
+          <Input
+            prefix={<HomeOutlined />}
+            placeholder="Nhập địa chỉ (tùy chọn)"
           />
         </Form.Item>
       </Form>

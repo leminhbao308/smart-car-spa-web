@@ -23,13 +23,14 @@ import {
   SafetyOutlined,
   ClockCircleOutlined,
 } from "@ant-design/icons";
+import { User } from "@/lib/api/types";
 
 const { Title, Text } = Typography;
 
 interface StaffDetailModalProps {
   visible: boolean;
   onCancel: () => void;
-  data: any;
+  data: User | null;
 }
 
 const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
@@ -39,44 +40,20 @@ const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
 }) => {
   if (!data) return null;
 
-  const getPositionColor = (position: string) => {
-    const colors: Record<string, string> = {
-      "Quản lý": "red",
-      "Trưởng phòng": "orange", 
-      "Nhân viên": "blue",
-      "Kỹ thuật viên": "green",
-      "Nhân viên kinh doanh": "purple",
-      "Kế toán": "cyan",
-      "Nhân viên kho": "lime",
-    };
-    return colors[position] || "default";
-  };
-
-  const getDepartmentColor = (department: string) => {
-    const colors: Record<string, string> = {
-      "Kỹ thuật": "blue",
-      "Kinh doanh": "green",
-      "Kế toán": "purple",
-      "Kho": "orange",
-      "Hành chính": "cyan",
-    };
-    return colors[department] || "default";
-  };
-
   const getGenderColor = (gender: string) => {
-    return gender === "male" ? "blue" : "pink";
+    return gender === "MALE" ? "blue" : "pink";
   };
 
   const getGenderLabel = (gender: string) => {
-    return gender === "male" ? "Nam" : "Nữ";
+    return gender === "MALE" ? "Nam" : "Nữ";
   };
 
-  const calculateWorkDays = (joinDate: string) => {
-    const join = new Date(joinDate);
+  const calculateAge = (dateOfBirth: string | null) => {
+    if (!dateOfBirth) return "Chưa cập nhật";
+    const birth = new Date(dateOfBirth);
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - join.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
+    const age = now.getFullYear() - birth.getFullYear();
+    return `${age} tuổi`;
   };
 
   return (
@@ -84,7 +61,7 @@ const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <TeamOutlined style={{ color: "#1890ff" }} />
-          <span>Chi tiết nhân viên: {data.name}</span>
+          <span>Chi tiết nhân viên: {data.full_name}</span>
         </div>
       }
       open={visible}
@@ -101,25 +78,22 @@ const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
         <Card size="small" style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
             <Avatar size={64} style={{ backgroundColor: "#1890ff" }}>
-              {data.name.charAt(0)}
+              {data.full_name.charAt(0)}
             </Avatar>
             <div>
               <Title level={4} style={{ margin: 0, marginBottom: 4 }}>
-                {data.name}
+                {data.full_name}
               </Title>
               <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <Tag color={getPositionColor(data.position)}>
-                  {data.position}
+                <Tag color="blue">
+                  {data.role.role_name}
                 </Tag>
-                <Tag color={getDepartmentColor(data.department)}>
-                  {data.department}
-                </Tag>
-                <Tag color={data.status === "active" ? "green" : "red"}>
-                  {data.status === "active" ? "Hoạt động" : "Không hoạt động"}
+                <Tag color={data.is_active ? "green" : "red"}>
+                  {data.is_active ? "Hoạt động" : "Không hoạt động"}
                 </Tag>
               </div>
               <Text type="secondary">
-                ID: <Text code>{data.id}</Text>
+                ID: <Text code>{data.user_id}</Text>
               </Text>
             </div>
           </div>
@@ -134,7 +108,7 @@ const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
             <Descriptions.Item label="Số điện thoại">
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <PhoneOutlined style={{ color: "#666" }} />
-                <Text>{data.phone}</Text>
+                <Text>{data.phone_number}</Text>
               </div>
             </Descriptions.Item>
             <Descriptions.Item label="Giới tính">
@@ -142,10 +116,8 @@ const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
                 {getGenderLabel(data.gender)}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="Trạng thái tài khoản">
-              <Tag color={data.hasAccount ? "green" : "orange"}>
-                {data.hasAccount ? "Có tài khoản" : "Chưa có tài khoản"}
-              </Tag>
+            <Descriptions.Item label="Tuổi">
+              <Text>{calculateAge(data.date_of_birth)}</Text>
             </Descriptions.Item>
             {data.address && (
               <Descriptions.Item label="Địa chỉ" span={2}>
@@ -158,74 +130,66 @@ const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
           </Descriptions>
         </Card>
 
-        {/* Thông tin công việc */}
+        {/* Thông tin vai trò */}
         <Card size="small" style={{ marginBottom: 16 }}>
           <Title level={5} style={{ marginBottom: 16 }}>
             <SafetyOutlined style={{ marginRight: 8 }} />
-            Thông tin công việc
+            Thông tin vai trò
           </Title>
           
           <Row gutter={16}>
-            <Col span={8}>
+            <Col span={12}>
               <div style={{ textAlign: "center", padding: 16, backgroundColor: "#e6f7ff", borderRadius: 6 }}>
-                <div style={{ fontSize: 24, fontWeight: "bold", color: "#1890ff", marginBottom: 4 }}>
-                  {calculateWorkDays(data.joinDate)}
+                <div style={{ fontSize: 20, fontWeight: "bold", color: "#1890ff", marginBottom: 4 }}>
+                  {data.role.role_name}
                 </div>
-                <Text type="secondary">Ngày làm việc</Text>
+                <Text type="secondary">Tên vai trò</Text>
               </div>
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <div style={{ textAlign: "center", padding: 16, backgroundColor: "#f6ffed", borderRadius: 6 }}>
-                <div style={{ fontSize: 24, fontWeight: "bold", color: "#52c41a", marginBottom: 4 }}>
-                  {data.position}
+                <div style={{ fontSize: 20, fontWeight: "bold", color: "#52c41a", marginBottom: 4 }}>
+                  {data.role.role_code}
                 </div>
-                <Text type="secondary">Chức vụ</Text>
-              </div>
-            </Col>
-            <Col span={8}>
-              <div style={{ textAlign: "center", padding: 16, backgroundColor: "#fff7e6", borderRadius: 6 }}>
-                <div style={{ fontSize: 24, fontWeight: "bold", color: "#fa8c16", marginBottom: 4 }}>
-                  {data.department}
-                </div>
-                <Text type="secondary">Phòng ban</Text>
+                <Text type="secondary">Mã vai trò</Text>
               </div>
             </Col>
           </Row>
+          
+          <div style={{ marginTop: 16, padding: 12, backgroundColor: "#fafafa", borderRadius: 6 }}>
+            <Text strong style={{ display: "block", marginBottom: 4 }}>Mô tả vai trò:</Text>
+            <Text>{data.role.description}</Text>
+          </div>
         </Card>
 
-        {/* Thông tin thời gian */}
+        {/* Thông tin hệ thống */}
         <Card size="small">
           <Title level={5} style={{ marginBottom: 16 }}>
             <CalendarOutlined style={{ marginRight: 8 }} />
-            Thông tin thời gian
+            Thông tin hệ thống
           </Title>
           
           <Descriptions column={2} size="small">
-            <Descriptions.Item label="Ngày vào làm">
+            <Descriptions.Item label="Ngày sinh">
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <CalendarOutlined style={{ color: "#666" }} />
-                <Text>{new Date(data.joinDate).toLocaleDateString("vi-VN")}</Text>
+                <Text>
+                  {data.date_of_birth 
+                    ? new Date(data.date_of_birth).toLocaleDateString("vi-VN")
+                    : "Chưa cập nhật"
+                  }
+                </Text>
               </div>
             </Descriptions.Item>
-            <Descriptions.Item label="Thời gian làm việc">
+            <Descriptions.Item label="Trạng thái tài khoản">
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <ClockCircleOutlined style={{ color: "#666" }} />
-                <Text>{calculateWorkDays(data.joinDate)} ngày</Text>
+                <Tag color={data.is_active ? "green" : "red"}>
+                  {data.is_active ? "Hoạt động" : "Không hoạt động"}
+                </Tag>
               </div>
             </Descriptions.Item>
           </Descriptions>
-
-          {data.notes && (
-            <>
-              <Divider />
-              <div>
-                <Text strong>Ghi chú:</Text>
-                <div style={{ marginTop: 8, padding: 12, backgroundColor: "#f6ffed", borderRadius: 6 }}>
-                  <Text>{data.notes}</Text>
-                </div>
-              </div>
-            </>
-          )}
         </Card>
       </div>
     </Modal>
