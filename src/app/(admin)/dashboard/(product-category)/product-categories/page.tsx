@@ -14,7 +14,6 @@ import {
   categoryStatuses,
 } from "@/components/utils/data/product-categories.data";
 import { getCategoryColorProduct } from "@/components/utils/helper/category.color.helper";
-import dayjs from "dayjs";
 
 const { Search } = Input;
 const { Option } = Select;

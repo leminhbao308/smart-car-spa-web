@@ -7,18 +7,7 @@ import {
   ProductEditModal,
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import {
-  Tag,
-  Card,
-  Row,
-  Col,
-  Select,
-  Input,
-  Button,
-  Space,
-  DatePicker,
-  InputNumber,
-} from "antd";
+import { Tag, Card, Row, Col, Select, Input, Button, Space } from "antd";
 import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   productsData,
@@ -26,7 +15,6 @@ import {
 } from "@/components/utils/data/products.data";
 import { productCategoriesData } from "@/components/utils/data/product-categories.data";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import dayjs from "dayjs";
 
 const { Search } = Input;
 const { Option } = Select;
