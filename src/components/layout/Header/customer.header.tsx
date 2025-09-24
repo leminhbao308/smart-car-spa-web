@@ -19,6 +19,7 @@ import { Header } from "antd/es/layout/layout";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { menuItems } from "@/components/utils/data/menu.data";
+import { AccountPopup } from "@/components/ui/AccountPopup";
 
 // Định nghĩa type cho menu items
 export interface MenuItem {
@@ -155,7 +156,7 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
               />
             </Col>
             <Col xs={0} sm={0} md={12}>
-              <Link href="/auth/login">
+              <AccountPopup>
                 <Button
                   type="text"
                   icon={<UserOutlined />}
@@ -163,7 +164,7 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
                     fontSize: "2rem",
                   }}
                 />
-              </Link>
+              </AccountPopup>
             </Col>
           </Row>
         </Col>
@@ -193,16 +194,20 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
             paddingLeft: "28px",
           }}
         >
-          <Link
-            href="/auth/login"
-            style={{
-              fontSize: "14px",
-              color: "#1B2559",
-              fontWeight: 500,
-            }}
-          >
-            Tài khoản
-          </Link>
+          <AccountPopup>
+            <Button
+              type="text"
+              style={{
+                fontSize: "14px",
+                color: "#1B2559",
+                fontWeight: 500,
+                padding: "4px 8px",
+                height: "auto",
+              }}
+            >
+              Tài khoản
+            </Button>
+          </AccountPopup>
         </Space>
       </Drawer>
     </Header>
