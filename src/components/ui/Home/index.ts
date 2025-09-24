@@ -1,0 +1,4 @@
+export { default as HeroSection } from "./HeroSection";
+export { default as FeaturedServices } from "./FeaturedServices";
+export { default as ProductCategories } from "./ProductCategories";
+export { default as NewsSection } from "./NewsSection";
