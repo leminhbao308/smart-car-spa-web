@@ -10,16 +10,14 @@ import {
   Space,
   Tooltip,
   Button,
-  Modal,
 } from "antd";
 import {
   CarOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  WrenchOutlined,
-  ReloadOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
-import { Branch, CareSlot } from "@/components/utils/data/branches.data";
+import { Branch } from "@/components/utils/data/branches.data";
 
 const { Title, Text } = Typography;
 
@@ -75,7 +73,7 @@ const SlotAvailabilityCard: React.FC<SlotAvailabilityCardProps> = ({
       case "occupied":
         return <CarOutlined style={{ color: "#1890ff" }} />;
       case "maintenance":
-        return <WrenchOutlined style={{ color: "#fa8c16" }} />;
+        return <ToolOutlined style={{ color: "#fa8c16" }} />;
       default:
         return <ExclamationCircleOutlined />;
     }
@@ -96,24 +94,34 @@ const SlotAvailabilityCard: React.FC<SlotAvailabilityCardProps> = ({
 
   const slotStats = {
     total: branch.careSlots.length,
-    available: branch.careSlots.filter(s => s.status === "available").length,
-    occupied: branch.careSlots.filter(s => s.status === "occupied").length,
-    maintenance: branch.careSlots.filter(s => s.status === "maintenance").length,
+    available: branch.careSlots.filter((s) => s.status === "available").length,
+    occupied: branch.careSlots.filter((s) => s.status === "occupied").length,
+    maintenance: branch.careSlots.filter((s) => s.status === "maintenance")
+      .length,
   };
 
   const slotTypeStats = {
-    basic: branch.careSlots.filter(s => s.type === "basic").length,
-    premium: branch.careSlots.filter(s => s.type === "premium").length,
-    vip: branch.careSlots.filter(s => s.type === "vip").length,
+    basic: branch.careSlots.filter((s) => s.type === "basic").length,
+    premium: branch.careSlots.filter((s) => s.type === "premium").length,
+    vip: branch.careSlots.filter((s) => s.type === "vip").length,
   };
 
   const availableByType = {
-    basic: branch.careSlots.filter(s => s.type === "basic" && s.status === "available").length,
-    premium: branch.careSlots.filter(s => s.type === "premium" && s.status === "available").length,
-    vip: branch.careSlots.filter(s => s.type === "vip" && s.status === "available").length,
+    basic: branch.careSlots.filter(
+      (s) => s.type === "basic" && s.status === "available"
+    ).length,
+    premium: branch.careSlots.filter(
+      (s) => s.type === "premium" && s.status === "available"
+    ).length,
+    vip: branch.careSlots.filter(
+      (s) => s.type === "vip" && s.status === "available"
+    ).length,
   };
 
-  const utilizationRate = slotStats.total > 0 ? Math.round((slotStats.occupied / slotStats.total) * 100) : 0;
+  const utilizationRate =
+    slotStats.total > 0
+      ? Math.round((slotStats.occupied / slotStats.total) * 100)
+      : 0;
 
   return (
     <Card
@@ -121,8 +129,20 @@ const SlotAvailabilityCard: React.FC<SlotAvailabilityCardProps> = ({
         <Space>
           <CarOutlined />
           <span>{branch.name}</span>
-          <Tag color={branch.status === "active" ? "green" : branch.status === "maintenance" ? "orange" : "red"}>
-            {branch.status === "active" ? "Hoạt động" : branch.status === "maintenance" ? "Bảo trì" : "Ngừng hoạt động"}
+          <Tag
+            color={
+              branch.status === "active"
+                ? "green"
+                : branch.status === "maintenance"
+                ? "orange"
+                : "red"
+            }
+          >
+            {branch.status === "active"
+              ? "Hoạt động"
+              : branch.status === "maintenance"
+              ? "Bảo trì"
+              : "Ngừng hoạt động"}
           </Tag>
         </Space>
       }
@@ -189,7 +209,14 @@ const SlotAvailabilityCard: React.FC<SlotAvailabilityCardProps> = ({
           showInfo={false}
           style={{ marginTop: 4 }}
         />
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#8c8c8c" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            fontSize: 12,
+            color: "#8c8c8c",
+          }}
+        >
           <span>Trống ({slotStats.available})</span>
           <span>Đang dùng ({slotStats.occupied})</span>
           <span>Bảo trì ({slotStats.maintenance})</span>
@@ -201,7 +228,14 @@ const SlotAvailabilityCard: React.FC<SlotAvailabilityCardProps> = ({
         <Text strong>Phân loại slot</Text>
         <Row gutter={[8, 8]} style={{ marginTop: 8 }}>
           <Col span={8}>
-            <div style={{ textAlign: "center", padding: 8, backgroundColor: "#f0f8ff", borderRadius: 4 }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: 8,
+                backgroundColor: "#f0f8ff",
+                borderRadius: 4,
+              }}
+            >
               <Tag color="blue">Cơ bản</Tag>
               <div style={{ fontSize: 12, color: "#8c8c8c" }}>
                 {availableByType.basic}/{slotTypeStats.basic} trống
@@ -209,7 +243,14 @@ const SlotAvailabilityCard: React.FC<SlotAvailabilityCardProps> = ({
             </div>
           </Col>
           <Col span={8}>
-            <div style={{ textAlign: "center", padding: 8, backgroundColor: "#fff7e6", borderRadius: 4 }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: 8,
+                backgroundColor: "#fff7e6",
+                borderRadius: 4,
+              }}
+            >
               <Tag color="gold">Cao cấp</Tag>
               <div style={{ fontSize: 12, color: "#8c8c8c" }}>
                 {availableByType.premium}/{slotTypeStats.premium} trống
@@ -217,7 +258,14 @@ const SlotAvailabilityCard: React.FC<SlotAvailabilityCardProps> = ({
             </div>
           </Col>
           <Col span={8}>
-            <div style={{ textAlign: "center", padding: 8, backgroundColor: "#f9f0ff", borderRadius: 4 }}>
+            <div
+              style={{
+                textAlign: "center",
+                padding: 8,
+                backgroundColor: "#f9f0ff",
+                borderRadius: 4,
+              }}
+            >
               <Tag color="purple">VIP</Tag>
               <div style={{ fontSize: 12, color: "#8c8c8c" }}>
                 {availableByType.vip}/{slotTypeStats.vip} trống
@@ -234,26 +282,42 @@ const SlotAvailabilityCard: React.FC<SlotAvailabilityCardProps> = ({
           <Row gutter={[4, 4]}>
             {branch.careSlots.slice(0, 6).map((slot) => (
               <Col span={8} key={slot.id}>
-                <Tooltip title={`${slot.name} - ${getSlotTypeLabel(slot.type)}`}>
+                <Tooltip
+                  title={`${slot.name} - ${getSlotTypeLabel(slot.type)}`}
+                >
                   <div
                     style={{
                       padding: 4,
                       borderRadius: 4,
-                      backgroundColor: slot.status === "available" ? "#f6ffed" : 
-                                      slot.status === "occupied" ? "#e6f7ff" : "#fff7e6",
-                      border: `1px solid ${slot.status === "available" ? "#b7eb8f" : 
-                                         slot.status === "occupied" ? "#91d5ff" : "#ffd591"}`,
+                      backgroundColor:
+                        slot.status === "available"
+                          ? "#f6ffed"
+                          : slot.status === "occupied"
+                          ? "#e6f7ff"
+                          : "#fff7e6",
+                      border: `1px solid ${
+                        slot.status === "available"
+                          ? "#b7eb8f"
+                          : slot.status === "occupied"
+                          ? "#91d5ff"
+                          : "#ffd591"
+                      }`,
                       textAlign: "center",
                       fontSize: 11,
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 2,
+                      }}
+                    >
                       {getSlotStatusIcon(slot.status)}
                       <span>{slot.name}</span>
                     </div>
-                    <Tag size="small" color={getSlotTypeColor(slot.type)}>
-                      {slot.type}
-                    </Tag>
+                    <Tag color={getSlotTypeColor(slot.type)}>{slot.type}</Tag>
                   </div>
                 </Tooltip>
               </Col>
