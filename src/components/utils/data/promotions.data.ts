@@ -1,55 +1,291 @@
 export interface Promotion {
   id: number;
   name: string;
+  code: string;
   description: string;
-  type: "percentage" | "fixed" | "buy_x_get_y" | "package" | "seasonal";
-  value: number; // Phần trăm giảm giá hoặc số tiền giảm
-  minOrderValue?: number; // Giá trị đơn hàng tối thiểu
-  maxDiscountAmount?: number; // Số tiền giảm tối đa
-  applicableServices: number[]; // ID các dịch vụ áp dụng
-  applicablePackages: number[]; // ID các gói áp dụng
-  applicableCategories: string[]; // Danh mục áp dụng
+  type: "percentage" | "fixed" | "gift" | "combo"; // Loại khuyến mãi
+  value: number; // Giá trị khuyến mãi
   startDate: string;
   endDate: string;
   status: "active" | "inactive" | "scheduled" | "expired";
-  usageLimit?: number; // Giới hạn số lần sử dụng
+  isPublic: boolean; // Có công khai hay không
+  usageLimit?: number; // Giới hạn sử dụng tổng
   usedCount: number; // Số lần đã sử dụng
-  customerLimit?: number; // Giới hạn số khách hàng
+  customerLimit?: number; // Giới hạn khách hàng
   customerUsedCount: number; // Số khách hàng đã sử dụng
-  conditions: PromotionCondition[];
-  benefits: string[];
-  terms: string[];
-  image?: string;
+  conditions: {
+    id: number;
+    description: string;
+    type: "min_amount" | "min_quantity" | "specific_service" | "specific_product" | "customer_type";
+    value?: number;
+    target?: string[];
+  }[];
+  benefits: string[]; // Lợi ích
+  terms: string[]; // Điều khoản
+  targetAudience: {
+    customerTypes: string[]; // Loại khách hàng
+    branches: string[]; // Chi nhánh áp dụng
+    services: string[]; // Dịch vụ áp dụng
+    products: string[]; // Sản phẩm áp dụng
+  };
   priority: number; // Độ ưu tiên (1-10)
-  isPublic: boolean; // Hiển thị công khai
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface PromotionCondition {
-  id: number;
-  type: "min_order" | "min_services" | "customer_type" | "time_range" | "day_of_week" | "vehicle_type";
-  value: any;
-  description: string;
-}
-
-export interface PromotionUsage {
-  id: number;
-  promotionId: number;
-  customerId: number;
-  customerName: string;
-  orderId: number;
-  discountAmount: number;
-  usedAt: string;
-  status: "used" | "cancelled";
-}
+export const promotionsData: Promotion[] = [
+  {
+    id: 1,
+    name: "Giảm giá 20% cho khách hàng mới",
+    code: "NEW_CUSTOMER_20",
+    description: "Chương trình giảm giá đặc biệt dành cho khách hàng lần đầu sử dụng dịch vụ",
+    type: "percentage",
+    value: 20,
+    startDate: "2024-01-01",
+    endDate: "2024-12-31",
+    status: "active",
+    isPublic: true,
+    usageLimit: 1000,
+    usedCount: 245,
+    customerLimit: 500,
+    customerUsedCount: 245,
+    conditions: [
+      {
+        id: 1,
+        description: "Đơn hàng tối thiểu 500,000 ₫",
+        type: "min_amount",
+        value: 500000,
+      },
+      {
+        id: 2,
+        description: "Chỉ áp dụng cho khách hàng mới",
+        type: "customer_type",
+        target: ["new_customer"],
+      },
+    ],
+    benefits: [
+      "Tiết kiệm 20% chi phí dịch vụ",
+      "Trải nghiệm dịch vụ chất lượng cao",
+      "Hỗ trợ tư vấn miễn phí",
+    ],
+    terms: [
+      "Không áp dụng với các chương trình khuyến mãi khác",
+      "Chỉ áp dụng cho đơn hàng đầu tiên",
+      "Có thể thay đổi mà không cần thông báo trước",
+    ],
+    targetAudience: {
+      customerTypes: ["new_customer"],
+      branches: ["all"],
+      services: ["all"],
+      products: ["all"],
+    },
+    priority: 8,
+    notes: "Chương trình khuyến mãi đặc biệt cho khách hàng mới",
+    createdAt: "2024-01-01",
+    updatedAt: "2024-06-15",
+  },
+  {
+    id: 2,
+    name: "Combo rửa xe + đánh bóng giảm 15%",
+    code: "COMBO_WASH_POLISH",
+    description: "Gói combo rửa xe và đánh bóng với mức giảm giá hấp dẫn",
+    type: "percentage",
+    value: 15,
+    startDate: "2024-02-01",
+    endDate: "2024-11-30",
+    status: "active",
+    isPublic: true,
+    usageLimit: 500,
+    usedCount: 89,
+    customerLimit: 200,
+    customerUsedCount: 89,
+    conditions: [
+      {
+        id: 3,
+        description: "Phải sử dụng cả 2 dịch vụ: Rửa xe và Đánh bóng",
+        type: "specific_service",
+        target: ["wash", "polish"],
+      },
+      {
+        id: 4,
+        description: "Đơn hàng tối thiểu 800,000 ₫",
+        type: "min_amount",
+        value: 800000,
+      },
+    ],
+    benefits: [
+      "Tiết kiệm 15% khi sử dụng combo",
+      "Chất lượng dịch vụ cao cấp",
+      "Thời gian xử lý nhanh chóng",
+    ],
+    terms: [
+      "Phải đặt trước ít nhất 1 ngày",
+      "Không hoàn tiền nếu hủy trong ngày",
+      "Áp dụng cho tất cả loại xe",
+    ],
+    targetAudience: {
+      customerTypes: ["all"],
+      branches: ["all"],
+      services: ["wash", "polish"],
+      products: ["all"],
+    },
+    priority: 7,
+    notes: "Combo dịch vụ phổ biến nhất",
+    createdAt: "2024-02-01",
+    updatedAt: "2024-06-10",
+  },
+  {
+    id: 3,
+    name: "Tặng kèm sản phẩm chăm sóc",
+    code: "FREE_CARE_PRODUCT",
+    description: "Tặng kèm sản phẩm chăm sóc xe khi sử dụng dịch vụ đánh bóng",
+    type: "gift",
+    value: 1,
+    startDate: "2024-03-01",
+    endDate: "2024-10-31",
+    status: "active",
+    isPublic: true,
+    usageLimit: 300,
+    usedCount: 67,
+    customerLimit: 150,
+    customerUsedCount: 67,
+    conditions: [
+      {
+        id: 5,
+        description: "Sử dụng dịch vụ đánh bóng",
+        type: "specific_service",
+        target: ["polish"],
+      },
+      {
+        id: 6,
+        description: "Đơn hàng tối thiểu 1,000,000 ₫",
+        type: "min_amount",
+        value: 1000000,
+      },
+    ],
+    benefits: [
+      "Nhận sản phẩm chăm sóc xe miễn phí",
+      "Hướng dẫn sử dụng sản phẩm",
+      "Bảo hành sản phẩm 3 tháng",
+    ],
+    terms: [
+      "Sản phẩm tặng kèm có thể thay đổi",
+      "Không đổi trả sản phẩm tặng kèm",
+      "Áp dụng trong khi còn hàng",
+    ],
+    targetAudience: {
+      customerTypes: ["all"],
+      branches: ["all"],
+      services: ["polish"],
+      products: ["care_products"],
+    },
+    priority: 6,
+    notes: "Chương trình tặng kèm sản phẩm",
+    createdAt: "2024-03-01",
+    updatedAt: "2024-06-05",
+  },
+  {
+    id: 4,
+    name: "Giảm 100,000 ₫ cho đơn hàng lớn",
+    code: "BIG_ORDER_100K",
+    description: "Giảm giá cố định cho các đơn hàng có giá trị cao",
+    type: "fixed",
+    value: 100000,
+    startDate: "2024-04-01",
+    endDate: "2024-09-30",
+    status: "active",
+    isPublic: false,
+    usageLimit: 200,
+    usedCount: 34,
+    customerLimit: 100,
+    customerUsedCount: 34,
+    conditions: [
+      {
+        id: 7,
+        description: "Đơn hàng tối thiểu 2,000,000 ₫",
+        type: "min_amount",
+        value: 2000000,
+      },
+      {
+        id: 8,
+        description: "Chỉ áp dụng cho khách hàng VIP",
+        type: "customer_type",
+        target: ["vip"],
+      },
+    ],
+    benefits: [
+      "Tiết kiệm 100,000 ₫",
+      "Ưu tiên phục vụ",
+      "Tư vấn chuyên nghiệp",
+    ],
+    terms: [
+      "Chỉ áp dụng cho khách hàng VIP",
+      "Không áp dụng với khuyến mãi khác",
+      "Cần đăng ký trước khi sử dụng",
+    ],
+    targetAudience: {
+      customerTypes: ["vip"],
+      branches: ["all"],
+      services: ["all"],
+      products: ["all"],
+    },
+    priority: 9,
+    notes: "Chương trình dành riêng cho khách hàng VIP",
+    createdAt: "2024-04-01",
+    updatedAt: "2024-06-01",
+  },
+  {
+    id: 5,
+    name: "Khuyến mãi cuối tuần",
+    code: "WEEKEND_SPECIAL",
+    description: "Chương trình khuyến mãi đặc biệt vào cuối tuần",
+    type: "percentage",
+    value: 10,
+    startDate: "2024-05-01",
+    endDate: "2024-08-31",
+    status: "scheduled",
+    isPublic: true,
+    usageLimit: 1000,
+    usedCount: 0,
+    customerLimit: 500,
+    customerUsedCount: 0,
+    conditions: [
+      {
+        id: 9,
+        description: "Chỉ áp dụng vào thứ 7 và chủ nhật",
+        type: "min_amount",
+        value: 300000,
+      },
+    ],
+    benefits: [
+      "Giảm 10% vào cuối tuần",
+      "Không cần đặt trước",
+      "Áp dụng cho tất cả dịch vụ",
+    ],
+    terms: [
+      "Chỉ áp dụng vào cuối tuần",
+      "Không áp dụng với combo khác",
+      "Có thể thay đổi mà không báo trước",
+    ],
+    targetAudience: {
+      customerTypes: ["all"],
+      branches: ["all"],
+      services: ["all"],
+      products: ["all"],
+    },
+    priority: 5,
+    notes: "Chương trình cuối tuần",
+    createdAt: "2024-05-01",
+    updatedAt: "2024-05-30",
+  },
+];
 
 export const promotionTypes = [
-  { value: "percentage", label: "Giảm giá theo %", icon: "📊" },
-  { value: "fixed", label: "Giảm giá cố định", icon: "💰" },
-  { value: "buy_x_get_y", label: "Mua X tặng Y", icon: "🎁" },
-  { value: "package", label: "Gói combo", icon: "📦" },
-  { value: "seasonal", label: "Khuyến mãi theo mùa", icon: "🌸" },
+  { value: "percentage", label: "Giảm theo phần trăm", icon: "📊" },
+  { value: "fixed", label: "Giảm số tiền cố định", icon: "💰" },
+  { value: "gift", label: "Tặng kèm sản phẩm", icon: "🎁" },
+  { value: "combo", label: "Combo dịch vụ", icon: "📦" },
 ];
 
 export const promotionStatuses = [
@@ -59,338 +295,71 @@ export const promotionStatuses = [
   { value: "expired", label: "Đã hết hạn", color: "gray" },
 ];
 
-export const conditionTypes = [
-  { value: "min_order", label: "Đơn hàng tối thiểu", icon: "🛒" },
-  { value: "min_services", label: "Số dịch vụ tối thiểu", icon: "🔧" },
-  { value: "customer_type", label: "Loại khách hàng", icon: "👤" },
-  { value: "time_range", label: "Khung giờ", icon: "⏰" },
-  { value: "day_of_week", label: "Ngày trong tuần", icon: "📅" },
-  { value: "vehicle_type", label: "Loại xe", icon: "🚗" },
-];
-
 export const customerTypes = [
-  "Khách hàng mới",
-  "Khách hàng VIP",
-  "Khách hàng thường",
-  "Khách hàng doanh nghiệp",
+  { value: "all", label: "Tất cả khách hàng" },
+  { value: "new_customer", label: "Khách hàng mới" },
+  { value: "vip", label: "Khách hàng VIP" },
+  { value: "regular", label: "Khách hàng thường" },
 ];
 
-export const vehicleTypes = [
-  "Sedan",
-  "SUV",
-  "Hatchback",
-  "Coupe",
-  "Pickup",
-  "Van",
-  "Tất cả loại xe",
+export const conditionTypes = [
+  { value: "min_amount", label: "Số tiền tối thiểu" },
+  { value: "min_quantity", label: "Số lượng tối thiểu" },
+  { value: "specific_service", label: "Dịch vụ cụ thể" },
+  { value: "specific_product", label: "Sản phẩm cụ thể" },
+  { value: "customer_type", label: "Loại khách hàng" },
 ];
 
-export const daysOfWeek = [
-  "Thứ 2",
-  "Thứ 3", 
-  "Thứ 4",
-  "Thứ 5",
-  "Thứ 6",
-  "Thứ 7",
-  "Chủ nhật",
-];
+// Helper functions
+export const getTypeLabel = (type: string) => {
+  const promotionType = promotionTypes.find((t) => t.value === type);
+  return promotionType ? promotionType.label : type;
+};
 
-export const promotionsData: Promotion[] = [
-  {
-    id: 1,
-    name: "Khuyến mãi mùa hè 2024",
-    description: "Giảm giá 20% cho tất cả dịch vụ chăm sóc xe trong mùa hè",
-    type: "percentage",
-    value: 20,
-    minOrderValue: 500000,
-    maxDiscountAmount: 1000000,
-    applicableServices: [1, 2, 3, 4],
-    applicablePackages: [101, 102],
-    applicableCategories: ["Chăm sóc ngoại thất", "Chăm sóc nội thất"],
-    startDate: "2024-06-01",
-    endDate: "2024-08-31",
-    status: "active",
-    usageLimit: 1000,
-    usedCount: 245,
-    customerLimit: 500,
-    customerUsedCount: 180,
-    priority: 8,
-    isPublic: true,
-    createdAt: "2024-05-15",
-    updatedAt: "2024-06-01",
-    conditions: [
-      {
-        id: 1,
-        type: "min_order",
-        value: 500000,
-        description: "Đơn hàng tối thiểu 500,000 VNĐ"
-      },
-      {
-        id: 2,
-        type: "time_range",
-        value: { start: "08:00", end: "17:00" },
-        description: "Áp dụng từ 8:00 - 17:00"
-      }
-    ],
-    benefits: [
-      "Tiết kiệm tối đa 1,000,000 VNĐ",
-      "Áp dụng cho nhiều dịch vụ",
-      "Không giới hạn số lần sử dụng"
-    ],
-    terms: [
-      "Không áp dụng với các khuyến mãi khác",
-      "Áp dụng cho khách hàng mới và cũ",
-      "Có thể thay đổi mà không báo trước"
-    ]
-  },
-  {
-    id: 2,
-    name: "Combo rửa xe + nội thất",
-    description: "Gói combo rửa xe và vệ sinh nội thất với giá ưu đãi",
-    type: "package",
-    value: 300000,
-    applicableServices: [1, 4],
-    applicablePackages: [],
-    applicableCategories: ["Chăm sóc ngoại thất", "Chăm sóc nội thất"],
-    startDate: "2024-01-01",
-    endDate: "2024-12-31",
-    status: "active",
-    usageLimit: 500,
-    usedCount: 89,
-    customerLimit: 300,
-    customerUsedCount: 67,
-    priority: 6,
-    isPublic: true,
-    createdAt: "2023-12-20",
-    updatedAt: "2024-01-01",
-    conditions: [
-      {
-        id: 3,
-        type: "min_services",
-        value: 2,
-        description: "Tối thiểu 2 dịch vụ"
-      }
-    ],
-    benefits: [
-      "Tiết kiệm 50,000 VNĐ",
-      "Dịch vụ toàn diện",
-      "Chất lượng đảm bảo"
-    ],
-    terms: [
-      "Chỉ áp dụng khi đặt cả 2 dịch vụ",
-      "Không hoàn tiền khi hủy"
-    ]
-  },
-  {
-    id: 3,
-    name: "Khách hàng VIP - Giảm 15%",
-    description: "Ưu đãi đặc biệt dành cho khách hàng VIP",
-    type: "percentage",
-    value: 15,
-    applicableServices: [],
-    applicablePackages: [201, 202],
-    applicableCategories: ["Dịch vụ cao cấp"],
-    startDate: "2024-01-01",
-    endDate: "2024-12-31",
-    status: "active",
-    usageLimit: 200,
-    usedCount: 45,
-    customerLimit: 100,
-    customerUsedCount: 38,
-    priority: 9,
-    isPublic: false,
-    createdAt: "2023-12-15",
-    updatedAt: "2024-01-01",
-    conditions: [
-      {
-        id: 4,
-        type: "customer_type",
-        value: "Khách hàng VIP",
-        description: "Chỉ dành cho khách hàng VIP"
-      }
-    ],
-    benefits: [
-      "Ưu đãi độc quyền",
-      "Dịch vụ cao cấp",
-      "Hỗ trợ ưu tiên"
-    ],
-    terms: [
-      "Cần xác minh tư cách VIP",
-      "Không chuyển nhượng"
-    ]
-  },
-  {
-    id: 4,
-    name: "Mua 2 tặng 1 - Dịch vụ bảo dưỡng",
-    description: "Mua 2 dịch vụ bảo dưỡng, tặng 1 dịch vụ rửa xe",
-    type: "buy_x_get_y",
-    value: 1,
-    applicableServices: [3, 5, 6],
-    applicablePackages: [],
-    applicableCategories: ["Bảo dưỡng động cơ", "Bảo dưỡng lốp"],
-    startDate: "2024-07-01",
-    endDate: "2024-07-31",
-    status: "scheduled",
-    usageLimit: 300,
-    usedCount: 0,
-    customerLimit: 200,
-    customerUsedCount: 0,
-    priority: 7,
-    isPublic: true,
-    createdAt: "2024-06-20",
-    updatedAt: "2024-06-20",
-    conditions: [
-      {
-        id: 5,
-        type: "min_services",
-        value: 2,
-        description: "Mua tối thiểu 2 dịch vụ bảo dưỡng"
-      }
-    ],
-    benefits: [
-      "Nhận miễn phí 1 dịch vụ rửa xe",
-      "Tiết kiệm 150,000 VNĐ",
-      "Chăm sóc toàn diện"
-    ],
-    terms: [
-      "Dịch vụ tặng có giá trị thấp nhất",
-      "Không hoàn tiền"
-    ]
-  },
-  {
-    id: 5,
-    name: "Giảm 100,000 VNĐ - Đơn hàng đầu tiên",
-    description: "Giảm 100,000 VNĐ cho đơn hàng đầu tiên của khách hàng mới",
-    type: "fixed",
-    value: 100000,
-    minOrderValue: 300000,
-    applicableServices: [],
-    applicablePackages: [],
-    applicableCategories: [],
-    startDate: "2024-01-01",
-    endDate: "2024-12-31",
-    status: "active",
-    usageLimit: 1000,
-    usedCount: 156,
-    customerLimit: 1000,
-    customerUsedCount: 156,
-    priority: 5,
-    isPublic: true,
-    createdAt: "2023-12-01",
-    updatedAt: "2024-01-01",
-    conditions: [
-      {
-        id: 6,
-        type: "customer_type",
-        value: "Khách hàng mới",
-        description: "Chỉ dành cho khách hàng mới"
-      },
-      {
-        id: 7,
-        type: "min_order",
-        value: 300000,
-        description: "Đơn hàng tối thiểu 300,000 VNĐ"
-      }
-    ],
-    benefits: [
-      "Tiết kiệm 100,000 VNĐ",
-      "Dễ dàng sử dụng",
-      "Không điều kiện phức tạp"
-    ],
-    terms: [
-      "Chỉ áp dụng 1 lần/khách hàng",
-      "Không áp dụng với khuyến mãi khác"
-    ]
-  },
-  {
-    id: 6,
-    name: "Cuối tuần vui vẻ - Giảm 25%",
-    description: "Giảm giá 25% cho tất cả dịch vụ vào cuối tuần",
-    type: "percentage",
-    value: 25,
-    applicableServices: [1, 2, 3, 4, 5, 6],
-    applicablePackages: [101, 102, 201, 202],
-    applicableCategories: [],
-    startDate: "2024-01-01",
-    endDate: "2024-12-31",
-    status: "active",
-    usageLimit: 2000,
-    usedCount: 567,
-    customerLimit: 1000,
-    customerUsedCount: 423,
-    priority: 4,
-    isPublic: true,
-    createdAt: "2023-12-01",
-    updatedAt: "2024-01-01",
-    conditions: [
-      {
-        id: 8,
-        type: "day_of_week",
-        value: ["Thứ 7", "Chủ nhật"],
-        description: "Chỉ áp dụng thứ 7 và chủ nhật"
-      }
-    ],
-    benefits: [
-      "Giảm giá cao nhất",
-      "Áp dụng mọi dịch vụ",
-      "Cuối tuần thư giãn"
-    ],
-    terms: [
-      "Chỉ áp dụng cuối tuần",
-      "Có thể thay đổi lịch"
-    ]
+export const getTypeIcon = (type: string) => {
+  const promotionType = promotionTypes.find((t) => t.value === type);
+  return promotionType ? promotionType.icon : "❓";
+};
+
+export const getStatusColor = (status: string) => {
+  const statusInfo = promotionStatuses.find((s) => s.value === status);
+  return statusInfo ? statusInfo.color : "default";
+};
+
+export const getStatusLabel = (status: string) => {
+  const statusInfo = promotionStatuses.find((s) => s.value === status);
+  return statusInfo ? statusInfo.label : status;
+};
+
+export const isExpired = (endDate: string) => {
+  const now = new Date();
+  const end = new Date(endDate);
+  return now > end;
+};
+
+export const isActive = (startDate: string, endDate: string, status: string) => {
+  const now = new Date();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  return (
+    status === "active" &&
+    now >= start &&
+    now <= end
+  );
+};
+
+export const formatPromotionValue = (type: string, value: number) => {
+  switch (type) {
+    case "percentage":
+      return `${value}%`;
+    case "fixed":
+      return `${value.toLocaleString()} ₫`;
+    case "gift":
+      return `${value} sản phẩm`;
+    case "combo":
+      return `Combo ${value}`;
+    default:
+      return value.toString();
   }
-];
-
-export const promotionUsageData: PromotionUsage[] = [
-  {
-    id: 1,
-    promotionId: 1,
-    customerId: 101,
-    customerName: "Nguyễn Văn A",
-    orderId: 1001,
-    discountAmount: 200000,
-    usedAt: "2024-06-15T10:30:00",
-    status: "used"
-  },
-  {
-    id: 2,
-    promotionId: 1,
-    customerId: 102,
-    customerName: "Trần Thị B",
-    orderId: 1002,
-    discountAmount: 150000,
-    usedAt: "2024-06-16T14:20:00",
-    status: "used"
-  },
-  {
-    id: 3,
-    promotionId: 2,
-    customerId: 103,
-    customerName: "Lê Văn C",
-    orderId: 1003,
-    discountAmount: 50000,
-    usedAt: "2024-06-17T09:15:00",
-    status: "used"
-  },
-  {
-    id: 4,
-    promotionId: 3,
-    customerId: 104,
-    customerName: "Phạm Thị D",
-    orderId: 1004,
-    discountAmount: 300000,
-    usedAt: "2024-06-18T16:45:00",
-    status: "used"
-  },
-  {
-    id: 5,
-    promotionId: 5,
-    customerId: 105,
-    customerName: "Võ Văn E",
-    orderId: 1005,
-    discountAmount: 100000,
-    usedAt: "2024-06-19T11:30:00",
-    status: "used"
-  }
-];
+};

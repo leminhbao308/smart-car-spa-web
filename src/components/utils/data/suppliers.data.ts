@@ -54,7 +54,6 @@ export interface Supplier {
   };
   notes: string; // Ghi chú
   status: "active" | "inactive" | "pending" | "blacklisted";
-  priority: number; // Độ ưu tiên (1-10)
   tags: string[]; // Tags phân loại
   createdAt: string;
   updatedAt: string;
@@ -258,7 +257,6 @@ export const suppliersData: Supplier[] = [
     },
     notes: "Nhà cung cấp uy tín, chất lượng tốt",
     status: "active",
-    priority: 8,
     tags: ["Hóa chất", "Chất lượng cao", "Giao hàng nhanh"],
     createdAt: "2024-01-01",
     updatedAt: "2024-06-15",
@@ -319,7 +317,6 @@ export const suppliersData: Supplier[] = [
     },
     notes: "Thiết bị chất lượng cao, hỗ trợ tốt",
     status: "active",
-    priority: 9,
     tags: ["Thiết bị", "Công nghệ cao", "Bảo hành dài"],
     createdAt: "2024-02-01",
     updatedAt: "2024-06-10",
@@ -380,7 +377,6 @@ export const suppliersData: Supplier[] = [
     },
     notes: "Vật liệu chất lượng tốt, giá cả hợp lý",
     status: "active",
-    priority: 6,
     tags: ["Vật liệu", "Giá tốt", "Giao hàng nhanh"],
     createdAt: "2024-03-01",
     updatedAt: "2024-06-05",
@@ -441,7 +437,6 @@ export const suppliersData: Supplier[] = [
     },
     notes: "Dịch vụ bảo trì chuyên nghiệp, hỗ trợ tốt",
     status: "active",
-    priority: 7,
     tags: ["Dịch vụ", "Bảo trì", "Hỗ trợ 24/7"],
     createdAt: "2024-01-15",
     updatedAt: "2024-06-12",
@@ -502,7 +497,6 @@ export const suppliersData: Supplier[] = [
     },
     notes: "Phụ tùng chính hãng, chất lượng đảm bảo",
     status: "active",
-    priority: 7,
     tags: ["Phụ tùng", "Chính hãng", "Đa dạng"],
     createdAt: "2024-02-15",
     updatedAt: "2024-06-08",
@@ -563,7 +557,6 @@ export const suppliersData: Supplier[] = [
     },
     notes: "Dụng cụ chất lượng tốt, giá cả cạnh tranh",
     status: "active",
-    priority: 6,
     tags: ["Dụng cụ", "Chất lượng", "Giá cạnh tranh"],
     createdAt: "2024-04-01",
     updatedAt: "2024-06-03",
