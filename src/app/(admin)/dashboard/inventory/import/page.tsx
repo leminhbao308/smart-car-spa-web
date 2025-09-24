@@ -11,7 +11,6 @@ import { Tag, Badge, message } from "antd";
 import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  EyeOutlined,
   EditOutlined,
 } from "@ant-design/icons";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
