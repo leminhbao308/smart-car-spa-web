@@ -26,7 +26,7 @@ export class UserService {
         queryParams.append("page", params.page.toString());
       }
       if (params.size !== undefined) {
-        queryParams.append("size", params.size.toString()); 
+        queryParams.append("size", params.size.toString());
       }
       if (params.direction) {
         queryParams.append("direction", params.direction);
@@ -40,8 +40,11 @@ export class UserService {
 
       const url = `/users/get-all?${queryParams.toString()}`;
       console.log("Making API call to:", url);
-      console.log("Base URL:", process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081");
-      
+      console.log(
+        "Base URL:",
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081"
+      );
+
       const response = await apiClient.get(url);
       console.log("API Response received:", response);
 
@@ -51,13 +54,7 @@ export class UserService {
         throw new Error(response.data.message || "Failed to fetch users");
       }
     } catch (error: any) {
-      console.error("Get all users error details:");
-      console.error("- Error type:", typeof error);
-      console.error("- Error message:", error?.message);
-      console.error("- Error response:", error?.response);
-      console.error("- Error status:", error?.response?.status);
-      console.error("- Error data:", error?.response?.data);
-      console.error("- Full error:", error);
+      console.log("Get all users error details:", error);
       throw error;
     }
   }

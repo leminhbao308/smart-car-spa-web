@@ -14,7 +14,7 @@ import {
   ReactNode,
 } from "react";
 import { AuthService } from "../services/auth.service";
-import { AuthState, AuthContextType, LoginRequest, SignupRequest, UserInfo } from "../types";
+import { AuthState, AuthContextType, LoginRequest, SignupRequest } from "../types";
 
 // Create Auth Context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -52,6 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: true,
             isLoading: false,
           }));
+
+          // Token refresh is now handled automatically by axios interceptor
         } else {
           // Try to get user info from API
           const userFromAPI = await AuthService.getCurrentUser();
@@ -63,6 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               isAuthenticated: true,
               isLoading: false,
             }));
+
+            // Token refresh is now handled automatically by axios interceptor
           } else {
             // Clear auth if user info not available
             AuthService.clearAuth();
@@ -111,6 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isLoading: false,
           error: null,
         }));
+
+        // Token refresh is now handled automatically by axios interceptor
       } catch (error: unknown) {
         const errorMessage =
           error && typeof error === "object" && "message" in error
@@ -147,6 +153,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isLoading: false,
             error: null,
           }));
+
+          // Token refresh is now handled automatically by axios interceptor
         }
       } catch (error: unknown) {
         const errorMessage =
@@ -175,6 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await AuthService.logout();
 
+      // Token refresh is now handled automatically by axios interceptor
+
       setState((prev) => ({
         ...prev,
         user: null,
@@ -184,6 +194,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }));
     } catch (error) {
       console.warn("Logout process completed with warnings:", error);
+      // Token refresh is now handled automatically by axios interceptor
+
       // Always clear state even if logout API fails
       setState((prev) => ({
         ...prev,
@@ -195,36 +207,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  /**
-   * Refresh token function
-   */
-  const refreshToken = useCallback(async () => {
-    try {
-      await AuthService.refreshToken();
-
-      // Get updated user info
-      const user = AuthService.getCurrentUserFromStorage();
-
-      setState((prev) => ({
-        ...prev,
-        user,
-        isAuthenticated: true,
-        error: null,
-      }));
-    } catch (error) {
-      console.error("Token refresh error:", error);
-
-      // Clear auth state if refresh fails
-      setState((prev) => ({
-        ...prev,
-        user: null,
-        isAuthenticated: false,
-        error: "Session expired. Please login again.",
-      }));
-
-      throw error;
-    }
-  }, []);
 
   /**
    * Verify token function
@@ -262,39 +244,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, error: null }));
   }, []);
 
-  /**
-   * Update user info function
-   */
-  const updateUser = useCallback((user: UserInfo) => {
-    setState((prev) => ({ ...prev, user }));
-  }, []);
 
   // Initialize auth on mount
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
 
-  // Set up token refresh interval
-  useEffect(() => {
-    if (!state.isAuthenticated) return;
-
-    const interval = setInterval(async () => {
-      try {
-        await refreshToken();
-      } catch (error) {
-        console.error("Automatic token refresh failed:", error);
-      }
-    }, 15 * 60 * 1000); // Refresh every 15 minutes
-
-    return () => clearInterval(interval);
-  }, [state.isAuthenticated, refreshToken]);
+  // Note: Token refresh is now handled automatically by axios interceptor
 
   const contextValue: AuthContextType = {
     ...state,
     login,
     signup,
     logout,
-    refreshToken,
     verifyToken,
     clearError,
   };
@@ -332,6 +294,6 @@ export function useAuthState(): AuthState {
  * Hook to get only authentication actions
  */
 export function useAuthActions() {
-  const { login, signup, logout, refreshToken, verifyToken, clearError } = useAuth();
-  return { login, signup, logout, refreshToken, verifyToken, clearError };
+  const { login, signup, logout, verifyToken, clearError } = useAuth();
+  return { login, signup, logout, verifyToken, clearError };
 }

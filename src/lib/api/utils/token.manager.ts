@@ -5,20 +5,17 @@
 
 // Token storage keys
 const TOKEN_KEYS = {
-  ACCESS_TOKEN: 'access_token',
-  REFRESH_TOKEN: 'refresh_token',
-  USER_INFO: 'user_info',
+  ACCESS_TOKEN: "access_token",
+  REFRESH_TOKEN: "refresh_token",
+  USER_INFO: "user_info",
 } as const;
-
-// Token expiration buffer (5 minutes before actual expiration)
-// const TOKEN_EXPIRATION_BUFFER = 5 * 60 * 1000;
 
 export class TokenManager {
   /**
    * Check if we're in browser environment
    */
   private static isBrowser(): boolean {
-    return typeof window !== 'undefined';
+    return typeof window !== "undefined";
   }
 
   /**
@@ -26,11 +23,11 @@ export class TokenManager {
    */
   static getAccessToken(): string | null {
     if (!this.isBrowser()) return null;
-    
+
     try {
       return localStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN);
     } catch (error) {
-      console.error('Error getting access token:', error);
+      console.error("Error getting access token:", error);
       return null;
     }
   }
@@ -40,11 +37,11 @@ export class TokenManager {
    */
   static getRefreshToken(): string | null {
     if (!this.isBrowser()) return null;
-    
+
     try {
       return localStorage.getItem(TOKEN_KEYS.REFRESH_TOKEN);
     } catch (error) {
-      console.error('Error getting refresh token:', error);
+      console.error("Error getting refresh token:", error);
       return null;
     }
   }
@@ -54,12 +51,12 @@ export class TokenManager {
    */
   static getUserInfo(): unknown | null {
     if (!this.isBrowser()) return null;
-    
+
     try {
       const userInfo = localStorage.getItem(TOKEN_KEYS.USER_INFO);
       return userInfo ? JSON.parse(userInfo) : null;
     } catch (error) {
-      console.error('Error getting user info:', error);
+      console.error("Error getting user info:", error);
       return null;
     }
   }
@@ -69,11 +66,11 @@ export class TokenManager {
    */
   static setAccessToken(token: string): void {
     if (!this.isBrowser()) return;
-    
+
     try {
       localStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, token);
     } catch (error) {
-      console.error('Error setting access token:', error);
+      console.error("Error setting access token:", error);
     }
   }
 
@@ -82,11 +79,11 @@ export class TokenManager {
    */
   static setRefreshToken(token: string): void {
     if (!this.isBrowser()) return;
-    
+
     try {
       localStorage.setItem(TOKEN_KEYS.REFRESH_TOKEN, token);
     } catch (error) {
-      console.error('Error setting refresh token:', error);
+      console.error("Error setting refresh token:", error);
     }
   }
 
@@ -95,22 +92,26 @@ export class TokenManager {
    */
   static setUserInfo(userInfo: unknown): void {
     if (!this.isBrowser()) return;
-    
+
     try {
       localStorage.setItem(TOKEN_KEYS.USER_INFO, JSON.stringify(userInfo));
     } catch (error) {
-      console.error('Error setting user info:', error);
+      console.error("Error setting user info:", error);
     }
   }
 
   /**
    * Set all tokens and user info
    */
-  static setTokens(accessToken: string, refreshToken: string, userInfo: unknown): void {
+  static setTokens(
+    accessToken: string,
+    refreshToken: string,
+    userInfo: unknown
+  ): void {
     this.setAccessToken(accessToken);
     this.setRefreshToken(refreshToken);
     this.setUserInfo(userInfo);
-    
+
     // Đồng bộ với cookies để middleware có thể đọc được
     this.syncToCookies(accessToken, refreshToken, userInfo);
   }
@@ -120,11 +121,11 @@ export class TokenManager {
    */
   static removeAccessToken(): void {
     if (!this.isBrowser()) return;
-    
+
     try {
       localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN);
     } catch (error) {
-      console.error('Error removing access token:', error);
+      console.error("Error removing access token:", error);
     }
   }
 
@@ -133,11 +134,11 @@ export class TokenManager {
    */
   static removeRefreshToken(): void {
     if (!this.isBrowser()) return;
-    
+
     try {
       localStorage.removeItem(TOKEN_KEYS.REFRESH_TOKEN);
     } catch (error) {
-      console.error('Error removing refresh token:', error);
+      console.error("Error removing refresh token:", error);
     }
   }
 
@@ -146,11 +147,11 @@ export class TokenManager {
    */
   static removeUserInfo(): void {
     if (!this.isBrowser()) return;
-    
+
     try {
       localStorage.removeItem(TOKEN_KEYS.USER_INFO);
     } catch (error) {
-      console.error('Error removing user info:', error);
+      console.error("Error removing user info:", error);
     }
   }
 
@@ -161,7 +162,7 @@ export class TokenManager {
     this.removeAccessToken();
     this.removeRefreshToken();
     this.removeUserInfo();
-    
+
     // Xóa cookies
     this.clearCookies();
   }
@@ -188,24 +189,6 @@ export class TokenManager {
   }
 
   /**
-   * Check if token is expired (basic check)
-   * Note: This is a simple check. For production, you might want to decode JWT
-   */
-  static isTokenExpired(token?: string): boolean {
-    const accessToken = token || this.getAccessToken();
-    if (!accessToken) return true;
-
-    try {
-      // Simple check - in production, you might want to decode JWT
-      // and check the exp claim
-      return false;
-    } catch (error) {
-      console.error('Error checking token expiration:', error);
-      return true;
-    }
-  }
-
-  /**
    * Get authorization header value
    */
   static getAuthHeader(): string | null {
@@ -217,29 +200,45 @@ export class TokenManager {
    * Đồng bộ tokens và user info với cookies
    * Để middleware có thể đọc được thông tin authentication
    */
-  static syncToCookies(accessToken: string, refreshToken: string, userInfo: unknown): void {
+  static syncToCookies(
+    accessToken: string,
+    refreshToken: string,
+    userInfo: unknown
+  ): void {
     if (!this.isBrowser()) return;
-    
+
     try {
       // Set cookies với các options phù hợp
       const cookieOptions = {
         maxAge: 60 * 60 * 24 * 7, // 7 days
         httpOnly: false, // Cần false để client có thể đọc được
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax' as const,
-        path: '/'
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax" as const,
+        path: "/",
       };
-      
+
       // Set access token cookie
-      document.cookie = `access_token=${accessToken}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${cookieOptions.secure ? '; secure' : ''}`;
-      
+      document.cookie = `access_token=${accessToken}; max-age=${
+        cookieOptions.maxAge
+      }; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${
+        cookieOptions.secure ? "; secure" : ""
+      }`;
+
       // Set refresh token cookie
-      document.cookie = `refresh_token=${refreshToken}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${cookieOptions.secure ? '; secure' : ''}`;
-      
+      document.cookie = `refresh_token=${refreshToken}; max-age=${
+        cookieOptions.maxAge
+      }; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${
+        cookieOptions.secure ? "; secure" : ""
+      }`;
+
       // Set user info cookie
-      document.cookie = `user_info=${JSON.stringify(userInfo)}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${cookieOptions.secure ? '; secure' : ''}`;
+      document.cookie = `user_info=${JSON.stringify(userInfo)}; max-age=${
+        cookieOptions.maxAge
+      }; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${
+        cookieOptions.secure ? "; secure" : ""
+      }`;
     } catch (error) {
-      console.error('Error syncing to cookies:', error);
+      console.error("Error syncing to cookies:", error);
     }
   }
 
@@ -248,18 +247,18 @@ export class TokenManager {
    */
   static clearCookies(): void {
     if (!this.isBrowser()) return;
-    
+
     try {
       // Xóa access token cookie
-      document.cookie = 'access_token=; max-age=0; path=/';
-      
+      document.cookie = "access_token=; max-age=0; path=/";
+
       // Xóa refresh token cookie
-      document.cookie = 'refresh_token=; max-age=0; path=/';
-      
+      document.cookie = "refresh_token=; max-age=0; path=/";
+
       // Xóa user info cookie
-      document.cookie = 'user_info=; max-age=0; path=/';
+      document.cookie = "user_info=; max-age=0; path=/";
     } catch (error) {
-      console.error('Error clearing cookies:', error);
+      console.error("Error clearing cookies:", error);
     }
   }
 
@@ -268,24 +267,32 @@ export class TokenManager {
    */
   static updateCookies(accessToken: string, refreshToken?: string): void {
     if (!this.isBrowser()) return;
-    
+
     try {
       const cookieOptions = {
         maxAge: 60 * 60 * 24 * 7, // 7 days
-        path: '/',
-        sameSite: 'lax' as const,
-        secure: process.env.NODE_ENV === 'production'
+        path: "/",
+        sameSite: "lax" as const,
+        secure: process.env.NODE_ENV === "production",
       };
-      
+
       // Update access token
-      document.cookie = `access_token=${accessToken}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${cookieOptions.secure ? '; secure' : ''}`;
-      
+      document.cookie = `access_token=${accessToken}; max-age=${
+        cookieOptions.maxAge
+      }; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${
+        cookieOptions.secure ? "; secure" : ""
+      }`;
+
       // Update refresh token nếu có
       if (refreshToken) {
-        document.cookie = `refresh_token=${refreshToken}; max-age=${cookieOptions.maxAge}; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${cookieOptions.secure ? '; secure' : ''}`;
+        document.cookie = `refresh_token=${refreshToken}; max-age=${
+          cookieOptions.maxAge
+        }; path=${cookieOptions.path}; samesite=${cookieOptions.sameSite}${
+          cookieOptions.secure ? "; secure" : ""
+        }`;
       }
     } catch (error) {
-      console.error('Error updating cookies:', error);
+      console.error("Error updating cookies:", error);
     }
   }
 }

@@ -8,8 +8,6 @@ import { TokenManager } from "../utils/token.manager";
 import {
   LoginRequest,
   LoginResponse,
-  RefreshTokenRequest,
-  RefreshTokenResponse,
   ForgotPasswordRequest,
   ResetPasswordRequest,
   ChangePasswordRequest,
@@ -91,45 +89,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Refresh access token using refresh token
-   */
-  static async refreshToken(): Promise<RefreshTokenResponse> {
-    try {
-      const refreshToken = TokenManager.getRefreshToken();
-
-      if (!refreshToken) {
-        throw new Error("No refresh token available");
-      }
-
-      const request: RefreshTokenRequest = {
-        refresh_token: refreshToken,
-      };
-
-      const response = await apiClient.post("/auth/refresh-token", request);
-
-      if (response.data.success && response.data.data) {
-        const { access_token, refresh_token } = response.data.data;
-
-        // Update tokens
-        TokenManager.setAccessToken(access_token);
-        TokenManager.setRefreshToken(refresh_token);
-
-        // Update cookies
-        TokenManager.updateCookies(access_token, refresh_token);
-
-        return response.data.data;
-      } else {
-        throw new Error(response.data.message || "Token refresh failed");
-      }
-    } catch (error) {
-      console.error("Token refresh error:", error);
-
-      // Clear tokens if refresh fails
-      TokenManager.clearAll();
-      throw error;
-    }
-  }
 
   /**
    * Verify if current token is valid

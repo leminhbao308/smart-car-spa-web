@@ -167,11 +167,16 @@ const AdminHeader = () => {
       onOk: async () => {
         try {
           await logout();
-          messageApi.success("Đăng xuất thành công!");
-          router.push(ROUTES.HOME);
+          // Use setTimeout to avoid React 18 concurrent mode warning
+          setTimeout(() => {
+            messageApi.success("Đăng xuất thành công!");
+            router.push(ROUTES.HOME);
+          }, 0);
         } catch (error) {
           console.error("Logout error:", error);
-          messageApi.error("Có lỗi xảy ra khi đăng xuất. Vui lòng thử lại.");
+          setTimeout(() => {
+            messageApi.error("Có lỗi xảy ra khi đăng xuất. Vui lòng thử lại.");
+          }, 0);
         }
       },
     });
@@ -418,7 +423,7 @@ const AdminHeader = () => {
             <Avatar
               size={40}
               icon={<UserOutlined />}
-              src={user?.avatar}
+              src={user?.avatar_url}
               style={{
                 backgroundColor: "rgba(0, 0, 0, 0.8)",
                 color: "#ffffff",
