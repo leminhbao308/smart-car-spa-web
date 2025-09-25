@@ -2,7 +2,7 @@
  * Authentication related types
  */
 
-import { BaseEntity } from './common.types';
+import { BaseEntity } from "./common.types";
 
 // User Role
 export interface Role extends BaseEntity {
@@ -53,6 +53,11 @@ export interface RefreshTokenResponse {
   access_token: string;
   refresh_token: string;
   expires_in: number;
+}
+
+// Refresh Token Request
+export interface LogoutRequest {
+  refresh_token: string;
 }
 
 // Forgot Password Request

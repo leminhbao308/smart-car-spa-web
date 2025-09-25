@@ -52,14 +52,14 @@ export function hasRouteAccess(user: UserInfo | null, routeGroup: RouteGroup): b
     return routeGroup === ROUTE_GROUPS.PUBLIC;
   }
 
-  // ADMIN có quyền truy cập tất cả
+  // ADMIN có quyền truy cập public routes và admin routes
   if (isAdmin(user)) {
-    return true;
+    return routeGroup === ROUTE_GROUPS.PUBLIC || routeGroup === ROUTE_GROUPS.ADMIN;
   }
 
-  // CUSTOMER chỉ có quyền truy cập customer routes và public routes
+  // CUSTOMER có quyền truy cập public routes và customer routes
   if (isCustomer(user)) {
-    return routeGroup === ROUTE_GROUPS.CUSTOMER || routeGroup === ROUTE_GROUPS.PUBLIC;
+    return routeGroup === ROUTE_GROUPS.PUBLIC || routeGroup === ROUTE_GROUPS.CUSTOMER;
   }
 
   return false;
@@ -82,23 +82,19 @@ export function getRedirectPathByRole(role?: string): string {
  */
 export function getRouteGroupFromPath(pathname: string): RouteGroup | null {
   // Public routes
-  if (pathname.startsWith('/auth') || pathname.startsWith('/api')) {
+  if (pathname.startsWith('/auth') || pathname.startsWith('/api') || 
+      pathname === '/' || pathname.startsWith('/services')) {
     return ROUTE_GROUPS.PUBLIC;
   }
   
   // Customer routes
-  if (pathname.startsWith('/member') || pathname.startsWith('/services')) {
+  if (pathname.startsWith('/member')) {
     return ROUTE_GROUPS.CUSTOMER;
   }
   
   // Admin routes
   if (pathname.startsWith('/dashboard')) {
     return ROUTE_GROUPS.ADMIN;
-  }
-  
-  // Root path
-  if (pathname === '/' || pathname === '') {
-    return ROUTE_GROUPS.PUBLIC;
   }
   
   return null;

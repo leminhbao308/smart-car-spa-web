@@ -37,7 +37,6 @@ apiClient.interceptors.request.use(
 
 // Response interceptor - Xử lý response và error
 apiClient.interceptors.response.use(
-
   (response: AxiosResponse<ApiResponse>) => {
     // Trả về response nguyên gốc
     return response;
@@ -50,7 +49,6 @@ apiClient.interceptors.response.use(
 
     // Xử lý lỗi 401 - Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
-      
       originalRequest._retry = true;
 
       try {
@@ -59,7 +57,7 @@ apiClient.interceptors.response.use(
         if (refreshToken) {
           // Gọi API refresh token với structure mới
           const response = await axios.post(`${BASE_URL}/auth/refresh-token`, {
-            refreshToken: refreshToken,
+            refresh_token: refreshToken,
           });
 
           if (response.data.success && response.data.data) {

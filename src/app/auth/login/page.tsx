@@ -5,13 +5,13 @@ import { ROUTES } from "@/components/utils/constant/path.route";
 import { useAuth, AuthService } from "@/lib/api";
 import { GoogleOutlined } from "@ant-design/icons";
 import {
+  App,
   Button,
   Checkbox,
   Col,
   Divider,
   Form,
   Input,
-  message,
   Row,
   Spin,
 } from "antd";
@@ -28,20 +28,13 @@ interface LoginFormValues {
 const REMEMBERED_EMAIL_KEY = "remembered_email";
 const MIN_PASSWORD_LENGTH = 3;
 
-// Helper function to determine redirect path based on user role
-const getRedirectPath = (roleCode?: string): string => {
-  if (roleCode !== "CUSTOMER") {
-    return ROUTES.DASHBOARD;
-  }
-  return ROUTES.HOME;
-};
-
-const LoginPage = () => {
+const LoginForm = () => {
   const [form] = Form.useForm();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { login, isAuthenticated, isLoading, error, clearError } = useAuth();
   const router = useRouter();
+  const { message } = App.useApp();
 
   // Kiểm tra nếu user đã đăng nhập thì redirect
   useEffect(() => {
@@ -49,8 +42,13 @@ const LoginPage = () => {
       const userInfo = AuthService.getCurrentUserFromStorage();
       if (userInfo) {
         const role = userInfo.role?.role_code;
-        const redirectPath = getRedirectPath(role);
-        router.push(redirectPath);
+        if (role === "ADMIN") {
+          router.push(ROUTES.DASHBOARD);
+        } else {
+          router.push(ROUTES.HOME);
+        }
+      } else {
+        router.push(ROUTES.HOME);
       }
     }
   }, [isAuthenticated, router]);
@@ -58,16 +56,17 @@ const LoginPage = () => {
   // Kiểm tra redirect_after_login cookie
   useEffect(() => {
     const checkRedirectAfterLogin = () => {
-      if (typeof document !== 'undefined') {
-        const cookies = document.cookie.split(';');
-        const redirectCookie = cookies.find(cookie => 
-          cookie.trim().startsWith('redirect_after_login=')
+      if (typeof document !== "undefined") {
+        const cookies = document.cookie.split(";");
+        const redirectCookie = cookies.find((cookie) =>
+          cookie.trim().startsWith("redirect_after_login=")
         );
-        
+
         if (redirectCookie) {
-          const redirectPath = redirectCookie.split('=')[1];
+          const redirectPath = redirectCookie.split("=")[1];
           // Xóa cookie sau khi đọc
-          document.cookie = 'redirect_after_login=; max-age=0; path=/';
+          document.cookie = "redirect_after_login=; max-age=0; path=/";
+          console.log("redirectPath - login page", redirectPath);
           return redirectPath;
         }
       }
@@ -106,17 +105,17 @@ const LoginPage = () => {
       const userInfo = AuthService.getCurrentUserFromStorage();
       if (userInfo) {
         const role = userInfo.role?.role_code;
-        const redirectPath = getRedirectPath(role);
-        router.push(redirectPath);
+        if (role === "ADMIN") {
+          router.push(ROUTES.DASHBOARD);
+        } else {
+          router.push(ROUTES.HOME);
+        }
       } else {
-        // Fallback redirect
-        router.push(ROUTES.DASHBOARD);
+        router.push(ROUTES.HOME);
       }
     } catch (error) {
       console.log("Login error:", error);
-
-      // Error message sẽ được hiển thị tự động từ useAuth hook
-      // Không cần xử lý thêm ở đây
+      message.error("Đăng nhập thất bại!");
     }
   };
 
@@ -446,6 +445,14 @@ const LoginPage = () => {
         </div>
       </div>
     </>
+  );
+};
+
+const LoginPage = () => {
+  return (
+    <App>
+      <LoginForm />
+    </App>
   );
 };
 

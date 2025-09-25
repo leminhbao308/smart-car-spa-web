@@ -38,16 +38,15 @@ export default function ProtectedRoute({
 
     // Kiểm tra quyền truy cập path hiện tại
     if (!canAccessPath(user, pathname)) {
-      // Redirect về trang phù hợp với role
-      const redirectPath = getRedirectPathByRole(user?.role?.role_code);
-      router.push(redirectPath);
+      // Redirect về trang chủ nếu không có quyền
+      router.push('/');
       return;
     }
 
     // Kiểm tra required role nếu có
     if (requiredRole && user?.role?.role_code !== requiredRole) {
-      const redirectPath = getRedirectPathByRole(user?.role?.role_code);
-      router.push(redirectPath);
+      // Redirect về trang chủ nếu không đúng role
+      router.push('/');
       return;
     }
   }, [isAuthenticated, isLoading, user, pathname, router, requiredRole]);
@@ -90,8 +89,8 @@ export default function ProtectedRoute({
         title="Không có quyền truy cập"
         subTitle={getAccessDeniedMessage(user, pathname)}
         extra={
-          <Button type="primary" onClick={() => router.push(getRedirectPathByRole(user?.role?.role_code))}>
-            Về trang chính
+          <Button type="primary" onClick={() => router.push('/')}>
+            Về trang chủ
           </Button>
         }
       />
@@ -106,8 +105,8 @@ export default function ProtectedRoute({
         title="Không có quyền truy cập"
         subTitle={`Trang này chỉ dành cho ${requiredRole === 'ADMIN' ? 'quản trị viên' : 'khách hàng'}`}
         extra={
-          <Button type="primary" onClick={() => router.push(getRedirectPathByRole(user?.role?.role_code))}>
-            Về trang chính
+          <Button type="primary" onClick={() => router.push('/')}>
+            Về trang chủ
           </Button>
         }
       />

@@ -30,7 +30,9 @@ const AccountPopup = ({ children }: AccountPopupProps) => {
       await logout();
       router.push("/");
     } catch (error) {
-      console.error("Logout error:", error);
+      console.warn("Logout completed with warnings:", error);
+      // Still redirect even if there are warnings
+      router.push("/");
     }
   };
 
@@ -72,7 +74,7 @@ const AccountPopup = ({ children }: AccountPopupProps) => {
         router.push(ROUTES.MEMBER_PROFILE);
       },
     },
-    ...(user?.role?.role_code === "admin"
+    ...(user?.role?.role_code === "ADMIN"
       ? [
           {
             type: "divider" as const,

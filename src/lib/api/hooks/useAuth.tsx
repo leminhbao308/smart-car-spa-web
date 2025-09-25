@@ -3,11 +3,18 @@
  * React hook for authentication state management
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useContext, createContext, ReactNode } from 'react';
-import { AuthService } from '../services/auth.service';
-import { AuthState, AuthContextType, LoginRequest, UserInfo } from '../types';
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useContext,
+  createContext,
+  ReactNode,
+} from "react";
+import { AuthService } from "../services/auth.service";
+import { AuthState, AuthContextType, LoginRequest, UserInfo } from "../types";
 
 // Create Auth Context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,17 +36,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const initializeAuth = useCallback(async () => {
     try {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       // Check if user is authenticated
       const isAuthenticated = AuthService.isAuthenticated();
-      
+
       if (isAuthenticated) {
         // Get user info from storage
         const userFromStorage = AuthService.getCurrentUserFromStorage();
-        
+
         if (userFromStorage) {
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             user: userFromStorage,
             isAuthenticated: true,
@@ -48,9 +55,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           // Try to get user info from API
           const userFromAPI = await AuthService.getCurrentUser();
-          
+
           if (userFromAPI) {
-            setState(prev => ({
+            setState((prev) => ({
               ...prev,
               user: userFromAPI,
               isAuthenticated: true,
@@ -59,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else {
             // Clear auth if user info not available
             AuthService.clearAuth();
-            setState(prev => ({
+            setState((prev) => ({
               ...prev,
               user: null,
               isAuthenticated: false,
@@ -68,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } else {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           user: null,
           isAuthenticated: false,
@@ -76,13 +83,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }));
       }
     } catch (error) {
-      console.error('Auth initialization error:', error);
-      setState(prev => ({
+      console.error("Auth initialization error:", error);
+      setState((prev) => ({
         ...prev,
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: 'Failed to initialize authentication',
+        error: "Failed to initialize authentication",
       }));
     }
   }, []);
@@ -90,44 +97,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /**
    * Login function
    */
-  const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
-    try {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
+  const login = useCallback(
+    async (credentials: LoginRequest): Promise<void> => {
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
-      const loginResponse = await AuthService.login(credentials);
-      
-      setState(prev => ({
-        ...prev,
-        user: loginResponse.user_info,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      }));
-    } catch (error: unknown) {
-      const errorMessage = error && typeof error === 'object' && 'message' in error 
-        ? (error as { message: string }).message 
-        : 'Login failed';
-      setState(prev => ({
-        ...prev,
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: errorMessage,
-      }));
-      throw error;
-    }
-  }, []);
+        const loginResponse = await AuthService.login(credentials);
+
+        setState((prev) => ({
+          ...prev,
+          user: loginResponse.user_info,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        }));
+      } catch (error: unknown) {
+        const errorMessage =
+          error && typeof error === "object" && "message" in error
+            ? (error as { message: string }).message
+            : "Login failed";
+        setState((prev) => ({
+          ...prev,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: errorMessage,
+        }));
+        throw error;
+      }
+    },
+    []
+  );
 
   /**
    * Logout function
    */
   const logout = useCallback(async () => {
     try {
-      setState(prev => ({ ...prev, isLoading: true, error: null }));
-      
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
       await AuthService.logout();
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         user: null,
         isAuthenticated: false,
@@ -135,9 +146,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error: null,
       }));
     } catch (error) {
-      console.error('Logout error:', error);
-      // Clear state even if logout API fails
-      setState(prev => ({
+      console.warn("Logout process completed with warnings:", error);
+      // Always clear state even if logout API fails
+      setState((prev) => ({
         ...prev,
         user: null,
         isAuthenticated: false,
@@ -153,27 +164,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshToken = useCallback(async () => {
     try {
       await AuthService.refreshToken();
-      
+
       // Get updated user info
       const user = AuthService.getCurrentUserFromStorage();
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         user,
         isAuthenticated: true,
         error: null,
       }));
     } catch (error) {
-      console.error('Token refresh error:', error);
-      
+      console.error("Token refresh error:", error);
+
       // Clear auth state if refresh fails
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         user: null,
         isAuthenticated: false,
-        error: 'Session expired. Please login again.',
+        error: "Session expired. Please login again.",
       }));
-      
+
       throw error;
     }
   }, []);
@@ -184,24 +195,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyToken = useCallback(async (): Promise<boolean> => {
     try {
       const isValid = await AuthService.verifyToken();
-      
+
       if (!isValid) {
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           user: null,
           isAuthenticated: false,
-          error: 'Invalid session. Please login again.',
+          error: "Invalid session. Please login again.",
         }));
       }
-      
+
       return isValid;
     } catch (error) {
-      console.error('Token verification error:', error);
-      setState(prev => ({
+      console.error("Token verification error:", error);
+      setState((prev) => ({
         ...prev,
         user: null,
         isAuthenticated: false,
-        error: 'Session verification failed.',
+        error: "Session verification failed.",
       }));
       return false;
     }
@@ -211,14 +222,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * Clear error function
    */
   const clearError = useCallback(() => {
-    setState(prev => ({ ...prev, error: null }));
+    setState((prev) => ({ ...prev, error: null }));
   }, []);
 
   /**
    * Update user info function
    */
   const updateUser = useCallback((user: UserInfo) => {
-    setState(prev => ({ ...prev, user }));
+    setState((prev) => ({ ...prev, user }));
   }, []);
 
   // Initialize auth on mount
@@ -234,7 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await refreshToken();
       } catch (error) {
-        console.error('Automatic token refresh failed:', error);
+        console.error("Automatic token refresh failed:", error);
       }
     }, 15 * 60 * 1000); // Refresh every 15 minutes
 
@@ -251,9 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }
 
@@ -263,11 +272,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
  */
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  
+
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
-  
+
   return context;
 }
 
