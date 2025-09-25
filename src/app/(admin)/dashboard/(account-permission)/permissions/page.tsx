@@ -18,7 +18,7 @@ const PermissionPage = () => {
   const [rolesData, setRolesData] = useState<Role[]>([]);
   const [permissionsData, setPermissionsData] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(false);
-  const { } = useConfirmationModalContext();
+  const {} = useConfirmationModalContext();
   const { message } = App.useApp();
 
   // Modal states for roles
@@ -30,9 +30,12 @@ const PermissionPage = () => {
 
   // Modal states for permissions
   const [permissionModalVisible, setPermissionModalVisible] = useState(false);
-  const [permissionDetailModalVisible, setPermissionDetailModalVisible] = useState(false);
-  const [permissionDetailData, setPermissionDetailData] = useState<Permission | null>(null);
-  const [permissionEditData, setPermissionEditData] = useState<Permission | null>(null);
+  const [permissionDetailModalVisible, setPermissionDetailModalVisible] =
+    useState(false);
+  const [permissionDetailData, setPermissionDetailData] =
+    useState<Permission | null>(null);
+  const [permissionEditData, setPermissionEditData] =
+    useState<Permission | null>(null);
 
   const fetchRoles = useCallback(async () => {
     setLoading(true);
@@ -40,7 +43,7 @@ const PermissionPage = () => {
       console.log("Fetching roles from API...");
       const response = await RoleService.getAllRoles();
       console.log("Roles API response:", response);
-      
+
       if (response.success && response.data) {
         setRolesData(response.data);
         message.success(`Đã tải ${response.data.length} vai trò thành công!`);
@@ -49,56 +52,11 @@ const PermissionPage = () => {
       }
     } catch (error: unknown) {
       console.error("Error fetching roles:", error);
-      const errorMessage = error instanceof Error ? error.message : "Không thể tải danh sách vai trò";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Không thể tải danh sách vai trò";
       message.error(errorMessage);
-      
-      // Fallback to mock data for development
-      console.log("Using mock data as fallback...");
-      const mockRoles: Role[] = [
-        {
-          role_id: "6250fd0d-dbce-4d59-881c-005a43f6a039",
-          role_name: "Customer Service",
-          role_code: "CS",
-          description: "Customer support access"
-        },
-        {
-          role_id: "91cc1277-709a-4312-98a2-db8c47d7efb1",
-          role_name: "Administrator",
-          role_code: "ADMIN",
-          description: "Full system access"
-        },
-        {
-          role_id: "10b82023-96c8-4d6e-8f35-d01d59663538",
-          role_name: "Inventory Manager",
-          role_code: "INV_MGR",
-          description: "Inventory management access"
-        },
-        {
-          role_id: "8ed98905-0562-4dba-af32-27839d86a087",
-          role_name: "Technician",
-          role_code: "TECHNICIAN",
-          description: "Service technician access"
-        },
-        {
-          role_id: "af686f51-4781-4fc2-8176-8ada13495db9",
-          role_name: "Cashier",
-          role_code: "CASHIER",
-          description: "Sales and payment processing"
-        },
-        {
-          role_id: "94f2b37a-aca0-4cdd-90db-263e27d744a4",
-          role_name: "Customer",
-          role_code: "CUSTOMER",
-          description: "Customer access"
-        },
-        {
-          role_id: "eee6cddd-f7d8-463a-a2ca-c6784a4282d5",
-          role_name: "Manager",
-          role_code: "MANAGER",
-          description: "Branch management access"
-        }
-      ];
-      setRolesData(mockRoles);
     } finally {
       setLoading(false);
     }
@@ -203,9 +161,7 @@ const PermissionPage = () => {
       dataIndex: "module",
       key: "module",
       width: 150,
-      render: (module: string) => (
-        <Tag color="green">{module}</Tag>
-      ),
+      render: (module: string) => <Tag color="green">{module}</Tag>,
       filters: [
         { text: "Dashboard", value: "Dashboard" },
         { text: "User Management", value: "User Management" },
@@ -260,7 +216,7 @@ const PermissionPage = () => {
       // Add new role
       setRolesData((prev) => [...prev, roleData]);
     }
-    
+
     // Refresh the list to ensure data consistency
     fetchRoles();
   };
@@ -286,7 +242,9 @@ const PermissionPage = () => {
       // Update existing permission
       setPermissionsData((prev) =>
         prev.map((item) =>
-          item.permission_id === permissionData.permission_id ? { ...item, ...permissionData } : item
+          item.permission_id === permissionData.permission_id
+            ? { ...item, ...permissionData }
+            : item
         )
       );
     } else {
@@ -305,10 +263,7 @@ const PermissionPage = () => {
           dataSource={rolesData}
           columns={roleColumns}
           loading={loading}
-          onAdd={handleAddRole}
-          onEdit={handleEditRole}
           onView={handleViewRole}
-          addButtonText="Thêm vai trò"
           searchable={true}
           searchPlaceholder="Tìm kiếm vai trò theo tên, mã, mô tả..."
           searchFields={["role_name", "role_code", "description"]}
@@ -325,27 +280,28 @@ const PermissionPage = () => {
         />
       ),
     },
-    {
-      key: "permissions",
-      label: "Quản lý quyền hạn",
-      children: (
-        <AdminTable
-          title="Quản lý quyền hạn"
-          dataSource={permissionsData}
-          columns={permissionColumns}
-          loading={loading}
-          onAdd={handleAddPermission}
-          onEdit={handleEditPermission}
-          onView={handleViewPermission}
-          addButtonText="Thêm quyền hạn"
-          searchable={true}
-          searchPlaceholder="Tìm kiếm quyền hạn theo tên, mã, module..."
-          searchFields={["permission_name", "permission_code", "module", "description"]}
-          scroll={{ x: 800 }}
-          rowKey="permission_id"
-        />
-      ),
-    },
+    // ,
+    // {
+    //   key: "permissions",
+    //   label: "Quản lý quyền hạn",
+    //   children: (
+    //     <AdminTable
+    //       title="Quản lý quyền hạn"
+    //       dataSource={permissionsData}
+    //       columns={permissionColumns}
+    //       loading={loading}
+    //       onAdd={handleAddPermission}
+    //       onEdit={handleEditPermission}
+    //       onView={handleViewPermission}
+    //       addButtonText="Thêm quyền hạn"
+    //       searchable={true}
+    //       searchPlaceholder="Tìm kiếm quyền hạn theo tên, mã, module..."
+    //       searchFields={["permission_name", "permission_code", "module", "description"]}
+    //       scroll={{ x: 800 }}
+    //       rowKey="permission_id"
+    //     />
+    //   ),
+    // },
   ];
 
   return (
@@ -386,7 +342,9 @@ const PermissionPage = () => {
         onCancel={() => setPermissionModalVisible(false)}
         onSuccess={handlePermissionModalSuccess}
         editData={permissionEditData}
-        title={permissionEditData ? "Chỉnh sửa quyền hạn" : "Thêm quyền hạn mới"}
+        title={
+          permissionEditData ? "Chỉnh sửa quyền hạn" : "Thêm quyền hạn mới"
+        }
       />
 
       {/* Permission Detail Modal */}
