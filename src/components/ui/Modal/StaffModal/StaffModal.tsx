@@ -12,6 +12,7 @@ import {
   DatePicker,
   Radio,
   Tag,
+  Spin,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -22,6 +23,7 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { UserManagementInfo, Role } from "@/lib/api/types";
+import { RoleService } from "@/lib/api/services/role.service";
 
 const { TextArea } = Input;
 
@@ -42,54 +44,39 @@ const StaffModal: React.FC<StaffModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-
-  // Mock data for roles (non-customer roles)
-  const staffRoles: Role[] = [
-    {
-      role_id: "91cc1277-709a-4312-98a2-db8c47d7efb1",
-      role_name: "Administrator",
-      role_code: "ADMIN",
-      description: "Full system access"
-    },
-    {
-      role_id: "eee6cddd-f7d8-463a-a2ca-c6784a4282d5",
-      role_name: "Manager",
-      role_code: "MANAGER",
-      description: "Branch management access"
-    },
-    {
-      role_id: "8ed98905-0562-4dba-af32-27839d86a087",
-      role_name: "Technician",
-      role_code: "TECHNICIAN",
-      description: "Service technician access"
-    },
-    {
-      role_id: "af686f51-4781-4fc2-8176-8ada13495db9",
-      role_name: "Cashier",
-      role_code: "CASHIER",
-      description: "Sales and payment processing"
-    },
-    {
-      role_id: "6250fd0d-dbce-4d59-881c-005a43f6a039",
-      role_name: "Customer Service",
-      role_code: "CS",
-      description: "Customer support access"
-    },
-    {
-      role_id: "10b82023-96c8-4d6e-8f35-d01d59663538",
-      role_name: "Inventory Manager",
-      role_code: "INV_MGR",
-      description: "Inventory management access"
-    }
-  ];
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [staffRoles, setStaffRoles] = useState<Role[]>([]);
 
   const genders = [
     { value: "male", label: "Nam", color: "blue" },
     { value: "female", label: "Nữ", color: "pink" },
   ];
 
+  // Load roles from API
+  const loadRoles = async () => {
+    try {
+      setRolesLoading(true);
+      const response = await RoleService.getAllRoles();
+      
+      if (response.success && response.data) {
+        // Filter out customer roles for staff
+        const nonCustomerRoles = response.data.filter(
+          (role: Role) => role.role_code !== "CUSTOMER"
+        );
+        setStaffRoles(nonCustomerRoles);
+      }
+    } catch (error) {
+      console.error("Error loading roles:", error);
+      message.error("Không thể tải danh sách vai trò. Vui lòng thử lại.");
+    } finally {
+      setRolesLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (visible) {
+      loadRoles();
+      
       if (editData) {
         form.setFieldsValue({
           full_name: editData.full_name,
@@ -123,6 +110,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
       const selectedRole = staffRoles.find(role => role.role_id === values.role_id);
       
       const staffData: UserManagementInfo = {
+        id: editData?.id || `staff_${Date.now()}`,
         user_id: editData?.user_id || `user_${Date.now()}`,
         email: values.email,
         full_name: values.full_name,
@@ -140,8 +128,8 @@ const StaffModal: React.FC<StaffModalProps> = ({
         total_spent: null,
         hired_at: values.hired_at ? values.hired_at.format("YYYY-MM-DD HH:mm:ss") : null,
         citizen_id: values.citizen_id || null,
-        createdDate: editData?.createdDate || new Date().toISOString(),
-        updatedDate: new Date().toISOString(),
+        created_at: editData?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       message.success(
@@ -275,6 +263,8 @@ const StaffModal: React.FC<StaffModalProps> = ({
             >
               <Select
                 placeholder="Chọn vai trò"
+                loading={rolesLoading}
+                notFoundContent={rolesLoading ? <Spin size="small" /> : "Không có dữ liệu"}
                 options={staffRoles.map((role) => ({
                   value: role.role_id,
                   label: (

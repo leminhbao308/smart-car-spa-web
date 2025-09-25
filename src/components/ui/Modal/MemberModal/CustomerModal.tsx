@@ -10,6 +10,9 @@ import {
   Col,
   DatePicker,
   Radio,
+  Select,
+  Tag,
+  Spin,
 } from "antd";
 import dayjs from "dayjs";
 import { 
@@ -19,6 +22,7 @@ import {
   HomeOutlined
 } from "@ant-design/icons";
 import { UserManagementInfo, Role } from "@/lib/api/types";
+import { RoleService } from "@/lib/api/services/role.service";
 
 const { TextArea } = Input;
 
@@ -39,22 +43,39 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-
-  // Customer role (fixed for all customers)
-  const customerRole: Role = {
-    role_id: "94f2b37a-aca0-4cdd-90db-263e27d744a4",
-    role_name: "Customer",
-    role_code: "CUSTOMER",
-    description: "Customer access"
-  };
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [customerRoles, setCustomerRoles] = useState<Role[]>([]);
 
   const genders = [
     { value: "MALE", label: "Nam" },
     { value: "FEMALE", label: "Nữ" },
   ];
 
+  // Load roles from API
+  const loadRoles = async () => {
+    try {
+      setRolesLoading(true);
+      const response = await RoleService.getAllRoles();
+      
+      if (response.success && response.data) {
+        // Filter only customer roles
+        const customerOnlyRoles = response.data.filter(
+          (role: Role) => role.role_code === "CUSTOMER"
+        );
+        setCustomerRoles(customerOnlyRoles);
+      }
+    } catch (error) {
+      console.error("Error loading roles:", error);
+      message.error("Không thể tải danh sách vai trò. Vui lòng thử lại.");
+    } finally {
+      setRolesLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (visible) {
+      loadRoles();
+      
       if (editData) {
         form.setFieldsValue({
           full_name: editData.full_name,
@@ -63,6 +84,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
           date_of_birth: editData.date_of_birth ? dayjs(editData.date_of_birth) : null,
           gender: editData.gender,
           address: editData.address,
+          role_id: editData.role?.role_id,
         });
       } else {
         form.resetFields();
@@ -78,7 +100,10 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      const selectedRole = customerRoles.find(role => role.role_id === values.role_id) || customerRoles[0];
+      
       const customerData: UserManagementInfo = {
+        id: editData?.id || `customer_${Date.now()}`,
         user_id: editData?.user_id || `user_${Date.now()}`,
         email: values.email,
         full_name: values.full_name,
@@ -88,7 +113,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
         address: values.address,
         avatar_url: null,
         is_active: true,
-        role: customerRole,
+        role: selectedRole,
         user_type: "CUSTOMER",
         customer_rank: null,
         accumulated_points: 0,
@@ -224,6 +249,37 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
+            <Form.Item
+              label="Vai trò"
+              name="role_id"
+              rules={[{ required: true, message: "Vui lòng chọn vai trò!" }]}
+            >
+              <Select
+                placeholder="Chọn vai trò"
+                loading={rolesLoading}
+                notFoundContent={rolesLoading ? <Spin size="small" /> : "Không có dữ liệu"}
+                options={customerRoles.map((role) => ({
+                  value: role.role_id,
+                  label: (
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      <Tag color="green" style={{ margin: 0 }}>
+                        {role.role_name}
+                      </Tag>
+                      <span style={{ fontSize: 12, color: "#666" }}>
+                        ({role.role_code})
+                      </span>
+                    </div>
+                  ),
+                }))}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={24}>
             <Form.Item label="Địa chỉ" name="address">
               <Input
                 prefix={<HomeOutlined />}
