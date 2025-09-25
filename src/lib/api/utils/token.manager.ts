@@ -27,7 +27,7 @@ export class TokenManager {
     try {
       return localStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN);
     } catch (error) {
-      console.error("Error getting access token:", error);
+      console.log("Error getting access token:", error);
       return null;
     }
   }
@@ -41,7 +41,7 @@ export class TokenManager {
     try {
       return localStorage.getItem(TOKEN_KEYS.REFRESH_TOKEN);
     } catch (error) {
-      console.error("Error getting refresh token:", error);
+      console.log("Error getting refresh token:", error);
       return null;
     }
   }
@@ -56,7 +56,7 @@ export class TokenManager {
       const userInfo = localStorage.getItem(TOKEN_KEYS.USER_INFO);
       return userInfo ? JSON.parse(userInfo) : null;
     } catch (error) {
-      console.error("Error getting user info:", error);
+      console.log("Error getting user info:", error);
       return null;
     }
   }
@@ -70,7 +70,7 @@ export class TokenManager {
     try {
       localStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, token);
     } catch (error) {
-      console.error("Error setting access token:", error);
+      console.log("Error setting access token:", error);
     }
   }
 
@@ -83,7 +83,7 @@ export class TokenManager {
     try {
       localStorage.setItem(TOKEN_KEYS.REFRESH_TOKEN, token);
     } catch (error) {
-      console.error("Error setting refresh token:", error);
+      console.log("Error setting refresh token:", error);
     }
   }
 
@@ -96,7 +96,7 @@ export class TokenManager {
     try {
       localStorage.setItem(TOKEN_KEYS.USER_INFO, JSON.stringify(userInfo));
     } catch (error) {
-      console.error("Error setting user info:", error);
+      console.log("Error setting user info:", error);
     }
   }
 
@@ -125,7 +125,7 @@ export class TokenManager {
     try {
       localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN);
     } catch (error) {
-      console.error("Error removing access token:", error);
+      console.log("Error removing access token:", error);
     }
   }
 
@@ -138,7 +138,7 @@ export class TokenManager {
     try {
       localStorage.removeItem(TOKEN_KEYS.REFRESH_TOKEN);
     } catch (error) {
-      console.error("Error removing refresh token:", error);
+      console.log("Error removing refresh token:", error);
     }
   }
 
@@ -151,7 +151,7 @@ export class TokenManager {
     try {
       localStorage.removeItem(TOKEN_KEYS.USER_INFO);
     } catch (error) {
-      console.error("Error removing user info:", error);
+      console.log("Error removing user info:", error);
     }
   }
 
@@ -238,7 +238,7 @@ export class TokenManager {
         cookieOptions.secure ? "; secure" : ""
       }`;
     } catch (error) {
-      console.error("Error syncing to cookies:", error);
+      console.log("Error syncing to cookies:", error);
     }
   }
 
@@ -258,7 +258,7 @@ export class TokenManager {
       // Xóa user info cookie
       document.cookie = "user_info=; max-age=0; path=/";
     } catch (error) {
-      console.error("Error clearing cookies:", error);
+      console.log("Error clearing cookies:", error);
     }
   }
 
@@ -292,7 +292,7 @@ export class TokenManager {
         }`;
       }
     } catch (error) {
-      console.error("Error updating cookies:", error);
+      console.log("Error updating cookies:", error);
     }
   }
 }

@@ -106,7 +106,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
         initialData ? "Cập nhật loại khuyến mãi thành công!" : "Thêm loại khuyến mãi thành công!"
       );
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }

@@ -152,7 +152,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
       onSuccess();
       onCancel();
     } catch (error) {
-      console.error("Error:", error);
+      console.log("Error:", error);
     } finally {
       setLoading(false);
     }

@@ -93,7 +93,7 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
       };
       onOk(centerInfo);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     }
   };
 

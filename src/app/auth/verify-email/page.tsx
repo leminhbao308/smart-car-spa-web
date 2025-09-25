@@ -36,7 +36,7 @@ const VerifyEmailPage = () => {
           setErrorMessage('Link xác thực không hợp lệ hoặc đã hết hạn');
         }
       } catch (error: any) {
-        console.error('Email verification error:', error);
+        console.log('Email verification error:', error);
         setStatus('error');
         setErrorMessage(error.message || 'Có lỗi xảy ra khi xác thực email');
       }

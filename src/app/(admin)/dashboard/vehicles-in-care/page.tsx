@@ -922,7 +922,7 @@ const UploadImageModal: React.FC<UploadImageModalProps> = ({
       // TODO: Implement actual upload logic
       onCancel();
     } catch (error) {
-      console.error("Upload failed:", error);
+      console.log("Upload failed:", error);
     } finally {
       setUploading(false);
     }
@@ -1256,7 +1256,7 @@ const UpdateStepStatusModal: React.FC<UpdateStepStatusModalProps> = ({
       onUpdate(step.id, values.status, values.notes);
       form.resetFields();
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }

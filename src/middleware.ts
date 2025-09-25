@@ -69,7 +69,7 @@ function getUserFromRequest(
       isAuthenticated: true,
     };
   } catch (error) {
-    console.error("Error parsing user info from cookie:", error);
+    console.log("Error parsing user info from cookie:", error);
     return null;
   }
 }

@@ -71,7 +71,7 @@ const PermissionItemModal: React.FC<PermissionItemModalProps> = ({
       onSuccess(permissionData);
       onCancel();
     } catch (error) {
-      console.error("Error:", error);
+      console.log("Error:", error);
     } finally {
       setLoading(false);
     }

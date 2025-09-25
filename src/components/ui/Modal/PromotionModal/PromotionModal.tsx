@@ -109,7 +109,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
         initialData ? "Cập nhật chương trình khuyến mãi thành công!" : "Thêm chương trình khuyến mãi thành công!"
       );
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }

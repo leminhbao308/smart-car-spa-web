@@ -127,7 +127,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
       message.success(editData ? "Cập nhật hồ sơ xe thành công!" : "Thêm hồ sơ xe thành công!");
       form.resetFields();
     } catch (error) {
-      console.error("Form validation failed:", error);
+      console.log("Form validation failed:", error);
     } finally {
       setLoading(false);
     }

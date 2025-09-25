@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }));
       }
     } catch (error) {
-      console.error("Auth initialization error:", error);
+      console.log("Auth initialization error:", error);
       setState((prev) => ({
         ...prev,
         user: null,
@@ -226,7 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return isValid;
     } catch (error) {
-      console.error("Token verification error:", error);
+      console.log("Token verification error:", error);
       setState((prev) => ({
         ...prev,
         user: null,

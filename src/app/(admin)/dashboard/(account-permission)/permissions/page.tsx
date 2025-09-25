@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import {
   useConfirmationModalContext,
@@ -9,8 +9,9 @@ import {
   PermissionModal,
   PermissionDetailModal,
 } from "@/components/ui/Modal";
+import { RoleService } from "@/lib/api/services";
 import { ColumnsType } from "antd/es/table";
-import { Tag, message, Tabs } from "antd";
+import { Tag, Tabs, App } from "antd";
 import { Role, Permission } from "@/lib/api/types";
 
 const PermissionPage = () => {
@@ -18,6 +19,7 @@ const PermissionPage = () => {
   const [permissionsData, setPermissionsData] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(false);
   const { } = useConfirmationModalContext();
+  const { message } = App.useApp();
 
   // Modal states for roles
   const [roleModalVisible, setRoleModalVisible] = useState(false);
@@ -32,20 +34,26 @@ const PermissionPage = () => {
   const [permissionDetailData, setPermissionDetailData] = useState<Permission | null>(null);
   const [permissionEditData, setPermissionEditData] = useState<Permission | null>(null);
 
-  // Fetch data
-  useEffect(() => {
-    fetchRoles();
-    fetchPermissions();
-  }, []);
-
-  const fetchRoles = async () => {
+  const fetchRoles = useCallback(async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await roleService.getAllRoles();
-      // setRolesData(response.data);
+      console.log("Fetching roles from API...");
+      const response = await RoleService.getAllRoles();
+      console.log("Roles API response:", response);
       
-      // Mock data based on API response
+      if (response.success && response.data) {
+        setRolesData(response.data);
+        message.success(`Đã tải ${response.data.length} vai trò thành công!`);
+      } else {
+        throw new Error(response.message || "Failed to fetch roles");
+      }
+    } catch (error: unknown) {
+      console.error("Error fetching roles:", error);
+      const errorMessage = error instanceof Error ? error.message : "Không thể tải danh sách vai trò";
+      message.error(errorMessage);
+      
+      // Fallback to mock data for development
+      console.log("Using mock data as fallback...");
       const mockRoles: Role[] = [
         {
           role_id: "6250fd0d-dbce-4d59-881c-005a43f6a039",
@@ -91,83 +99,15 @@ const PermissionPage = () => {
         }
       ];
       setRolesData(mockRoles);
-    } catch {
-      message.error("Không thể tải danh sách vai trò");
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
 
-  const fetchPermissions = async () => {
-    try {
-      // TODO: Replace with actual API call
-      // const response = await permissionService.getAllPermissions();
-      // setPermissionsData(response.data);
-      
-      // Mock data for permissions
-      const mockPermissions: Permission[] = [
-        {
-          permission_id: "perm_001",
-          permission_name: "Xem dashboard",
-          permission_code: "DASHBOARD_VIEW",
-          module: "Dashboard",
-          description: "Quyền xem trang dashboard"
-        },
-        {
-          permission_id: "perm_002",
-          permission_name: "Quản lý người dùng",
-          permission_code: "USER_MANAGE",
-          module: "User Management",
-          description: "Quyền quản lý người dùng, vai trò và quyền hạn"
-        },
-        {
-          permission_id: "perm_003",
-          permission_name: "Quản lý đặt lịch",
-          permission_code: "BOOKING_MANAGE",
-          module: "Booking",
-          description: "Quyền quản lý đặt lịch dịch vụ"
-        },
-        {
-          permission_id: "perm_004",
-          permission_name: "Quản lý sản phẩm",
-          permission_code: "PRODUCT_MANAGE",
-          module: "Product",
-          description: "Quyền quản lý sản phẩm và danh mục"
-        },
-        {
-          permission_id: "perm_005",
-          permission_name: "Quản lý dịch vụ",
-          permission_code: "SERVICE_MANAGE",
-          module: "Service",
-          description: "Quyền quản lý dịch vụ và gói dịch vụ"
-        },
-        {
-          permission_id: "perm_006",
-          permission_name: "Quản lý kho",
-          permission_code: "INVENTORY_MANAGE",
-          module: "Inventory",
-          description: "Quyền quản lý kho hàng"
-        },
-        {
-          permission_id: "perm_007",
-          permission_name: "Bán hàng",
-          permission_code: "SALES_PROCESS",
-          module: "Sales",
-          description: "Quyền thực hiện bán hàng và thanh toán"
-        },
-        {
-          permission_id: "perm_008",
-          permission_name: "Quản lý báo cáo",
-          permission_code: "REPORT_VIEW",
-          module: "Report",
-          description: "Quyền xem và quản lý báo cáo"
-        }
-      ];
-      setPermissionsData(mockPermissions);
-    } catch {
-      message.error("Không thể tải danh sách quyền hạn");
-    }
-  };
+  // Fetch data
+  useEffect(() => {
+    fetchRoles();
+  }, [fetchRoles]);
 
   // Định nghĩa columns cho roles
   const roleColumns: ColumnsType<Role> = [
@@ -320,6 +260,9 @@ const PermissionPage = () => {
       // Add new role
       setRolesData((prev) => [...prev, roleData]);
     }
+    
+    // Refresh the list to ensure data consistency
+    fetchRoles();
   };
 
   // Handlers for permissions
@@ -406,7 +349,7 @@ const PermissionPage = () => {
   ];
 
   return (
-    <>
+    <App>
       <Tabs
         defaultActiveKey="roles"
         items={tabItems}
@@ -452,7 +395,7 @@ const PermissionPage = () => {
         onCancel={() => setPermissionDetailModalVisible(false)}
         data={permissionDetailData}
       />
-    </>
+    </App>
   );
 };
 

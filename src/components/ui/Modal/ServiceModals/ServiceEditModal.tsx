@@ -140,7 +140,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
       setLaborCost(0);
       setTotalPrice(0);
     } catch (error) {
-      console.error("Form validation failed:", error);
+      console.log("Form validation failed:", error);
       message.error("Vui lòng kiểm tra lại thông tin đã nhập!");
     } finally {
       setLoading(false);

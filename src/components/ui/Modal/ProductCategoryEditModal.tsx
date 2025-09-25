@@ -88,7 +88,7 @@ const ProductCategoryEditModal: React.FC<ProductCategoryEditModalProps> = ({
       message.success("Cập nhật loại sản phẩm thành công!");
       form.resetFields();
     } catch (error) {
-      console.error("Form validation failed:", error);
+      console.log("Form validation failed:", error);
       message.error("Vui lòng kiểm tra lại thông tin đã nhập!");
     } finally {
       setLoading(false);

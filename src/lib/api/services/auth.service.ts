@@ -36,7 +36,7 @@ export class AuthService {
         throw new Error(response.data.message || "Login failed");
       }
     } catch (error) {
-      console.error("Login error:", error);
+      console.log("Login error:", error);
       throw error;
     }
   }
@@ -59,7 +59,7 @@ export class AuthService {
         throw new Error(response.data.message || "Signup failed");
       }
     } catch (error) {
-      console.error("Signup error:", error);
+      console.log("Signup error:", error);
       throw error;
     }
   }
@@ -98,7 +98,7 @@ export class AuthService {
       const response = await apiClient.get("/auth/verify-token");
       return response.data.success;
     } catch (error) {
-      console.error("Token verification error:", error);
+      console.log("Token verification error:", error);
       return false;
     }
   }
@@ -118,7 +118,7 @@ export class AuthService {
 
       return null;
     } catch (error) {
-      console.error("Get current user error:", error);
+      console.log("Get current user error:", error);
       return null;
     }
   }
@@ -134,7 +134,7 @@ export class AuthService {
         throw new Error(response.data.message || "Failed to send reset email");
       }
     } catch (error) {
-      console.error("Forgot password error:", error);
+      console.log("Forgot password error:", error);
       throw error;
     }
   }
@@ -150,7 +150,7 @@ export class AuthService {
         throw new Error(response.data.message || "Password reset failed");
       }
     } catch (error) {
-      console.error("Reset password error:", error);
+      console.log("Reset password error:", error);
       throw error;
     }
   }
@@ -166,7 +166,7 @@ export class AuthService {
         throw new Error(response.data.message || "Password change failed");
       }
     } catch (error) {
-      console.error("Change password error:", error);
+      console.log("Change password error:", error);
       throw error;
     }
   }

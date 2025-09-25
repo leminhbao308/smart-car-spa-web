@@ -22,6 +22,8 @@ import {
   UserSortOptions,
   UserStatistics,
   UserType,
+  CreateUserRequest,
+  CreateUserResponse,
 } from "../types";
 
 // Re-export UserType for convenience
@@ -37,6 +39,7 @@ interface UserManagementContextType extends UserManagementState {
   // Actions
   fetchUsers: (params?: GetAllUsersRequest) => Promise<void>;
   refreshUsers: () => Promise<void>;
+  createUser: (userData: CreateUserRequest) => Promise<CreateUserResponse>;
   updateUserStatus: (userId: string, isActive: boolean) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
   searchUsers: (query: string) => Promise<void>;
@@ -135,6 +138,43 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
       await fetchUsers();
     }
   }, [fetchUsers, state.pagination]);
+
+  /**
+   * Create new user
+   */
+  const createUser = useCallback(
+    async (userData: CreateUserRequest): Promise<CreateUserResponse> => {
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+        const response = await UserService.createUser(userData);
+
+        // Add new user to the beginning of the list
+        setState((prev) => ({
+          ...prev,
+          users: [response.data, ...prev.users],
+          isLoading: false,
+          error: null,
+        }));
+
+        return response;
+      } catch (error: unknown) {
+        const errorMessage =
+          error && typeof error === "object" && "message" in error
+            ? (error as { message: string }).message
+            : "Failed to create user";
+
+        setState((prev) => ({
+          ...prev,
+          isLoading: false,
+          error: errorMessage,
+        }));
+
+        throw error;
+      }
+    },
+    []
+  );
 
   /**
    * Update user status
@@ -294,7 +334,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
         const statistics = await UserService.getUserStatistics();
         return statistics;
       } catch (error) {
-        console.error("Failed to get user statistics:", error);
+        console.log("Failed to get user statistics:", error);
         return null;
       }
     }, []);
@@ -409,6 +449,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     ...state,
     fetchUsers,
     refreshUsers,
+    createUser,
     updateUserStatus,
     deleteUser,
     searchUsers,
@@ -463,6 +504,7 @@ export function useUserManagementActions() {
   const {
     fetchUsers,
     refreshUsers,
+    createUser,
     updateUserStatus,
     deleteUser,
     searchUsers,
@@ -480,6 +522,7 @@ export function useUserManagementActions() {
   return {
     fetchUsers,
     refreshUsers,
+    createUser,
     updateUserStatus,
     deleteUser,
     searchUsers,

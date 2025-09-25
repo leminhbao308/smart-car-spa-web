@@ -50,7 +50,7 @@ export function handleApiError(error: unknown): never {
   const apiError = createApiError(error);
 
   // Log error for debugging
-  console.error("API Error:", apiError);
+  console.log("API Error:", apiError);
 
   // You can add additional error handling here
   // e.g., show toast notification, redirect to error page, etc.

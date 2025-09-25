@@ -178,7 +178,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
       message.success(editData ? "Cập nhật gói dịch vụ thành công!" : "Thêm gói dịch vụ thành công!");
       
     } catch (error) {
-      console.error("Form validation failed:", error);
+      console.log("Form validation failed:", error);
       message.error("Vui lòng kiểm tra lại thông tin đã nhập!");
     } finally {
       setLoading(false);

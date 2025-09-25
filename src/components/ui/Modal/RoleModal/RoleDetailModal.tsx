@@ -4,27 +4,25 @@ import {
   Modal,
   Descriptions,
   Tag,
-  Divider,
+  Space,
   Typography,
-  Card,
-  Row,
-  Col,
-  Statistic,
+  Divider,
+  Button,
 } from "antd";
 import { 
+  EyeOutlined,
   SafetyOutlined,
   UserOutlined,
-  CalendarOutlined,
   InfoCircleOutlined
 } from "@ant-design/icons";
 import { Role } from "@/lib/api/types";
 
-const { Title, Text } = Typography;
+const { Text, Title } = Typography;
 
 interface RoleDetailModalProps {
   visible: boolean;
   onCancel: () => void;
-  data?: Role | null;
+  data: Role | null;
 }
 
 const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
@@ -34,13 +32,11 @@ const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
 }) => {
   if (!data) return null;
 
-  const isCustomerRole = data.role_code === "CUSTOMER";
-
   return (
     <Modal
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <SafetyOutlined style={{ color: "#1890ff" }} />
+          <EyeOutlined style={{ color: "#52c41a" }} />
           <span>Chi tiết vai trò</span>
         </div>
       }
@@ -48,123 +44,153 @@ const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
       onCancel={onCancel}
       width={700}
       footer={[
-        <div key="footer" style={{ textAlign: "right" }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Vai trò được tạo vào: {new Date().toLocaleDateString("vi-VN")}
-          </Text>
-        </div>
+        <Button key="close" onClick={onCancel}>
+          Đóng
+        </Button>,
       ]}
     >
-      <div style={{ marginBottom: 24 }}>
-        <Card>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Statistic
-                title="Loại vai trò"
-                value={isCustomerRole ? "Khách hàng" : "Nhân viên"}
-                prefix={<UserOutlined />}
-                valueStyle={{ 
-                  color: isCustomerRole ? "#52c41a" : "#1890ff",
-                  fontSize: 18
-                }}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title="Mã vai trò"
-                value={data.role_code}
-                prefix={<SafetyOutlined />}
-                valueStyle={{ 
-                  color: "#722ed1",
-                  fontSize: 18,
-                  fontFamily: "monospace"
-                }}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title="Trạng thái"
-                value="Hoạt động"
-                valueStyle={{ 
-                  color: "#52c41a",
-                  fontSize: 18
-                }}
-              />
-            </Col>
-          </Row>
-        </Card>
-      </div>
-
-      <Divider orientation="left">
-        <InfoCircleOutlined style={{ marginRight: 8 }} />
-        Thông tin chi tiết
-      </Divider>
-
-      <Descriptions
-        bordered
-        column={1}
-        size="middle"
-        labelStyle={{ 
-          backgroundColor: "#fafafa", 
-          fontWeight: 500,
-          width: "30%"
-        }}
-      >
-        <Descriptions.Item label="Tên vai trò">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <Title level={5} style={{ margin: 0 }}>
-              {data.role_name}
-            </Title>
-            <Tag color={isCustomerRole ? "green" : "blue"}>
-              {isCustomerRole ? "Khách hàng" : "Nhân viên"}
-            </Tag>
-          </div>
-        </Descriptions.Item>
-
-        <Descriptions.Item label="Mã vai trò">
-          <Tag color="purple" style={{ fontFamily: "monospace", fontSize: 14 }}>
+      <div style={{ padding: "16px 0" }}>
+        {/* Header Section */}
+        <div style={{ 
+          textAlign: "center", 
+          marginBottom: 24,
+          padding: "20px",
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          borderRadius: 8,
+          color: "white"
+        }}>
+          <SafetyOutlined style={{ fontSize: 48, marginBottom: 16 }} />
+          <Title level={3} style={{ color: "white", margin: 0 }}>
+            {data.role_name}
+          </Title>
+          <Tag 
+            color={data.role_code === "CUSTOMER" ? "green" : "blue"}
+            style={{ 
+              fontSize: 14, 
+              padding: "4px 12px",
+              marginTop: 8,
+              background: "rgba(255,255,255,0.2)",
+              border: "1px solid rgba(255,255,255,0.3)"
+            }}
+          >
             {data.role_code}
           </Tag>
-        </Descriptions.Item>
+        </div>
 
-        <Descriptions.Item label="Mô tả">
-          <Text>{data.description}</Text>
-        </Descriptions.Item>
+        {/* Basic Information */}
+        <Divider orientation="left">
+          <InfoCircleOutlined style={{ marginRight: 8 }} />
+          Thông tin cơ bản
+        </Divider>
+        
+        <Descriptions
+          bordered
+          column={1}
+          size="middle"
+          styles={{
+            label: {
+              fontWeight: 600,
+              backgroundColor: "#fafafa",
+              width: "30%"
+            }
+          }}
+        >
+          <Descriptions.Item label="ID vai trò">
+            <Text code style={{ fontSize: 12 }}>
+              {data.role_id}
+            </Text>
+          </Descriptions.Item>
+          
+          <Descriptions.Item label="Tên vai trò">
+            <Space>
+              <UserOutlined />
+              <Text strong>{data.role_name}</Text>
+            </Space>
+          </Descriptions.Item>
+          
+          <Descriptions.Item label="Mã vai trò">
+            <Tag color="blue" style={{ fontFamily: "monospace", fontSize: 14 }}>
+              {data.role_code}
+            </Tag>
+          </Descriptions.Item>
+          
+          <Descriptions.Item label="Loại vai trò">
+            <Tag color={data.role_code === "CUSTOMER" ? "green" : "blue"}>
+              {data.role_code === "CUSTOMER" ? "Khách hàng" : "Nhân viên"}
+            </Tag>
+          </Descriptions.Item>
+          
+          <Descriptions.Item label="Mô tả">
+            <Text>{data.description}</Text>
+          </Descriptions.Item>
+        </Descriptions>
 
-        <Descriptions.Item label="ID vai trò">
-          <Text code style={{ fontSize: 12 }}>
-            {data.role_id}
-          </Text>
-        </Descriptions.Item>
-      </Descriptions>
+        {/* Permissions Section */}
+        {data.permissions && data.permissions.length > 0 && (
+          <>
+            <Divider orientation="left">
+              <SafetyOutlined style={{ marginRight: 8 }} />
+              Quyền hạn ({data.permissions.length})
+            </Divider>
+            
+            <div style={{ 
+              padding: 16, 
+              backgroundColor: "#f8f9fa", 
+              borderRadius: 8,
+              border: "1px solid #e9ecef"
+            }}>
+              <Space wrap>
+                {data.permissions.map((permission) => (
+                  <Tag 
+                    key={permission.permission_id} 
+                    color="purple"
+                    style={{ 
+                      padding: "4px 12px",
+                      fontSize: 13,
+                      margin: "4px"
+                    }}
+                  >
+                    {permission.permission_name}
+                  </Tag>
+                ))}
+              </Space>
+            </div>
+          </>
+        )}
 
-      <Divider orientation="left">
-        <CalendarOutlined style={{ marginRight: 8 }} />
-        Thông tin hệ thống
-      </Divider>
-
-      <Descriptions
-        bordered
-        column={2}
-        size="small"
-        labelStyle={{ 
-          backgroundColor: "#fafafa", 
-          fontWeight: 500 
-        }}
-      >
-        <Descriptions.Item label="Ngày tạo">
-          {new Date().toLocaleDateString("vi-VN")}
-        </Descriptions.Item>
-        <Descriptions.Item label="Cập nhật cuối">
-          {new Date().toLocaleDateString("vi-VN")}
-        </Descriptions.Item>
-        <Descriptions.Item label="Số người dùng">
-          <Tag color="blue">0</Tag>
-        </Descriptions.Item>
-        <Descriptions.Item label="Trạng thái">
-          <Tag color="green">Hoạt động</Tag>
-        </Descriptions.Item>
-      </Descriptions>
+        {/* Additional Info */}
+        <Divider orientation="left">
+          <InfoCircleOutlined style={{ marginRight: 8 }} />
+          Thông tin bổ sung
+        </Divider>
+        
+        <div style={{ 
+          padding: 16, 
+          backgroundColor: "#f0f8ff", 
+          borderRadius: 8,
+          border: "1px solid #d6e4ff"
+        }}>
+          <Space direction="vertical" size="small">
+            <Text type="secondary">
+              <InfoCircleOutlined style={{ marginRight: 8 }} />
+              Vai trò này được sử dụng để phân quyền và quản lý quyền truy cập trong hệ thống.
+            </Text>
+            <Text type="secondary">
+              Mã vai trò ({data.role_code}) được sử dụng để định danh duy nhất cho vai trò này.
+            </Text>
+            {data.role_code === "CUSTOMER" && (
+              <Text type="secondary">
+                Đây là vai trò dành cho khách hàng, có quyền truy cập hạn chế.
+              </Text>
+            )}
+            {data.role_code !== "CUSTOMER" && (
+              <Text type="secondary">
+                Đây là vai trò dành cho nhân viên, có quyền truy cập mở rộng hơn.
+              </Text>
+            )}
+          </Space>
+        </div>
+      </div>
     </Modal>
   );
 };

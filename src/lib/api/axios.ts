@@ -61,6 +61,7 @@ const refreshToken = async (): Promise<string | null> => {
     const refreshTokenValue = TokenManager.getRefreshToken();
     
     if (!refreshTokenValue) {
+      console.log("No refresh token available for refresh");
       throw new Error("No refresh token available");
     }
 
@@ -68,6 +69,17 @@ const refreshToken = async (): Promise<string | null> => {
     
     const response = await axios.post(`${BASE_URL}/auth/refresh-token`, {
       refresh_token: refreshTokenValue,
+    }, {
+      timeout: 10000, // 10 second timeout
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    console.log("Refresh token response:", {
+      status: response.status,
+      success: response.data?.success,
+      hasData: !!response.data?.data
     });
 
     if (response.data.success && response.data.data) {
@@ -79,16 +91,25 @@ const refreshToken = async (): Promise<string | null> => {
       console.log("Token refreshed successfully");
       return access_token;
     } else {
-      throw new Error(response.data.message || "Failed to refresh token");
+      const errorMessage = response.data.message || "Failed to refresh token";
+      console.log("Refresh token response indicates failure:", errorMessage);
+      throw new Error(errorMessage);
     }
-  } catch (error) {
-    console.error("Token refresh failed:", error);
+  } catch (error: any) {
+    console.log("Token refresh failed with details:", {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url,
+    });
     
     // Clear all tokens on refresh failure
     TokenManager.clearAll();
     
     // Redirect to login if on client side
     if (typeof window !== "undefined") {
+      console.log("Redirecting to login due to token refresh failure");
       window.location.href = "/auth/login";
     }
     
@@ -106,6 +127,16 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
+
+    // Log error details for debugging
+    console.log("API Error Details:", {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      url: originalRequest?.url,
+      method: originalRequest?.method,
+      data: error.response?.data,
+      message: error.message,
+    });
 
     // Xử lý lỗi 401 - Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -141,10 +172,30 @@ apiClient.interceptors.response.use(
         }
         return apiClient(originalRequest);
       } catch (refreshError) {
+        console.log("Token refresh failed:", refreshError);
         processQueue(refreshError, null);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
+      }
+    }
+
+    // Xử lý lỗi 500 - Internal Server Error
+    if (error.response?.status === 500) {
+      console.log("Server Error (500):", {
+        url: originalRequest?.url,
+        data: error.response?.data,
+        message: error.response?.data?.message || "Internal server error",
+      });
+      
+      // If this is a refresh token request that failed, clear tokens and redirect
+      if (originalRequest?.url?.includes('/auth/refresh-token')) {
+        console.log("Refresh token endpoint returned 500, clearing tokens");
+        TokenManager.clearAll();
+        
+        if (typeof window !== "undefined") {
+          window.location.href = "/auth/login";
+        }
       }
     }
 

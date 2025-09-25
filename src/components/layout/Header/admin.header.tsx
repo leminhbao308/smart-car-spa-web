@@ -173,7 +173,7 @@ const AdminHeader = () => {
             router.push(ROUTES.HOME);
           }, 0);
         } catch (error) {
-          console.error("Logout error:", error);
+          console.log("Logout error:", error);
           setTimeout(() => {
             messageApi.error("Có lỗi xảy ra khi đăng xuất. Vui lòng thử lại.");
           }, 0);

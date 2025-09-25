@@ -116,7 +116,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
       setMediaFiles([]);
       setIssues([]);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }

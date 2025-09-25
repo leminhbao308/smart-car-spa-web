@@ -155,7 +155,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       };
       onOk(bookingData);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     }
   };
 

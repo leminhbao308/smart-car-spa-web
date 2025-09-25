@@ -5,18 +5,50 @@
 import { BaseEntity } from "./common.types";
 
 // User Role
-export interface Role extends BaseEntity {
+export interface Role {
+  role_id: string;
   role_name: string;
   role_code: string;
-  description?: string;
+  description: string;
   permissions?: Permission[];
 }
 
 // Permission
-export interface Permission extends BaseEntity {
+export interface Permission {
+  permission_id: string;
   permission_name: string;
   permission_code: string;
-  description?: string;
+  description: string;
+  module?: string;
+}
+
+// Get All Roles Response
+export interface GetAllRolesResponse {
+  success: boolean;
+  message: string;
+  timestamp: string;
+  data: Role[];
+}
+
+// Create Role Request
+export interface CreateRoleRequest {
+  role_name: string;
+  role_code: string;
+  description: string;
+}
+
+// Update Role Request
+export interface UpdateRoleRequest {
+  role_name: string;
+  description: string;
+}
+
+// Role Response
+export interface RoleResponse {
+  success: boolean;
+  message: string;
+  timestamp: string;
+  data: Role;
 }
 
 // User Info

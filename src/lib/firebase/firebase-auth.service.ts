@@ -44,7 +44,7 @@ export class FirebaseAuthService {
       // Lưu email vào localStorage để verify sau
       localStorage.setItem('emailForSignIn', email);
     } catch (error) {
-      console.error('Error sending OTP to email:', error);
+      console.log('Error sending OTP to email:', error);
       throw this.handleAuthError(error as AuthError);
     }
   }
@@ -65,7 +65,7 @@ export class FirebaseAuthService {
       }
       return null;
     } catch (error) {
-      console.error('Error verifying email link:', error);
+      console.log('Error verifying email link:', error);
       throw this.handleAuthError(error as AuthError);
     }
   }
@@ -85,7 +85,7 @@ export class FirebaseAuthService {
       
       return result.user;
     } catch (error) {
-      console.error('Error creating account:', error);
+      console.log('Error creating account:', error);
       throw this.handleAuthError(error as AuthError);
     }
   }
@@ -97,7 +97,7 @@ export class FirebaseAuthService {
     try {
       await signOut(auth);
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.log('Error signing out:', error);
       throw this.handleAuthError(error as AuthError);
     }
   }

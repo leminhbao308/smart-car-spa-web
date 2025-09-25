@@ -91,7 +91,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
       form.resetFields();
       setSteps([]);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }
@@ -531,7 +531,7 @@ const StepModal: React.FC<StepModalProps> = ({
       setQualityChecklist([]);
       setSafetyNotes([]);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }

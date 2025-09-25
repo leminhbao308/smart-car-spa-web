@@ -9,6 +9,8 @@ import {
   GetAllUsersResponse,
   UserManagementInfo,
   UserStatistics,
+  CreateUserRequest,
+  CreateUserResponse,
 } from "../types";
 
 export class UserService {
@@ -39,11 +41,7 @@ export class UserService {
       }
 
       const url = `/users/get-all?${queryParams.toString()}`;
-      console.log("Making API call to:", url);
-      console.log(
-        "Base URL:",
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081"
-      );
+      
 
       const response = await apiClient.get(url);
       console.log("API Response received:", response);
@@ -54,8 +52,26 @@ export class UserService {
         throw new Error(response.data.message || "Failed to fetch users");
       }
     } catch (error: any) {
-      console.log("Get all users error details:", error);
-      throw error;
+      console.log("Get all users error details:", {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+      });
+      
+      // Provide more specific error messages
+      if (error.response?.status === 500) {
+        throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
+      } else if (error.response?.status === 401) {
+        throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      } else if (error.response?.status === 403) {
+        throw new Error("Bạn không có quyền truy cập tài nguyên này.");
+      } else if (error.response?.status === 404) {
+        throw new Error("Không tìm thấy dữ liệu người dùng.");
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -72,7 +88,7 @@ export class UserService {
         throw new Error(response.data.message || "Failed to fetch user");
       }
     } catch (error) {
-      console.error("Get user by ID error:", error);
+      console.log("Get user by ID error:", error);
       throw error;
     }
   }
@@ -95,7 +111,7 @@ export class UserService {
         );
       }
     } catch (error) {
-      console.error("Update user status error:", error);
+      console.log("Update user status error:", error);
       throw error;
     }
   }
@@ -111,7 +127,7 @@ export class UserService {
         throw new Error(response.data.message || "Failed to delete user");
       }
     } catch (error) {
-      console.error("Delete user error:", error);
+      console.log("Delete user error:", error);
       throw error;
     }
   }
@@ -131,7 +147,7 @@ export class UserService {
         );
       }
     } catch (error) {
-      console.error("Get user statistics error:", error);
+      console.log("Get user statistics error:", error);
       throw error;
     }
   }
@@ -174,7 +190,7 @@ export class UserService {
         throw new Error(response.data.message || "Failed to search users");
       }
     } catch (error) {
-      console.error("Search users error:", error);
+      console.log("Search users error:", error);
       throw error;
     }
   }
@@ -199,8 +215,46 @@ export class UserService {
 
       return response.data;
     } catch (error) {
-      console.error("Export users error:", error);
+      console.log("Export users error:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Create new user (Customer or Staff)
+   */
+  static async createUser(userData: CreateUserRequest): Promise<CreateUserResponse> {
+    try {
+      console.log("Creating user with data:", userData);
+      
+      const response = await apiClient.post("/users/create", userData);
+      
+      console.log("Create user API response:", response);
+
+      if (response.data.success && response.data.data) {
+        return response.data;
+      } else {
+        throw new Error(response.data.message || "Failed to create user");
+      }
+    } catch (error: any) {
+      console.log("Create user error details:", error);
+      
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        // Bad Request - validation errors
+        const errorMessage = error.response.data?.message || "Validation failed";
+        throw new Error(errorMessage);
+      } else if (error.response?.status === 409) {
+        // Conflict - email already exists
+        const errorMessage = error.response.data?.message || "Email already exists";
+        throw new Error(errorMessage);
+      } else if (error.response?.status === 500) {
+        // Server error
+        throw new Error("Server error occurred. Please try again later.");
+      } else {
+        // Other errors
+        throw new Error(error.message || "Failed to create user");
+      }
     }
   }
 }

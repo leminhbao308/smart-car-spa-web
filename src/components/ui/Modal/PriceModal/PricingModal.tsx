@@ -86,7 +86,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
       form.resetFields();
       setPriceRanges([]);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }

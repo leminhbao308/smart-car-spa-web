@@ -51,13 +51,15 @@ const CustomerInfoModal: React.FC<CustomerInfoModalProps> = ({
       <Descriptions
         column={1}
         size="middle"
-        labelStyle={{ 
-          fontWeight: 600, 
-          color: "#666",
-          width: "120px"
-        }}
-        contentStyle={{ 
-          color: "#333"
+        styles={{
+          label: {
+            fontWeight: 600,
+            color: "#666",
+            width: "120px"
+          },
+          content: {
+            color: "#333"
+          }
         }}
       >
         <Descriptions.Item

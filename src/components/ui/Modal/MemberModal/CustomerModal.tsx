@@ -104,7 +104,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
       onSuccess(customerData);
       onCancel();
     } catch (error) {
-      console.error("Error:", error);
+      console.log("Error:", error);
     } finally {
       setLoading(false);
     }

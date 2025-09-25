@@ -85,7 +85,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
       message.success(initialData ? "Cập nhật chi nhánh thành công!" : "Thêm chi nhánh thành công!");
       form.resetFields();
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }

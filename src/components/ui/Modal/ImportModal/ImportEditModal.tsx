@@ -149,7 +149,7 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
 
       onSave(data);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     }
   };
 

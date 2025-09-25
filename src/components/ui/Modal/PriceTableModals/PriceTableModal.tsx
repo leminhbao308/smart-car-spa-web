@@ -295,7 +295,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
       setSelectedServices([]);
       setSelectedDiscountPrograms([]);
     } catch (error) {
-      console.error("Error:", error);
+      console.log("Error:", error);
     } finally {
       setLoading(false);
     }

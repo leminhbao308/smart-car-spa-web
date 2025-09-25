@@ -3,6 +3,7 @@ import { AntdRegistry } from "@ant-design/nextjs-registry";
 import "./globals.css";
 import "@ant-design/v5-patch-for-react-19";
 import { AuthProvider } from "@/lib/api";
+import { App } from "antd";
 
 // Suppress specific React warnings that are false positives
 if (typeof window !== "undefined") {
@@ -35,7 +36,9 @@ export default function RootLayout({
     <html lang="en">
       <body suppressHydrationWarning={true}>
         <AuthProvider>
-          <AntdRegistry>{children}</AntdRegistry>
+          <AntdRegistry>
+            <App>{children}</App>
+          </AntdRegistry>
         </AuthProvider>
       </body>
     </html>

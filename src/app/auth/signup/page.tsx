@@ -69,7 +69,7 @@ const SignupPage = () => {
         `Mã OTP đã được gửi đến email ${values.emailOrPhone}! Vui lòng kiểm tra hộp thư.`
       );
     } catch (error: unknown) {
-      console.error("Error sending OTP:", error);
+      console.log("Error sending OTP:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -91,7 +91,7 @@ const SignupPage = () => {
       message.success("Đăng ký với Google thành công!");
       router.push("/auth/login");
     } catch (error) {
-      console.error("Google signup error:", error);
+      console.log("Google signup error:", error);
       message.error("Đăng ký với Google thất bại!");
     } finally {
       setLoading(false);
@@ -109,7 +109,7 @@ const SignupPage = () => {
       // Redirect đến email verification page
       window.location.href = `/auth/verify-email?email=${emailOrPhone}`;
     } catch (error: unknown) {
-      console.error("Error verifying OTP:", error);
+      console.log("Error verifying OTP:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Xác thực OTP thất bại!";
       message.error(errorMessage);
@@ -143,7 +143,7 @@ const SignupPage = () => {
       );
       router.push("/");
     } catch (error: unknown) {
-      console.error("Error creating account:", error);
+      console.log("Error creating account:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -165,7 +165,7 @@ const SignupPage = () => {
       setOtpExpired(false);
       message.success("Mã OTP mới đã được gửi!");
     } catch (error: unknown) {
-      console.error("Error resending OTP:", error);
+      console.log("Error resending OTP:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Gửi lại OTP thất bại!";
       message.error(errorMessage);

@@ -209,7 +209,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
       setSelectedServices([]);
       setPackageTotalPrice(0);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }

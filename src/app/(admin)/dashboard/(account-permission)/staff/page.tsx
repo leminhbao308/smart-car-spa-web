@@ -1,10 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { AdminTable } from "@/components/ui/Table";
-import { 
+import {
   useConfirmationModalContext,
   StaffModal,
-  StaffDetailModal
+  StaffDetailModal,
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import { Tag, Avatar, message } from "antd";
@@ -15,7 +15,7 @@ const StaffPage = () => {
   const [data, setData] = useState<UserManagementInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const { showModal } = useConfirmationModalContext();
-  
+
   // Modal states
   const [staffModalVisible, setStaffModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -34,15 +34,18 @@ const StaffPage = () => {
       const response = await UserService.getAllUsers({
         userType: "EMPLOYEE" as UserType,
         page: 0,
-        size: 100, // Get all employees for now
+        size: 100, 
         direction: "DESC",
-        sort: "createdDate"
+        sort: "createdDate",
       });
-      
+
       setData(response.data.content);
-    } catch (error) {
-      console.error("Error fetching staff:", error);
-      message.error("Không thể tải danh sách nhân viên");
+    } catch (error: any) {
+      console.log("Error fetching staff:", error);
+
+      // Show more specific error message
+      const errorMessage = error.message || "Không thể tải danh sách nhân viên";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -60,11 +63,14 @@ const StaffPage = () => {
             {record.full_name.charAt(0)}
           </Avatar>
           <div>
-            <div style={{ fontWeight: 500, fontSize: 14 }}>{record.full_name}</div>
+            <div style={{ fontWeight: 500, fontSize: 14 }}>
+              {record.full_name}
+            </div>
             <div style={{ fontSize: 12, color: "#666" }}>{record.email}</div>
             <div style={{ fontSize: 11, color: "#999" }}>
               {record.gender === "MALE" ? "Nam" : "Nữ"}
-              {record.date_of_birth && ` • ${new Date(record.date_of_birth).getFullYear()}`}
+              {record.date_of_birth &&
+                ` • ${new Date(record.date_of_birth).getFullYear()}`}
             </div>
           </div>
         </div>
@@ -97,7 +103,8 @@ const StaffPage = () => {
         { text: "Customer Service", value: "CS" },
         { text: "Inventory Manager", value: "INV_MGR" },
       ],
-      onFilter: (value, record: UserManagementInfo) => record.role.role_code === value,
+      onFilter: (value, record: UserManagementInfo) =>
+        record.role.role_code === value,
     },
     {
       title: "Địa chỉ",
@@ -112,8 +119,10 @@ const StaffPage = () => {
       dataIndex: "hired_at",
       key: "hired_at",
       width: 120,
-      render: (hiredAt: string | null) => 
-        hiredAt ? new Date(hiredAt).toLocaleDateString("vi-VN") : "Chưa cập nhật",
+      render: (hiredAt: string | null) =>
+        hiredAt
+          ? new Date(hiredAt).toLocaleDateString("vi-VN")
+          : "Chưa cập nhật",
       sorter: (a, b) => {
         if (!a.hired_at && !b.hired_at) return 0;
         if (!a.hired_at) return 1;
@@ -142,7 +151,8 @@ const StaffPage = () => {
         { text: "Hoạt động", value: true },
         { text: "Không hoạt động", value: false },
       ],
-      onFilter: (value, record: UserManagementInfo) => record.is_active === value,
+      onFilter: (value, record: UserManagementInfo) =>
+        record.is_active === value,
     },
   ];
 
@@ -165,21 +175,27 @@ const StaffPage = () => {
   const handleToggleStatus = (record: UserManagementInfo) => {
     const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
     showModal({
-      title: `${action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"} nhân viên`,
+      title: `${
+        action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"
+      } nhân viên`,
       content: `Bạn có chắc chắn muốn ${action} nhân viên ${record.full_name}?`,
       type: "warning",
       onConfirm: async () => {
         try {
           setLoading(true);
           await UserService.updateUserStatus(record.user_id, !record.is_active);
-          setData(prev => prev.map(item => 
-            item.user_id === record.user_id 
-              ? { ...item, is_active: !item.is_active }
-              : item
-          ));
-          message.success(`Đã ${action} nhân viên ${record.full_name} thành công!`);
+          setData((prev) =>
+            prev.map((item) =>
+              item.user_id === record.user_id
+                ? { ...item, is_active: !item.is_active }
+                : item
+            )
+          );
+          message.success(
+            `Đã ${action} nhân viên ${record.full_name} thành công!`
+          );
         } catch (error) {
-          console.error("Error updating user status:", error);
+          console.log("Error updating user status:", error);
           message.error(`Không thể ${action} nhân viên ${record.full_name}`);
         } finally {
           setLoading(false);

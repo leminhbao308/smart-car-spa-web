@@ -101,3 +101,35 @@ export interface UserStatistics {
   inactiveUsers: number;
   newUsersThisMonth: number;
 }
+
+// Create User Request
+export interface CreateUserRequest {
+  email: string;
+  password: string;
+  googleId?: string | null;
+  fullName: string;
+  phoneNumber: string;
+  dateOfBirth: string; // ISO date string
+  gender: "MALE" | "FEMALE" | "OTHER";
+  address: string;
+  avatarUrl?: string | null;
+  roleCode: "CUSTOMER" | "ADMIN" | "STAFF";
+}
+
+// Create User Response
+export interface CreateUserResponse {
+  success: boolean;
+  message: string;
+  timestamp: string;
+  data: UserManagementInfo;
+}
+
+// Create User Error Response
+export interface CreateUserErrorResponse {
+  timestamp: string;
+  status: number;
+  error: string;
+  message: string;
+  path: string;
+  errorCode: string;
+}

@@ -248,7 +248,7 @@ const ScheduleServiceModal: React.FC<ScheduleServiceModalProps> = ({
       message.success("Đặt lịch bảo dưỡng thành công!");
       form.resetFields();
     } catch (error) {
-      console.error("Form validation failed:", error);
+      console.log("Form validation failed:", error);
       
       // Handle Ant Design form validation errors
       if (error && typeof error === 'object' && 'errorFields' in error) {

@@ -64,7 +64,7 @@ export const useConfirmationModal = (): UseConfirmationModalReturn => {
       await onConfirmCallback();
       hideModal();
     } catch (error) {
-      console.error("Error in confirmation:", error);
+      console.log("Error in confirmation:", error);
       setLoading(false);
     }
   }, [onConfirmCallback, hideModal]);

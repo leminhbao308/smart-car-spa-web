@@ -118,7 +118,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
         initialData ? "Cập nhật nhà cung cấp thành công!" : "Thêm nhà cung cấp thành công!"
       );
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }

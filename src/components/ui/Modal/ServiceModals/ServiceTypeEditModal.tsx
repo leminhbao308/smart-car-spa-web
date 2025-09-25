@@ -91,7 +91,7 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
       form.resetFields();
       setFeatures([]);
     } catch (error) {
-      console.error("Form validation failed:", error);
+      console.log("Form validation failed:", error);
       message.error("Vui lòng kiểm tra lại thông tin đã nhập!");
     } finally {
       setLoading(false);

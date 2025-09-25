@@ -30,10 +30,10 @@ export { default as CareProcessDetailModal } from "./CarProcessModal/CareProcess
 export { default as StepProgressModal } from "./StepProgressModal";
 export { default as PermissionModal } from "./PermissionModal/PermissionModal";
 export { default as PermissionDetailModal } from "./PermissionModal/PermissionDetailModal";
-export { default as RoleUsersModal } from "./PermissionModal/RoleUsersModal";
 export { default as PermissionItemModal } from "./PermissionModal/PermissionItemModal";
 export { default as RoleModal } from "./RoleModal/RoleModal";
 export { default as RoleDetailModal } from "./RoleModal/RoleDetailModal";
+export { default as RoleUsersModal } from "./RoleModal/RoleUsersModal";
 export { default as CustomerModal } from "./MemberModal/CustomerModal";
 export { default as CustomerDetailModal } from "./MemberModal/CustomerDetailModal";
 export { default as CustomerVehiclesModal } from "./MemberModal/CustomerVehiclesModal";

@@ -165,7 +165,7 @@ const PriceTableEditModal: React.FC<PriceTableEditModalProps> = ({
       setVehicleTypes([]);
       setDiscountPrograms([]);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.log("Validation failed:", error);
     } finally {
       setLoading(false);
     }
