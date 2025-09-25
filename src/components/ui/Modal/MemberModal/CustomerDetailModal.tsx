@@ -17,7 +17,7 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
 } from "@ant-design/icons";
-import { User } from "@/lib/api/types";
+import { UserManagementInfo } from "@/lib/api/types";
 import { calculateAge } from "@/components/utils/helper/member.helper";
 
 const { Title, Text } = Typography;
@@ -25,7 +25,7 @@ const { Title, Text } = Typography;
 interface CustomerDetailModalProps {
   visible: boolean;
   onCancel: () => void;
-  data: User | null;
+  data: UserManagementInfo | null;
 }
 
 const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
@@ -78,6 +78,16 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 <Tag color={data.is_active ? "green" : "red"}>
                   {data.is_active ? "Hoạt động" : "Không hoạt động"}
                 </Tag>
+                {data.customer_rank && (
+                  <Tag color={
+                    data.customer_rank === "BRONZE" ? "orange" :
+                    data.customer_rank === "SILVER" ? "gray" :
+                    data.customer_rank === "GOLD" ? "gold" :
+                    data.customer_rank === "PLATINUM" ? "blue" : "default"
+                  }>
+                    {data.customer_rank}
+                  </Tag>
+                )}
               </div>
               <Text type="secondary">
                 ID: <Text code>{data.user_id}</Text>
@@ -117,6 +127,42 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </Descriptions>
         </Card>
 
+        {/* Thông tin khách hàng */}
+        <Card size="small" style={{ marginBottom: 16 }}>
+          <Title level={5} style={{ marginBottom: 16 }}>
+            <UserOutlined style={{ marginRight: 8 }} />
+            Thông tin khách hàng
+          </Title>
+          
+          <Descriptions column={2} size="small">
+            <Descriptions.Item label="Hạng khách hàng">
+              <Tag color={
+                data.customer_rank === "BRONZE" ? "orange" :
+                data.customer_rank === "SILVER" ? "gray" :
+                data.customer_rank === "GOLD" ? "gold" :
+                data.customer_rank === "PLATINUM" ? "blue" : "default"
+              }>
+                {data.customer_rank || "Chưa xếp hạng"}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Điểm tích lũy">
+              <Text style={{ fontWeight: 500, color: "#1890ff" }}>
+                {data.accumulated_points?.toLocaleString() || "0"} điểm
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Tổng đơn hàng">
+              <Text style={{ fontWeight: 500 }}>
+                {data.total_orders || "0"} đơn
+              </Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Tổng chi tiêu">
+              <Text style={{ fontWeight: 500, color: "#52c41a" }}>
+                {data.total_spent ? `${data.total_spent.toLocaleString()} VNĐ` : "0 VNĐ"}
+              </Text>
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+
         {/* Thông tin hệ thống */}
         <Card size="small">
           <Title level={5} style={{ marginBottom: 16 }}>
@@ -144,6 +190,20 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </Tag>
               </div>
             </Descriptions.Item>
+            {data.created_at && (
+              <Descriptions.Item label="Ngày tạo">
+                <Text>
+                  {new Date(data.created_at).toLocaleDateString("vi-VN")}
+                </Text>
+              </Descriptions.Item>
+            )}
+            {data.updated_at && (
+              <Descriptions.Item label="Cập nhật lần cuối">
+                <Text>
+                  {new Date(data.updated_at).toLocaleDateString("vi-VN")}
+                </Text>
+              </Descriptions.Item>
+            )}
           </Descriptions>
         </Card>
       </div>

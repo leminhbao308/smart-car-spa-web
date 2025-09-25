@@ -14,6 +14,7 @@ import {
 } from "antd";
 import { CarOutlined, SearchOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
+import { UserManagementInfo } from "@/lib/api/types";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -21,7 +22,7 @@ const { Option } = Select;
 interface CustomerVehiclesModalProps {
   visible: boolean;
   onCancel: () => void;
-  customerData: any;
+  customerData: UserManagementInfo | null;
 }
 
 interface Vehicle {
@@ -248,7 +249,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <CarOutlined style={{ color: "#1890ff" }} />
-          <span>Xe của khách hàng: {customerData.fullName}</span>
+          <span>Xe của khách hàng: {customerData.full_name}</span>
         </div>
       }
       open={visible}
@@ -266,7 +267,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <CarOutlined style={{ color: "#1890ff" }} />
               <Text strong>Khách hàng:</Text>
-              <Text>{customerData.fullName}</Text>
+              <Text>{customerData.full_name}</Text>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Text strong>Tổng số xe:</Text>

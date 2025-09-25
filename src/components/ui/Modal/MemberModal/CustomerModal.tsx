@@ -18,15 +18,15 @@ import {
   MailOutlined,
   HomeOutlined
 } from "@ant-design/icons";
-import { User, Role } from "@/lib/api/types";
+import { UserManagementInfo, Role } from "@/lib/api/types";
 
 const { TextArea } = Input;
 
 interface CustomerModalProps {
   visible: boolean;
   onCancel: () => void;
-  onSuccess: (data: User) => void;
-  editData?: User | null;
+  onSuccess: (data: UserManagementInfo) => void;
+  editData?: UserManagementInfo | null;
   title?: string;
 }
 
@@ -78,7 +78,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const customerData: User = {
+      const customerData: UserManagementInfo = {
         user_id: editData?.user_id || `user_${Date.now()}`,
         email: values.email,
         full_name: values.full_name,
@@ -89,6 +89,15 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
         avatar_url: null,
         is_active: true,
         role: customerRole,
+        user_type: "CUSTOMER",
+        customer_rank: null,
+        accumulated_points: 0,
+        total_orders: 0,
+        total_spent: 0.0,
+        hired_at: null,
+        citizen_id: null,
+        created_at: editData?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       message.success(editData ? "Cập nhật khách hàng thành công!" : "Tạo khách hàng thành công!");

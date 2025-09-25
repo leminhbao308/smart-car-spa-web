@@ -1,113 +1,63 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { AdminTable } from "@/components/ui/Table";
-import { 
+import {
   useConfirmationModalContext,
   CustomerModal,
   CustomerDetailModal,
-  CustomerVehiclesModal
+  CustomerVehiclesModal,
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Avatar, Badge, message } from "antd";
+import { Tag, Avatar, message } from "antd";
 import { CarOutlined, PhoneOutlined } from "@ant-design/icons";
-import { User } from "@/lib/api/types";
+import { UserManagementInfo } from "@/lib/api/types";
+import { useUserManagement } from "@/lib/api/hooks/useUserManagement";
 import { calculateAge } from "@/components/utils/helper/member.helper";
 
 const MembersPage = () => {
-  const [data, setData] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
   const { showModal } = useConfirmationModalContext();
-  
+
+  // User Management Hook
+  const {
+    users,
+    pagination,
+    isLoading,
+    error,
+    updateUserStatus,
+    setFilters,
+    goToPage,
+    changePageSize,
+    clearError,
+  } = useUserManagement();
+
   // Modal states
   const [customerModalVisible, setCustomerModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [vehiclesModalVisible, setVehiclesModalVisible] = useState(false);
-  const [detailData, setDetailData] = useState<User | null>(null);
-  const [editData, setEditData] = useState<User | null>(null);
+  const [detailData, setDetailData] = useState<UserManagementInfo | null>(null);
+  const [editData, setEditData] = useState<UserManagementInfo | null>(null);
 
   // Fetch customers data (users with CUSTOMER role)
   useEffect(() => {
-    fetchCustomers();
-  }, []);
+    // Set filter to only show CUSTOMER users
+    setFilters({ userType: "CUSTOMER" });
+  }, [setFilters]);
 
-  const fetchCustomers = async () => {
-    setLoading(true);
-    try {
-      // TODO: Replace with actual API call
-      // const response = await userService.getAllUsers();
-      // Filter users with CUSTOMER role
-      // const customerUsers = response.data.content.filter(user => user.role.role_code === "CUSTOMER");
-      // setData(customerUsers);
-      
-      // Mock data based on API response - only customer users
-      const mockCustomers: User[] = [
-        {
-          user_id: "37ba416e-d82a-4bf0-b389-4f763497749d",
-          email: "leminhbao.iuh@gmail.com",
-          full_name: "Lê Minh Bảo",
-          phone_number: "0399405711",
-          date_of_birth: "2003-01-31 00:00:00",
-          gender: "MALE",
-          address: "Gò Vấp, Hồ Chí Minh",
-          avatar_url: null,
-          is_active: true,
-          role: {
-            role_id: "94f2b37a-aca0-4cdd-90db-263e27d744a4",
-            role_name: "Customer",
-            role_code: "CUSTOMER",
-            description: "Customer access"
-          }
-        },
-        {
-          user_id: "c1b01cf2-7d39-410f-8cdf-825beb89ab4e",
-          email: "user01@scsms.com",
-          full_name: "Customer User 01",
-          phone_number: "0234567891",
-          date_of_birth: null,
-          gender: "MALE",
-          address: null,
-          avatar_url: null,
-          is_active: true,
-          role: {
-            role_id: "94f2b37a-aca0-4cdd-90db-263e27d744a4",
-            role_name: "Customer",
-            role_code: "CUSTOMER",
-            description: "Customer access"
-          }
-        },
-        {
-          user_id: "82dced5d-8e06-4403-bf48-c0f538c1c26f",
-          email: "user02@scsms.com",
-          full_name: "Customer User 02",
-          phone_number: "0345678912",
-          date_of_birth: null,
-          gender: "MALE",
-          address: null,
-          avatar_url: null,
-          is_active: true,
-          role: {
-            role_id: "94f2b37a-aca0-4cdd-90db-263e27d744a4",
-            role_name: "Customer",
-            role_code: "CUSTOMER",
-            description: "Customer access"
-          }
-        }
-      ];
-      setData(mockCustomers);
-    } catch (error) {
-      message.error("Không thể tải danh sách khách hàng");
-    } finally {
-      setLoading(false);
+  // Handle error display
+  useEffect(() => {
+    if (error) {
+      message.error(error);
+      clearError();
     }
-  };
+  }, [error, clearError]);
 
   // Định nghĩa columns
-  const columns: ColumnsType<User> = [
+  const columns: ColumnsType<UserManagementInfo> = [
     {
       title: "Khách hàng",
       key: "customer",
       width: 300,
-      render: (_, record: User) => (
+      render: (_, record: UserManagementInfo) => (
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Avatar size="large" style={{ backgroundColor: "#1890ff" }}>
             {record.full_name.charAt(0)}
@@ -118,7 +68,8 @@ const MembersPage = () => {
             </div>
             <div style={{ fontSize: 12, color: "#666" }}>
               {record.gender === "MALE" ? "Nam" : "Nữ"}
-              {record.date_of_birth && ` • ${calculateAge(record.date_of_birth)} tuổi`}
+              {record.date_of_birth &&
+                ` • ${calculateAge(record.date_of_birth)} tuổi`}
             </div>
             <div style={{ fontSize: 11, color: "#999" }}>{record.email}</div>
           </div>
@@ -130,7 +81,7 @@ const MembersPage = () => {
       title: "Liên hệ",
       key: "contact",
       width: 200,
-      render: (_, record: User) => (
+      render: (_, record: UserManagementInfo) => (
         <div>
           <div
             style={{
@@ -164,8 +115,62 @@ const MembersPage = () => {
         if (!a.date_of_birth && !b.date_of_birth) return 0;
         if (!a.date_of_birth) return 1;
         if (!b.date_of_birth) return -1;
-        return new Date(a.date_of_birth).getTime() - new Date(b.date_of_birth).getTime();
+        return (
+          new Date(a.date_of_birth).getTime() -
+          new Date(b.date_of_birth).getTime()
+        );
       },
+    },
+    {
+      title: "Hạng khách hàng",
+      dataIndex: "customer_rank",
+      key: "customer_rank",
+      width: 120,
+      render: (rank: string | null) => {
+        if (!rank) return <Tag color="default">Chưa xếp hạng</Tag>;
+        const rankColors: { [key: string]: string } = {
+          BRONZE: "orange",
+          SILVER: "gray",
+          GOLD: "gold",
+          PLATINUM: "blue",
+        };
+        return <Tag color={rankColors[rank] || "default"}>{rank}</Tag>;
+      },
+    },
+    {
+      title: "Điểm tích lũy",
+      dataIndex: "accumulated_points",
+      key: "accumulated_points",
+      width: 120,
+      render: (points: number | null) => (
+        <span style={{ fontWeight: 500 }}>
+          {points !== null ? points.toLocaleString() : "0"}
+        </span>
+      ),
+      sorter: (a, b) =>
+        (a.accumulated_points || 0) - (b.accumulated_points || 0),
+    },
+    {
+      title: "Tổng đơn hàng",
+      dataIndex: "total_orders",
+      key: "total_orders",
+      width: 120,
+      render: (orders: number | null) => (
+        <span>{orders !== null ? orders : "0"}</span>
+      ),
+      sorter: (a, b) => (a.total_orders || 0) - (b.total_orders || 0),
+    },
+    {
+      title: "Tổng chi tiêu",
+      dataIndex: "total_spent",
+      key: "total_spent",
+      width: 120,
+      render: (spent: number | null) => (
+        <span style={{ fontWeight: 500, color: "#52c41a" }}>
+          {spent !== null ? `${spent.toLocaleString()} VNĐ` : "0 VNĐ"}
+        </span>
+      ),
+      sorter: (a, b) => (a.total_spent || 0) - (b.total_spent || 0),
     },
     {
       title: "Trạng thái",
@@ -181,7 +186,8 @@ const MembersPage = () => {
         { text: "Hoạt động", value: true },
         { text: "Không hoạt động", value: false },
       ],
-      onFilter: (value, record: User) => record.is_active === value,
+      onFilter: (value, record: UserManagementInfo) =>
+        record.is_active === value,
     },
   ];
 
@@ -191,59 +197,55 @@ const MembersPage = () => {
     setCustomerModalVisible(true);
   };
 
-  const handleEdit = (record: User) => {
+  const handleEdit = (record: UserManagementInfo) => {
     setEditData(record);
     setCustomerModalVisible(true);
   };
 
-  const handleView = (record: User) => {
+  const handleView = (record: UserManagementInfo) => {
     setDetailData(record);
     setDetailModalVisible(true);
   };
 
-  const handleViewVehicles = (record: User) => {
+  const handleViewVehicles = (record: UserManagementInfo) => {
     setDetailData(record);
     setVehiclesModalVisible(true);
   };
 
-  const handleToggleStatus = (record: User) => {
+  const handleToggleStatus = (record: UserManagementInfo) => {
     const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
     showModal({
-      title: `${action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"} khách hàng`,
+      title: `${
+        action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"
+      } khách hàng`,
       content: `Bạn có chắc chắn muốn ${action} khách hàng ${record.full_name}?`,
       type: "warning",
       onConfirm: async () => {
-        setLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setData(prev => prev.map(item => 
-          item.user_id === record.user_id 
-            ? { ...item, is_active: !item.is_active }
-            : item
-        ));
-        setLoading(false);
+        try {
+          await updateUserStatus(record.user_id, !record.is_active);
+          message.success(
+            `Đã ${action} khách hàng ${record.full_name} thành công`
+          );
+        } catch {
+          message.error(`Không thể ${action} khách hàng`);
+        }
       },
     });
   };
 
-  const handleCustomerModalSuccess = (customerData: User) => {
-    if (editData) {
-      // Update existing customer
-      setData(prev => prev.map(item => 
-        item.user_id === customerData.user_id ? { ...item, ...customerData } : item
-      ));
-    } else {
-      // Add new customer
-      setData(prev => [...prev, customerData]);
-    }
+  const handleCustomerModalSuccess = () => {
+    // Refresh the data after successful operation
+    // The data will be refreshed automatically when the modal closes
+    // due to the useEffect that watches for filter changes
   };
 
   return (
     <>
       <AdminTable
         title="Quản lý khách hàng"
-        dataSource={data}
+        dataSource={users}
         columns={columns}
-        loading={loading}
+        loading={isLoading}
         onAdd={handleAdd}
         onEdit={handleEdit}
         onView={handleView}
@@ -261,15 +263,30 @@ const MembersPage = () => {
           },
           {
             key: "toggle-status",
-            label: (record: User) =>
+            label: (record: UserManagementInfo) =>
               record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
             type: "default",
-            danger: (record: User) => record.is_active,
+            danger: (record: UserManagementInfo) => record.is_active,
             onClick: handleToggleStatus,
           },
         ]}
-        scroll={{ x: 800 }}
+        scroll={{ x: 1200 }}
         rowKey="user_id"
+        pagination={{
+          current: pagination?.page ? pagination.page + 1 : 1,
+          pageSize: pagination?.size || 10,
+          total: pagination?.total_elements || 0,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total: number, range: [number, number]) =>
+            `${range[0]}-${range[1]} của ${total} khách hàng`,
+          onChange: (page: number, pageSize: number) => {
+            goToPage(page - 1);
+            if (pageSize !== pagination?.size) {
+              changePageSize(pageSize || 10);
+            }
+          },
+        }}
       />
 
       {/* Customer Modal */}
