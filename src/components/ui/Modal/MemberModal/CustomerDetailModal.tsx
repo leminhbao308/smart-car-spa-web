@@ -116,14 +116,12 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             <Descriptions.Item label="Tuổi">
               <Text>{calculateAge(data.date_of_birth)}</Text>
             </Descriptions.Item>
-            {data.address && (
-              <Descriptions.Item label="Địa chỉ" span={2}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <HomeOutlined style={{ color: "#666" }} />
-                  <Text>{data.address}</Text>
-                </div>
-              </Descriptions.Item>
-            )}
+            <Descriptions.Item label="Địa chỉ">
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <HomeOutlined style={{ color: "#666" }} />
+                <Text>{data.address || "Chưa cập nhật"}</Text>
+              </div>
+            </Descriptions.Item>
           </Descriptions>
         </Card>
 

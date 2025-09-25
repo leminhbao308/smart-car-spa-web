@@ -133,3 +133,66 @@ export interface CreateUserErrorResponse {
   path: string;
   errorCode: string;
 }
+
+// Update User Request
+export interface UpdateUserRequest {
+  email: string;
+  full_name: string;
+  phone_number: string;
+  date_of_birth: string; // ISO date string
+  gender: "MALE" | "FEMALE" | "OTHER";
+  address: string;
+  avatar_url?: string | null; // optional
+  is_active?: boolean; // optional
+  is_deleted?: boolean; // optional
+  role_code?: string; // optional
+  customer_rank?: CustomerRank; // optional
+  accumulated_points?: number; // optional
+  citizen_id?: string | null; // for employee only
+}
+
+// Update User Response
+export interface UpdateUserResponse {
+  success: boolean;
+  message: string;
+  timestamp: string;
+  data: {
+    user_id: string;
+    email: string;
+    full_name: string;
+    phone_number: string;
+    date_of_birth: string;
+    gender: "MALE" | "FEMALE" | "OTHER";
+    address: string;
+    avatar_url: string | null;
+    role: {
+      role_id: string;
+      role_name: string;
+      role_code: string;
+      description: string;
+    };
+    user_type: UserType;
+    customer_rank: CustomerRank | null;
+    accumulated_points: number;
+    total_orders: number;
+    total_spent: number;
+    hired_at: string | null;
+    citizen_id: string | null;
+    created_date: string;
+    modified_date: string;
+    created_by: string;
+    modified_by: string;
+    is_active: boolean;
+    is_deleted: boolean;
+  };
+}
+
+// Update User Error Response
+export interface UpdateUserErrorResponse {
+  timestamp: string;
+  status: number;
+  error: string;
+  message: string;
+  path: string;
+  errorCode: string;
+}

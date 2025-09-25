@@ -11,6 +11,8 @@ import {
   UserStatistics,
   CreateUserRequest,
   CreateUserResponse,
+  UpdateUserRequest,
+  UpdateUserResponse,
 } from "../types";
 
 export class UserService {
@@ -41,7 +43,6 @@ export class UserService {
       }
 
       const url = `/users/get-all?${queryParams.toString()}`;
-      
 
       const response = await apiClient.get(url);
       console.log("API Response received:", response);
@@ -59,7 +60,7 @@ export class UserService {
         data: error.response?.data,
         url: error.config?.url,
       });
-      
+
       // Provide more specific error messages
       if (error.response?.status === 500) {
         throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
@@ -223,12 +224,14 @@ export class UserService {
   /**
    * Create new user (Customer or Staff)
    */
-  static async createUser(userData: CreateUserRequest): Promise<CreateUserResponse> {
+  static async createUser(
+    userData: CreateUserRequest
+  ): Promise<CreateUserResponse> {
     try {
       console.log("Creating user with data:", userData);
-      
+
       const response = await apiClient.post("/users/create", userData);
-      
+
       console.log("Create user API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -238,22 +241,87 @@ export class UserService {
       }
     } catch (error: any) {
       console.log("Create user error details:", error);
-      
+
       // Handle specific error cases
       if (error.response?.status === 400) {
         // Bad Request - validation errors
-        const errorMessage = error.response.data?.message || "Validation failed";
+        const errorMessage =
+          error.response.data?.message || "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.";
         throw new Error(errorMessage);
       } else if (error.response?.status === 409) {
         // Conflict - email already exists
-        const errorMessage = error.response.data?.message || "Email already exists";
+        const errorMessage =
+          error.response.data?.message || "Email đã tồn tại trong hệ thống.";
         throw new Error(errorMessage);
       } else if (error.response?.status === 500) {
         // Server error
-        throw new Error("Server error occurred. Please try again later.");
+        throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
+      } else if (error.response?.status === 401) {
+        // Unauthorized
+        throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      } else if (error.response?.status === 403) {
+        // Forbidden
+        throw new Error("Bạn không có quyền thực hiện thao tác này.");
       } else {
         // Other errors
-        throw new Error(error.message || "Failed to create user");
+        const errorMessage = error.message || error.response?.data?.message || "Không thể tạo người dùng. Vui lòng thử lại.";
+        throw new Error(errorMessage);
+      }
+    }
+  }
+
+  /**
+   * Update user by ID
+   */
+  static async updateUser(
+    userId: string,
+    userData: UpdateUserRequest
+  ): Promise<UpdateUserResponse> {
+    try {
+      console.log("Updating user with data:", userData);
+
+      const response = await apiClient.post(
+        `/users/${userId}/update`,
+        userData
+      );
+
+      console.log("Update user API response:", response);
+
+      if (response.data.success && response.data.data) {
+        return response.data;
+      } else {
+        throw new Error(response.data.message || "Failed to update user");
+      }
+    } catch (error: any) {
+      console.log("Update user error details:", error);
+
+      // Handle specific error cases
+      if (error.response?.status === 400) {
+        // Bad Request - validation errors
+        const errorMessage =
+          error.response.data?.message || "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.";
+        throw new Error(errorMessage);
+      } else if (error.response?.status === 404) {
+        // Not Found - user not found
+        throw new Error("Không tìm thấy người dùng.");
+      } else if (error.response?.status === 409) {
+        // Conflict - email already exists
+        const errorMessage =
+          error.response.data?.message || "Email đã tồn tại trong hệ thống.";
+        throw new Error(errorMessage);
+      } else if (error.response?.status === 500) {
+        // Server error
+        throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
+      } else if (error.response?.status === 401) {
+        // Unauthorized
+        throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      } else if (error.response?.status === 403) {
+        // Forbidden
+        throw new Error("Bạn không có quyền thực hiện thao tác này.");
+      } else {
+        // Other errors
+        const errorMessage = error.message || error.response?.data?.message || "Không thể cập nhật người dùng. Vui lòng thử lại.";
+        throw new Error(errorMessage);
       }
     }
   }

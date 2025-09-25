@@ -22,10 +22,16 @@ import {
   HomeOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { UserManagementInfo, Role } from "@/lib/api/types";
+import {
+  UserManagementInfo,
+  Role,
+  UpdateUserRequest,
+  CreateUserRequest,
+} from "@/lib/api/types";
 import { RoleService } from "@/lib/api/services/role.service";
+import { UserService } from "@/lib/api/services/user.service";
 
-const { TextArea } = Input;
+// const { TextArea } = Input; // Not used in this component
 
 interface StaffModalProps {
   visible: boolean;
@@ -56,18 +62,25 @@ const StaffModal: React.FC<StaffModalProps> = ({
   const loadRoles = async () => {
     try {
       setRolesLoading(true);
+      console.log("StaffModal: Loading roles...");
       const response = await RoleService.getAllRoles();
-      
+      console.log("StaffModal: Roles response:", response);
+
       if (response.success && response.data) {
         // Filter out customer roles for staff
         const nonCustomerRoles = response.data.filter(
           (role: Role) => role.role_code !== "CUSTOMER"
         );
+        console.log("StaffModal: Filtered roles:", nonCustomerRoles);
         setStaffRoles(nonCustomerRoles);
+      } else {
+        console.warn("StaffModal: No roles data received");
+        setStaffRoles([]);
       }
     } catch (error) {
-      console.error("Error loading roles:", error);
+      console.error("StaffModal: Error loading roles:", error);
       message.error("Không thể tải danh sách vai trò. Vui lòng thử lại.");
+      setStaffRoles([]);
     } finally {
       setRolesLoading(false);
     }
@@ -76,7 +89,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
   useEffect(() => {
     if (visible) {
       loadRoles();
-      
+
       if (editData) {
         form.setFieldsValue({
           full_name: editData.full_name,
@@ -89,9 +102,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
           address: editData.address,
           role_id: editData.role.role_id,
           citizen_id: editData.citizen_id,
-          hired_at: editData.hired_at
-            ? dayjs(editData.hired_at)
-            : null,
+          hired_at: editData.hired_at ? dayjs(editData.hired_at) : null,
         });
       } else {
         form.resetFields();
@@ -102,45 +113,151 @@ const StaffModal: React.FC<StaffModalProps> = ({
   const handleSubmit = async () => {
     try {
       setLoading(true);
+      console.log("StaffModal: Starting form validation...");
+
       const values = await form.validateFields();
+      console.log("StaffModal: Form validation successful, values:", values);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Additional validation
+      if (!values.email || !values.full_name || !values.phone_number) {
+        throw new Error("Vui lòng điền đầy đủ thông tin bắt buộc.");
+      }
 
-      const selectedRole = staffRoles.find(role => role.role_id === values.role_id);
-      
-      const staffData: UserManagementInfo = {
-        id: editData?.id || `staff_${Date.now()}`,
-        user_id: editData?.user_id || `user_${Date.now()}`,
-        email: values.email,
-        full_name: values.full_name,
-        phone_number: values.phone_number,
-        date_of_birth: values.date_of_birth ? values.date_of_birth.format("YYYY-MM-DD HH:mm:ss") : null,
-        gender: values.gender,
-        address: values.address,
-        avatar_url: null,
-        is_active: true,
-        role: selectedRole || staffRoles[0],
-        user_type: "EMPLOYEE",
-        customer_rank: null,
-        accumulated_points: null,
-        total_orders: null,
-        total_spent: null,
-        hired_at: values.hired_at ? values.hired_at.format("YYYY-MM-DD HH:mm:ss") : null,
-        citizen_id: values.citizen_id || null,
-        created_at: editData?.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      if (!editData && (!values.password || !values.role_id)) {
+        throw new Error("Vui lòng điền đầy đủ mật khẩu và chọn vai trò.");
+      }
 
-      message.success(
-        editData
-          ? "Cập nhật nhân viên thành công!"
-          : "Tạo nhân viên thành công!"
-      );
+      if (editData) {
+        // Update existing user
+        console.log("StaffModal: Updating existing user...");
+        const selectedRole = staffRoles.find(
+          (role) => role.role_id === values.role_id
+        );
+
+        try {
+          const updateData: UpdateUserRequest = {
+            email: values.email,
+            full_name: values.full_name,
+            phone_number: values.phone_number,
+            date_of_birth: values.date_of_birth
+              ? values.date_of_birth.toISOString()
+              : new Date().toISOString(),
+            gender: values.gender,
+            address: values.address || "",
+            avatar_url: null,
+            is_active: true,
+            role_code: selectedRole?.role_code || staffRoles[0]?.role_code,
+            citizen_id: values.citizen_id || null,
+          };
+
+          console.log("StaffModal: Update data:", updateData);
+          console.log("StaffModal: Calling UserService.updateUser...");
+
+          const result = await UserService.updateUser(
+            editData.user_id,
+            updateData
+          );
+          console.log("StaffModal: UserService.updateUser result:", result);
+
+          message.success("Cập nhật nhân viên thành công!");
+        } catch (apiError) {
+          console.error("StaffModal: API Error in updateUser:", apiError);
+          throw apiError; // Re-throw to be caught by outer catch
+        }
+      } else {
+        // Create new user using real API
+        console.log("StaffModal: Creating new user...");
+        console.log("StaffModal: Available roles:", staffRoles);
+        console.log("StaffModal: Selected role_id:", values.role_id);
+
+        const selectedRole = staffRoles.find(
+          (role) => role.role_id === values.role_id
+        );
+        console.log("StaffModal: Selected role:", selectedRole);
+
+        if (!selectedRole && staffRoles.length === 0) {
+          throw new Error(
+            "Không có vai trò nào khả dụng. Vui lòng thử lại sau."
+          );
+        }
+
+        try {
+          const createData: CreateUserRequest = {
+            email: values.email,
+            password: values.password,
+            googleId: null,
+            fullName: values.full_name,
+            phoneNumber: values.phone_number,
+            dateOfBirth: values.date_of_birth
+              ? values.date_of_birth.toISOString()
+              : new Date().toISOString(),
+            gender: values.gender,
+            address: values.address || "",
+            avatarUrl: null,
+            roleCode: (selectedRole?.role_code ||
+              staffRoles[0]?.role_code ||
+              "STAFF") as "CUSTOMER" | "ADMIN" | "STAFF",
+          };
+
+
+          const result = await UserService.createUser(createData);
+          console.log("StaffModal: UserService.createUser result:", result);
+
+          message.success("Tạo nhân viên thành công!");
+        } catch (apiError) {
+          console.error("StaffModal: API Error in createUser:", apiError);
+          throw apiError; // Re-throw to be caught by outer catch
+        }
+      }
+
+      console.log("StaffModal: Calling onSuccess...");
       onSuccess();
+      console.log("StaffModal: Calling onCancel...");
       onCancel();
-    } catch (error) {
-      console.log("Error:", error);
+      console.log("StaffModal: Success flow completed");
+    } catch (error: unknown) {
+      // Enhanced error logging
+      console.error("=== StaffModal Error Debug ===");
+      console.error("Raw error:", error);
+      console.error("Error type:", typeof error);
+      console.error("Error constructor:", error?.constructor?.name);
+      console.error("Error string:", String(error));
+      console.error("Error JSON:", JSON.stringify(error, null, 2));
+
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        console.error("Error name:", error.name);
+      }
+
+      if (error && typeof error === "object") {
+        console.error("Error keys:", Object.keys(error));
+        console.error("Error values:", Object.values(error));
+      }
+
+      console.error("=== End Error Debug ===");
+
+      let errorMessage = "Có lỗi xảy ra. Vui lòng thử lại!";
+
+      if (error instanceof Error) {
+        errorMessage = error.message || "Lỗi không xác định";
+      } else if (typeof error === "string") {
+        errorMessage = error;
+      } else if (error && typeof error === "object") {
+        // Try to extract message from various possible properties
+        const errorObj = error as Record<string, unknown>;
+        const possibleMessage =
+          errorObj.message ||
+          errorObj.error ||
+          errorObj.detail ||
+          errorObj.description;
+        if (possibleMessage) {
+          errorMessage = String(possibleMessage);
+        }
+      }
+
+      console.error("Final error message:", errorMessage);
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -206,6 +323,45 @@ const StaffModal: React.FC<StaffModalProps> = ({
           </Col>
         </Row>
 
+        {!editData && (
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="Mật khẩu"
+                name="password"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mật khẩu!" },
+                  { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
+                ]}
+              >
+                <Input.Password placeholder="Nhập mật khẩu" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Xác nhận mật khẩu"
+                name="confirmPassword"
+                dependencies={["password"]}
+                rules={[
+                  { required: true, message: "Vui lòng xác nhận mật khẩu!" },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue("password") === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        new Error("Mật khẩu xác nhận không khớp!")
+                      );
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password placeholder="Xác nhận mật khẩu" />
+              </Form.Item>
+            </Col>
+          </Row>
+        )}
+
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -213,10 +369,6 @@ const StaffModal: React.FC<StaffModalProps> = ({
               name="phone_number"
               rules={[
                 { required: true, message: "Vui lòng nhập số điện thoại!" },
-                {
-                  pattern: /^[0-9]{10,11}$/,
-                  message: "Số điện thoại không hợp lệ!",
-                },
               ]}
             >
               <Input
@@ -226,10 +378,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item
-              label="Ngày sinh"
-              name="date_of_birth"
-            >
+            <Form.Item label="Ngày sinh" name="date_of_birth">
               <DatePicker
                 style={{ width: "100%" }}
                 placeholder="Chọn ngày sinh"
@@ -264,7 +413,9 @@ const StaffModal: React.FC<StaffModalProps> = ({
               <Select
                 placeholder="Chọn vai trò"
                 loading={rolesLoading}
-                notFoundContent={rolesLoading ? <Spin size="small" /> : "Không có dữ liệu"}
+                notFoundContent={
+                  rolesLoading ? <Spin size="small" /> : "Không có dữ liệu"
+                }
                 options={staffRoles.map((role) => ({
                   value: role.role_id,
                   label: (
@@ -296,9 +447,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
           </Col>
           <Col span={12}>
             <Form.Item label="CMND/CCCD" name="citizen_id">
-              <Input
-                placeholder="Nhập số CMND/CCCD (tùy chọn)"
-              />
+              <Input placeholder="Nhập số CMND/CCCD (tùy chọn)" />
             </Form.Item>
           </Col>
         </Row>
