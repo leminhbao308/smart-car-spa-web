@@ -8,13 +8,27 @@ import {
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import { Tag, Avatar, message } from "antd";
-import { UserManagementInfo, UserType } from "@/lib/api/types";
-import { UserService } from "@/lib/api/services/user.service";
+import { UserManagementInfo } from "@/lib/api/types";
+import { useUserManagement } from "@/lib/api/hooks/useUserManagement";
 
 const StaffPage = () => {
-  const [data, setData] = useState<UserManagementInfo[]>([]);
-  const [loading, setLoading] = useState(false);
   const { showModal } = useConfirmationModalContext();
+
+  // User Management Hook
+  const {
+    users,
+    pagination,
+    isLoading,
+    error,
+    updateUserStatus,
+    deleteUser,
+    setFilters,
+    goToPage,
+    changePageSize,
+    clearError,
+    refreshUsers,
+    searchUsers,
+  } = useUserManagement();
 
   // Modal states
   const [staffModalVisible, setStaffModalVisible] = useState(false);
@@ -22,34 +36,19 @@ const StaffPage = () => {
   const [detailData, setDetailData] = useState<UserManagementInfo | null>(null);
   const [editData, setEditData] = useState<UserManagementInfo | null>(null);
 
-  // Fetch staff data (users with non-customer roles)
+  // Fetch staff data (users with EMPLOYEE role)
   useEffect(() => {
-    fetchStaff();
-  }, []);
+    // Set filter to only show EMPLOYEE users
+    setFilters({ userType: "EMPLOYEE" });
+  }, [setFilters]);
 
-  const fetchStaff = async () => {
-    setLoading(true);
-    try {
-      // Fetch employees using API
-      const response = await UserService.getAllUsers({
-        userType: "EMPLOYEE" as UserType,
-        page: 0,
-        size: 100, 
-        direction: "DESC",
-        sort: "createdDate",
-      });
-
-      setData(response.data.content);
-    } catch (error: any) {
-      console.log("Error fetching staff:", error);
-
-      // Show more specific error message
-      const errorMessage = error.message || "Không thể tải danh sách nhân viên";
-      message.error(errorMessage);
-    } finally {
-      setLoading(false);
+  // Handle error display
+  useEffect(() => {
+    if (error) {
+      message.error(error);
+      clearError();
     }
-  };
+  }, [error, clearError]);
 
   // Định nghĩa columns
   const columns: ColumnsType<UserManagementInfo> = [
@@ -182,40 +181,55 @@ const StaffPage = () => {
       type: "warning",
       onConfirm: async () => {
         try {
-          setLoading(true);
-          await UserService.updateUserStatus(record.user_id, !record.is_active);
-          setData((prev) =>
-            prev.map((item) =>
-              item.user_id === record.user_id
-                ? { ...item, is_active: !item.is_active }
-                : item
-            )
-          );
+          await updateUserStatus(record.user_id, !record.is_active);
           message.success(
-            `Đã ${action} nhân viên ${record.full_name} thành công!`
+            `Đã ${action} nhân viên ${record.full_name} thành công`
           );
-        } catch (error) {
-          console.log("Error updating user status:", error);
-          message.error(`Không thể ${action} nhân viên ${record.full_name}`);
-        } finally {
-          setLoading(false);
+        } catch {
+          message.error(`Không thể ${action} nhân viên`);
         }
       },
     });
   };
 
-  const handleStaffModalSuccess = () => {
-    // Refresh the staff list after create/update
-    fetchStaff();
+  const handleDeleteUser = (record: UserManagementInfo) => {
+    showModal({
+      title: "Xóa nhân viên",
+      content: `Bạn có chắc chắn muốn xóa nhân viên ${record.full_name}? Hành động này không thể hoàn tác.`,
+      type: "error",
+      onConfirm: async () => {
+        try {
+          await deleteUser(record.user_id);
+          message.success(`Đã xóa nhân viên ${record.full_name} thành công`);
+        } catch (error: unknown) {
+          const errorMessage =
+            error && typeof error === "object" && "message" in error
+              ? (error as { message: string }).message
+              : "Không thể xóa nhân viên";
+          message.error(errorMessage);
+        }
+      },
+    });
+  };
+
+  const handleStaffModalSuccess = async () => {
+    // Refresh the data after successful operation
+    console.log("StaffPage: Refreshing data after modal success...");
+    try {
+      await refreshUsers();
+      console.log("StaffPage: Data refreshed successfully");
+    } catch (error) {
+      console.error("StaffPage: Error refreshing data:", error);
+    }
   };
 
   return (
     <>
       <AdminTable
         title="Quản lý nhân viên"
-        dataSource={data}
+        dataSource={users}
         columns={columns}
-        loading={loading}
+        loading={isLoading}
         onAdd={handleAdd}
         onEdit={handleEdit}
         onView={handleView}
@@ -223,18 +237,42 @@ const StaffPage = () => {
         searchable={true}
         searchPlaceholder="Tìm kiếm nhân viên theo tên, email, số điện thoại..."
         searchFields={["full_name", "email", "phone_number"]}
+        useServerSearch={true}
+        onSearch={searchUsers}
         actions={[
           {
-            key: "toggle-status",
-            label: (record: UserManagementInfo) =>
-              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
+            key: "delete-user",
+            label: "Xóa",
             type: "default",
-            danger: (record: UserManagementInfo) => record.is_active,
-            onClick: handleToggleStatus,
+            danger: true,
+            onClick: handleDeleteUser,
+            condition: (record: UserManagementInfo) => record.is_active,
           },
         ]}
         scroll={{ x: 1200 }}
         rowKey="user_id"
+        pagination={{
+          current: pagination?.page ? pagination.page + 1 : 1,
+          pageSize: pagination?.size || 10,
+          total: pagination?.total_elements || 0,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total: number, range: [number, number]) =>
+            `${range[0]}-${range[1]} của ${total} nhân viên`,
+          pageSizeOptions: ["10", "20", "50", "100"],
+          onChange: (page: number, pageSize: number) => {
+            console.log("Staff Page: Pagination changed", { page, pageSize });
+            if (pageSize !== pagination?.size) {
+              changePageSize(pageSize || 10);
+            } else {
+              goToPage(page - 1);
+            }
+          },
+          onShowSizeChange: (current: number, size: number) => {
+            console.log("Staff Page: Page size changed", { current, size });
+            changePageSize(size);
+          },
+        }}
       />
 
       {/* Staff Modal */}

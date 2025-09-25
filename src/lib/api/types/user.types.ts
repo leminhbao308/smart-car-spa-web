@@ -114,6 +114,17 @@ export interface CreateUserRequest {
   address: string;
   avatarUrl?: string | null;
   roleCode: "CUSTOMER" | "ADMIN" | "STAFF";
+  user_type: UserType;
+  
+  // Customer-specific fields
+  customer_rank?: CustomerRank;
+  accumulated_points?: number;
+  total_orders?: number;
+  total_spent?: number;
+  
+  // Employee-specific fields
+  hired_at?: string; // ISO date string
+  citizen_id?: string; // Required for employees
 }
 
 // Create User Response

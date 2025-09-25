@@ -197,6 +197,10 @@ const StaffModal: React.FC<StaffModalProps> = ({
             roleCode: (selectedRole?.role_code ||
               staffRoles[0]?.role_code ||
               "STAFF") as "CUSTOMER" | "ADMIN" | "STAFF",
+            user_type: "EMPLOYEE",
+            // Employee-specific fields
+            hired_at: values.hired_at ? values.hired_at.toISOString() : new Date().toISOString(),
+            citizen_id: values.citizen_id,
           };
 
 
@@ -446,8 +450,18 @@ const StaffModal: React.FC<StaffModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
-            <Form.Item label="CMND/CCCD" name="citizen_id">
-              <Input placeholder="Nhập số CMND/CCCD (tùy chọn)" />
+            <Form.Item 
+              label="CMND/CCCD" 
+              name="citizen_id"
+              rules={[
+                { required: !editData, message: "Vui lòng nhập số CMND/CCCD!" },
+                {
+                  pattern: /^[0-9]{9,12}$/,
+                  message: "Số CMND/CCCD phải có 9-12 chữ số!",
+                },
+              ]}
+            >
+              <Input placeholder="Nhập số CMND/CCCD" />
             </Form.Item>
           </Col>
         </Row>

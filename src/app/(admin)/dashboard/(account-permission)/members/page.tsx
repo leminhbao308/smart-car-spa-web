@@ -24,10 +24,13 @@ const MembersPage = () => {
     isLoading,
     error,
     updateUserStatus,
+    deleteUser,
     setFilters,
     goToPage,
     changePageSize,
     clearError,
+    refreshUsers,
+    searchUsers,
   } = useUserManagement();
 
   // Modal states
@@ -233,10 +236,35 @@ const MembersPage = () => {
     });
   };
 
-  const handleCustomerModalSuccess = () => {
+  const handleDeleteUser = (record: UserManagementInfo) => {
+    showModal({
+      title: "Xóa khách hàng",
+      content: `Bạn có chắc chắn muốn xóa khách hàng ${record.full_name}? Hành động này không thể hoàn tác.`,
+      type: "error",
+      onConfirm: async () => {
+        try {
+          await deleteUser(record.user_id);
+          message.success(`Đã xóa khách hàng ${record.full_name} thành công`);
+        } catch (error: unknown) {
+          const errorMessage =
+            error && typeof error === "object" && "message" in error
+              ? (error as { message: string }).message
+              : "Không thể xóa khách hàng";
+          message.error(errorMessage);
+        }
+      },
+    });
+  };
+
+  const handleCustomerModalSuccess = async () => {
     // Refresh the data after successful operation
-    // The data will be refreshed automatically when the modal closes
-    // due to the useEffect that watches for filter changes
+    console.log("MembersPage: Refreshing data after modal success...");
+    try {
+      await refreshUsers();
+      console.log("MembersPage: Data refreshed successfully");
+    } catch (error) {
+      console.error("MembersPage: Error refreshing data:", error);
+    }
   };
 
   return (
@@ -253,21 +281,16 @@ const MembersPage = () => {
         searchable={true}
         searchPlaceholder="Tìm kiếm khách hàng theo tên, email, số điện thoại..."
         searchFields={["full_name", "email", "phone_number", "address"]}
+        useServerSearch={true}
+        onSearch={searchUsers}
         actions={[
           {
-            key: "view-vehicles",
-            label: "Xem xe",
+            key: "delete-user",
+            label: "Xóa",
             type: "default",
-            icon: <CarOutlined />,
-            onClick: handleViewVehicles,
-          },
-          {
-            key: "toggle-status",
-            label: (record: UserManagementInfo) =>
-              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
-            type: "default",
-            danger: (record: UserManagementInfo) => record.is_active,
-            onClick: handleToggleStatus,
+            danger: true,
+            onClick: handleDeleteUser,
+            condition: (record: UserManagementInfo) => record.is_active,
           },
         ]}
         scroll={{ x: 1200 }}
@@ -280,11 +303,18 @@ const MembersPage = () => {
           showQuickJumper: true,
           showTotal: (total: number, range: [number, number]) =>
             `${range[0]}-${range[1]} của ${total} khách hàng`,
+          pageSizeOptions: ["10", "20", "50", "100"],
           onChange: (page: number, pageSize: number) => {
-            goToPage(page - 1);
+            console.log("Members Page: Pagination changed", { page, pageSize });
             if (pageSize !== pagination?.size) {
               changePageSize(pageSize || 10);
+            } else {
+              goToPage(page - 1);
             }
+          },
+          onShowSizeChange: (current: number, size: number) => {
+            console.log("Members Page: Page size changed", { current, size });
+            changePageSize(size);
           },
         }}
       />

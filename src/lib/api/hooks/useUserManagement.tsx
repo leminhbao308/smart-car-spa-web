@@ -16,7 +16,6 @@ import {
 import { UserService } from "../services/user.service";
 import {
   UserManagementState,
-  UserManagementInfo,
   GetAllUsersRequest,
   UserFilterOptions,
   UserSortOptions,
@@ -83,12 +82,13 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
+      // Merge params with current state
       const requestParams: GetAllUsersRequest = {
         page: params.page ?? 0,
         size: params.size ?? 10,
-        direction: params.direction ?? state.sort.direction,
-        sort: params.sort ?? state.sort.field,
-        userType: params.userType ?? state.filters.userType,
+        direction: params.direction ?? "DESC",
+        sort: params.sort ?? "createdDate",
+        userType: params.userType,
       };
 
       const response = await UserService.getAllUsers(requestParams);
@@ -129,15 +129,25 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
    * Refresh users (re-fetch current page)
    */
   const refreshUsers = useCallback(async () => {
-    if (state.pagination) {
+    const currentState = state;
+    if (currentState.pagination) {
       await fetchUsers({
-        page: state.pagination.page,
-        size: state.pagination.size,
+        page: currentState.pagination.page,
+        size: currentState.pagination.size,
+        userType: currentState.filters.userType,
+        direction: currentState.sort.direction,
+        sort: currentState.sort.field
       });
     } else {
-      await fetchUsers();
+      await fetchUsers({
+        page: 0,
+        size: 10,
+        userType: currentState.filters.userType,
+        direction: currentState.sort.direction,
+        sort: currentState.sort.field
+      });
     }
-  }, [fetchUsers, state.pagination]);
+  }, [fetchUsers, state]);
 
   /**
    * Create new user
@@ -149,13 +159,8 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
         const response = await UserService.createUser(userData);
 
-        // Add new user to the beginning of the list
-        setState((prev) => ({
-          ...prev,
-          users: [response.data, ...prev.users],
-          isLoading: false,
-          error: null,
-        }));
+        // Refresh the data to get the latest list with proper pagination
+        await refreshUsers();
 
         return response;
       } catch (error: unknown) {
@@ -173,7 +178,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    []
+    [refreshUsers]
   );
 
   /**
@@ -186,15 +191,8 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
         await UserService.updateUserStatus(userId, isActive);
 
-        // Update user in local state
-        setState((prev) => ({
-          ...prev,
-          users: prev.users.map((user) =>
-            user.user_id === userId ? { ...user, is_active: isActive } : user
-          ),
-          isLoading: false,
-          error: null,
-        }));
+        // Refresh the data to get the latest list
+        await refreshUsers();
       } catch (error: unknown) {
         const errorMessage =
           error && typeof error === "object" && "message" in error
@@ -208,7 +206,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
         }));
       }
     },
-    []
+    [refreshUsers]
   );
 
   /**
@@ -255,12 +253,13 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
       try {
         setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
+        const currentState = state;
         const response = await UserService.searchUsers(query, {
           page: 0,
-          size: state.pagination?.size ?? 10,
-          direction: state.sort.direction,
-          sort: state.sort.field,
-          userType: state.filters.userType,
+          size: currentState.pagination?.size ?? 10,
+          direction: currentState.sort.direction,
+          sort: currentState.sort.field,
+          userType: currentState.filters.userType,
         });
 
         setState((prev) => ({
@@ -294,7 +293,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
         }));
       }
     },
-    [state.sort, state.filters, state.pagination]
+    [state]
   );
 
   /**
@@ -304,8 +303,9 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
     try {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
+      const currentState = state;
       const blob = await UserService.exportUsers({
-        userType: state.filters.userType,
+        userType: currentState.filters.userType,
       });
 
       setState((prev) => ({ ...prev, isLoading: false, error: null }));
@@ -323,7 +323,7 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
       }));
       throw error;
     }
-  }, [state.filters]);
+  }, [state]);
 
   /**
    * Get user statistics
@@ -365,9 +365,16 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
    */
   const goToPage = useCallback(
     async (page: number) => {
-      await fetchUsers({ page });
+      const currentState = state;
+      await fetchUsers({ 
+        page,
+        size: currentState.pagination?.size ?? 10,
+        userType: currentState.filters.userType,
+        direction: currentState.sort.direction,
+        sort: currentState.sort.field
+      });
     },
-    [fetchUsers]
+    [fetchUsers, state]
   );
 
   /**
@@ -375,9 +382,16 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
    */
   const changePageSize = useCallback(
     async (size: number) => {
-      await fetchUsers({ page: 0, size });
+      const currentState = state;
+      await fetchUsers({ 
+        page: 0, 
+        size,
+        userType: currentState.filters.userType,
+        direction: currentState.sort.direction,
+        sort: currentState.sort.field
+      });
     },
-    [fetchUsers]
+    [fetchUsers, state]
   );
 
   /**
@@ -396,54 +410,16 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
   // Auto-fetch users when filters or sort change
   useEffect(() => {
-    const fetchUsersWithCurrentState = async () => {
-      try {
-        setState((prev) => ({ ...prev, isLoading: true, error: null }));
-
-        const requestParams: GetAllUsersRequest = {
-          page: 0,
-          size: 10,
-          direction: state.sort.direction,
-          sort: state.sort.field,
-          userType: state.filters.userType,
-        };
-
-        const response = await UserService.getAllUsers(requestParams);
-
-        setState((prev) => ({
-          ...prev,
-          users: response.data.content,
-          pagination: {
-            page: response.data.page,
-            size: response.data.size,
-            total_elements: response.data.total_elements,
-            total_pages: response.data.total_pages,
-            first: response.data.first,
-            last: response.data.last,
-            has_next: response.data.has_next,
-            has_previous: response.data.has_previous,
-          },
-          isLoading: false,
-          error: null,
-        }));
-      } catch (error: unknown) {
-        const errorMessage =
-          error && typeof error === "object" && "message" in error
-            ? (error as { message: string }).message
-            : "Failed to fetch users";
-
-        setState((prev) => ({
-          ...prev,
-          users: [],
-          pagination: null,
-          isLoading: false,
-          error: errorMessage,
-        }));
-      }
-    };
-
-    fetchUsersWithCurrentState();
-  }, [state.filters, state.sort]);
+    if (state.filters.userType) {
+      fetchUsers({
+        page: 0,
+        size: 10,
+        direction: state.sort.direction,
+        sort: state.sort.field,
+        userType: state.filters.userType,
+      });
+    }
+  }, [state.filters.userType, state.sort.field, state.sort.direction, fetchUsers]);
 
   const contextValue: UserManagementContextType = {
     ...state,

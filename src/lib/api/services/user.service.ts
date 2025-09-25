@@ -52,27 +52,47 @@ export class UserService {
       } else {
         throw new Error(response.data.message || "Failed to fetch users");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log("Get all users error details:", {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        url: error.config?.url,
+        message:
+          error && typeof error === "object" && "message" in error
+            ? (error as { message: string }).message
+            : "Unknown error",
+        status:
+          error && typeof error === "object" && "response" in error
+            ? (error as { response?: { status?: number } }).response?.status
+            : undefined,
+        statusText:
+          error && typeof error === "object" && "response" in error
+            ? (error as { response?: { statusText?: string } }).response
+                ?.statusText
+            : undefined,
+        data:
+          error && typeof error === "object" && "response" in error
+            ? (error as { response?: { data?: unknown } }).response?.data
+            : undefined,
+        url:
+          error && typeof error === "object" && "config" in error
+            ? (error as { config?: { url?: string } }).config?.url
+            : undefined,
       });
 
       // Provide more specific error messages
-      if (error.response?.status === 500) {
-        throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
-      } else if (error.response?.status === 401) {
-        throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-      } else if (error.response?.status === 403) {
-        throw new Error("Bạn không có quyền truy cập tài nguyên này.");
-      } else if (error.response?.status === 404) {
-        throw new Error("Không tìm thấy dữ liệu người dùng.");
-      } else {
-        throw error;
+      if (error && typeof error === "object" && "response" in error) {
+        const errorResponse = error as { response?: { status?: number } };
+        if (errorResponse.response?.status === 500) {
+          throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
+        } else if (errorResponse.response?.status === 401) {
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
+        } else if (errorResponse.response?.status === 403) {
+          throw new Error("Bạn không có quyền truy cập tài nguyên này.");
+        } else if (errorResponse.response?.status === 404) {
+          throw new Error("Không tìm thấy dữ liệu người dùng.");
+        }
       }
+      throw error;
     }
   }
 
@@ -122,14 +142,36 @@ export class UserService {
    */
   static async deleteUser(userId: string): Promise<void> {
     try {
-      const response = await apiClient.delete(`/users/${userId}`);
+      const response = await apiClient.post(`/users/${userId}/delete`);
 
       if (!response.data.success) {
         throw new Error(response.data.message || "Failed to delete user");
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.log("Delete user error:", error);
-      throw error;
+
+      // Handle specific error cases
+      if (error && typeof error === "object" && "response" in error) {
+        const errorResponse = error as {
+          response?: { status?: number; data?: { message?: string } };
+        };
+        if (errorResponse.response?.status === 404) {
+          throw new Error("Không tìm thấy người dùng để xóa.");
+        } else if (errorResponse.response?.status === 403) {
+          throw new Error("Bạn không có quyền xóa người dùng này.");
+        } else if (errorResponse.response?.status === 500) {
+          throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
+        } else if (errorResponse.response?.status === 401) {
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
+        }
+      }
+      const errorMessage =
+        error && typeof error === "object" && "message" in error
+          ? (error as { message: string }).message
+          : "Không thể xóa người dùng. Vui lòng thử lại.";
+      throw new Error(errorMessage);
     }
   }
 
@@ -239,34 +281,45 @@ export class UserService {
       } else {
         throw new Error(response.data.message || "Failed to create user");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log("Create user error details:", error);
 
       // Handle specific error cases
-      if (error.response?.status === 400) {
-        // Bad Request - validation errors
-        const errorMessage =
-          error.response.data?.message || "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.";
-        throw new Error(errorMessage);
-      } else if (error.response?.status === 409) {
-        // Conflict - email already exists
-        const errorMessage =
-          error.response.data?.message || "Email đã tồn tại trong hệ thống.";
-        throw new Error(errorMessage);
-      } else if (error.response?.status === 500) {
-        // Server error
-        throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
-      } else if (error.response?.status === 401) {
-        // Unauthorized
-        throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-      } else if (error.response?.status === 403) {
-        // Forbidden
-        throw new Error("Bạn không có quyền thực hiện thao tác này.");
-      } else {
-        // Other errors
-        const errorMessage = error.message || error.response?.data?.message || "Không thể tạo người dùng. Vui lòng thử lại.";
-        throw new Error(errorMessage);
+      if (error && typeof error === "object" && "response" in error) {
+        const errorResponse = error as {
+          response?: { status?: number; data?: { message?: string } };
+        };
+        if (errorResponse.response?.status === 400) {
+          // Bad Request - validation errors
+          const errorMessage =
+            errorResponse.response.data?.message ||
+            "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.";
+          throw new Error(errorMessage);
+        } else if (errorResponse.response?.status === 409) {
+          // Conflict - email already exists
+          const errorMessage =
+            errorResponse.response.data?.message ||
+            "Email đã tồn tại trong hệ thống.";
+          throw new Error(errorMessage);
+        } else if (errorResponse.response?.status === 500) {
+          // Server error
+          throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
+        } else if (errorResponse.response?.status === 401) {
+          // Unauthorized
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
+        } else if (errorResponse.response?.status === 403) {
+          // Forbidden
+          throw new Error("Bạn không có quyền thực hiện thao tác này.");
+        }
       }
+      // Other errors
+      const errorMessage =
+        error && typeof error === "object" && "message" in error
+          ? (error as { message: string }).message
+          : "Không thể tạo người dùng. Vui lòng thử lại.";
+      throw new Error(errorMessage);
     }
   }
 
@@ -292,37 +345,48 @@ export class UserService {
       } else {
         throw new Error(response.data.message || "Failed to update user");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log("Update user error details:", error);
 
       // Handle specific error cases
-      if (error.response?.status === 400) {
-        // Bad Request - validation errors
-        const errorMessage =
-          error.response.data?.message || "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.";
-        throw new Error(errorMessage);
-      } else if (error.response?.status === 404) {
-        // Not Found - user not found
-        throw new Error("Không tìm thấy người dùng.");
-      } else if (error.response?.status === 409) {
-        // Conflict - email already exists
-        const errorMessage =
-          error.response.data?.message || "Email đã tồn tại trong hệ thống.";
-        throw new Error(errorMessage);
-      } else if (error.response?.status === 500) {
-        // Server error
-        throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
-      } else if (error.response?.status === 401) {
-        // Unauthorized
-        throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-      } else if (error.response?.status === 403) {
-        // Forbidden
-        throw new Error("Bạn không có quyền thực hiện thao tác này.");
-      } else {
-        // Other errors
-        const errorMessage = error.message || error.response?.data?.message || "Không thể cập nhật người dùng. Vui lòng thử lại.";
-        throw new Error(errorMessage);
+      if (error && typeof error === "object" && "response" in error) {
+        const errorResponse = error as {
+          response?: { status?: number; data?: { message?: string } };
+        };
+        if (errorResponse.response?.status === 400) {
+          // Bad Request - validation errors
+          const errorMessage =
+            errorResponse.response.data?.message ||
+            "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.";
+          throw new Error(errorMessage);
+        } else if (errorResponse.response?.status === 404) {
+          // Not Found - user not found
+          throw new Error("Không tìm thấy người dùng.");
+        } else if (errorResponse.response?.status === 409) {
+          // Conflict - email already exists
+          const errorMessage =
+            errorResponse.response.data?.message ||
+            "Email đã tồn tại trong hệ thống.";
+          throw new Error(errorMessage);
+        } else if (errorResponse.response?.status === 500) {
+          // Server error
+          throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
+        } else if (errorResponse.response?.status === 401) {
+          // Unauthorized
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
+        } else if (errorResponse.response?.status === 403) {
+          // Forbidden
+          throw new Error("Bạn không có quyền thực hiện thao tác này.");
+        }
       }
+      // Other errors
+      const errorMessage =
+        error && typeof error === "object" && "message" in error
+          ? (error as { message: string }).message
+          : "Không thể cập nhật người dùng. Vui lòng thử lại.";
+      throw new Error(errorMessage);
     }
   }
 }

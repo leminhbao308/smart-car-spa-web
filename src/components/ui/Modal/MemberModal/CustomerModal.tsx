@@ -33,7 +33,7 @@ import { UserService } from "@/lib/api/services/user.service";
 interface CustomerModalProps {
   visible: boolean;
   onCancel: () => void;
-  onSuccess: (data: UserManagementInfo) => void;
+  onSuccess: () => void;
   editData?: UserManagementInfo | null;
   title?: string;
 }
@@ -149,16 +149,23 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
           roleCode: (selectedRole?.role_code ||
             customerRoles[0]?.role_code ||
             "CUSTOMER") as "CUSTOMER" | "ADMIN" | "STAFF",
+          user_type: "CUSTOMER",
+          // Customer-specific fields
+          customer_rank: "BRONZE", // Default rank for new customers
+          accumulated_points: 0,
+          total_orders: 0,
+          total_spent: 0.0,
         };
 
-        const response = await UserService.createUser(createData);
+        await UserService.createUser(createData);
         message.success("Tạo khách hàng thành công!");
-
-        // response.data is already UserManagementInfo format
-        onSuccess(response.data);
       }
 
+      console.log("CustomerModal: Calling onSuccess...");
+      onSuccess();
+      console.log("CustomerModal: Calling onCancel...");
       onCancel();
+      console.log("CustomerModal: Success flow completed");
     } catch (error: unknown) {
       console.error("Error:", error);
       const errorMessage =

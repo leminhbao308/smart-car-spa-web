@@ -9,7 +9,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import ClientOnlyTable from "./ClientOnlyTable";
+import SafeTable from "./SafeTable";
 
 const { Title } = Typography;
 
@@ -44,6 +44,8 @@ export interface AdminTableProps {
   searchable?: boolean;
   searchPlaceholder?: string;
   searchFields?: string[];
+  onSearch?: (query: string) => void;
+  useServerSearch?: boolean;
 }
 
 const AdminTable: React.FC<AdminTableProps> = ({
@@ -67,12 +69,14 @@ const AdminTable: React.FC<AdminTableProps> = ({
   searchable = true,
   searchPlaceholder = "Tìm kiếm...",
   searchFields = [],
+  onSearch,
+  useServerSearch = false,
 }) => {
   const [searchText, setSearchText] = useState("");
 
-  // Lọc dữ liệu dựa trên tìm kiếm
+  // Lọc dữ liệu dựa trên tìm kiếm (chỉ khi sử dụng client-side search)
   const filteredData = useMemo(() => {
-    if (!searchText || !searchable) return dataSource;
+    if (useServerSearch || !searchText || !searchable) return dataSource;
 
     return dataSource.filter((item) => {
       if (searchFields.length > 0) {
@@ -94,7 +98,7 @@ const AdminTable: React.FC<AdminTableProps> = ({
         });
       }
     });
-  }, [dataSource, searchText, searchable, searchFields]);
+  }, [dataSource, searchText, searchable, searchFields, useServerSearch]);
 
   // Tạo columns cho actions
   const getActionColumns = (): ColumnsType<any> => {
@@ -243,7 +247,12 @@ const AdminTable: React.FC<AdminTableProps> = ({
             placeholder={searchPlaceholder}
             prefix={<SearchOutlined />}
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(e) => {
+              setSearchText(e.target.value);
+              if (useServerSearch && onSearch) {
+                onSearch(e.target.value);
+              }
+            }}
             allowClear
             style={{ maxWidth: 300 }}
           />
@@ -251,7 +260,7 @@ const AdminTable: React.FC<AdminTableProps> = ({
       )}
 
       {/* Table */}
-      <ClientOnlyTable
+      <SafeTable
         columns={finalColumns}
         dataSource={filteredData}
         loading={loading}

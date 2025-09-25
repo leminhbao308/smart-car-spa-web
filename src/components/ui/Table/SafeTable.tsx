@@ -3,13 +3,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { Table, ConfigProvider } from "antd";
 import type { TableProps } from "antd/es/table";
 
-interface ClientOnlyTableProps<T = unknown> extends TableProps<T> {
+interface SafeTableProps<T = unknown> extends TableProps<T> {
   children?: React.ReactNode;
 }
 
-const ClientOnlyTable = <T = unknown,>(props: ClientOnlyTableProps<T>) => {
+const SafeTable = <T = unknown,>(props: SafeTableProps<T>) => {
   const [isClient, setIsClient] = useState(false);
-  const styleRef = useRef<HTMLStyleElement | null>(null);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -19,32 +18,27 @@ const ClientOnlyTable = <T = unknown,>(props: ClientOnlyTableProps<T>) => {
     };
   }, []);
 
-  // Inject CSS for the loading animation with proper cleanup
+  // Prevent CSS-in-JS cleanup warnings
   useEffect(() => {
     if (!isClient) return;
 
-    // Only create style if it doesn't exist
-    if (!styleRef.current) {
-      const style = document.createElement("style");
-      style.textContent = `
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `;
-      document.head.appendChild(style);
-      styleRef.current = style;
-    }
+    const originalConsoleWarn = console.warn;
+    console.warn = (...args) => {
+      const message = args[0];
+      if (
+        typeof message === "string" &&
+        (message.includes("You are registering a cleanup function after unmount") ||
+         message.includes("Ant Design CSS-in-JS") ||
+         message.includes("cleanup function after unmount"))
+      ) {
+        return; // Suppress Ant Design CSS-in-JS warnings
+      }
+      originalConsoleWarn.apply(console, args);
+    };
 
     return () => {
-      if (styleRef.current && isMountedRef.current) {
-        try {
-          document.head.removeChild(styleRef.current);
-        } catch (error) {
-          // Style element might already be removed
-          console.warn("Style element already removed:", error);
-        }
-        styleRef.current = null;
+      if (isMountedRef.current) {
+        console.warn = originalConsoleWarn;
       }
     };
   }, [isClient]);
@@ -96,4 +90,4 @@ const ClientOnlyTable = <T = unknown,>(props: ClientOnlyTableProps<T>) => {
   );
 };
 
-export default ClientOnlyTable;
+export default SafeTable;
