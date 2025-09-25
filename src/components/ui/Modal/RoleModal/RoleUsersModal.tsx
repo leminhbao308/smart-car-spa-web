@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Modal,
   Table,
@@ -8,9 +8,8 @@ import {
   Typography,
   Divider,
   Button,
-  message,
+  App,
   Avatar,
-  Tooltip,
 } from "antd";
 import { 
   UserOutlined,
@@ -38,14 +37,9 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
 }) => {
   const [users, setUsers] = useState<UserManagementInfo[]>([]);
   const [loading, setLoading] = useState(false);
+  const { message } = App.useApp();
 
-  useEffect(() => {
-    if (visible && roleData) {
-      fetchUsersByRole();
-    }
-  }, [visible, roleData]);
-
-  const fetchUsersByRole = async () => {
+  const fetchUsersByRole = useCallback(async () => {
     if (!roleData) return;
     
     setLoading(true);
@@ -60,7 +54,13 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [roleData, message]);
+
+  useEffect(() => {
+    if (visible && roleData) {
+      fetchUsersByRole();
+    }
+  }, [visible, roleData, fetchUsersByRole]);
 
   const columns: ColumnsType<UserManagementInfo> = [
     {
@@ -142,22 +142,23 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
   if (!roleData) return null;
 
   return (
-    <Modal
-      title={
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <TeamOutlined style={{ color: "#1890ff" }} />
-          <span>Người dùng có vai trò "{roleData.role_name}"</span>
-        </div>
-      }
-      open={visible}
-      onCancel={onCancel}
-      width={1000}
-      footer={[
-        <Button key="close" onClick={onCancel}>
-          Đóng
-        </Button>,
-      ]}
-    >
+    <App>
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <TeamOutlined style={{ color: "#1890ff" }} />
+            <span>Người dùng có vai trò &quot;{roleData.role_name}&quot;</span>
+          </div>
+        }
+        open={visible}
+        onCancel={onCancel}
+        width={1000}
+        footer={[
+          <Button key="close" onClick={onCancel}>
+            Đóng
+          </Button>,
+        ]}
+      >
       <div style={{ padding: "16px 0" }}>
         {/* Role Info Header */}
         <div style={{ 
@@ -211,7 +212,8 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
           }}
         />
       </div>
-    </Modal>
+      </Modal>
+    </App>
   );
 };
 
