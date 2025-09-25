@@ -201,6 +201,10 @@ const MembersPage = () => {
   };
 
   const handleEdit = (record: UserManagementInfo) => {
+    if (record.is_deleted) {
+      message.warning("Không thể chỉnh sửa khách hàng đã bị xóa!");
+      return;
+    }
     setEditData(record);
     setCustomerModalVisible(true);
   };
@@ -276,6 +280,7 @@ const MembersPage = () => {
         loading={isLoading}
         onAdd={handleAdd}
         onEdit={handleEdit}
+        onEditCondition={(record: UserManagementInfo) => !record.is_deleted}
         onView={handleView}
         addButtonText="Thêm khách hàng"
         searchable={true}
@@ -290,7 +295,7 @@ const MembersPage = () => {
             type: "default",
             danger: true,
             onClick: handleDeleteUser,
-            condition: (record: UserManagementInfo) => record.is_active,
+            condition: (record: UserManagementInfo) => record.is_active && !record.is_deleted,
           },
         ]}
         scroll={{ x: 1200 }}

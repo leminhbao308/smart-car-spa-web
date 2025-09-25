@@ -44,6 +44,8 @@ export interface BaseEntity {
   id: string;
   created_at: string;
   updated_at: string;
+  created_date: string;
+  modified_date: string;
 }
 
 // HTTP Methods

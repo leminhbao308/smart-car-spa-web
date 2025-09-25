@@ -4,8 +4,6 @@ import {
   Modal,
   Form,
   Input,
-  Select,
-  InputNumber,
   Button,
   Row,
   Col,
@@ -13,26 +11,21 @@ import {
   message,
   Space,
   Typography,
-  Tag,
 } from "antd";
 import {
-  PlusOutlined, 
-  GlobalOutlined,
-  CalendarOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
-import {
-  countries,
-  brandStatuses,
-} from "@/components/utils/data/vehicle-brands.data";
+import Image from "next/image";
+import { CreateVehicleBrandRequest } from "@/lib/api/types";
+import { VehicleService } from "@/lib/api/services/vehicle.service";
 
-const { Title, Text } = Typography;
-const { Option } = Select;
+const { Title } = Typography;
 const { TextArea } = Input;
 
 interface VehicleBrandAddModalProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess: (brand: any) => void;
+  onSuccess: () => void;
 }
 
 const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
@@ -44,32 +37,29 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>("");
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: { brandName: string; brandCode: string; description: string }) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const newBrand = {
-        id: Date.now(),
-        ...values,
-        logo: logoUrl || "https://via.placeholder.com/100x100?text=LOGO",
-        totalModels: 0,
-        totalVehicles: 0,
-        averageRating: 0,
-        popularModels: [],
-        specialties: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      const brandData: CreateVehicleBrandRequest = {
+        brand_name: values.brandName,
+        brand_code: values.brandCode,
+        description: values.description,
+        ...(logoUrl && { brand_logo_url: logoUrl }),
       };
 
-      onSuccess(newBrand);
+      console.log("Submitting brand data:", brandData);
+      const createdBrand = await VehicleService.createVehicleBrand(brandData);
+      console.log("Created brand:", createdBrand);
+
       message.success("Thêm hãng xe thành công!");
       form.resetFields();
       setLogoUrl("");
+      onSuccess();
       onClose();
     } catch (error) {
-      message.error("Có lỗi xảy ra khi thêm hãng xe!");
+      console.error("Error creating vehicle brand:", error);
+      const errorMessage = error instanceof Error ? error.message : "Có lỗi xảy ra khi thêm hãng xe!";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -81,12 +71,17 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
     onClose();
   };
 
-  const handleLogoUpload = (info: any) => {
-    if (info.file.status === "done") {
-      setLogoUrl(info.file.response?.url || "");
-      message.success("Tải logo thành công!");
-    } else if (info.file.status === "error") {
-      message.error("Tải logo thất bại!");
+  // Tạo preview URL cho file được chọn
+  const handleFileChange = (info: { file: { originFileObj?: File; status?: string } }) => {
+    const { file } = info;
+    
+    if (file.originFileObj) {
+      // Tạo URL preview cho file local
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoUrl(e.target?.result as string);
+      };
+      reader.readAsDataURL(file.originFileObj);
     }
   };
 
@@ -112,24 +107,46 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{
-          status: "active",
-          foundedYear: new Date().getFullYear(),
-        }}
+        initialValues={{}}
       >
         <Row gutter={[16, 16]}>
           {/* Logo */}
           <Col span={24}>
-            <Form.Item label="Logo hãng xe">
+            <Form.Item 
+              label="Logo hãng xe (tùy chọn)"
+              help="Hỗ trợ định dạng: JPG, PNG, GIF. Kích thước tối đa: 2MB"
+            >
               <Upload
                 name="logo"
                 listType="picture-card"
                 showUploadList={false}
-                onChange={handleLogoUpload}
-                beforeUpload={() => false} // Disable actual upload for demo
+                onChange={handleFileChange}
+                beforeUpload={(file) => {
+                  const isImage = file.type.startsWith('image/');
+                  if (!isImage) {
+                    message.error('Chỉ được tải lên file hình ảnh!');
+                    return false;
+                  }
+                  const isLt2M = file.size / 1024 / 1024 < 2;
+                  if (!isLt2M) {
+                    message.error('Kích thước file không được vượt quá 2MB!');
+                    return false;
+                  }
+                  return false; // Disable actual upload for demo
+                }}
+                accept="image/*"
               >
                 {logoUrl ? (
-                  <img src={logoUrl} alt="logo" style={{ width: "100%" }} />
+                  <Image 
+                    src={logoUrl} 
+                    alt="logo" 
+                    width={104}
+                    height={104}
+                    style={{ 
+                      objectFit: "cover",
+                      borderRadius: 6
+                    }} 
+                  />
                 ) : (
                   <div>
                     <PlusOutlined />
@@ -137,6 +154,17 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
                   </div>
                 )}
               </Upload>
+              {logoUrl && (
+                <div style={{ marginTop: 8, textAlign: 'center' }}>
+                  <Button 
+                    size="small" 
+                    danger 
+                    onClick={() => setLogoUrl("")}
+                  >
+                    Xóa logo
+                  </Button>
+                </div>
+              )}
             </Form.Item>
           </Col>
 
@@ -148,9 +176,18 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
               rules={[
                 { required: true, message: "Vui lòng nhập tên hãng xe!" },
                 { min: 2, message: "Tên hãng xe phải có ít nhất 2 ký tự!" },
+                { max: 100, message: "Tên hãng xe không được quá 100 ký tự!" },
+                {
+                  pattern: /^[a-zA-Z0-9\s\-&.,()]+$/,
+                  message: "Tên hãng xe chỉ được chứa chữ cái, số, khoảng trắng và ký tự đặc biệt: -&.,()",
+                },
               ]}
             >
-              <Input placeholder="Nhập tên hãng xe" />
+              <Input 
+                placeholder="Nhập tên hãng xe" 
+                showCount
+                maxLength={100}
+              />
             </Form.Item>
           </Col>
 
@@ -165,85 +202,20 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
                   message:
                     "Mã hãng xe chỉ được chứa chữ hoa, số và dấu gạch dưới!",
                 },
+                { min: 2, message: "Mã hãng xe phải có ít nhất 2 ký tự!" },
+                { max: 20, message: "Mã hãng xe không được quá 20 ký tự!" },
               ]}
             >
-              <Input placeholder="VD: TOYOTA, HONDA" />
-            </Form.Item>
-          </Col>
-
-          <Col span={12}>
-            <Form.Item
-              label="Quốc gia"
-              name="country"
-              rules={[{ required: true, message: "Vui lòng chọn quốc gia!" }]}
-            >
-              <Select
-                placeholder="Chọn quốc gia"
-                showSearch
-                optionFilterProp="children"
-                suffixIcon={<GlobalOutlined />}
-              >
-                {countries.map((country) => (
-                  <Option key={country.value} value={country.label}>
-                    <Space>
-                      <span>{country.flag}</span>
-                      <span>{country.label}</span>
-                    </Space>
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-
-          <Col span={12}>
-            <Form.Item
-              label="Năm thành lập"
-              name="foundedYear"
-              rules={[
-                { required: true, message: "Vui lòng nhập năm thành lập!" },
-                {
-                  type: "number",
-                  min: 1800,
-                  max: new Date().getFullYear(),
-                  message: "Năm thành lập không hợp lệ!",
-                },
-              ]}
-            >
-              <InputNumber
-                style={{ width: "100%" }}
-                placeholder="VD: 1937"
-                suffix={<CalendarOutlined />}
-                min={1800}
-                max={new Date().getFullYear()}
+              <Input 
+                placeholder="VD: TOYOTA, HONDA, BMW" 
+                style={{ textTransform: 'uppercase' }}
+                onChange={(e) => {
+                  e.target.value = e.target.value.toUpperCase();
+                }}
               />
             </Form.Item>
           </Col>
 
-          <Col span={12}>
-            <Form.Item
-              label="Website"
-              name="website"
-              rules={[{ type: "url", message: "URL website không hợp lệ!" }]}
-            >
-              <Input placeholder="https://www.example.com" />
-            </Form.Item>
-          </Col>
-
-          <Col span={12}>
-            <Form.Item
-              label="Trạng thái"
-              name="status"
-              rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
-            >
-              <Select placeholder="Chọn trạng thái">
-                {brandStatuses.map((status) => (
-                  <Option key={status.value} value={status.value}>
-                    <Tag color={status.color}>{status.label}</Tag>
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
 
           <Col span={24}>
             <Form.Item
@@ -252,35 +224,38 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
               rules={[
                 { required: true, message: "Vui lòng nhập mô tả!" },
                 { min: 10, message: "Mô tả phải có ít nhất 10 ký tự!" },
+                { max: 500, message: "Mô tả không được quá 500 ký tự!" },
               ]}
             >
               <TextArea
-                rows={3}
-                placeholder="Nhập mô tả về hãng xe..."
+                rows={4}
+                placeholder="Nhập mô tả về hãng xe, lịch sử, đặc điểm nổi bật..."
                 showCount
                 maxLength={500}
+                style={{ resize: 'vertical' }}
               />
             </Form.Item>
           </Col>
 
-          <Col span={24}>
-            <Form.Item
-              label="Phân khúc giá"
-              name="priceRange"
-              rules={[
-                { required: true, message: "Vui lòng nhập phân khúc giá!" },
-              ]}
-            >
-              <Input placeholder="VD: Từ 500 triệu - 2 tỷ VNĐ" />
-            </Form.Item>
-          </Col>
         </Row>
 
-        <div style={{ textAlign: "right", marginTop: 24 }}>
+        <div style={{ textAlign: "right", marginTop: 24, paddingTop: 16, borderTop: "1px solid #f0f0f0" }}>
           <Space>
-            <Button onClick={handleCancel}>Hủy</Button>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              Thêm hãng xe
+            <Button 
+              onClick={handleCancel}
+              disabled={loading}
+              size="large"
+            >
+              Hủy
+            </Button>
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              loading={loading}
+              size="large"
+              icon={<PlusOutlined />}
+            >
+              {loading ? "Đang thêm..." : "Thêm hãng xe"}
             </Button>
           </Space>
         </div>

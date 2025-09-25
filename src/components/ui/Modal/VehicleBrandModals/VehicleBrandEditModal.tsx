@@ -4,8 +4,6 @@ import {
   Modal,
   Form,
   Input,
-  Select,
-  InputNumber,
   Button,
   Row,
   Col,
@@ -13,27 +11,23 @@ import {
   message,
   Space,
   Typography,
-  Tag,
 } from "antd";
 import {
   EditOutlined,
-  UploadOutlined,
-  GlobalOutlined,
-  CalendarOutlined,
   PlusOutlined,
-  MinusCircleOutlined,
 } from "@ant-design/icons";
-import { countries, brandStatuses } from "@/components/utils/data/vehicle-brands.data";
+import Image from "next/image";
+import { VehicleBrand, UpdateVehicleBrandRequest } from "@/lib/api/types";
+import { VehicleService } from "@/lib/api/services/vehicle.service";
 
-const { Title, Text } = Typography;
-const { Option } = Select;
+const { Title } = Typography;
 const { TextArea } = Input;
 
 interface VehicleBrandEditModalProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess: (brand: any) => void;
-  brandData: any;
+  onSuccess: () => void;
+  brandData: VehicleBrand | null;
 }
 
 const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
@@ -45,49 +39,43 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>("");
-  const [popularModels, setPopularModels] = useState<string[]>([]);
-  const [specialties, setSpecialties] = useState<string[]>([]);
-  const [newModel, setNewModel] = useState("");
-  const [newSpecialty, setNewSpecialty] = useState("");
 
   useEffect(() => {
-    if (brandData && visible) {
+    if (visible && brandData) {
       form.setFieldsValue({
-        brandName: brandData.brandName,
-        brandCode: brandData.brandCode,
-        country: brandData.country,
-        foundedYear: brandData.foundedYear,
-        website: brandData.website,
-        status: brandData.status,
+        brandName: brandData.brand_name,
+        brandCode: brandData.brand_code,
         description: brandData.description,
-        priceRange: brandData.priceRange,
       });
-      setLogoUrl(brandData.logo || "");
-      setPopularModels(brandData.popularModels || []);
-      setSpecialties(brandData.specialties || []);
+      setLogoUrl(brandData.brand_logo_url || "");
     }
-  }, [brandData, visible, form]);
+  }, [visible, brandData, form]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: { brandName: string; brandCode: string; description: string }) => {
+    if (!brandData) return;
+    
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      const updatedBrand = {
-        ...brandData,
-        ...values,
-        logo: logoUrl || brandData.logo,
-        popularModels,
-        specialties,
-        updatedAt: new Date().toISOString(),
+      const updateData: UpdateVehicleBrandRequest = {
+        brand_name: values.brandName,
+        brand_code: values.brandCode,
+        description: values.description,
+        ...(logoUrl && { brand_logo_url: logoUrl }),
       };
 
-      onSuccess(updatedBrand);
+      console.log("Submitting update data:", updateData);
+      const updatedBrand = await VehicleService.updateVehicleBrand(brandData.brand_id, updateData);
+      console.log("Updated brand:", updatedBrand);
+
       message.success("Cập nhật hãng xe thành công!");
+      form.resetFields();
+      setLogoUrl("");
+      onSuccess();
       onClose();
     } catch (error) {
-      message.error("Có lỗi xảy ra khi cập nhật hãng xe!");
+      console.error("Error updating vehicle brand:", error);
+      const errorMessage = error instanceof Error ? error.message : "Có lỗi xảy ra khi cập nhật hãng xe!";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -95,44 +83,23 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
 
   const handleCancel = () => {
     form.resetFields();
-    setLogoUrl(brandData?.logo || "");
-    setPopularModels(brandData?.popularModels || []);
-    setSpecialties(brandData?.specialties || []);
+    setLogoUrl("");
     onClose();
   };
 
-  const handleLogoUpload = (info: any) => {
-    if (info.file.status === "done") {
-      setLogoUrl(info.file.response?.url || "");
-      message.success("Tải logo thành công!");
-    } else if (info.file.status === "error") {
-      message.error("Tải logo thất bại!");
+  // Tạo preview URL cho file được chọn
+  const handleFileChange = (info: { file: { originFileObj?: File; status?: string } }) => {
+    const { file } = info;
+    
+    if (file.originFileObj) {
+      // Tạo URL preview cho file local
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoUrl(e.target?.result as string);
+      };
+      reader.readAsDataURL(file.originFileObj);
     }
   };
-
-  const addModel = () => {
-    if (newModel.trim() && !popularModels.includes(newModel.trim())) {
-      setPopularModels([...popularModels, newModel.trim()]);
-      setNewModel("");
-    }
-  };
-
-  const removeModel = (model: string) => {
-    setPopularModels(popularModels.filter((m) => m !== model));
-  };
-
-  const addSpecialty = () => {
-    if (newSpecialty.trim() && !specialties.includes(newSpecialty.trim())) {
-      setSpecialties([...specialties, newSpecialty.trim()]);
-      setNewSpecialty("");
-    }
-  };
-
-  const removeSpecialty = (specialty: string) => {
-    setSpecialties(specialties.filter((s) => s !== specialty));
-  };
-
-  if (!brandData) return null;
 
   return (
     <Modal
@@ -140,14 +107,14 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <EditOutlined style={{ color: "#1890ff" }} />
           <Title level={4} style={{ margin: 0 }}>
-            Chỉnh sửa hãng xe: {brandData.brandName}
+            Chỉnh sửa hãng xe
           </Title>
         </div>
       }
       open={visible}
       onCancel={handleCancel}
       footer={null}
-      width={800}
+      width={700}
       styles={{
         body: { maxHeight: "70vh", overflowY: "auto" },
       }}
@@ -156,20 +123,46 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
+        initialValues={{}}
       >
         <Row gutter={[16, 16]}>
           {/* Logo */}
           <Col span={24}>
-            <Form.Item label="Logo hãng xe">
+            <Form.Item 
+              label="Logo hãng xe (tùy chọn)"
+              help="Hỗ trợ định dạng: JPG, PNG, GIF. Kích thước tối đa: 2MB"
+            >
               <Upload
                 name="logo"
                 listType="picture-card"
                 showUploadList={false}
-                onChange={handleLogoUpload}
-                beforeUpload={() => false} // Disable actual upload for demo
+                onChange={handleFileChange}
+                beforeUpload={(file) => {
+                  const isImage = file.type.startsWith('image/');
+                  if (!isImage) {
+                    message.error('Chỉ được tải lên file hình ảnh!');
+                    return false;
+                  }
+                  const isLt2M = file.size / 1024 / 1024 < 2;
+                  if (!isLt2M) {
+                    message.error('Kích thước file không được vượt quá 2MB!');
+                    return false;
+                  }
+                  return false; // Disable actual upload for demo
+                }}
+                accept="image/*"
               >
                 {logoUrl ? (
-                  <img src={logoUrl} alt="logo" style={{ width: "100%" }} />
+                  <Image 
+                    src={logoUrl} 
+                    alt="logo" 
+                    width={104}
+                    height={104}
+                    style={{ 
+                      objectFit: "cover",
+                      borderRadius: 6
+                    }} 
+                  />
                 ) : (
                   <div>
                     <PlusOutlined />
@@ -177,6 +170,17 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
                   </div>
                 )}
               </Upload>
+              {logoUrl && (
+                <div style={{ marginTop: 8, textAlign: 'center' }}>
+                  <Button 
+                    size="small" 
+                    danger 
+                    onClick={() => setLogoUrl("")}
+                  >
+                    Xóa logo
+                  </Button>
+                </div>
+              )}
             </Form.Item>
           </Col>
 
@@ -188,9 +192,18 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
               rules={[
                 { required: true, message: "Vui lòng nhập tên hãng xe!" },
                 { min: 2, message: "Tên hãng xe phải có ít nhất 2 ký tự!" },
+                { max: 100, message: "Tên hãng xe không được quá 100 ký tự!" },
+                {
+                  pattern: /^[a-zA-Z0-9\s\-&.,()]+$/,
+                  message: "Tên hãng xe chỉ được chứa chữ cái, số, khoảng trắng và ký tự đặc biệt: -&.,()",
+                },
               ]}
             >
-              <Input placeholder="Nhập tên hãng xe" />
+              <Input 
+                placeholder="Nhập tên hãng xe" 
+                showCount
+                maxLength={100}
+              />
             </Form.Item>
           </Col>
 
@@ -200,81 +213,22 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
               name="brandCode"
               rules={[
                 { required: true, message: "Vui lòng nhập mã hãng xe!" },
-                { pattern: /^[A-Z0-9_]+$/, message: "Mã hãng xe chỉ được chứa chữ hoa, số và dấu gạch dưới!" },
+                {
+                  pattern: /^[A-Z0-9_]+$/,
+                  message:
+                    "Mã hãng xe chỉ được chứa chữ hoa, số và dấu gạch dưới!",
+                },
+                { min: 2, message: "Mã hãng xe phải có ít nhất 2 ký tự!" },
+                { max: 20, message: "Mã hãng xe không được quá 20 ký tự!" },
               ]}
             >
-              <Input placeholder="VD: TOYOTA, HONDA" />
-            </Form.Item>
-          </Col>
-
-          <Col span={12}>
-            <Form.Item
-              label="Quốc gia"
-              name="country"
-              rules={[{ required: true, message: "Vui lòng chọn quốc gia!" }]}
-            >
-              <Select
-                placeholder="Chọn quốc gia"
-                showSearch
-                optionFilterProp="children"
-                suffixIcon={<GlobalOutlined />}
-              >
-                {countries.map((country) => (
-                  <Option key={country.value} value={country.label}>
-                    <Space>
-                      <span>{country.flag}</span>
-                      <span>{country.label}</span>
-                    </Space>
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-
-          <Col span={12}>
-            <Form.Item
-              label="Năm thành lập"
-              name="foundedYear"
-              rules={[
-                { required: true, message: "Vui lòng nhập năm thành lập!" },
-                { type: "number", min: 1800, max: new Date().getFullYear(), message: "Năm thành lập không hợp lệ!" },
-              ]}
-            >
-              <InputNumber
-                style={{ width: "100%" }}
-                placeholder="VD: 1937"
-                suffix={<CalendarOutlined />}
-                min={1800}
-                max={new Date().getFullYear()}
+              <Input 
+                placeholder="VD: TOYOTA, HONDA, BMW" 
+                style={{ textTransform: 'uppercase' }}
+                onChange={(e) => {
+                  e.target.value = e.target.value.toUpperCase();
+                }}
               />
-            </Form.Item>
-          </Col>
-
-          <Col span={12}>
-            <Form.Item
-              label="Website"
-              name="website"
-              rules={[
-                { type: "url", message: "URL website không hợp lệ!" },
-              ]}
-            >
-              <Input placeholder="https://www.example.com" />
-            </Form.Item>
-          </Col>
-
-          <Col span={12}>
-            <Form.Item
-              label="Trạng thái"
-              name="status"
-              rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
-            >
-              <Select placeholder="Chọn trạng thái">
-                {brandStatuses.map((status) => (
-                  <Option key={status.value} value={status.value}>
-                    <Tag color={status.color}>{status.label}</Tag>
-                  </Option>
-                ))}
-              </Select>
             </Form.Item>
           </Col>
 
@@ -285,98 +239,37 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
               rules={[
                 { required: true, message: "Vui lòng nhập mô tả!" },
                 { min: 10, message: "Mô tả phải có ít nhất 10 ký tự!" },
+                { max: 500, message: "Mô tả không được quá 500 ký tự!" },
               ]}
             >
               <TextArea
-                rows={3}
-                placeholder="Nhập mô tả về hãng xe..."
+                rows={4}
+                placeholder="Nhập mô tả về hãng xe, lịch sử, đặc điểm nổi bật..."
                 showCount
                 maxLength={500}
+                style={{ resize: 'vertical' }}
               />
-            </Form.Item>
-          </Col>
-
-          <Col span={24}>
-            <Form.Item
-              label="Phân khúc giá"
-              name="priceRange"
-              rules={[{ required: true, message: "Vui lòng nhập phân khúc giá!" }]}
-            >
-              <Input placeholder="VD: Từ 500 triệu - 2 tỷ VNĐ" />
-            </Form.Item>
-          </Col>
-
-          {/* Model phổ biến */}
-          <Col span={24}>
-            <Form.Item label="Model phổ biến">
-              <div style={{ marginBottom: 8 }}>
-                <Space.Compact style={{ width: "100%" }}>
-                  <Input
-                    placeholder="Nhập tên model"
-                    value={newModel}
-                    onChange={(e) => setNewModel(e.target.value)}
-                    onPressEnter={addModel}
-                  />
-                  <Button type="primary" onClick={addModel}>
-                    Thêm
-                  </Button>
-                </Space.Compact>
-              </div>
-              <div>
-                {popularModels.map((model) => (
-                  <Tag
-                    key={model}
-                    closable
-                    onClose={() => removeModel(model)}
-                    style={{ marginBottom: 4 }}
-                  >
-                    {model}
-                  </Tag>
-                ))}
-              </div>
-            </Form.Item>
-          </Col>
-
-          {/* Đặc điểm nổi bật */}
-          <Col span={24}>
-            <Form.Item label="Đặc điểm nổi bật">
-              <div style={{ marginBottom: 8 }}>
-                <Space.Compact style={{ width: "100%" }}>
-                  <Input
-                    placeholder="Nhập đặc điểm"
-                    value={newSpecialty}
-                    onChange={(e) => setNewSpecialty(e.target.value)}
-                    onPressEnter={addSpecialty}
-                  />
-                  <Button type="primary" onClick={addSpecialty}>
-                    Thêm
-                  </Button>
-                </Space.Compact>
-              </div>
-              <div>
-                {specialties.map((specialty) => (
-                  <Tag
-                    key={specialty}
-                    closable
-                    onClose={() => removeSpecialty(specialty)}
-                    color="green"
-                    style={{ marginBottom: 4 }}
-                  >
-                    {specialty}
-                  </Tag>
-                ))}
-              </div>
             </Form.Item>
           </Col>
         </Row>
 
-        <div style={{ textAlign: "right", marginTop: 24 }}>
+        <div style={{ textAlign: "right", marginTop: 24, paddingTop: 16, borderTop: "1px solid #f0f0f0" }}>
           <Space>
-            <Button onClick={handleCancel}>
+            <Button 
+              onClick={handleCancel}
+              disabled={loading}
+              size="large"
+            >
               Hủy
             </Button>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              Cập nhật
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              loading={loading}
+              size="large"
+              icon={<EditOutlined />}
+            >
+              {loading ? "Đang cập nhật..." : "Cập nhật hãng xe"}
             </Button>
           </Space>
         </div>

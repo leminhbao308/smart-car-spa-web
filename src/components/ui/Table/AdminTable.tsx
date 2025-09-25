@@ -34,6 +34,7 @@ export interface AdminTableProps {
   addButtonText?: string;
   onAdd?: () => void;
   onEdit?: (record: any) => void;
+  onEditCondition?: (record: any) => boolean;
   onDelete?: (record: any) => void;
   onView?: (record: any) => void;
   rowKey?: string;
@@ -59,6 +60,7 @@ const AdminTable: React.FC<AdminTableProps> = ({
   addButtonText = "Thêm mới",
   onAdd,
   onEdit,
+  onEditCondition,
   onDelete,
   onView,
   rowKey = "id",
@@ -126,14 +128,20 @@ const AdminTable: React.FC<AdminTableProps> = ({
         title: "Sửa",
         key: "edit",
         width: 80,
-        render: (_, record) => (
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => onEdit(record)}
-            size="small"
-          />
-        ),
+        render: (_, record) => {
+          // Kiểm tra condition nếu có
+          if (onEditCondition && !onEditCondition(record)) {
+            return null;
+          }
+          return (
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(record)}
+              size="small"
+            />
+          );
+        },
       });
     }
 

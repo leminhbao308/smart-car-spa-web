@@ -1,45 +1,22 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Avatar } from "antd";
+import { Tag, Avatar, message } from "antd";
 import {
-  vehicleBrandsData,
-  countries,
-  brandStatuses,
-} from "@/components/utils/data/vehicle-brands.data";
-import { calculateBrandAge } from "@/components/utils/helper/vehicle.brand.helper";
+  VehicleBrand,
+} from "@/lib/api/types";
+import { VehicleService } from "@/lib/api/services/vehicle.service";
 import {
   VehicleBrandDetailModal,
   VehicleBrandAddModal,
   VehicleBrandEditModal,
 } from "@/components/ui/Modal/VehicleBrandModals";
-import { VehicleBrandFilterPanel } from "@/components/ui/FilterPanel";
 
-interface VehicleBrand {
-  id: number;
-  brandCode: string;
-  brandName: string;
-  country: string;
-  foundedYear: number;
-  logo: string;
-  website: string;
-  description: string;
-  status: string;
-  totalModels: number;
-  totalVehicles: number;
-  averageRating: number;
-  popularModels: string[];
-  priceRange: string;
-  specialties: string[];
-  createdAt: string;
-  updatedAt: string;
-}
 
 const VehicleBrandsPage = () => {
-  const [data, setData] = useState(vehicleBrandsData);
-  const [filteredData, setFilteredData] = useState(vehicleBrandsData);
+  const [data, setData] = useState<VehicleBrand[]>([]);
   const [loading, setLoading] = useState(false);
   const { showModal } = useConfirmationModalContext();
   
@@ -49,104 +26,130 @@ const VehicleBrandsPage = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<VehicleBrand | null>(null);
 
+  // Fetch vehicle brands data
+  useEffect(() => {
+    fetchVehicleBrands();
+  }, []);
+
+  const fetchVehicleBrands = async () => {
+    setLoading(true);
+    try {
+      const response = await VehicleService.getAllVehicleBrands({
+        page: 0,
+        size: 100, // Get all brands for now
+        direction: "DESC",
+        sort: "createdDate"
+      });
+      
+      setData(response.data.content);
+    } catch (error) {
+      console.error("Error fetching vehicle brands:", error);
+      message.error("Không thể tải danh sách hãng xe");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Định nghĩa columns
   const columns: ColumnsType<VehicleBrand> = [
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 80,
-      sorter: (a, b) => a.id - b.id,
-    },
-    {
       title: "Logo",
-      dataIndex: "logo",
-      key: "logo",
+      dataIndex: "brand_logo_url",
+      key: "brand_logo_url",
       width: 80,
-      render: (logo: string, record: VehicleBrand) => (
-        <Avatar size={50} src={logo} style={{ backgroundColor: "#f0f0f0" }}>
-          {record.brandName.charAt(0)}
+      render: (logoUrl: string | null, record: VehicleBrand) => (
+        <Avatar 
+          size={50} 
+          src={logoUrl} 
+          style={{ backgroundColor: "#f0f0f0" }}
+        >
+          {record.brand_name.charAt(0)}
         </Avatar>
       ),
     },
     {
       title: "Hãng xe",
       key: "brand",
-      width: 200,
-      render: (_, record) => (
+      width: 250,
+      render: (_, record: VehicleBrand) => (
         <div>
           <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
-            {record.brandName}
+            {record.brand_name}
           </div>
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 2 }}>
-            {record.brandCode}
+          <div style={{ fontSize: 12, color: "#666", marginBottom: 2, fontFamily: "monospace" }}>
+            {record.brand_code}
           </div>
           <div style={{ fontSize: 11, color: "#999" }}>
             {record.description}
           </div>
         </div>
       ),
+      sorter: (a, b) => a.brand_name.localeCompare(b.brand_name),
     },
     {
-      title: "Quốc gia",
-      dataIndex: "country",
-      key: "country",
+      title: "Ngày tạo",
+      dataIndex: "created_date",
+      key: "created_date",
       width: 120,
-      render: (country: string) => {
-        const countryConfig = countries.find((c) => c.label === country);
-        return (
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 16 }}>{countryConfig?.flag}</span>
-            <span style={{ fontSize: 12 }}>{country}</span>
-          </div>
-        );
-      },
-      filters: countries.map((country) => ({
-        text: country.label,
-        value: country.label,
-      })),
-      onFilter: (value, record) => record.country === value,
-    },
-    {
-      title: "Năm thành lập",
-      dataIndex: "foundedYear",
-      key: "foundedYear",
-      width: 120,
-      sorter: (a, b) => a.foundedYear - b.foundedYear,
-      render: (year: number) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{year}</div>
-          <div style={{ fontSize: 11, color: "#666" }}>
-            {calculateBrandAge(year)} tuổi
-          </div>
+      render: (createdDate: string) => (
+        <div style={{ fontSize: 12 }}>
+          {new Date(createdDate).toLocaleDateString("vi-VN")}
         </div>
       ),
+      sorter: (a, b) => new Date(a.created_date).getTime() - new Date(b.created_date).getTime(),
     },
-
     {
-      title: "Phân khúc giá",
-      dataIndex: "priceRange",
-      key: "priceRange",
-      width: 180,
-      render: (range: string) => (
-        <div style={{ fontSize: 12, color: "#666" }}>{range}</div>
+      title: "Ngày cập nhật",
+      dataIndex: "modified_date",
+      key: "modified_date",
+      width: 120,
+      render: (modifiedDate: string) => (
+        <div style={{ fontSize: 12 }}>
+          {new Date(modifiedDate).toLocaleDateString("vi-VN")}
+        </div>
+      ),
+      sorter: (a, b) => new Date(a.modified_date).getTime() - new Date(b.modified_date).getTime(),
+    },
+    {
+      title: "Người tạo",
+      dataIndex: "created_by",
+      key: "created_by",
+      width: 150,
+      render: (createdBy: string) => (
+        <div style={{ fontSize: 12, color: "#666" }}>{createdBy}</div>
       ),
     },
-
     {
       title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      dataIndex: "is_active",
+      key: "is_active",
       width: 100,
-      render: (status: string) => {
-        const statusConfig = brandStatuses.find((s) => s.value === status);
-        return <Tag color={statusConfig?.color}>{statusConfig?.label}</Tag>;
-      },
-      filters: brandStatuses.map((status) => ({
-        text: status.label,
-        value: status.value,
-      })),
-      onFilter: (value, record) => record.status === value,
+      render: (isActive: boolean) => (
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Hoạt động" : "Không hoạt động"}
+        </Tag>
+      ),
+      filters: [
+        { text: "Hoạt động", value: true },
+        { text: "Không hoạt động", value: false },
+      ],
+      onFilter: (value, record: VehicleBrand) => record.is_active === value,
+    },
+    {
+      title: "Đã xóa",
+      dataIndex: "is_deleted",
+      key: "is_deleted",
+      width: 100,
+      render: (isDeleted: boolean) => (
+        <Tag color={isDeleted ? "red" : "green"}>
+          {isDeleted ? "Đã xóa" : "Chưa xóa"}
+        </Tag>
+      ),
+      filters: [
+        { text: "Đã xóa", value: true },
+        { text: "Chưa xóa", value: false },
+      ],
+      onFilter: (value, record: VehicleBrand) => record.is_deleted === value,
     },
   ];
 
@@ -156,6 +159,10 @@ const VehicleBrandsPage = () => {
   };
 
   const handleEdit = (record: VehicleBrand) => {
+    if (record.is_deleted) {
+      message.warning("Không thể chỉnh sửa hãng xe đã bị xóa!");
+      return;
+    }
     setSelectedBrand(record);
     setEditModalVisible(true);
   };
@@ -165,132 +172,110 @@ const VehicleBrandsPage = () => {
     setDetailModalVisible(true);
   };
 
-  const handleAddSuccess = (newBrand: VehicleBrand) => {
-    const newData = [...data, newBrand];
-    setData(newData);
-    setFilteredData(newData);
+  const handleAddSuccess = () => {
+    // Refresh the brands list after create
+    fetchVehicleBrands();
   };
 
-  const handleEditSuccess = (updatedBrand: VehicleBrand) => {
-    const newData = data.map((item) => (item.id === updatedBrand.id ? updatedBrand : item));
-    setData(newData);
-    setFilteredData(newData);
+  const handleEditSuccess = () => {
+    // Refresh the brands list after update
+    fetchVehicleBrands();
   };
 
-  const handleFilter = (filters: {
-    search: string;
-    country: string;
-    status: string;
-    foundedYearRange: [number | null, number | null];
-    priceSegment: string;
-    averageRating: number | null;
-  }) => {
-    let filtered = [...data];
-
-    // Tìm kiếm
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (brand) =>
-          brand.brandName.toLowerCase().includes(searchLower) ||
-          brand.brandCode.toLowerCase().includes(searchLower) ||
-          brand.description.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Quốc gia
-    if (filters.country) {
-      filtered = filtered.filter((brand) => brand.country === filters.country);
-    }
-
-    // Trạng thái
-    if (filters.status) {
-      filtered = filtered.filter((brand) => brand.status === filters.status);
-    }
-
-    // Năm thành lập
-    if (filters.foundedYearRange[0] || filters.foundedYearRange[1]) {
-      filtered = filtered.filter((brand) => {
-        const year = brand.foundedYear;
-        const minYear = filters.foundedYearRange[0] || 0;
-        const maxYear = filters.foundedYearRange[1] || 9999;
-        return year >= minYear && year <= maxYear;
-      });
-    }
-
-    // Đánh giá trung bình
-    if (filters.averageRating !== null) {
-      filtered = filtered.filter((brand) => brand.averageRating >= filters.averageRating!);
-    }
-
-    setFilteredData(filtered);
+  const handleDelete = (record: VehicleBrand) => {
+    showModal({
+      title: "Xóa hãng xe",
+      content: `Bạn có chắc chắn muốn xóa hãng xe "${record.brand_name}"? Hành động này không thể hoàn tác.`,
+      type: "error",
+      onConfirm: async () => {
+        try {
+          setLoading(true);
+          await VehicleService.deleteVehicleBrand(record.brand_id);
+          setData(prev => prev.filter(item => item.brand_id !== record.brand_id));
+          message.success(`Đã xóa hãng xe ${record.brand_name} thành công!`);
+        } catch (error) {
+          console.error("Error deleting vehicle brand:", error);
+          const errorMessage = error instanceof Error ? error.message : "Có lỗi xảy ra khi xóa hãng xe!";
+          message.error(errorMessage);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
-  const handleClearFilter = () => {
-    setFilteredData(data);
-  };
 
   const handleToggleStatus = (record: VehicleBrand) => {
-    const action = record.status === "active" ? "vô hiệu hóa" : "kích hoạt";
+    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
     showModal({
       title: `${
         action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"
       } hãng xe`,
-      content: `Bạn có chắc chắn muốn ${action} hãng xe ${record.brandName}?`,
+      content: `Bạn có chắc chắn muốn ${action} hãng xe ${record.brand_name}?`,
       type: "warning",
       onConfirm: async () => {
-        setLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const newData = data.map((item) =>
-          item.id === record.id
-            ? {
-                ...item,
-                status: item.status === "active" ? "inactive" : "active",
-              }
-            : item
-        );
-        setData(newData);
-        setFilteredData(newData);
-        setLoading(false);
+        try {
+          setLoading(true);
+          await VehicleService.updateVehicleBrandStatus(record.brand_id, !record.is_active);
+          setData(prev => prev.map(item => 
+            item.brand_id === record.brand_id 
+              ? { ...item, is_active: !item.is_active }
+              : item
+          ));
+          message.success(`Đã ${action} hãng xe ${record.brand_name} thành công!`);
+        } catch (error) {
+          console.error("Error updating vehicle brand status:", error);
+          message.error(`Không thể ${action} hãng xe ${record.brand_name}`);
+        } finally {
+          setLoading(false);
+        }
       },
     });
   };
 
   return (
     <>
-      <VehicleBrandFilterPanel
-        onFilter={handleFilter}
-        onClear={handleClearFilter}
-      />
-      
       <AdminTable
         title="Quản lý hãng xe"
-        dataSource={filteredData}
+        dataSource={data}
         columns={columns}
         loading={loading}
         onAdd={handleAdd}
         onEdit={handleEdit}
+        onEditCondition={(record: VehicleBrand) => !record.is_deleted}
         onView={handleView}
         addButtonText="Thêm hãng xe"
         actions={[
           {
             key: "toggle-status",
             label: (record: VehicleBrand) =>
-              record.status === "active" ? "Vô hiệu hóa" : "Kích hoạt",
+              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
             type: "default",
-            danger: (record: VehicleBrand) => record.status === "active",
+            danger: (record: VehicleBrand) => record.is_active,
             onClick: handleToggleStatus,
+            condition: (record: VehicleBrand) => !record.is_deleted,
+          },
+          {
+            key: "delete",
+            label: "Xóa",
+            type: "default",
+            danger: true,
+            onClick: handleDelete,
+            condition: (record: VehicleBrand) => !record.is_deleted,
           },
         ]}
-        searchable={false}
-        scroll={{ x: 1400 }}
+        searchable={true}
+        searchPlaceholder="Tìm kiếm hãng xe theo tên, mã..."
+        searchFields={["brand_name", "brand_code", "description"]}
+        scroll={{ x: 1200 }}
+        rowKey="brand_id"
       />
 
       {/* Modals */}
       <VehicleBrandDetailModal
         visible={detailModalVisible}
         onClose={() => setDetailModalVisible(false)}
-        brandId={selectedBrand?.id || null}
+        brandId={selectedBrand?.brand_id || ""}
       />
 
       <VehicleBrandAddModal

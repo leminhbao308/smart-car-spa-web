@@ -162,6 +162,10 @@ const StaffPage = () => {
   };
 
   const handleEdit = (record: UserManagementInfo) => {
+    if (record.is_deleted) {
+      message.warning("Không thể chỉnh sửa nhân viên đã bị xóa!");
+      return;
+    }
     setEditData(record);
     setStaffModalVisible(true);
   };
@@ -232,6 +236,7 @@ const StaffPage = () => {
         loading={isLoading}
         onAdd={handleAdd}
         onEdit={handleEdit}
+        onEditCondition={(record: UserManagementInfo) => !record.is_deleted}
         onView={handleView}
         addButtonText="Thêm nhân viên"
         searchable={true}
@@ -246,7 +251,7 @@ const StaffPage = () => {
             type: "default",
             danger: true,
             onClick: handleDeleteUser,
-            condition: (record: UserManagementInfo) => record.is_active,
+            condition: (record: UserManagementInfo) => record.is_active && !record.is_deleted,
           },
         ]}
         scroll={{ x: 1200 }}

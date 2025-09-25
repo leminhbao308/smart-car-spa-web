@@ -21,6 +21,7 @@ export interface UserManagementInfo extends BaseEntity {
   address: string | null;
   avatar_url: string | null;
   is_active: boolean;
+  is_deleted: boolean;
   role: {
     role_id: string;
     role_name: string;

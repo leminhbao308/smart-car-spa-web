@@ -10,3 +10,6 @@ export * from './auth.types';
 
 // User types
 export * from './user.types';
+
+// Vehicle types
+export * from './vehicle.types';
