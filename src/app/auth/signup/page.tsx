@@ -5,26 +5,19 @@ import {
   Input,
   Button,
   Typography,
-  Row,
-  Col,
   Divider,
   message,
   Checkbox,
 } from "antd";
-import {
-  UserOutlined,
-  MailOutlined,
-  LockOutlined,
-  PhoneOutlined,
-  GoogleOutlined,
-} from "@ant-design/icons";
+import { GoogleOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import CustomerHeader from "@/components/layout/Header/customer.header";
-import InputPassword from "@/components/ui/Input/input.password";
-import InputOTP from "@/components/ui/Input/input.otp";
+import { AuthIntegrationService } from "@/lib/firebase";
+import { useAuth } from "@/lib/api/hooks/useAuth";
+import { SignupRequest } from "@/lib/api/types";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface BasicInfoFormData {
   emailOrPhone: string;
@@ -32,6 +25,11 @@ interface BasicInfoFormData {
 }
 
 interface PasswordFormData {
+  fullName: string;
+  phoneNumber: string;
+  dateOfBirth: string;
+  gender: "MALE" | "FEMALE" | "OTHER";
+  address: string;
   password: string;
   confirmPassword: string;
 }
@@ -41,34 +39,42 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // 1: Email/Phone, 2: OTP, 3: Password
   const [emailOrPhone, setEmailOrPhone] = useState("");
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [otp, setOtp] = useState("");
   const [isGoogleSignup, setIsGoogleSignup] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
   const [otpExpired, setOtpExpired] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { signup } = useAuth();
 
   const handleEmailOrPhoneSubmit = async (values: BasicInfoFormData) => {
     try {
       setLoading(true);
 
-      // Simulate API call to send OTP
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Validate email format
+      const isEmail = values.emailOrPhone.includes("@");
+      if (!isEmail) {
+        message.error("Vui lòng nhập email hợp lệ để gửi OTP!");
+        return;
+      }
+
+      // Send OTP using Firebase
+      await AuthIntegrationService.sendOTPToEmail(values.emailOrPhone);
 
       setEmailOrPhone(values.emailOrPhone);
       setCurrentStep(2);
       setOtpTimer(60); // 60 seconds countdown
       setOtpExpired(false);
 
-      // Determine if it's email or phone
-      const isEmail = values.emailOrPhone.includes("@");
-      const messageText = isEmail
-        ? `Mã OTP đã được gửi đến email ${values.emailOrPhone}!`
-        : `Mã OTP đã được gửi đến số điện thoại ${values.emailOrPhone}!`;
-
-      message.success(messageText);
-    } catch (error) {
-      message.error("Gửi OTP thất bại. Vui lòng thử lại!");
+      message.success(
+        `Mã OTP đã được gửi đến email ${values.emailOrPhone}! Vui lòng kiểm tra hộp thư.`
+      );
+    } catch (error: unknown) {
+      console.error("Error sending OTP:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Gửi OTP thất bại. Vui lòng thử lại!";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -85,6 +91,7 @@ const SignupPage = () => {
       message.success("Đăng ký với Google thành công!");
       router.push("/auth/login");
     } catch (error) {
+      console.error("Google signup error:", error);
       message.error("Đăng ký với Google thất bại!");
     } finally {
       setLoading(false);
@@ -95,19 +102,17 @@ const SignupPage = () => {
     try {
       setLoading(true);
 
-      // Simulate OTP verification
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Firebase sử dụng email link thay vì OTP code
+      // Redirect user đến email verification page
+      message.info("Vui lòng kiểm tra email và click vào link để xác thực!");
 
-      if (otp === "123456") {
-        // Mock OTP
-        setOtpVerified(true);
-        setCurrentStep(3);
-        message.success("Xác thực OTP thành công!");
-      } else {
-        message.error("Mã OTP không đúng!");
-      }
-    } catch (error) {
-      message.error("Xác thực OTP thất bại!");
+      // Redirect đến email verification page
+      window.location.href = `/auth/verify-email?email=${emailOrPhone}`;
+    } catch (error: unknown) {
+      console.error("Error verifying OTP:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Xác thực OTP thất bại!";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -117,13 +122,33 @@ const SignupPage = () => {
     try {
       setLoading(true);
 
-      // Simulate API call for final registration
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Prepare signup data for backend API
+      const signupData: SignupRequest = {
+        email: emailOrPhone,
+        password: values.password,
+        googleId: null,
+        fullName: values.fullName,
+        phoneNumber: values.phoneNumber,
+        dateOfBirth: new Date(values.dateOfBirth).toISOString(),
+        gender: values.gender,
+        address: values.address,
+        avatarUrl: null,
+      };
 
-      message.success("Đăng ký thành công! Vui lòng đăng nhập.");
-      router.push("/auth/login");
-    } catch (error) {
-      message.error("Đăng ký thất bại. Vui lòng thử lại!");
+      // Call backend API to create account
+      await signup(signupData);
+
+      message.success(
+        "Đăng ký thành công! Chào mừng bạn đến với Smart Car SPA!"
+      );
+      router.push("/");
+    } catch (error: unknown) {
+      console.error("Error creating account:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Đăng ký thất bại. Vui lòng thử lại!";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -132,22 +157,38 @@ const SignupPage = () => {
   const resendOTP = async () => {
     try {
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Resend OTP using Firebase
+      await AuthIntegrationService.sendOTPToEmail(emailOrPhone);
+
       setOtpTimer(60); // Reset timer to 60 seconds
       setOtpExpired(false);
-      setOtp(""); // Clear current OTP
       message.success("Mã OTP mới đã được gửi!");
-    } catch (error) {
-      message.error("Gửi lại OTP thất bại!");
+    } catch (error: unknown) {
+      console.error("Error resending OTP:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Gửi lại OTP thất bại!";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle URL parameters for step navigation
+  useEffect(() => {
+    const step = searchParams.get("step");
+    const email = searchParams.get("email");
+
+    if (step === "3" && email) {
+      setCurrentStep(3);
+      setEmailOrPhone(email);
+    }
+  }, [searchParams]);
+
   // Countdown timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (otpTimer > 0) {
       interval = setInterval(() => {
         setOtpTimer((prev) => {
@@ -377,7 +418,7 @@ const SignupPage = () => {
                   margin: "0 0 8px 0",
                 }}
               >
-                Xác thực OTP
+                Xác thực Email
               </h1>
               <p
                 style={{
@@ -386,21 +427,34 @@ const SignupPage = () => {
                   margin: 0,
                 }}
               >
-                Nhập mã OTP đã được gửi đến {emailOrPhone}
+                Chúng tôi đã gửi link xác thực đến {emailOrPhone}
               </p>
             </div>
 
-            {/* OTP Input */}
-            <div style={{ marginBottom: "24px" }}>
-              <Input.OTP
-                value={otp}
-                onChange={setOtp}
-                length={6}
-                style={{
-                  justifyContent: "center",
-                  gap: "12px",
-                }}
-              />
+            {/* Email Verification Info */}
+            <div
+              style={{
+                marginBottom: "24px",
+                padding: "16px",
+                backgroundColor: "#F8F9FA",
+                borderRadius: "8px",
+                border: "1px solid #E5E7EB",
+              }}
+            >
+              <div style={{ textAlign: "center" }}>
+                <p
+                  style={{
+                    color: "#1B2559",
+                    fontSize: "14px",
+                    margin: "0 0 8px 0",
+                  }}
+                >
+                  📧 Kiểm tra hộp thư của bạn
+                </p>
+                <p style={{ color: "#8B92A5", fontSize: "12px", margin: 0 }}>
+                  Click vào link trong email để xác thực tài khoản
+                </p>
+              </div>
             </div>
 
             {/* Verify Button */}
@@ -410,7 +464,6 @@ const SignupPage = () => {
               loading={loading}
               size="large"
               block
-              disabled={otp.length !== 6}
               style={{
                 height: "48px",
                 backgroundColor: "#6C7BEA",
@@ -421,13 +474,13 @@ const SignupPage = () => {
                 marginBottom: "16px",
               }}
             >
-              {loading ? "Đang xác thực..." : "Xác thực OTP"}
+              {loading ? "Đang xử lý..." : "Tôi đã xác thực email"}
             </Button>
 
-            {/* Resend OTP */}
+            {/* Resend Email */}
             <div style={{ textAlign: "center" }}>
               <Text style={{ color: "#8B92A5", fontSize: "14px" }}>
-                Không nhận được mã?{" "}
+                Không nhận được email?{" "}
               </Text>
               {otpExpired ? (
                 <Button
@@ -480,7 +533,7 @@ const SignupPage = () => {
                   margin: "0 0 8px 0",
                 }}
               >
-                Tạo mật khẩu
+                Hoàn thành đăng ký
               </h1>
               <p
                 style={{
@@ -489,7 +542,7 @@ const SignupPage = () => {
                   margin: 0,
                 }}
               >
-                Tạo mật khẩu mạnh để bảo vệ tài khoản của bạn
+                Nhập thông tin cá nhân và tạo mật khẩu để hoàn tất đăng ký
               </p>
             </div>
 
@@ -500,6 +553,163 @@ const SignupPage = () => {
               layout="vertical"
               style={{ width: "100%" }}
             >
+              <Form.Item
+                label={
+                  <span
+                    style={{
+                      color: "#1B2559",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Họ và tên
+                  </span>
+                }
+                name="fullName"
+                rules={[
+                  { required: true, message: "Vui lòng nhập họ và tên!" },
+                  { min: 2, message: "Họ tên phải có ít nhất 2 ký tự!" },
+                ]}
+              >
+                <Input
+                  placeholder="Nhập họ và tên"
+                  style={{
+                    height: "48px",
+                    backgroundColor: "#F8F9FA",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    color: "#1B2559",
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span
+                    style={{
+                      color: "#1B2559",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Số điện thoại
+                  </span>
+                }
+                name="phoneNumber"
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại!" },
+                  {
+                    pattern: /^[0-9]{10,11}$/,
+                    message: "Số điện thoại phải có 10-11 chữ số!",
+                  },
+                ]}
+              >
+                <Input
+                  placeholder="Nhập số điện thoại"
+                  style={{
+                    height: "48px",
+                    backgroundColor: "#F8F9FA",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    color: "#1B2559",
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span
+                    style={{
+                      color: "#1B2559",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Ngày sinh
+                  </span>
+                }
+                name="dateOfBirth"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày sinh!" },
+                ]}
+              >
+                <Input
+                  type="date"
+                  style={{
+                    height: "48px",
+                    backgroundColor: "#F8F9FA",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    color: "#1B2559",
+                  }}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span
+                    style={{
+                      color: "#1B2559",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Giới tính
+                  </span>
+                }
+                name="gender"
+                rules={[
+                  { required: true, message: "Vui lòng chọn giới tính!" },
+                ]}
+              >
+                <select
+                  style={{
+                    height: "48px",
+                    backgroundColor: "#F8F9FA",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    color: "#1B2559",
+                    width: "100%",
+                    padding: "0 12px",
+                  }}
+                >
+                  <option value="">Chọn giới tính</option>
+                  <option value="MALE">Nam</option>
+                  <option value="FEMALE">Nữ</option>
+                  <option value="OTHER">Khác</option>
+                </select>
+              </Form.Item>
+
+              <Form.Item
+                label={
+                  <span
+                    style={{
+                      color: "#1B2559",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Địa chỉ
+                  </span>
+                }
+                name="address"
+                rules={[
+                  { required: true, message: "Vui lòng nhập địa chỉ!" },
+                  { min: 5, message: "Địa chỉ phải có ít nhất 5 ký tự!" },
+                ]}
+              >
+                <Input
+                  placeholder="Nhập địa chỉ"
+                  style={{
+                    height: "48px",
+                    backgroundColor: "#F8F9FA",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    color: "#1B2559",
+                  }}
+                />
+              </Form.Item>
+
               <Form.Item
                 label={
                   <span
