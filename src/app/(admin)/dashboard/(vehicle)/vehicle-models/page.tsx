@@ -1,13 +1,13 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import { Tag } from "antd";
+import { Tag, Avatar, message } from "antd";
 import {
-  vehicleModelsData,
-  modelStatuses,
-} from "@/components/utils/data/vehicle-models.data";
+  VehicleModel,
+} from "@/lib/api/types";
+import { useVehicleModels } from "@/lib/api/hooks";
 import {
   VehicleModelDetailModal,
   VehicleModelAddModal,
@@ -15,50 +15,24 @@ import {
 } from "@/components/ui/Modal/VehicleModelModals";
 import { VehicleModelFilterPanel } from "@/components/ui/FilterPanel";
 
-interface VehicleModel {
-  id: number;
-  modelCode: string;
-  modelName: string;
-  brandId: number;
-  brandName: string;
-  typeId: number;
-  typeName: string;
-  year: number;
-  generation: string;
-  description: string;
-  engineOptions: Array<{
-    engine: string;
-    power: string;
-    fuelType: string;
-  }>;
-  transmissionOptions: string[];
-  drivetrainOptions: string[];
-  priceRange: string;
-  fuelEfficiency: string;
-  dimensions: {
-    length: string;
-    width: string;
-    height: string;
-    wheelbase: string;
-  };
-  features: string[];
-  colors: string[];
-  status: string;
-  totalVehicles: number;
-  averageRating: number;
-  launchDate: string;
-  endDate: null;
-  competitors: string[];
-  targetMarket: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 const VehicleModelsPage = () => {
-  const [data, setData] = useState(vehicleModelsData);
-  const [filteredData, setFilteredData] = useState(vehicleModelsData);
-  const [loading, setLoading] = useState(false);
   const { showModal } = useConfirmationModalContext();
+  
+  // Use the custom hook for vehicle models
+  const {
+    models: data,
+    isLoading: loading,
+    fetchModels,
+    refreshModels,
+    deleteModel,
+    toggleModelStatus,
+  } = useVehicleModels({
+    page: 0,
+    size: 10,
+    direction: "DESC",
+    sort: "createdDate"
+  });
   
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -67,142 +41,98 @@ const VehicleModelsPage = () => {
   const [selectedModel, setSelectedModel] = useState<VehicleModel | null>(null);
 
   // Định nghĩa columns
-  const columns: ColumnsType<VehicleModel> = [
+  const columns: ColumnsType<VehicleModel> = useMemo(() => [
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
+      title: "Icon",
+      dataIndex: "model_code",
+      key: "model_code",
       width: 80,
-      sorter: (a, b) => a.id - b.id,
+      render: (modelCode: string, record: VehicleModel) => (
+        <Avatar 
+          size={50} 
+          style={{ backgroundColor: "#f0f0f0" }}
+        >
+          {record.model_name.charAt(0)}
+        </Avatar>
+      ),
     },
     {
       title: "Model",
       key: "model",
-      width: 200,
-      render: (_, record) => (
+      width: 250,
+      render: (_, record: VehicleModel) => (
         <div>
           <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
-            {record.modelName}
+            {record.model_name}
           </div>
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 2 }}>
-            {record.brandName} • {record.typeName}
+          <div style={{ fontSize: 12, color: "#666", marginBottom: 2, fontFamily: "monospace" }}>
+            {record.model_code}
           </div>
-          <div style={{ fontSize: 11, color: "#999" }}>
-            {record.generation} • {record.year}
+          <div style={{ fontSize: 11, color: "#999", marginBottom: 2 }}>
+            {record.brand_name || `Brand ID: ${record.brand_id}`} • {record.type_name || `Type ID: ${record.type_id}`}
           </div>
         </div>
       ),
+      sorter: (a, b) => a.model_name.localeCompare(b.model_name),
     },
-
     {
-      title: "Động cơ",
-      dataIndex: "engineOptions",
-      key: "engineOptions",
-      width: 180,
-      render: (engines: Array<{engine: string; power: string; fuelType: string}>) => (
-        <div>
-          {engines.slice(0, 1).map((engine, index) => (
-            <div key={index} style={{ marginBottom: 2 }}>
-              <div style={{ fontSize: 11, fontWeight: 500 }}>
-                {engine.engine}
-              </div>
-              <div style={{ fontSize: 10, color: "#666" }}>
-                {engine.power} • {engine.fuelType}
-              </div>
-            </div>
-          ))}
-          {engines.length > 1 && (
-            <Tag color="default" style={{ fontSize: 10 }}>
-              +{engines.length - 1} khác
-            </Tag>
-          )}
+      title: "Mô tả",
+      dataIndex: "description",
+      key: "description",
+      width: 200,
+      render: (description: string) => (
+        <div style={{ fontSize: 12, color: "#666" }}>
+          {description && description.length > 50 
+            ? `${description.substring(0, 50)}...` 
+            : description}
         </div>
       ),
     },
     {
-      title: "Hộp số",
-      dataIndex: "transmissionOptions",
-      key: "transmissionOptions",
+      title: "Ngày tạo",
+      dataIndex: "created_date",
+      key: "created_date",
       width: 120,
-      render: (transmissions: string[]) => (
-        <div>
-          {transmissions.slice(0, 1).map((transmission, index) => (
-            <Tag
-              key={index}
-              color="blue"
-              style={{ fontSize: 10, marginBottom: 2 }}
-            >
-              {transmission}
-            </Tag>
-          ))}
-          {transmissions.length > 1 && (
-            <Tag color="default" style={{ fontSize: 10 }}>
-              +{transmissions.length - 1}
-            </Tag>
-          )}
+      render: (createdDate: string) => (
+        <div style={{ fontSize: 12 }}>
+          {new Date(createdDate).toLocaleDateString("vi-VN")}
         </div>
       ),
-    },
-    {
-      title: "Dẫn động",
-      dataIndex: "drivetrainOptions",
-      key: "drivetrainOptions",
-      width: 100,
-      render: (drivetrains: string[]) => (
-        <div>
-          {drivetrains.slice(0, 1).map((drivetrain, index) => (
-            <Tag
-              key={index}
-              color="green"
-              style={{ fontSize: 10, marginBottom: 2 }}
-            >
-              {drivetrain}
-            </Tag>
-          ))}
-          {drivetrains.length > 1 && (
-            <Tag color="default" style={{ fontSize: 10 }}>
-              +{drivetrains.length - 1}
-            </Tag>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: "Giá",
-      dataIndex: "priceRange",
-      key: "priceRange",
-      width: 150,
-      render: (range: string) => (
-        <div style={{ fontSize: 12, color: "#666" }}>{range}</div>
-      ),
-    },
-    {
-      title: "Tiêu thụ",
-      dataIndex: "fuelEfficiency",
-      key: "fuelEfficiency",
-      width: 100,
-      render: (efficiency: string) => (
-        <div style={{ fontSize: 12, fontWeight: 500, color: "#52c41a" }}>
-          {efficiency}
-        </div>
-      ),
+      sorter: (a, b) => new Date(a.created_date).getTime() - new Date(b.created_date).getTime(),
     },
     {
       title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      dataIndex: "is_active",
+      key: "is_active",
       width: 100,
-      render: (status: string) => {
-        const statusConfig = modelStatuses.find((s) => s.value === status);
-        return <Tag color={statusConfig?.color}>{statusConfig?.label}</Tag>;
-      },
-      filters: modelStatuses.map((status) => ({
-        text: status.label,
-        value: status.value,
-      })),
-      onFilter: (value, record) => record.status === value,
+      render: (isActive: boolean) => (
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Hoạt động" : "Không hoạt động"}
+        </Tag>
+      ),
+      filters: [
+        { text: "Hoạt động", value: true },
+        { text: "Không hoạt động", value: false },
+      ],
+      onFilter: (value, record: VehicleModel) => record.is_active === value,
     },
-  ];
+    {
+      title: "Đã xóa",
+      dataIndex: "is_deleted",
+      key: "is_deleted",
+      width: 100,
+      render: (isDeleted: boolean) => (
+        <Tag color={isDeleted ? "red" : "green"}>
+          {isDeleted ? "Đã xóa" : "Chưa xóa"}
+        </Tag>
+      ),
+      filters: [
+        { text: "Đã xóa", value: true },
+        { text: "Chưa xóa", value: false },
+      ],
+      onFilter: (value, record: VehicleModel) => record.is_deleted === value,
+    },
+  ], []);
 
   // Handlers
   const handleAdd = () => {
@@ -210,6 +140,10 @@ const VehicleModelsPage = () => {
   };
 
   const handleEdit = (record: VehicleModel) => {
+    if (record.is_deleted) {
+      message.warning("Không thể chỉnh sửa model xe đã bị xóa!");
+      return;
+    }
     setSelectedModel(record);
     setEditModalVisible(true);
   };
@@ -219,16 +153,16 @@ const VehicleModelsPage = () => {
     setDetailModalVisible(true);
   };
 
-  const handleAddSuccess = (newModel: VehicleModel) => {
-    const newData = [...data, newModel];
-    setData(newData);
-    setFilteredData(newData);
+  const handleAddSuccess = () => {
+    // Close modal and refresh the models list after create
+    setAddModalVisible(false);
+    refreshModels();
   };
 
-  const handleEditSuccess = (updatedModel: VehicleModel) => {
-    const newData = data.map((item) => (item.id === updatedModel.id ? updatedModel : item));
-    setData(newData);
-    setFilteredData(newData);
+  const handleEditSuccess = () => {
+    // Close modal and refresh the models list after update
+    setEditModalVisible(false);
+    refreshModels();
   };
 
   const handleFilter = (filters: {
@@ -241,86 +175,87 @@ const VehicleModelsPage = () => {
     priceSegment: string;
     averageRating: number | null;
   }) => {
-    let filtered = [...data];
+    // Use API filtering instead of client-side filtering
+    const apiFilters: {
+      page: number;
+      size: number;
+      direction: "ASC" | "DESC";
+      sort: string;
+      search?: string;
+      brand_id?: string;
+      type_id?: string;
+      year_from?: number;
+      year_to?: number;
+      fuel_type?: string;
+    } = {
+      page: 0,
+      size: 10,
+      direction: "DESC",
+      sort: "createdDate"
+    };
 
-    // Tìm kiếm
     if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (model) =>
-          model.modelName.toLowerCase().includes(searchLower) ||
-          model.modelCode.toLowerCase().includes(searchLower) ||
-          model.brandName.toLowerCase().includes(searchLower) ||
-          model.typeName.toLowerCase().includes(searchLower)
-      );
+      apiFilters.search = filters.search;
     }
-
-    // Hãng xe
     if (filters.brandId) {
-      filtered = filtered.filter((model) => model.brandId === Number(filters.brandId));
+      apiFilters.brand_id = filters.brandId;
     }
-
-    // Loại xe
     if (filters.typeId) {
-      filtered = filtered.filter((model) => model.typeId === Number(filters.typeId));
+      apiFilters.type_id = filters.typeId;
     }
-
-    // Trạng thái
-    if (filters.status) {
-      filtered = filtered.filter((model) => model.status === filters.status);
-    }
-
-    // Năm sản xuất
     if (filters.yearRange[0] || filters.yearRange[1]) {
-      filtered = filtered.filter((model) => {
-        const year = model.year;
-        const minYear = filters.yearRange[0] || 0;
-        const maxYear = filters.yearRange[1] || 9999;
-        return year >= minYear && year <= maxYear;
-      });
+      if (filters.yearRange[0]) {
+        apiFilters.year_from = filters.yearRange[0];
+      }
+      if (filters.yearRange[1]) {
+        apiFilters.year_to = filters.yearRange[1];
+      }
     }
-
-    // Loại nhiên liệu
     if (filters.fuelType) {
-      filtered = filtered.filter((model) =>
-        model.engineOptions.some((engine) => engine.fuelType === filters.fuelType)
-      );
+      apiFilters.fuel_type = filters.fuelType;
     }
 
-    // Đánh giá trung bình
-    if (filters.averageRating !== null) {
-      filtered = filtered.filter((model) => model.averageRating >= filters.averageRating!);
-    }
-
-    setFilteredData(filtered);
+    fetchModels(apiFilters);
   };
 
   const handleClearFilter = () => {
-    setFilteredData(data);
+    fetchModels({
+      page: 0,
+      size: 10,
+      direction: "DESC",
+      sort: "createdDate"
+    });
   };
 
   const handleToggleStatus = (record: VehicleModel) => {
-    const action = record.status === "active" ? "ngừng sản xuất" : "kích hoạt";
+    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
     showModal({
       title: `${
-        action === "ngừng sản xuất" ? "Ngừng sản xuất" : "Kích hoạt"
+        action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"
       } model`,
-      content: `Bạn có chắc chắn muốn ${action} model ${record.modelName}?`,
+      content: `Bạn có chắc chắn muốn ${action} model ${record.model_name}?`,
       type: "warning",
       onConfirm: async () => {
-        setLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const newData = data.map((item) =>
-          item.id === record.id
-            ? {
-                ...item,
-                status: item.status === "active" ? "discontinued" : "active",
-              }
-            : item
-        );
-        setData(newData);
-        setFilteredData(newData);
-        setLoading(false);
+        try {
+          await toggleModelStatus(record.model_id, !record.is_active);
+        } catch (error) {
+          console.error("Error toggling model status:", error);
+        }
+      },
+    });
+  };
+
+  const handleDelete = (record: VehicleModel) => {
+    showModal({
+      title: "Xóa model xe",
+      content: `Bạn có chắc chắn muốn xóa model xe "${record.model_name}"? Hành động này không thể hoàn tác.`,
+      type: "error",
+      onConfirm: async () => {
+        try {
+          await deleteModel(record.model_id);
+        } catch (error) {
+          console.error("Error deleting model:", error);
+        }
       },
     });
   };
@@ -334,37 +269,50 @@ const VehicleModelsPage = () => {
       
       <AdminTable
         title="Quản lý model xe"
-        dataSource={filteredData}
+        dataSource={data}
         columns={columns}
         loading={loading}
         onAdd={handleAdd}
         onEdit={handleEdit}
+        onEditCondition={(record: VehicleModel) => !record.is_deleted}
         onView={handleView}
         addButtonText="Thêm model xe"
         actions={[
           {
             key: "toggle-status",
             label: (record: VehicleModel) =>
-              record.status === "active" ? "Ngừng sản xuất" : "Kích hoạt",
+              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
             type: "default",
-            danger: (record: VehicleModel) => record.status === "active",
+            danger: (record: VehicleModel) => record.is_active,
             onClick: handleToggleStatus,
+            condition: (record: VehicleModel) => !record.is_deleted,
+          },
+          {
+            key: "delete",
+            label: "Xóa",
+            type: "default",
+            danger: true,
+            onClick: handleDelete,
+            condition: (record: VehicleModel) => !record.is_deleted,
           },
         ]}
-        searchable={false}
-        scroll={{ x: 1800 }}
+        searchable={true}
+        searchPlaceholder="Tìm kiếm model xe theo tên, mã..."
+        searchFields={["model_name", "model_code", "description"]}
+        scroll={{ x: 1000 }}
+        rowKey="model_id"
       />
 
       {/* Modals */}
       <VehicleModelDetailModal
         visible={detailModalVisible}
-        onClose={() => setDetailModalVisible(false)}
-        modelId={selectedModel?.id || null}
+        onCancel={() => setDetailModalVisible(false)}
+        modelId={selectedModel?.model_id || null}
       />
 
       <VehicleModelAddModal
         visible={addModalVisible}
-        onClose={() => setAddModalVisible(false)}
+        onCancel={() => setAddModalVisible(false)}
         onSuccess={handleAddSuccess}
       />
 

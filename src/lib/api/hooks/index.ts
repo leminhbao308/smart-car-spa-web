@@ -5,3 +5,5 @@
 export * from './useAuth';
 export * from './useUserManagement';
 export * from './useVehicleBrands';
+export * from './useVehicleTypes';
+export * from './useVehicleModels';
