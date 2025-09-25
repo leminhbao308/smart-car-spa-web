@@ -13,6 +13,8 @@ import {
   ForgotPasswordRequest,
   ResetPasswordRequest,
   ChangePasswordRequest,
+  SignupRequest,
+  SignupResponse,
   UserInfo,
   LogoutRequest,
 } from "../types";
@@ -37,6 +39,29 @@ export class AuthService {
       }
     } catch (error) {
       console.error("Login error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Register new user
+   */
+  static async signup(signupData: SignupRequest): Promise<SignupResponse> {
+    try {
+      const response = await apiClient.post("/auth/register", signupData);
+
+      if (response.data.success && response.data.data) {
+        const { user_info, access_token, refresh_token } = response.data.data;
+
+        // Store tokens and user info
+        TokenManager.setTokens(access_token, refresh_token, user_info);
+
+        return response.data;
+      } else {
+        throw new Error(response.data.message || "Signup failed");
+      }
+    } catch (error) {
+      console.error("Signup error:", error);
       throw error;
     }
   }

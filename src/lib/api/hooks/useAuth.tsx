@@ -14,7 +14,7 @@ import {
   ReactNode,
 } from "react";
 import { AuthService } from "../services/auth.service";
-import { AuthState, AuthContextType, LoginRequest, UserInfo } from "../types";
+import { AuthState, AuthContextType, LoginRequest, SignupRequest, UserInfo } from "../types";
 
 // Create Auth Context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -116,6 +116,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error && typeof error === "object" && "message" in error
             ? (error as { message: string }).message
             : "Login failed";
+        setState((prev) => ({
+          ...prev,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: errorMessage,
+        }));
+        throw error;
+      }
+    },
+    []
+  );
+
+  /**
+   * Signup function
+   */
+  const signup = useCallback(
+    async (signupData: SignupRequest): Promise<void> => {
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+        const signupResponse = await AuthService.signup(signupData);
+
+        if (signupResponse.data) {
+          setState((prev) => ({
+            ...prev,
+            user: signupResponse.data!.user_info,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          }));
+        }
+      } catch (error: unknown) {
+        const errorMessage =
+          error && typeof error === "object" && "message" in error
+            ? (error as { message: string }).message
+            : "Signup failed";
         setState((prev) => ({
           ...prev,
           user: null,
@@ -255,6 +292,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const contextValue: AuthContextType = {
     ...state,
     login,
+    signup,
     logout,
     refreshToken,
     verifyToken,
@@ -294,6 +332,6 @@ export function useAuthState(): AuthState {
  * Hook to get only authentication actions
  */
 export function useAuthActions() {
-  const { login, logout, refreshToken, verifyToken, clearError } = useAuth();
-  return { login, logout, refreshToken, verifyToken, clearError };
+  const { login, signup, logout, refreshToken, verifyToken, clearError } = useAuth();
+  return { login, signup, logout, refreshToken, verifyToken, clearError };
 }

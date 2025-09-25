@@ -21,12 +21,21 @@ export interface Permission extends BaseEntity {
 
 // User Info
 export interface UserInfo extends BaseEntity {
+  user_id: string;
   email: string;
   full_name: string;
-  phone?: string;
-  avatar?: string;
+  phone_number: string;
+  date_of_birth: string;
+  gender: "MALE" | "FEMALE" | "OTHER";
+  address: string;
+  avatar_url?: string | null;
   is_active: boolean;
   role: Role;
+  user_type: "CUSTOMER" | "ADMIN" | "STAFF";
+  customer_rank?: string | null;
+  accumulated_points: number;
+  total_orders: number;
+  total_spent: number;
 }
 
 // Login Request
@@ -79,6 +88,31 @@ export interface ChangePasswordRequest {
   confirm_password: string;
 }
 
+// Signup Request
+export interface SignupRequest {
+  email: string;
+  password: string;
+  googleId?: string | null;
+  fullName: string;
+  phoneNumber: string;
+  dateOfBirth: string; // ISO date string
+  gender: "MALE" | "FEMALE" | "OTHER";
+  address: string;
+  avatarUrl?: string | null;
+}
+
+// Signup Response
+export interface SignupResponse {
+  success: boolean;
+  message: string;
+  timestamp: string;
+  data?: {
+    access_token: string;
+    refresh_token: string;
+    user_info: UserInfo;
+  };
+}
+
 // Auth State
 export interface AuthState {
   user: UserInfo | null;
@@ -90,6 +124,7 @@ export interface AuthState {
 // Auth Context
 export interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
+  signup: (signupData: SignupRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
   verifyToken: () => Promise<boolean>;
