@@ -8,18 +8,19 @@ import {
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import { Tag, Avatar, message } from "antd";
-import { User } from "@/lib/api/types";
+import { UserManagementInfo, UserType } from "@/lib/api/types";
+import { UserService } from "@/lib/api/services/user.service";
 
 const StaffPage = () => {
-  const [data, setData] = useState<User[]>([]);
+  const [data, setData] = useState<UserManagementInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const { showModal } = useConfirmationModalContext();
   
   // Modal states
   const [staffModalVisible, setStaffModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [detailData, setDetailData] = useState<User | null>(null);
-  const [editData, setEditData] = useState<User | null>(null);
+  const [detailData, setDetailData] = useState<UserManagementInfo | null>(null);
+  const [editData, setEditData] = useState<UserManagementInfo | null>(null);
 
   // Fetch staff data (users with non-customer roles)
   useEffect(() => {
@@ -29,136 +30,18 @@ const StaffPage = () => {
   const fetchStaff = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await userService.getAllUsers();
-      // Filter users with non-customer roles
-      // const staffUsers = response.data.content.filter(user => user.role.role_code !== "CUSTOMER");
-      // setData(staffUsers);
+      // Fetch employees using API
+      const response = await UserService.getAllUsers({
+        userType: "EMPLOYEE" as UserType,
+        page: 0,
+        size: 100, // Get all employees for now
+        direction: "DESC",
+        sort: "createdDate"
+      });
       
-      // Mock data based on API response - only non-customer users
-      const mockStaff: User[] = [
-        {
-          user_id: "8b93b075-b127-4d2d-9f64-0bb10dbb1652",
-          email: "lehoangnam@demo.com",
-          full_name: "Lê Hoàng Nam",
-          phone_number: "0999999999",
-          date_of_birth: "2003-01-31 00:00:00",
-          gender: "MALE",
-          address: "Gò Vấp, Hồ Chí Minh",
-          avatar_url: null,
-          is_active: true,
-          role: {
-            role_id: "8ed98905-0562-4dba-af32-27839d86a087",
-            role_name: "Technician",
-            role_code: "TECHNICIAN",
-            description: "Service technician access"
-          }
-        },
-        {
-          user_id: "80becbc7-4824-4bc3-8fa8-18c7afa7695d",
-          email: "technician@scsms.com",
-          full_name: "Technician User",
-          phone_number: "0567891234",
-          date_of_birth: null,
-          gender: "MALE",
-          address: null,
-          avatar_url: null,
-          is_active: true,
-          role: {
-            role_id: "8ed98905-0562-4dba-af32-27839d86a087",
-            role_name: "Technician",
-            role_code: "TECHNICIAN",
-            description: "Service technician access"
-          }
-        },
-        {
-          user_id: "1feab04b-9c51-4307-89ad-b6e359265fad",
-          email: "cashier@scsms.com",
-          full_name: "Cashier User",
-          phone_number: "0678912345",
-          date_of_birth: null,
-          gender: "FEMALE",
-          address: null,
-          avatar_url: null,
-          is_active: true,
-          role: {
-            role_id: "af686f51-4781-4fc2-8176-8ada13495db9",
-            role_name: "Cashier",
-            role_code: "CASHIER",
-            description: "Sales and payment processing"
-          }
-        },
-        {
-          user_id: "089b67fb-1218-4e44-bba7-4e89f4488dce",
-          email: "cs@scsms.com",
-          full_name: "Customer Service User",
-          phone_number: "0789123456",
-          date_of_birth: null,
-          gender: "FEMALE",
-          address: null,
-          avatar_url: null,
-          is_active: true,
-          role: {
-            role_id: "6250fd0d-dbce-4d59-881c-005a43f6a039",
-            role_name: "Customer Service",
-            role_code: "CS",
-            description: "Customer support access"
-          }
-        },
-        {
-          user_id: "b6d0701f-ed48-437b-afcd-fd9eb42dfe76",
-          email: "ivm@scsms.com",
-          full_name: "Iventory Manager User",
-          phone_number: "0891234567",
-          date_of_birth: null,
-          gender: "FEMALE",
-          address: null,
-          avatar_url: null,
-          is_active: true,
-          role: {
-            role_id: "10b82023-96c8-4d6e-8f35-d01d59663538",
-            role_name: "Inventory Manager",
-            role_code: "INV_MGR",
-            description: "Inventory management access"
-          }
-        },
-        {
-          user_id: "018fe43d-30e6-4585-bffd-b8b70b50fb1a",
-          email: "admin@scsms.com",
-          full_name: "Admin User",
-          phone_number: "0123456789",
-          date_of_birth: null,
-          gender: "MALE",
-          address: null,
-          avatar_url: null,
-          is_active: true,
-          role: {
-            role_id: "91cc1277-709a-4312-98a2-db8c47d7efb1",
-            role_name: "Administrator",
-            role_code: "ADMIN",
-            description: "Full system access"
-          }
-        },
-        {
-          user_id: "cde708cb-da78-458c-9e1b-72a2bd4aa2a4",
-          email: "manager@scsms.com",
-          full_name: "Manager User",
-          phone_number: "0456789123",
-          date_of_birth: null,
-          gender: "MALE",
-          address: null,
-          avatar_url: null,
-          is_active: true,
-          role: {
-            role_id: "eee6cddd-f7d8-463a-a2ca-c6784a4282d5",
-            role_name: "Manager",
-            role_code: "MANAGER",
-            description: "Branch management access"
-          }
-        }
-      ];
-      setData(mockStaff);
+      setData(response.data.content);
     } catch (error) {
+      console.error("Error fetching staff:", error);
       message.error("Không thể tải danh sách nhân viên");
     } finally {
       setLoading(false);
@@ -166,12 +49,12 @@ const StaffPage = () => {
   };
 
   // Định nghĩa columns
-  const columns: ColumnsType<User> = [
+  const columns: ColumnsType<UserManagementInfo> = [
     {
       title: "Nhân viên",
       key: "staff",
       width: 250,
-      render: (_, record: User) => (
+      render: (_, record: UserManagementInfo) => (
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Avatar size="large" style={{ backgroundColor: "#1890ff" }}>
             {record.full_name.charAt(0)}
@@ -198,7 +81,7 @@ const StaffPage = () => {
       title: "Vai trò",
       key: "role",
       width: 150,
-      render: (_, record: User) => (
+      render: (_, record: UserManagementInfo) => (
         <div>
           <Tag color="blue">{record.role.role_name}</Tag>
           <div style={{ fontSize: 11, color: "#666", fontFamily: "monospace" }}>
@@ -214,7 +97,7 @@ const StaffPage = () => {
         { text: "Customer Service", value: "CS" },
         { text: "Inventory Manager", value: "INV_MGR" },
       ],
-      onFilter: (value, record: User) => record.role.role_code === value,
+      onFilter: (value, record: UserManagementInfo) => record.role.role_code === value,
     },
     {
       title: "Địa chỉ",
@@ -223,6 +106,27 @@ const StaffPage = () => {
       width: 200,
       ellipsis: true,
       render: (address: string | null) => address || "Chưa cập nhật",
+    },
+    {
+      title: "Ngày tuyển dụng",
+      dataIndex: "hired_at",
+      key: "hired_at",
+      width: 120,
+      render: (hiredAt: string | null) => 
+        hiredAt ? new Date(hiredAt).toLocaleDateString("vi-VN") : "Chưa cập nhật",
+      sorter: (a, b) => {
+        if (!a.hired_at && !b.hired_at) return 0;
+        if (!a.hired_at) return 1;
+        if (!b.hired_at) return -1;
+        return new Date(a.hired_at).getTime() - new Date(b.hired_at).getTime();
+      },
+    },
+    {
+      title: "CMND/CCCD",
+      dataIndex: "citizen_id",
+      key: "citizen_id",
+      width: 120,
+      render: (citizenId: string | null) => citizenId || "Chưa cập nhật",
     },
     {
       title: "Trạng thái",
@@ -238,7 +142,7 @@ const StaffPage = () => {
         { text: "Hoạt động", value: true },
         { text: "Không hoạt động", value: false },
       ],
-      onFilter: (value, record: User) => record.is_active === value,
+      onFilter: (value, record: UserManagementInfo) => record.is_active === value,
     },
   ];
 
@@ -248,45 +152,45 @@ const StaffPage = () => {
     setStaffModalVisible(true);
   };
 
-  const handleEdit = (record: User) => {
+  const handleEdit = (record: UserManagementInfo) => {
     setEditData(record);
     setStaffModalVisible(true);
   };
 
-  const handleView = (record: User) => {
+  const handleView = (record: UserManagementInfo) => {
     setDetailData(record);
     setDetailModalVisible(true);
   };
 
-  const handleToggleStatus = (record: User) => {
+  const handleToggleStatus = (record: UserManagementInfo) => {
     const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
     showModal({
       title: `${action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"} nhân viên`,
       content: `Bạn có chắc chắn muốn ${action} nhân viên ${record.full_name}?`,
       type: "warning",
       onConfirm: async () => {
-        setLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setData(prev => prev.map(item => 
-          item.user_id === record.user_id 
-            ? { ...item, is_active: !item.is_active }
-            : item
-        ));
-        setLoading(false);
+        try {
+          setLoading(true);
+          await UserService.updateUserStatus(record.user_id, !record.is_active);
+          setData(prev => prev.map(item => 
+            item.user_id === record.user_id 
+              ? { ...item, is_active: !item.is_active }
+              : item
+          ));
+          message.success(`Đã ${action} nhân viên ${record.full_name} thành công!`);
+        } catch (error) {
+          console.error("Error updating user status:", error);
+          message.error(`Không thể ${action} nhân viên ${record.full_name}`);
+        } finally {
+          setLoading(false);
+        }
       },
     });
   };
 
-  const handleStaffModalSuccess = (staffData: User) => {
-    if (editData) {
-      // Update existing staff
-      setData(prev => prev.map(item => 
-        item.user_id === staffData.user_id ? { ...item, ...staffData } : item
-      ));
-    } else {
-      // Add new staff
-      setData(prev => [...prev, staffData]);
-    }
+  const handleStaffModalSuccess = () => {
+    // Refresh the staff list after create/update
+    fetchStaff();
   };
 
   return (
@@ -306,14 +210,14 @@ const StaffPage = () => {
         actions={[
           {
             key: "toggle-status",
-            label: (record: User) =>
+            label: (record: UserManagementInfo) =>
               record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
             type: "default",
-            danger: (record: User) => record.is_active,
+            danger: (record: UserManagementInfo) => record.is_active,
             onClick: handleToggleStatus,
           },
         ]}
-        scroll={{ x: 1000 }}
+        scroll={{ x: 1200 }}
         rowKey="user_id"
       />
 

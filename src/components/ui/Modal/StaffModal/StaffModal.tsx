@@ -21,15 +21,15 @@ import {
   HomeOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { User, Role } from "@/lib/api/types";
+import { UserManagementInfo, Role } from "@/lib/api/types";
 
 const { TextArea } = Input;
 
 interface StaffModalProps {
   visible: boolean;
   onCancel: () => void;
-  onSuccess: (data: User) => void;
-  editData?: User | null;
+  onSuccess: () => void;
+  editData?: UserManagementInfo | null;
   title?: string;
 }
 
@@ -101,6 +101,10 @@ const StaffModal: React.FC<StaffModalProps> = ({
           gender: editData.gender,
           address: editData.address,
           role_id: editData.role.role_id,
+          citizen_id: editData.citizen_id,
+          hired_at: editData.hired_at
+            ? dayjs(editData.hired_at)
+            : null,
         });
       } else {
         form.resetFields();
@@ -118,7 +122,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
 
       const selectedRole = staffRoles.find(role => role.role_id === values.role_id);
       
-      const staffData: User = {
+      const staffData: UserManagementInfo = {
         user_id: editData?.user_id || `user_${Date.now()}`,
         email: values.email,
         full_name: values.full_name,
@@ -129,6 +133,15 @@ const StaffModal: React.FC<StaffModalProps> = ({
         avatar_url: null,
         is_active: true,
         role: selectedRole || staffRoles[0],
+        user_type: "EMPLOYEE",
+        customer_rank: null,
+        accumulated_points: null,
+        total_orders: null,
+        total_spent: null,
+        hired_at: values.hired_at ? values.hired_at.format("YYYY-MM-DD HH:mm:ss") : null,
+        citizen_id: values.citizen_id || null,
+        createdDate: editData?.createdDate || new Date().toISOString(),
+        updatedDate: new Date().toISOString(),
       };
 
       message.success(
@@ -136,7 +149,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
           ? "Cập nhật nhân viên thành công!"
           : "Tạo nhân viên thành công!"
       );
-      onSuccess(staffData);
+      onSuccess();
       onCancel();
     } catch (error) {
       console.error("Error:", error);
@@ -282,10 +295,29 @@ const StaffModal: React.FC<StaffModalProps> = ({
           </Col>
         </Row>
 
-        <Form.Item label="Địa chỉ" name="address">
-          <Input
-            prefix={<HomeOutlined />}
-            placeholder="Nhập địa chỉ (tùy chọn)"
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item label="Địa chỉ" name="address">
+              <Input
+                prefix={<HomeOutlined />}
+                placeholder="Nhập địa chỉ (tùy chọn)"
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="CMND/CCCD" name="citizen_id">
+              <Input
+                placeholder="Nhập số CMND/CCCD (tùy chọn)"
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Form.Item label="Ngày tuyển dụng" name="hired_at">
+          <DatePicker
+            style={{ width: "100%" }}
+            placeholder="Chọn ngày tuyển dụng"
+            format="DD/MM/YYYY"
           />
         </Form.Item>
       </Form>

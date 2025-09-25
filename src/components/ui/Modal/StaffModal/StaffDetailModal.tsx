@@ -4,17 +4,14 @@ import {
   Modal,
   Descriptions,
   Tag,
-  Badge,
   Card,
   Row,
   Col,
   Typography,
   Button,
   Avatar,
-  Divider,
 } from "antd";
 import {
-  UserOutlined,
   PhoneOutlined,
   MailOutlined,
   HomeOutlined,
@@ -23,14 +20,14 @@ import {
   SafetyOutlined,
   ClockCircleOutlined,
 } from "@ant-design/icons";
-import { User } from "@/lib/api/types";
+import { UserManagementInfo } from "@/lib/api/types";
 
 const { Title, Text } = Typography;
 
 interface StaffDetailModalProps {
   visible: boolean;
   onCancel: () => void;
-  data: User | null;
+  data: UserManagementInfo | null;
 }
 
 const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
@@ -119,6 +116,9 @@ const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
             <Descriptions.Item label="Tuổi">
               <Text>{calculateAge(data.date_of_birth)}</Text>
             </Descriptions.Item>
+            <Descriptions.Item label="CMND/CCCD">
+              <Text>{data.citizen_id || "Chưa cập nhật"}</Text>
+            </Descriptions.Item>
             {data.address && (
               <Descriptions.Item label="Địa chỉ" span={2}>
                 <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -181,11 +181,30 @@ const StaffDetailModal: React.FC<StaffDetailModalProps> = ({
                 </Text>
               </div>
             </Descriptions.Item>
+            <Descriptions.Item label="Ngày tuyển dụng">
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <CalendarOutlined style={{ color: "#666" }} />
+                <Text>
+                  {data.hired_at 
+                    ? new Date(data.hired_at).toLocaleDateString("vi-VN")
+                    : "Chưa cập nhật"
+                  }
+                </Text>
+              </div>
+            </Descriptions.Item>
             <Descriptions.Item label="Trạng thái tài khoản">
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <ClockCircleOutlined style={{ color: "#666" }} />
                 <Tag color={data.is_active ? "green" : "red"}>
                   {data.is_active ? "Hoạt động" : "Không hoạt động"}
+                </Tag>
+              </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="Loại tài khoản">
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <TeamOutlined style={{ color: "#666" }} />
+                <Tag color="blue">
+                  {data.user_type === "EMPLOYEE" ? "Nhân viên" : "Khách hàng"}
                 </Tag>
               </div>
             </Descriptions.Item>
