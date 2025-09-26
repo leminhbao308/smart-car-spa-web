@@ -31,15 +31,18 @@ export class CenterService {
   private static transformToDisplayFormat(center: Center): CenterDisplay {
     return {
       ...center,
-      business_hours: this.parseJsonSafely<BusinessHours>(center.business_hours, {
-        monday: { open: "08:00", close: "20:00" },
-        tuesday: { open: "08:00", close: "20:00" },
-        wednesday: { open: "08:00", close: "20:00" },
-        thursday: { open: "08:00", close: "20:00" },
-        friday: { open: "08:00", close: "20:00" },
-        saturday: { open: "08:00", close: "18:00" },
-        sunday: { open: "09:00", close: "17:00" },
-      }),
+      business_hours: this.parseJsonSafely<BusinessHours>(
+        center.business_hours,
+        {
+          monday: { open: "08:00", close: "20:00" },
+          tuesday: { open: "08:00", close: "20:00" },
+          wednesday: { open: "08:00", close: "20:00" },
+          thursday: { open: "08:00", close: "20:00" },
+          friday: { open: "08:00", close: "20:00" },
+          saturday: { open: "08:00", close: "18:00" },
+          sunday: { open: "09:00", close: "17:00" },
+        }
+      ),
       contact_info: this.parseJsonSafely<ContactInfo>(center.contact_info, {}),
       social_media: this.parseJsonSafely<SocialMedia>(center.social_media, {}),
       service_areas: this.parseJsonSafely<string[]>(center.service_areas, []),
@@ -65,30 +68,33 @@ export class CenterService {
     try {
       console.log("Fetching all centers...");
 
-      const response = await apiClient.get<CenterListResponse>("/centers/get-all");
+      const response = await apiClient.get<CenterListResponse>(
+        "/centers/get-all"
+      );
       console.log("Get all centers API response:", response);
 
       if (response.data.success && response.data.data) {
         // Handle both array and single object responses
-        const dataArray = Array.isArray(response.data.data) 
-          ? response.data.data 
-          : [response.data.data];
-          
-        const transformedCenters = dataArray.map(center => 
+        const dataArray = Array.isArray(response.data.data.content)
+          ? response.data.data.content
+          : [response.data.data.content];
+
+        const transformedCenters = dataArray.map((center) =>
           this.transformToDisplayFormat(center)
         );
-        
+
         return {
           centers: transformedCenters,
           pagination: {
-            page: 0,
-            size: dataArray.length,
-            total_elements: dataArray.length,
-            total_pages: 1,
-            first: true,
-            last: true,
-            has_next: false,
-            has_previous: false,
+            page: response.data.data.page || 0,
+            size: response.data.data.size || dataArray.length,
+            total_elements:
+              response.data.data.total_elements || dataArray.length,
+            total_pages: response.data.data.total_pages || 1,
+            first: response.data.data.first || true,
+            last: response.data.data.last || true,
+            has_next: response.data.data.has_next || false,
+            has_previous: response.data.data.has_previous || false,
           },
         };
       } else {
@@ -107,7 +113,9 @@ export class CenterService {
     try {
       console.log("Fetching center with ID:", centerId);
 
-      const response = await apiClient.get<CenterResponse>(`/centers/${centerId}`);
+      const response = await apiClient.get<CenterResponse>(
+        `/centers/${centerId}`
+      );
       console.log("Get center by ID API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -128,7 +136,10 @@ export class CenterService {
     try {
       console.log("Creating center with data:", data);
 
-      const response = await apiClient.post<CenterResponse>("/centers/create", data);
+      const response = await apiClient.post<CenterResponse>(
+        "/centers/create",
+        data
+      );
       console.log("Create center API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -145,7 +156,10 @@ export class CenterService {
   /**
    * Update center
    */
-  static async updateCenter(centerId: string, data: UpdateCenterRequest): Promise<CenterDisplay> {
+  static async updateCenter(
+    centerId: string,
+    data: UpdateCenterRequest
+  ): Promise<CenterDisplay> {
     try {
       console.log("Updating center with ID:", centerId, "and data:", data);
 
@@ -192,15 +206,19 @@ export class CenterService {
   /**
    * Get branches by center ID
    */
-  static async getBranchesByCenterId(centerId: string): Promise<CenterDisplay[]> {
+  static async getBranchesByCenterId(
+    centerId: string
+  ): Promise<CenterDisplay[]> {
     try {
       console.log("Fetching branches for center ID:", centerId);
 
-      const response = await apiClient.get<CenterListResponse>(`/centers/${centerId}/branches`);
+      const response = await apiClient.get<CenterListResponse>(
+        `/centers/${centerId}/branches`
+      );
       console.log("Get branches by center ID API response:", response);
 
       if (response.data.success && response.data.data) {
-        return response.data.data.map(center => 
+        return response.data.data.content.map((center: Center) =>
           this.transformToDisplayFormat(center)
         );
       } else {

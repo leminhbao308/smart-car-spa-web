@@ -36,7 +36,17 @@ export interface CenterListResponse {
   success: boolean;
   message: string;
   timestamp: string;
-  data: Center | Center[];
+  data: {
+    content: Center[];
+    page: number;
+    size: number;
+    total_elements: number;
+    total_pages: number;
+    first: boolean;
+    last: boolean;
+    has_next: boolean | null;
+    has_previous: boolean | null;
+  };
 }
 
 export interface CenterResponse {

@@ -9,6 +9,7 @@ import {
 
 export interface UseCentersParams {
   // No pagination params needed as API doesn't support them
+  [key: string]: never;
 }
 
 export interface UseCentersReturn {

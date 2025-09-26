@@ -69,9 +69,9 @@ export class BranchService {
 
       if (response.data.success && response.data.data) {
         // Handle both array and single object responses
-        const dataArray = Array.isArray(response.data.data) 
-          ? response.data.data 
-          : [response.data.data];
+        const dataArray = Array.isArray(response.data.data.content) 
+          ? response.data.data.content 
+          : [response.data.data.content];
           
         const transformedBranches = dataArray.map(branch => 
           this.transformToDisplayFormat(branch)
@@ -80,14 +80,14 @@ export class BranchService {
         return {
           branches: transformedBranches,
           pagination: {
-            page: 0,
-            size: dataArray.length,
-            total_elements: dataArray.length,
-            total_pages: 1,
-            first: true,
-            last: true,
-            has_next: false,
-            has_previous: false,
+            page: response.data.data.page || 0,
+            size: response.data.data.size || dataArray.length,
+            total_elements: response.data.data.total_elements || dataArray.length,
+            total_pages: response.data.data.total_pages || 1,
+            first: response.data.data.first || true,
+            last: response.data.data.last || true,
+            has_next: response.data.data.has_next || false,
+            has_previous: response.data.data.has_previous || false,
           },
         };
       } else {

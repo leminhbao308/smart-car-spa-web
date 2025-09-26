@@ -44,7 +44,17 @@ export interface BranchListResponse {
   success: boolean;
   message: string;
   timestamp: string;
-  data: Branch | Branch[];
+  data: {
+    content: Branch[];
+    page: number;
+    size: number;
+    total_elements: number;
+    total_pages: number;
+    first: boolean;
+    last: boolean;
+    has_next: boolean | null;
+    has_previous: boolean | null;
+  };
 }
 
 export interface BranchResponse {
