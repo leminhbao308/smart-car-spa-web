@@ -1,33 +1,23 @@
 "use client";
 import React from "react";
-import {
-  Modal,
-  Row,
-  Col,
-  Card,
-  Tag,
-  Space,
-  Typography,
-  Progress,
-  Divider,
-} from "antd";
+import { Modal, Card, Row, Col, Typography, Tag, Space, Avatar, Statistic, List, Divider } from "antd";
 import {
   EnvironmentOutlined,
   PhoneOutlined,
   MailOutlined,
-  UserOutlined,
   ClockCircleOutlined,
+  UserOutlined,
   CarOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
-import { Branch } from "@/components/utils/data/branches.data";
-import { getStatusColor, getStatusLabel } from "@/components/utils/helper/center.helper";
+import { BranchDisplay } from "@/lib/api/types/branch.types";
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 interface BranchDetailModalProps {
   open: boolean;
   onCancel: () => void;
-  branch: Branch | null;
+  branch: BranchDisplay | null;
 }
 
 const BranchDetailModal: React.FC<BranchDetailModalProps> = ({
@@ -39,167 +29,206 @@ const BranchDetailModal: React.FC<BranchDetailModalProps> = ({
 
   return (
     <Modal
-      title={
-        <Space>
-          <EnvironmentOutlined />
-          <span>Chi tiết chi nhánh: {branch.name}</span>
-        </Space>
-      }
+      title="Chi tiết chi nhánh"
       open={open}
       onCancel={onCancel}
-      width={800}
       footer={null}
+      width={1000}
+      style={{ top: 20 }}
     >
-      <Row gutter={[16, 16]}>
-        {/* Thông tin cơ bản */}
-        <Col span={24}>
-          <Card title="Thông tin cơ bản" size="small">
-            <Row gutter={[16, 8]}>
-              <Col span={12}>
-                <Space>
-                  <EnvironmentOutlined style={{ color: "#8c8c8c" }} />
-                  <Text strong>Địa chỉ:</Text>
-                  <Text>{branch.address}</Text>
-                </Space>
-              </Col>
-              <Col span={12}>
-                <Space>
-                  <UserOutlined style={{ color: "#722ed1" }} />
-                  <Text strong>Quản lý:</Text>
-                  <Text>{branch.manager}</Text>
-                </Space>
-              </Col>
-              <Col span={12}>
-                <Space>
-                  <PhoneOutlined style={{ color: "#52c41a" }} />
-                  <Text strong>Điện thoại:</Text>
-                  <Text>{branch.phone}</Text>
-                </Space>
-              </Col>
-              <Col span={12}>
-                <Space>
-                  <MailOutlined style={{ color: "#1890ff" }} />
-                  <Text strong>Email:</Text>
-                  <Text>{branch.email}</Text>
-                </Space>
-              </Col>
-              <Col span={12}>
-                <Space>
-                  <CarOutlined style={{ color: "#fa8c16" }} />
-                  <Text strong>Sức chứa:</Text>
-                  <Text>{branch.capacity} xe</Text>
-                </Space>
-              </Col>
-              <Col span={12}>
-                <Space>
-                  <Tag color={getStatusColor(branch.status)}>
-                    {getStatusLabel(branch.status)}
+      <div style={{ padding: 24 }}>
+        {/* Header với logo và thông tin cơ bản */}
+        <Card style={{ marginBottom: 24 }}>
+          <Row gutter={24} align="middle">
+            <Col span={4}>
+              <Avatar
+                size={100}
+                style={{ 
+                  border: "2px solid #f0f0f0",
+                  backgroundColor: "#1890ff",
+                  fontSize: 32
+                }}
+              >
+                {branch.branch_name?.charAt(0) || 'B'}
+              </Avatar>
+            </Col>
+            <Col span={16}>
+              <div>
+                <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
+                  {branch.branch_name || 'Chưa có tên'}
+                </Title>
+                <Paragraph
+                  style={{ fontSize: 16, color: "#666", marginBottom: 16 }}
+                >
+                  {branch.description || 'Chưa có mô tả'}
+                </Paragraph>
+                <Space wrap>
+                  <Tag color="blue" icon={<ClockCircleOutlined />}>
+                    Thành lập: {branch.established_date ? new Date(branch.established_date).getFullYear() : 'N/A'}
+                  </Tag>
+                  <Tag color={branch.is_active ? "green" : "red"}>
+                    {branch.is_active ? "Đang hoạt động" : "Tạm dừng"}
+                  </Tag>
+                  <Tag color="gold">
+                    {branch.operating_status || 'N/A'}
+                  </Tag>
+                  <Tag color={branch.branch_type === "PREMIUM" ? "gold" : branch.branch_type === "VIP" ? "purple" : "blue"}>
+                    {branch.branch_type === "PREMIUM" ? "Premium" : branch.branch_type === "VIP" ? "VIP" : "Standard"}
                   </Tag>
                 </Space>
-              </Col>
-            </Row>
-            {branch.description && (
-              <div style={{ marginTop: 12 }}>
-                <Text strong>Mô tả:</Text>
-                <Text style={{ marginTop: 4, display: "block" }}>
-                  {branch.description}
-                </Text>
               </div>
-            )}
-          </Card>
-        </Col>
+            </Col>
+          </Row>
+        </Card>
 
-        {/* Giờ hoạt động */}
-        <Col span={12}>
-          <Card title="Giờ hoạt động" size="small">
-            <Space direction="vertical" style={{ width: "100%" }}>
-              <div>
-                <ClockCircleOutlined style={{ marginRight: 8, color: "#1890ff" }} />
-                <Text strong>Ngày thường:</Text>
-                <Text style={{ marginLeft: 8 }}>{branch.openingHours.weekdays}</Text>
-              </div>
-              <div>
-                <ClockCircleOutlined style={{ marginRight: 8, color: "#52c41a" }} />
-                <Text strong>Cuối tuần:</Text>
-                <Text style={{ marginLeft: 8 }}>{branch.openingHours.weekends}</Text>
-              </div>
-            </Space>
-          </Card>
-        </Col>
+        <Row gutter={24}>
+          {/* Thông tin liên hệ */}
+          <Col span={12}>
+            <Card title="Thông tin liên hệ" style={{ marginBottom: 24 }}>
+              <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                <div>
+                  <Text strong>Địa chỉ:</Text>
+                  <div style={{ marginTop: 4 }}>
+                    <EnvironmentOutlined
+                      style={{ marginRight: 8, color: "#1890ff" }}
+                    />
+                    <Text>{branch.address || 'Chưa có địa chỉ'}</Text>
+                  </div>
+                </div>
 
-        {/* Thống kê slot */}
-        <Col span={12}>
-          <Card title="Thống kê slot chăm sóc" size="small">
-            <Row gutter={16}>
-              <Col span={8}>
-                <div style={{ textAlign: "center" }}>
-                  <Text strong style={{ fontSize: 18, color: "#1890ff" }}>
-                    {branch.totalSlots}
-                  </Text>
-                  <div>
-                    <Text type="secondary">Tổng slot</Text>
+                <div>
+                  <Text strong>Liên hệ:</Text>
+                  <div style={{ marginTop: 4 }}>
+                    <PhoneOutlined style={{ marginRight: 8, color: "#52c41a" }} />
+                    <Text>{branch.phone || 'Chưa có số điện thoại'}</Text>
+                  </div>
+                  <div style={{ marginTop: 4 }}>
+                    <MailOutlined style={{ marginRight: 8, color: "#722ed1" }} />
+                    <Text>{branch.email || 'Chưa có email'}</Text>
                   </div>
                 </div>
-              </Col>
-              <Col span={8}>
-                <div style={{ textAlign: "center" }}>
-                  <Text strong style={{ fontSize: 18, color: "#52c41a" }}>
-                    {branch.availableSlots}
-                  </Text>
-                  <div>
-                    <Text type="secondary">Trống</Text>
+
+                <div>
+                  <Text strong>Giờ làm việc:</Text>
+                  <div style={{ marginTop: 4 }}>
+                    <ClockCircleOutlined
+                      style={{ marginRight: 8, color: "#1890ff" }}
+                    />
+                    <Text>
+                      Thứ 2: {branch.operating_hours?.monday?.open || 'N/A'} - {branch.operating_hours?.monday?.close || 'N/A'}
+                    </Text>
+                  </div>
+                  <div style={{ marginTop: 4 }}>
+                    <ClockCircleOutlined
+                      style={{ marginRight: 8, color: "#1890ff" }}
+                    />
+                    <Text>
+                      Thứ 7: {branch.operating_hours?.saturday?.open || 'N/A'} - {branch.operating_hours?.saturday?.close || 'N/A'}
+                    </Text>
+                  </div>
+                  <div style={{ marginTop: 4 }}>
+                    <ClockCircleOutlined
+                      style={{ marginRight: 8, color: "#1890ff" }}
+                    />
+                    <Text>
+                      Chủ nhật: {branch.operating_hours?.sunday?.open || 'N/A'} - {branch.operating_hours?.sunday?.close || 'N/A'}
+                    </Text>
                   </div>
                 </div>
-              </Col>
-              <Col span={8}>
-                <div style={{ textAlign: "center" }}>
-                  <Text strong style={{ fontSize: 18, color: "#fa8c16" }}>
-                    {branch.currentBookings}
-                  </Text>
-                  <div>
-                    <Text type="secondary">Đang sử dụng</Text>
+              </Space>
+            </Card>
+
+            {/* Thông tin pháp lý */}
+            <Card title="Thông tin chi nhánh">
+              <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                <div>
+                  <Text strong>Mã chi nhánh:</Text>
+                  <div style={{ marginTop: 4 }}>
+                    <Text>{branch.branch_code || 'Chưa có'}</Text>
                   </div>
                 </div>
-              </Col>
-            </Row>
-            <Divider />
-            <div>
-              <Text strong>Tỷ lệ sử dụng:</Text>
-              <Progress
-                percent={Math.round((branch.currentBookings / branch.totalSlots) * 100)}
-                strokeColor="#1890ff"
-                style={{ marginTop: 8 }}
+                <div>
+                  <Text strong>Diện tích:</Text>
+                  <div style={{ marginTop: 4 }}>
+                    <Text>{branch.area_sqm || 0} m²</Text>
+                  </div>
+                </div>
+                <div>
+                  <Text strong>Chỗ đỗ xe:</Text>
+                  <div style={{ marginTop: 4 }}>
+                    <Text>{branch.parking_spaces || 0} chỗ</Text>
+                  </div>
+                </div>
+              </Space>
+            </Card>
+          </Col>
+
+          {/* Thống kê và dịch vụ */}
+          <Col span={12}>
+            <Card title="Thống kê hoạt động" style={{ marginBottom: 24 }}>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Statistic
+                    title="Tổng khách hàng"
+                    value={branch.total_customers || 0}
+                    prefix={<UserOutlined />}
+                    valueStyle={{ color: "#1890ff" }}
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic
+                    title="Tổng nhân viên"
+                    value={branch.total_employees || 0}
+                    prefix={<UserOutlined />}
+                    valueStyle={{ color: "#52c41a" }}
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic
+                    title="Công suất"
+                    value={`${branch.current_workload || 0}/${branch.service_capacity || 0}`}
+                    valueStyle={{ color: "#fa8c16" }}
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic
+                    title="Tỷ lệ sử dụng"
+                    value={`${Math.round(branch.utilization_rate || 0)}%`}
+                    valueStyle={{ color: "#722ed1" }}
+                  />
+                </Col>
+              </Row>
+              <Divider />
+              <div>
+                <Text strong>Quản lý:</Text>
+                <div style={{ marginTop: 8 }}>
+                  <Text style={{ fontSize: 16, fontWeight: "bold", color: "#52c41a" }}>
+                    {branch.manager_name || 'Chưa có quản lý'}
+                  </Text>
+                  <Text
+                    type="secondary"
+                    style={{ marginLeft: 8 }}
+                  >
+                    ({branch.manager_email || 'N/A'})
+                  </Text>
+                </div>
+              </div>
+            </Card>
+
+            {/* Cơ sở vật chất */}
+            <Card title="Cơ sở vật chất">
+              <List
+                dataSource={branch.facilities || []}
+                renderItem={(facility) => (
+                  <List.Item>
+                    <Text>• {facility}</Text>
+                  </List.Item>
+                )}
               />
-            </div>
-          </Card>
-        </Col>
-
-        {/* Dịch vụ */}
-        <Col span={12}>
-          <Card title="Dịch vụ cung cấp" size="small">
-            <Space wrap>
-              {branch.services.map((service, index) => (
-                <Tag key={index} color="blue">
-                  {service}
-                </Tag>
-              ))}
-            </Space>
-          </Card>
-        </Col>
-
-        {/* Tiện ích */}
-        <Col span={12}>
-          <Card title="Tiện ích" size="small">
-            <Space wrap>
-              {branch.facilities.map((facility, index) => (
-                <Tag key={index} color="green">
-                  {facility}
-                </Tag>
-              ))}
-            </Space>
-          </Card>
-        </Col>
-      </Row>
+            </Card>
+          </Col>
+        </Row>
+      </div>
     </Modal>
   );
 };

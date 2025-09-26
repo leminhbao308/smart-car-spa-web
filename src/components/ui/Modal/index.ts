@@ -30,6 +30,11 @@ export {
   SupplierEditModal,
   SupplierCreateModal
 } from "./SupplierModal";
+export { 
+  BranchDetailModal,
+  BranchEditModal,
+  BranchCreateModal
+} from "./BranchModal";
 export { default as CareProcessModal } from "./CarProcessModal/CareProcessModal";
 export { default as CareProcessDetailModal } from "./CarProcessModal/CareProcessDetailModal";
 export { default as StepProgressModal } from "./StepProgressModal";

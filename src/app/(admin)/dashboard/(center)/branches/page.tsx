@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { Tag, Space, Typography } from "antd";
+import React, { useState, useMemo } from "react";
+import { Tag, Space, Typography, message } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
@@ -11,32 +11,48 @@ import {
   UserOutlined, 
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
-import BranchModal from "@/components/ui/Modal/BranchModal/BranchModal";
-import BranchDetailModal from "@/components/ui/Modal/BranchModal/BranchDetailModal";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
-import { branchesData, Branch } from "@/components/utils/data/branches.data";
-import {
-  getStatusColor,
-  getStatusLabel,
-} from "@/components/utils/helper/center.helper";
+import { useBranchesByCenter } from "@/lib/api/hooks/useBranchesByCenter";
+import { useCenters } from "@/lib/api/hooks/useCenters";
+import { BranchDisplay } from "@/lib/api/types/branch.types";
+import { 
+  BranchDetailModal, 
+  BranchEditModal, 
+  BranchCreateModal 
+} from "@/components/ui/Modal/BranchModal";
 
 const { Text } = Typography;
 
 const BranchesPage = () => {
-  const [data, setData] = useState<Branch[]>(branchesData);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
-  const [viewingBranch, setViewingBranch] = useState<Branch | null>(null);
+  const { centers } = useCenters({});
+  const centerId = centers.length > 0 ? centers[0].center_id : null;
+  const { branches, loading, error, refreshBranches } = useBranchesByCenter(centerId);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedData, setSelectedData] = useState<BranchDisplay | null>(null);
+  const [editData, setEditData] = useState<BranchDisplay | null>(null);
   const { showModal } = useConfirmationModalContext();
+
+  // Mock pagination for now
+  const pagination = {
+    page: 0,
+    size: 10,
+    total_elements: branches.length,
+    total_pages: 1,
+    first: true,
+    last: true,
+    has_next: false,
+    has_previous: false,
+  };
 
   const columns = [
     {
       title: "Tên chi nhánh",
-      dataIndex: "name",
-      key: "name",
+      dataIndex: "branch_name",
+      key: "branch_name",
       width: 200,
-      render: (text: string, record: Branch) => (
+      render: (text: string, record: BranchDisplay) => (
         <div>
           <Text strong style={{ fontSize: 14 }}>
             {text}
@@ -54,10 +70,9 @@ const BranchesPage = () => {
     },
     {
       title: "Thông tin liên hệ",
-      dataIndex: "contact",
       key: "contact",
       width: 180,
-      render: (_: unknown, record: Branch) => (
+      render: (record: BranchDisplay) => (
         <div>
           <div style={{ marginBottom: 4 }}>
             <Space size="small">
@@ -76,167 +91,155 @@ const BranchesPage = () => {
     },
     {
       title: "Quản lý",
-      dataIndex: "manager",
       key: "manager",
       width: 120,
-      render: (text: string) => (
+      render: (record: BranchDisplay) => (
         <Space>
           <UserOutlined style={{ color: "#722ed1" }} />
-          <Text>{text}</Text>
+          <Text>{record.manager_name}</Text>
         </Space>
       ),
     },
     {
       title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      dataIndex: "operating_status",
+      key: "operating_status",
       width: 120,
       render: (status: string) => (
-        <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>
+        <Tag color={status === "ACTIVE" ? "green" : status === "INACTIVE" ? "red" : "orange"}>
+          {status === "ACTIVE" ? "Hoạt động" : status === "INACTIVE" ? "Tạm dừng" : "Bảo trì"}
+        </Tag>
       ),
     },
     {
-      title: "Slot chăm sóc",
-      dataIndex: "careSlots",
-      key: "careSlots",
+      title: "Loại chi nhánh",
+      dataIndex: "branch_type",
+      key: "branch_type",
       width: 120,
-      render: (_: unknown, record: Branch) => (
+      render: (type: string) => (
+        <Tag color={type === "PREMIUM" ? "gold" : type === "VIP" ? "purple" : "blue"}>
+          {type === "PREMIUM" ? "Premium" : type === "VIP" ? "VIP" : "Standard"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Công suất",
+      key: "capacity",
+      width: 120,
+      render: (record: BranchDisplay) => (
         <div>
-          <Text strong style={{ color: "#52c41a" }}>{record.availableSlots}</Text>
-          <Text type="secondary">/{record.totalSlots}</Text>
+          <Text strong style={{ color: "#52c41a" }}>{record.current_workload}</Text>
+          <Text type="secondary">/{record.service_capacity}</Text>
           <div style={{ fontSize: 11, color: "#8c8c8c" }}>
-            slot trống
+            {Math.round(record.utilization_rate)}% sử dụng
           </div>
         </div>
       ),
     },
   ];
 
+  // Handlers
+  const handleView = (record: BranchDisplay) => {
+    setSelectedData(record);
+    setDetailModalVisible(true);
+  };
+
+  const handleEdit = (record: BranchDisplay) => {
+    setEditData(record);
+    setEditModalVisible(true);
+  };
+
+  const handleDelete = async (record: BranchDisplay) => {
+    showModal({
+      title: "Xác nhận xóa chi nhánh",
+      content: `Bạn có chắc chắn muốn xóa chi nhánh "${record.branch_name}"? Hành động này không thể hoàn tác.`,
+      type: "confirm",
+      confirmText: "Xóa",
+      cancelText: "Hủy",
+      onConfirm: async () => {
+        try {
+          // TODO: Implement delete branch API
+          message.success("Xóa chi nhánh thành công");
+          await refreshBranches();
+        } catch (error: unknown) {
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Có lỗi xảy ra khi xóa chi nhánh";
+          message.error(errorMessage);
+        }
+      },
+    });
+  };
+
+  const handleCreateModalSuccess = async () => {
+    try {
+      await refreshBranches();
+      message.success("Thêm chi nhánh thành công");
+      setCreateModalVisible(false);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi thêm chi nhánh";
+      message.error(errorMessage);
+    }
+  };
+
+  const handleEditModalSuccess = async () => {
+    try {
+      await refreshBranches();
+      message.success("Cập nhật chi nhánh thành công");
+      setEditModalVisible(false);
+      setEditData(null);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi cập nhật chi nhánh";
+      message.error(errorMessage);
+    }
+  };
+
   const actions = [
     {
       key: "view",
       label: "Xem chi tiết",
       icon: <EyeOutlined />,
-      onClick: (record: Branch) => {
-        setViewingBranch(record);
-        setDetailModalOpen(true);
-      },
+      onClick: handleView,
     },
     {
       key: "edit",
       label: "Chỉnh sửa",
       icon: <EditOutlined />,
-      onClick: (record: Branch) => {
-        setEditingBranch(record);
-        setModalOpen(true);
-      },
+      onClick: handleEdit,
     },
     {
       key: "delete",
       label: "Xóa",
       icon: <DeleteOutlined />,
       danger: true,
-      condition: (record: Branch) => record.status === "inactive",
-      onClick: (record: Branch) => {
-        showModal({
-          title: "Xác nhận xóa chi nhánh",
-          content: `Bạn có chắc chắn muốn xóa chi nhánh "${record.name}"?`,
-          type: "error",
-          onConfirm: () => {
-            setData(data.filter((item) => item.id !== record.id));
-          },
-        });
-      },
-    },
-    {
-      key: "deactivate",
-      label: "Ngừng hoạt động",
-      icon: <DeleteOutlined />,
-      danger: true,
-      condition: (record: Branch) => record.status === "active",
-      onClick: (record: Branch) => {
-        showModal({
-          title: "Xác nhận ngừng hoạt động",
-          content: `Bạn có chắc chắn muốn ngừng hoạt động chi nhánh "${record.name}"?`,
-          type: "warning",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "inactive" as const, currentBookings: 0 }
-                  : item
-              )
-            );
-          },
-        });
-      },
-    },
-    {
-      key: "activate",
-      label: "Kích hoạt",
-      icon: <EditOutlined />,
-      condition: (record: Branch) => record.status === "inactive",
-      onClick: (record: Branch) => {
-        showModal({
-          title: "Xác nhận kích hoạt",
-          content: `Bạn có chắc chắn muốn kích hoạt chi nhánh "${record.name}"?`,
-          type: "success",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "active" as const }
-                  : item
-              )
-            );
-          },
-        });
-      },
+      onClick: handleDelete,
     },
   ];
-
-  const handleAddNew = () => {
-    setEditingBranch(null);
-    setModalOpen(true);
-  };
-
-  const handleModalOk = (branchData: Branch) => {
-    if (editingBranch) {
-      // Cập nhật chi nhánh
-      setData(
-        data.map((item) =>
-          item.id === editingBranch.id
-            ? { ...branchData, id: editingBranch.id }
-            : item
-        )
-      );
-    } else {
-      // Thêm chi nhánh mới
-      setData([...data, branchData]);
-    }
-    setModalOpen(false);
-    setEditingBranch(null);
-  };
-
-  const handleModalCancel = () => {
-    setModalOpen(false);
-    setEditingBranch(null);
-  };
 
   return (
     <div>
       <AdminTable
         title="Quản lý chi nhánh"
-        dataSource={data}
+        dataSource={branches}
         columns={columns}
         actions={actions}
-        onAdd={handleAddNew}
+        onAdd={() => setCreateModalVisible(true)}
         addButtonText="Thêm chi nhánh mới"
+        loading={loading}
         searchable={true}
         searchPlaceholder="Tìm kiếm chi nhánh theo tên, địa chỉ, số điện thoại..."
-        searchFields={["name", "address", "phone", "managerName"]}
+        searchFields={["branch_name", "address", "phone", "manager_name"]}
         pagination={{
-          pageSize: 10,
+          current: pagination.page + 1,
+          pageSize: pagination.size,
+          total: pagination.total_elements,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total: number, range: [number, number]) =>
@@ -244,21 +247,29 @@ const BranchesPage = () => {
         }}
       />
 
-      <BranchModal
-        open={modalOpen}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
-        initialData={editingBranch}
-        title={editingBranch ? "Chỉnh sửa chi nhánh" : "Thêm chi nhánh mới"}
+      {/* Modals */}
+      <BranchCreateModal
+        open={createModalVisible}
+        onCancel={() => setCreateModalVisible(false)}
+        onSuccess={handleCreateModalSuccess}
+        centerId={centerId}
       />
 
       <BranchDetailModal
-        open={detailModalOpen}
+        open={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        branch={selectedData}
+      />
+
+      <BranchEditModal
+        open={editModalVisible}
         onCancel={() => {
-          setDetailModalOpen(false);
-          setViewingBranch(null);
+          setEditModalVisible(false);
+          setEditData(null);
         }}
-        branch={viewingBranch}
+        onSuccess={handleEditModalSuccess}
+        branch={editData}
+        centerId={centerId}
       />
     </div>
   );

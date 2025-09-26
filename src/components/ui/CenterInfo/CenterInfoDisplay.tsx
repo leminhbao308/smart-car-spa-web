@@ -21,17 +21,14 @@ import {
   ClockCircleOutlined,
   StarOutlined,
   UserOutlined,
-  CarOutlined,
-  DollarOutlined,
   EditOutlined,
 } from "@ant-design/icons";
-import { CenterInfo } from "@/components/utils/data/center-info.data";
-import formatCurrency from "@/components/utils/helper/currency.format.helper";
+import { CenterDisplay } from "@/lib/api/types/center.types";
 
 const { Title, Text, Paragraph } = Typography;
 
 interface CenterInfoDisplayProps {
-  centerInfo: CenterInfo;
+  centerInfo: CenterDisplay | null;
   onEdit?: () => void;
 }
 
@@ -39,6 +36,15 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
   centerInfo,
   onEdit,
 }) => {
+  // Null safety check
+  if (!centerInfo) {
+    return (
+      <div style={{ padding: 24, textAlign: 'center' }}>
+        <Text type="secondary">Không có dữ liệu trung tâm</Text>
+      </div>
+    );
+  }
+
   return (
     <div style={{ padding: 24 }}>
       {/* Header với logo và thông tin cơ bản */}
@@ -47,33 +53,31 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
           <Col span={4}>
             <Avatar
               size={100}
-              src={centerInfo.logo}
+              src={centerInfo.logo_url}
               style={{ border: "2px solid #f0f0f0" }}
             >
-              {centerInfo.name.charAt(0)}
+              {centerInfo.center_name?.charAt(0) || 'C'}
             </Avatar>
           </Col>
           <Col span={16}>
             <div>
               <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
-                {centerInfo.name}
+                {centerInfo.center_name || 'Chưa có tên'}
               </Title>
               <Paragraph
                 style={{ fontSize: 16, color: "#666", marginBottom: 16 }}
               >
-                {centerInfo.description}
+                {centerInfo.description || 'Chưa có mô tả'}
               </Paragraph>
               <Space wrap>
                 <Tag color="blue" icon={<ClockCircleOutlined />}>
-                  Thành lập: {centerInfo.establishedYear}
+                  Thành lập: {centerInfo.established_date ? new Date(centerInfo.established_date).getFullYear() : 'N/A'}
                 </Tag>
-                <Tag color={centerInfo.status === "active" ? "green" : "red"}>
-                  {centerInfo.status === "active"
-                    ? "Đang hoạt động"
-                    : "Tạm dừng"}
+                <Tag color={centerInfo.is_active ? "green" : "red"}>
+                  {centerInfo.is_active ? "Đang hoạt động" : "Tạm dừng"}
                 </Tag>
                 <Tag color="gold" icon={<StarOutlined />}>
-                  {centerInfo.statistics.averageRating}/5.0
+                  {centerInfo.operating_status || 'N/A'}
                 </Tag>
               </Space>
             </div>
@@ -104,35 +108,25 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
                   <EnvironmentOutlined
                     style={{ marginRight: 8, color: "#1890ff" }}
                   />
-                  <Text>
-                    {centerInfo.address.street}, {centerInfo.address.ward},{" "}
-                    {centerInfo.address.district}, {centerInfo.address.city}
-                  </Text>
+                  <Text>{centerInfo.headquarters_address || 'Chưa có địa chỉ'}</Text>
                 </div>
-                <Text type="secondary" style={{ marginLeft: 24 }}>
-                  Mã bưu điện: {centerInfo.address.postalCode}
-                </Text>
               </div>
 
               <div>
                 <Text strong>Liên hệ:</Text>
                 <div style={{ marginTop: 4 }}>
                   <PhoneOutlined style={{ marginRight: 8, color: "#52c41a" }} />
-                  <Text>{centerInfo.phone}</Text>
-                </div>
-                <div style={{ marginTop: 4 }}>
-                  <PhoneOutlined style={{ marginRight: 8, color: "#fa8c16" }} />
-                  <Text>Hotline: {centerInfo.hotline}</Text>
+                  <Text>{centerInfo.headquarters_phone || 'Chưa có số điện thoại'}</Text>
                 </div>
                 <div style={{ marginTop: 4 }}>
                   <MailOutlined style={{ marginRight: 8, color: "#722ed1" }} />
-                  <Text>{centerInfo.email}</Text>
+                  <Text>{centerInfo.headquarters_email || 'Chưa có email'}</Text>
                 </div>
                 <div style={{ marginTop: 4 }}>
                   <GlobalOutlined
                     style={{ marginRight: 8, color: "#13c2c2" }}
                   />
-                  <Text>{centerInfo.website}</Text>
+                  <Text>{centerInfo.website || 'Chưa có website'}</Text>
                 </div>
               </div>
 
@@ -143,8 +137,7 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
                     style={{ marginRight: 8, color: "#1890ff" }}
                   />
                   <Text>
-                    Thứ 2 - Thứ 6: {centerInfo.businessHours.weekdays.open} -{" "}
-                    {centerInfo.businessHours.weekdays.close}
+                    Thứ 2: {centerInfo.business_hours?.monday?.open || 'N/A'} - {centerInfo.business_hours?.monday?.close || 'N/A'}
                   </Text>
                 </div>
                 <div style={{ marginTop: 4 }}>
@@ -152,13 +145,15 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
                     style={{ marginRight: 8, color: "#1890ff" }}
                   />
                   <Text>
-                    Thứ 7 - Chủ nhật: {centerInfo.businessHours.weekends.open} -{" "}
-                    {centerInfo.businessHours.weekends.close}
+                    Thứ 7: {centerInfo.business_hours?.saturday?.open || 'N/A'} - {centerInfo.business_hours?.saturday?.close || 'N/A'}
                   </Text>
                 </div>
                 <div style={{ marginTop: 4 }}>
-                  <Text type="secondary">
-                    {centerInfo.businessHours.holidays}
+                  <ClockCircleOutlined
+                    style={{ marginRight: 8, color: "#1890ff" }}
+                  />
+                  <Text>
+                    Chủ nhật: {centerInfo.business_hours?.sunday?.open || 'N/A'} - {centerInfo.business_hours?.sunday?.close || 'N/A'}
                   </Text>
                 </div>
               </div>
@@ -171,28 +166,19 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
               <div>
                 <Text strong>Giấy phép kinh doanh:</Text>
                 <div style={{ marginTop: 4 }}>
-                  <Text>{centerInfo.licenseNumber}</Text>
+                  <Text>{centerInfo.business_license || 'Chưa có'}</Text>
                 </div>
               </div>
               <div>
                 <Text strong>Mã số thuế:</Text>
                 <div style={{ marginTop: 4 }}>
-                  <Text>{centerInfo.taxCode}</Text>
+                  <Text>{centerInfo.tax_code || 'Chưa có'}</Text>
                 </div>
               </div>
               <div>
-                <Text strong>Thông tin ngân hàng:</Text>
+                <Text strong>Mã trung tâm:</Text>
                 <div style={{ marginTop: 4 }}>
-                  <Text>{centerInfo.bankInfo.bankName}</Text>
-                </div>
-                <div style={{ marginTop: 4 }}>
-                  <Text>STK: {centerInfo.bankInfo.accountNumber}</Text>
-                </div>
-                <div style={{ marginTop: 4 }}>
-                  <Text>Chủ TK: {centerInfo.bankInfo.accountHolder}</Text>
-                </div>
-                <div style={{ marginTop: 4 }}>
-                  <Text>Chi nhánh: {centerInfo.bankInfo.branch}</Text>
+                  <Text>{centerInfo.center_code || 'Chưa có'}</Text>
                 </div>
               </div>
             </Space>
@@ -206,60 +192,58 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
               <Col span={12}>
                 <Statistic
                   title="Tổng khách hàng"
-                  value={centerInfo.statistics.totalCustomers}
+                  value={centerInfo.total_customers || 0}
                   prefix={<UserOutlined />}
                   valueStyle={{ color: "#1890ff" }}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
-                  title="Tổng xe phục vụ"
-                  value={centerInfo.statistics.totalVehicles}
-                  prefix={<CarOutlined />}
+                  title="Tổng nhân viên"
+                  value={centerInfo.total_employees || 0}
+                  prefix={<UserOutlined />}
                   valueStyle={{ color: "#52c41a" }}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
-                  title="Tổng dịch vụ"
-                  value={centerInfo.statistics.totalServices}
+                  title="Tổng chi nhánh"
+                  value={centerInfo.total_branches || 0}
                   valueStyle={{ color: "#fa8c16" }}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
-                  title="Doanh thu"
-                  value={centerInfo.statistics.totalRevenue}
-                  formatter={(value) => formatCurrency(Number(value))}
-                  prefix={<DollarOutlined />}
+                  title="Trạng thái"
+                  value={centerInfo.operating_status || 'N/A'}
                   valueStyle={{ color: "#722ed1" }}
                 />
               </Col>
             </Row>
             <Divider />
             <div>
-              <Text strong>Đánh giá trung bình:</Text>
+              <Text strong>Quản lý:</Text>
               <div style={{ marginTop: 8 }}>
-                <Text style={{ fontSize: 18, fontWeight: "bold", color: "#52c41a" }}>
-                  {centerInfo.statistics.averageRating}/5.0
+                <Text style={{ fontSize: 16, fontWeight: "bold", color: "#52c41a" }}>
+                  {centerInfo.manager_name || 'Chưa có quản lý'}
                 </Text>
                 <Text
                   type="secondary"
                   style={{ marginLeft: 8 }}
                 >
-                  ({centerInfo.statistics.totalReviews} đánh giá)
+                  ({centerInfo.manager_email || 'N/A'})
                 </Text>
               </div>
             </div>
           </Card>
 
-          {/* Dịch vụ cung cấp */}
-          <Card title="Dịch vụ cung cấp">
+          {/* Khu vực phục vụ */}
+          <Card title="Khu vực phục vụ">
             <List
-              dataSource={centerInfo.services}
-              renderItem={(service) => (
+              dataSource={centerInfo.service_areas || []}
+              renderItem={(area) => (
                 <List.Item>
-                  <Text>• {service}</Text>
+                  <Text>• {area}</Text>
                 </List.Item>
               )}
             />

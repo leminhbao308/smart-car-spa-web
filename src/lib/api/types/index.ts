@@ -17,3 +17,9 @@ export * from './vehicle-profile.types';
 
 // Supplier types
 export * from './supplier.types';
+
+// Center types
+export * from './center.types';
+
+// Branch types
+export * from './branch.types';
