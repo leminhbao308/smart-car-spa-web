@@ -8,3 +8,5 @@ export * from './role.service';
 export * from './vehicle.service';
 export * from './vehicle-profile.service';
 export { VehicleProfileService } from './vehicle-profile.service';
+export * from './supplier.service';
+export { SupplierService } from './supplier.service';

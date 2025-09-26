@@ -25,6 +25,11 @@ export { default as PriceTableDetailModal } from "./PriceTableModals/PriceTableD
 export { default as PriceTableEditModal } from "./PriceTableModals/PriceTableEditModal";
 export { default as PromotionModal } from "./PromotionModal/PromotionModal";
 export { default as SupplierModal } from "./SupplierModal/SupplierModal";
+export { 
+  SupplierDetailModal,
+  SupplierEditModal,
+  SupplierCreateModal
+} from "./SupplierModal";
 export { default as CareProcessModal } from "./CarProcessModal/CareProcessModal";
 export { default as CareProcessDetailModal } from "./CarProcessModal/CareProcessDetailModal";
 export { default as StepProgressModal } from "./StepProgressModal";

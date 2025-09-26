@@ -13,3 +13,7 @@ export * from './user.types';
 
 // Vehicle types
 export * from './vehicle.types';
+export * from './vehicle-profile.types';
+
+// Supplier types
+export * from './supplier.types';

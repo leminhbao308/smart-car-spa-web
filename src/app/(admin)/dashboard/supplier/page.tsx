@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Tag, 
   Typography,
@@ -8,6 +8,7 @@ import {
   Col,
   Statistic,
   Progress,
+  message,
 } from "antd";
 import {
   EditOutlined,
@@ -25,37 +26,36 @@ import {
   TrophyOutlined,
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
-import SupplierModal from "@/components/ui/Modal/SupplierModal/SupplierModal";
-import { useConfirmationModalContext } from "@/components/ui/Modal";
-import {
-  suppliersData,
-  Supplier,
-} from "@/components/utils/data/suppliers.data";
-import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import {
-  getStatusColor,
-  getStatusLabel,
-  getContractStatusColor,
-  getContractStatusLabel,
-  isContractExpired,
-} from "@/components/utils/helper/supplier.helper";
+import { 
+  useConfirmationModalContext,
+  SupplierDetailModal,
+  SupplierEditModal,
+  SupplierCreateModal
+} from "@/components/ui/Modal";
+import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
+import { Supplier } from "@/lib/api/types/supplier.types";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 
 const { Text } = Typography;
 
 const SupplierPage = () => {
-  const [data, setData] = useState<Supplier[]>(suppliersData);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
-  const [viewingSupplier, setViewingSupplier] = useState<Supplier | null>(null);
-  const [modalMode, setModalMode] = useState<'add' | 'edit' | 'view'>('add');
+  // Use custom hook for API data management
+  const { suppliers, loading, pagination, refreshSuppliers, createSupplier, updateSupplier, deleteSupplier } =
+    useSuppliers({});
+
+  // Modal states
+  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedData, setSelectedData] = useState<Supplier | null>(null);
+  const [editData, setEditData] = useState<Supplier | null>(null);
   const { showModal } = useConfirmationModalContext();
 
   const columns = [
     {
       title: "Nhà cung cấp",
-      dataIndex: "name",
-      key: "name",
+      dataIndex: "supplier_name",
+      key: "supplier_name",
       width: 300,
       render: (text: string, record: Supplier) => (
         <div>
@@ -68,11 +68,11 @@ const SupplierPage = () => {
             </Text>
           </div>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Mã: {record.code} | {record.category}
+            ID: {record.supplier_id}
           </Text>
           <div style={{ marginTop: 4 }}>
             <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
-              {record.description}
+              {record.address}
             </Text>
           </div>
         </div>
@@ -80,314 +80,198 @@ const SupplierPage = () => {
     },
     {
       title: "Liên hệ",
-      dataIndex: "contactInfo",
-      key: "contactInfo",
+      key: "contact",
       width: 200,
-      render: (contactInfo: Supplier['contactInfo']) => (
+      render: (record: Supplier) => (
         <div>
           <div style={{ marginBottom: 4 }}>
             <PhoneOutlined style={{ marginRight: 4, color: "#1890ff" }} />
-            <Text style={{ fontSize: 12 }}>{contactInfo.phone}</Text>
+            <Text style={{ fontSize: 12 }}>{record.phone}</Text>
           </div>
           <div style={{ marginBottom: 4 }}>
             <MailOutlined style={{ marginRight: 4, color: "#52c41a" }} />
-            <Text style={{ fontSize: 12 }}>{contactInfo.email}</Text>
+            <Text style={{ fontSize: 12 }}>{record.email}</Text>
           </div>
           <div style={{ marginBottom: 4 }}>
             <EnvironmentOutlined style={{ marginRight: 4, color: "#fa8c16" }} />
-            <Text style={{ fontSize: 12 }}>{contactInfo.city}</Text>
+            <Text style={{ fontSize: 12 }}>{record.contact_person}</Text>
           </div>
-          {contactInfo.website && (
-            <div>
-              <GlobalOutlined style={{ marginRight: 4, color: "#722ed1" }} />
-              <Text style={{ fontSize: 12 }}>{contactInfo.website}</Text>
-            </div>
-          )}
         </div>
       ),
     },
     {
-      title: "Hợp đồng",
-      dataIndex: "contractInfo",
-      key: "contractInfo",
-      width: 180,
-      render: (contractInfo: Supplier['contractInfo']) => (
+      title: "Thông tin ngân hàng",
+      key: "bank",
+      width: 200,
+      render: (record: Supplier) => (
         <div>
           <div style={{ marginBottom: 4 }}>
-            <Text style={{ fontSize: 12, fontWeight: "bold" }}>
-              {contractInfo.contractNumber}
-            </Text>
+            <BankOutlined style={{ marginRight: 4, color: "#722ed1" }} />
+            <Text style={{ fontSize: 12 }}>{record.bank_name}</Text>
           </div>
           <div style={{ marginBottom: 4 }}>
-            <Tag color={getContractStatusColor(contractInfo.status)}>
-              {getContractStatusLabel(contractInfo.status)}
-            </Tag>
-          </div>
-          <div style={{ marginBottom: 4 }}>
-            <Text style={{ fontSize: 11 }}>
-              {formatDate(contractInfo.startDate)} -{" "}
-              {formatDate(contractInfo.endDate)}
+            <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
+              STK: {record.bank_account}
             </Text>
           </div>
-          {isContractExpired(contractInfo.endDate) && (
-            <Tag color="red">Hết hạn</Tag>
-          )}
         </div>
       ),
     },
     {
       title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      dataIndex: "is_active",
+      key: "is_active",
       width: 120,
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>
+      render: (isActive: boolean) => (
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Hoạt động" : "Tạm dừng"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Ngày tạo",
+      dataIndex: "created_date",
+      key: "created_date",
+      width: 150,
+      render: (date: string) => (
+        <Text style={{ fontSize: 12 }}>
+          {formatDate(date)}
+        </Text>
       ),
     },
   ];
+
+  // Handlers
+  const handleView = (record: Supplier) => {
+    setSelectedData(record);
+    setDetailModalVisible(true);
+  };
+
+  const handleEdit = (record: Supplier) => {
+    setEditData(record);
+    setEditModalVisible(true);
+  };
+
+  const handleDelete = async (record: Supplier) => {
+    showModal({
+      title: "Xác nhận xóa nhà cung cấp",
+      content: `Bạn có chắc chắn muốn xóa nhà cung cấp "${record.supplier_name}"? Hành động này không thể hoàn tác.`,
+      type: "confirm",
+      confirmText: "Xóa",
+      cancelText: "Hủy",
+      onConfirm: async () => {
+        try {
+          await deleteSupplier(record.supplier_id);
+          message.success("Xóa nhà cung cấp thành công");
+        } catch (error: unknown) {
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Có lỗi xảy ra khi xóa nhà cung cấp";
+          message.error(errorMessage);
+        }
+      },
+    });
+  };
+
+  const handleCreateModalSuccess = async () => {
+    try {
+      await refreshSuppliers();
+      message.success("Thêm nhà cung cấp thành công");
+      setCreateModalVisible(false);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi thêm nhà cung cấp";
+      message.error(errorMessage);
+    }
+  };
+
+  const handleEditModalSuccess = async () => {
+    try {
+      await refreshSuppliers();
+      message.success("Cập nhật nhà cung cấp thành công");
+      setEditModalVisible(false);
+      setEditData(null);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi cập nhật nhà cung cấp";
+      message.error(errorMessage);
+    }
+  };
 
   const actions = [
     {
       key: "view",
       label: "Xem chi tiết",
       icon: <EyeOutlined />,
-      onClick: (record: Supplier) => {
-        setViewingSupplier(record);
-        setModalMode('view');
-        setModalOpen(true);
-      },
+      onClick: handleView,
     },
     {
       key: "edit",
       label: "Chỉnh sửa",
       icon: <EditOutlined />,
-      onClick: (record: Supplier) => {
-        setEditingSupplier(record);
-        setModalMode('edit');
-        setModalOpen(true);
-      },
+      onClick: handleEdit,
     },
     {
-      key: "deactivate",
-      label: "Tạm dừng",
+      key: "delete",
+      label: "Xóa",
       icon: <DeleteOutlined />,
       danger: true,
-      condition: (record: Supplier) => record.status === "active",
-      onClick: (record: Supplier) => {
-        showModal({
-          title: "Xác nhận tạm dừng",
-          content: `Bạn có chắc chắn muốn tạm dừng nhà cung cấp "${record.name}"?`,
-          type: "warning",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "inactive" as const }
-                  : item
-              )
-            );
-          },
-        });
-      },
-    },
-    {
-      key: "activate",
-      label: "Kích hoạt",
-      icon: <EditOutlined />,
-      condition: (record: Supplier) => record.status === "inactive",
-      onClick: (record: Supplier) => {
-        showModal({
-          title: "Xác nhận kích hoạt",
-          content: `Bạn có chắc chắn muốn kích hoạt nhà cung cấp "${record.name}"?`,
-          type: "success",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "active" as const }
-                  : item
-              )
-            );
-          },
-        });
-      },
-    },
-    {
-      key: "blacklist",
-      label: "Cấm",
-      icon: <DeleteOutlined />,
-      danger: true,
-      condition: (record: Supplier) =>
-        record.status === "active" || record.status === "inactive",
-      onClick: (record: Supplier) => {
-        showModal({
-          title: "Xác nhận cấm nhà cung cấp",
-          content: `Bạn có chắc chắn muốn cấm nhà cung cấp "${record.name}"?`,
-          type: "error",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "blacklisted" as const }
-                  : item
-              )
-            );
-          },
-        });
-      },
+      onClick: handleDelete,
     },
   ];
 
-  const handleAddNew = () => {
-    setEditingSupplier(null);
-    setViewingSupplier(null);
-    setModalMode('add');
-    setModalOpen(true);
-  };
-
-  const handleModalOk = (supplierData: Supplier) => {
-    if (modalMode === 'edit' && editingSupplier) {
-      // Cập nhật nhà cung cấp
-      setData(
-        data.map((item) =>
-          item.id === editingSupplier.id
-            ? { ...supplierData, id: editingSupplier.id }
-            : item
-        )
-      );
-    } else if (modalMode === 'add') {
-      // Thêm nhà cung cấp mới
-      setData([...data, supplierData]);
-    }
-    setModalOpen(false);
-    setEditingSupplier(null);
-    setViewingSupplier(null);
-  };
-
-  const handleModalCancel = () => {
-    setModalOpen(false);
-    setEditingSupplier(null);
-    setViewingSupplier(null);
-  };
-
-  // Thống kê tổng quan
-  const totalSuppliers = data.length;
-  const activeSuppliers = data.filter(
-    (item) => item.status === "active"
-  ).length;
-  const inactiveSuppliers = data.filter(
-    (item) => item.status === "inactive"
-  ).length;
-  const blacklistedSuppliers = data.filter(
-    (item) => item.status === "blacklisted"
-  ).length;
-  const expiredContracts = data.filter((item) =>
-    isContractExpired(item.contractInfo.endDate)
-  ).length;
-  const totalOrders = data.reduce(
-    (sum, item) => sum + item.performance.totalOrders,
-    0
-  );
-  const totalValue = data.reduce(
-    (sum, item) => sum + item.performance.totalValue,
-    0
-  );
-  const averageRating =
-    data.length > 0
-      ? data.reduce((sum, item) => sum + item.performance.rating, 0) /
-        data.length
-      : 0;
+  // Statistics
+  const statistics = useMemo(() => {
+    const totalSuppliers = suppliers.length;
+    const activeSuppliers = suppliers.filter((item) => item.is_active).length;
+    const inactiveSuppliers = suppliers.filter((item) => !item.is_active).length;
+    
+    return {
+      totalSuppliers,
+      activeSuppliers,
+      inactiveSuppliers,
+    };
+  }, [suppliers]);
 
   return (
     <div>
       {/* Thống kê tổng quan */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
           <Card>
             <Statistic
               title="Tổng nhà cung cấp"
-              value={totalSuppliers}
+              value={statistics.totalSuppliers}
               valueStyle={{ color: "#1890ff" }}
               prefix={<BankOutlined />}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
           <Card>
             <Statistic
               title="Đang hoạt động"
-              value={activeSuppliers}
+              value={statistics.activeSuppliers}
               valueStyle={{ color: "#52c41a" }}
               prefix={<StarOutlined />}
             />
             <Progress
-              percent={Math.round((activeSuppliers / totalSuppliers) * 100)}
+              percent={statistics.totalSuppliers > 0 ? Math.round((statistics.activeSuppliers / statistics.totalSuppliers) * 100) : 0}
               strokeColor="#52c41a"
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
           <Card>
             <Statistic
               title="Tạm dừng"
-              value={inactiveSuppliers}
+              value={statistics.inactiveSuppliers}
               valueStyle={{ color: "#fa8c16" }}
-              prefix={<ClockCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Cấm"
-              value={blacklistedSuppliers}
-              valueStyle={{ color: "#f5222d" }}
-              prefix={<DeleteOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Thống kê bổ sung */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng đơn hàng"
-              value={totalOrders}
-              valueStyle={{ color: "#13c2c2" }}
-              prefix={<FileTextOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng giá trị"
-              value={totalValue}
-              valueStyle={{ color: "#eb2f96" }}
-              prefix={<DollarOutlined />}
-              formatter={(value) => formatCurrency(Number(value))}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Đánh giá TB"
-              value={averageRating}
-              precision={1}
-              valueStyle={{ color: "#722ed1" }}
-              prefix={<TrophyOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Hợp đồng hết hạn"
-              value={expiredContracts}
-              valueStyle={{ color: "#8c8c8c" }}
               prefix={<ClockCircleOutlined />}
             />
           </Card>
@@ -396,16 +280,19 @@ const SupplierPage = () => {
 
       <AdminTable
         title="Quản lý nhà cung cấp"
-        dataSource={data}
+        dataSource={suppliers}
         columns={columns}
         actions={actions}
-        onAdd={handleAddNew}
+        onAdd={() => setCreateModalVisible(true)}
         addButtonText="Thêm nhà cung cấp mới"
+        loading={loading}
         searchable={true}
-        searchPlaceholder="Tìm kiếm nhà cung cấp theo tên, mã, liên hệ..."
-        searchFields={["supplierName", "supplierCode", "contactInfo.phone", "contactInfo.email"]}
+        searchPlaceholder="Tìm kiếm nhà cung cấp theo tên, liên hệ..."
+        searchFields={["supplier_name", "contact_person", "phone", "email"]}
         pagination={{
-          pageSize: 10,
+          current: pagination.page + 1,
+          pageSize: pagination.size,
+          total: pagination.total_elements,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total: number, range: [number, number]) =>
@@ -413,18 +300,28 @@ const SupplierPage = () => {
         }}
       />
 
-      <SupplierModal
-        open={modalOpen}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
-        initialData={modalMode === 'view' ? viewingSupplier : editingSupplier}
-        title={
-          modalMode === 'view' 
-            ? "Chi tiết nhà cung cấp" 
-            : modalMode === 'edit' 
-            ? "Chỉnh sửa nhà cung cấp" 
-            : "Thêm nhà cung cấp mới"
-        }
+      {/* Modals */}
+      <SupplierCreateModal
+        visible={createModalVisible}
+        onCancel={() => setCreateModalVisible(false)}
+        onSuccess={handleCreateModalSuccess}
+        loading={loading}
+      />
+
+      <SupplierDetailModal
+        visible={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        onEdit={handleEdit}
+        supplier={selectedData}
+        loading={loading}
+      />
+
+      <SupplierEditModal
+        visible={editModalVisible}
+        onCancel={() => setEditModalVisible(false)}
+        onSuccess={handleEditModalSuccess}
+        supplier={editData}
+        loading={loading}
       />
     </div>
   );
