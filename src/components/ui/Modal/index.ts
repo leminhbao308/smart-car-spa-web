@@ -40,6 +40,9 @@ export { default as CustomerVehiclesModal } from "./MemberModal/CustomerVehicles
 export { default as StaffModal } from "./StaffModal/StaffModal";
 export { default as StaffDetailModal } from "./StaffModal/StaffDetailModal";
 export { default as CarProfileModal } from "./CarProfileModal/CarProfileModal";
+export { default as CreateVehicleProfileModal } from "./CarProfileModal/CreateVehicleProfileModal";
+export { default as VehicleProfileDetailModal } from "./CarProfileModal/VehicleProfileDetailModal";
+export { default as EditVehicleProfileModal } from "./CarProfileModal/EditVehicleProfileModal";
 export { default as CarDetailModal } from "./CarProfileModal/CarDetailModal";
 export { default as ServiceHistoryModal } from "./CarProfileModal/ServiceHistoryModal";
 export { default as OwnerDetailModal } from "./CarProfileModal/OwnerDetailModal";

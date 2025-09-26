@@ -273,7 +273,7 @@ const AdminTable: React.FC<AdminTableProps> = ({
         dataSource={filteredData}
         loading={loading}
         pagination={paginationConfig}
-        rowKey={rowKey}
+        rowKey={(record) => record[rowKey] || record.id || record.vehicle_id || Math.random().toString()}
         scroll={scroll}
         size={size}
         bordered={bordered}

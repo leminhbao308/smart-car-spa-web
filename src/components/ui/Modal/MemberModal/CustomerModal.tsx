@@ -33,7 +33,7 @@ import { UserService } from "@/lib/api/services/user.service";
 interface CustomerModalProps {
   visible: boolean;
   onCancel: () => void;
-  onSuccess: () => void;
+  onSuccess: (customer?: UserManagementInfo) => void;
   editData?: UserManagementInfo | null;
   title?: string;
 }
@@ -130,9 +130,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
         message.success("Cập nhật khách hàng thành công!");
       } else {
         // Create new customer using real API
-        const selectedRole = customerRoles.find(
-          (role) => role.role_id === values.role_id
-        );
+        // Note: We always use CUSTOMER role for customer modal
 
         const createData: CreateUserRequest = {
           email: values.email,
@@ -146,9 +144,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
           gender: values.gender,
           address: values.address || "",
           avatarUrl: null,
-          roleCode: (selectedRole?.role_code ||
-            customerRoles[0]?.role_code ||
-            "CUSTOMER") as "CUSTOMER" | "ADMIN" | "STAFF",
+          roleCode: "CUSTOMER", // Always CUSTOMER for customer modal
           user_type: "CUSTOMER",
           // Customer-specific fields
           customer_rank: "BRONZE", // Default rank for new customers
@@ -157,15 +153,15 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
           total_spent: 0.0,
         };
 
-        await UserService.createUser(createData);
+        const response = await UserService.createUser(createData);
         message.success("Tạo khách hàng thành công!");
-      }
 
-      console.log("CustomerModal: Calling onSuccess...");
-      onSuccess();
-      console.log("CustomerModal: Calling onCancel...");
-      onCancel();
-      console.log("CustomerModal: Success flow completed");
+        console.log("CustomerModal: Calling onSuccess with customer data...");
+        onSuccess(response.data);
+        console.log("CustomerModal: Calling onCancel...");
+        onCancel();
+        console.log("CustomerModal: Success flow completed");
+      }
     } catch (error: unknown) {
       console.error("Error:", error);
       const errorMessage =

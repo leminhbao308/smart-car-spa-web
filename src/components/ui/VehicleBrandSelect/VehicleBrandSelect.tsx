@@ -37,7 +37,7 @@ const VehicleBrandSelect: React.FC<VehicleBrandSelectProps> = ({
   loading: externalLoading,
   notFoundContent,
   size = "middle",
-  dropdownMatchSelectWidth = true,
+  popupMatchSelectWidth = true,
   options: externalOptions,
   ...restProps
 }) => {
@@ -65,7 +65,7 @@ const VehicleBrandSelect: React.FC<VehicleBrandSelectProps> = ({
             (loading ? <Spin size="small" /> : "Không có dữ liệu")
       }
       size={size}
-      dropdownMatchSelectWidth={dropdownMatchSelectWidth}
+      popupMatchSelectWidth={popupMatchSelectWidth}
       options={error ? [] : options}
     />
   );
