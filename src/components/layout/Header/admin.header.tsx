@@ -423,7 +423,7 @@ const AdminHeader = () => {
             <Avatar
               size={40}
               icon={<UserOutlined />}
-              src={user?.avatar_url}
+              src={user?.avatar_url || "/images/Main Logo_Light.png"}
               style={{
                 backgroundColor: "rgba(0, 0, 0, 0.8)",
                 color: "#ffffff",

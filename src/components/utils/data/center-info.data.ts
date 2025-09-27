@@ -72,7 +72,7 @@ export interface CenterInfo {
 export const centerInfoData: CenterInfo = {
   id: 1,
   name: "Smart Car Spa - Trung tâm chăm sóc xe hơi cao cấp",
-  logo: "/images/logo-sider.png",
+  logo: "/images/Main Logo_Light.png",
   description: "Smart Car Spa là trung tâm chăm sóc xe hơi hàng đầu tại Việt Nam, chuyên cung cấp các dịch vụ chăm sóc xe toàn diện với công nghệ hiện đại và đội ngũ kỹ thuật viên chuyên nghiệp.",
   establishedYear: 2018,
   licenseNumber: "0123456789",

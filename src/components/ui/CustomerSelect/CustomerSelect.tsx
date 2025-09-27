@@ -231,7 +231,7 @@ const CustomerSelect: React.FC<CustomerSelectProps> = ({
             <Avatar 
               size="small" 
               icon={<UserOutlined />}
-              src={customer.avatar_url}
+              src={customer.avatar_url || "/images/Main Logo_Light.png"}
               style={{ 
                 backgroundColor: '#1890ff',
                 flexShrink: 0

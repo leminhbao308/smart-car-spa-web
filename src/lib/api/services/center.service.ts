@@ -10,6 +10,8 @@ import {
   BusinessHours,
   ContactInfo,
   SocialMedia,
+  CreateCenterFormData,
+  UpdateCenterFormData,
 } from "../types/center.types";
 
 export class CenterService {
@@ -26,11 +28,67 @@ export class CenterService {
   }
 
   /**
+   * Convert form data to create request
+   */
+  private static formDataToCreateRequest(
+    data: CreateCenterFormData
+  ): CreateCenterRequest {
+    return {
+      ...data,
+      business_hours: JSON.stringify(data.business_hours),
+      contact_info: JSON.stringify(data.contact_info),
+      social_media: JSON.stringify(data.social_media),
+      service_areas: JSON.stringify(data.service_areas),
+    };
+  }
+
+  /**
+   * Convert form data to update request
+   */
+  private static formDataToUpdateRequest(
+    data: UpdateCenterFormData
+  ): UpdateCenterRequest {
+    return {
+      ...data,
+      business_hours: JSON.stringify(data.business_hours),
+      contact_info: JSON.stringify(data.contact_info),
+      social_media: JSON.stringify(data.social_media),
+      service_areas: JSON.stringify(data.service_areas),
+    };
+  }
+
+  /**
    * Transform center data to display format
    */
   private static transformToDisplayFormat(center: Center): CenterDisplay {
+    // Helper function to get safe logo URL
+    const getSafeLogoUrl = (logoUrl: string | null | undefined): string => {
+      if (!logoUrl) return "/images/Main Logo_Light.png";
+
+      // Check if it's a valid local path
+      if (logoUrl.startsWith("/") || logoUrl.startsWith("./")) {
+        return logoUrl;
+      }
+
+      // Check if it's a valid external URL (not the problematic one)
+      if (logoUrl.startsWith("http")) {
+        // Filter out problematic URLs
+        if (
+          logoUrl.includes("premium.smartcarspa-hn.com") ||
+          logoUrl.includes("smartcarspa-hn.com")
+        ) {
+          return "/images/Main Logo_Light.png";
+        }
+        return logoUrl;
+      }
+
+      // Default fallback
+      return "/images/Main Logo_Light.png";
+    };
+
     return {
       ...center,
+      logo_url: getSafeLogoUrl(center.logo_url),
       business_hours: this.parseJsonSafely<BusinessHours>(
         center.business_hours,
         {
@@ -154,6 +212,16 @@ export class CenterService {
   }
 
   /**
+   * Create new center with form data
+   */
+  static async createCenterWithFormData(
+    data: CreateCenterFormData
+  ): Promise<CenterDisplay> {
+    const requestData = this.formDataToCreateRequest(data);
+    return this.createCenter(requestData);
+  }
+
+  /**
    * Update center
    */
   static async updateCenter(
@@ -161,13 +229,10 @@ export class CenterService {
     data: UpdateCenterRequest
   ): Promise<CenterDisplay> {
     try {
-      console.log("Updating center with ID:", centerId, "and data:", data);
-
       const response = await apiClient.post<CenterResponse>(
         `/centers/${centerId}/update`,
         data
       );
-      console.log("Update center API response:", response);
 
       if (response.data.success && response.data.data) {
         return this.transformToDisplayFormat(response.data.data);
@@ -178,6 +243,17 @@ export class CenterService {
       console.error("Update center error:", error);
       throw error;
     }
+  }
+
+  /**
+   * Update center with form data
+   */
+  static async updateCenterWithFormData(
+    centerId: string,
+    data: UpdateCenterFormData
+  ): Promise<CenterDisplay> {
+    const requestData = this.formDataToUpdateRequest(data);
+    return this.updateCenter(centerId, requestData);
   }
 
   /**

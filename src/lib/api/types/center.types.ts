@@ -68,6 +68,7 @@ export interface CreateCenterRequest {
   business_license: string;
   logo_url: string;
   established_date: string;
+  operating_status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
   manager_id: string;
   business_hours: string;
   contact_info: string;
@@ -77,18 +78,23 @@ export interface CreateCenterRequest {
 
 export interface UpdateCenterRequest {
   center_name: string;
+  center_code: string;
   description: string;
   headquarters_address: string;
   headquarters_phone: string;
   headquarters_email: string;
   website: string;
+  tax_code: string;
+  business_license: string;
   logo_url: string;
+  established_date: string;
   operating_status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
   business_hours: string;
   contact_info: string;
   social_media: string;
   service_areas: string;
   is_active: boolean;
+  manager_id: string;
 }
 
 export interface DeleteCenterResponse {
@@ -128,4 +134,46 @@ export interface CenterDisplay extends Omit<Center, 'business_hours' | 'contact_
   contact_info: ContactInfo;
   social_media: SocialMedia;
   service_areas: string[];
+}
+
+// Interfaces for creating/updating centers with parsed JSON data
+export interface CreateCenterFormData {
+  center_name: string;
+  center_code: string;
+  description: string;
+  headquarters_address: string;
+  headquarters_phone: string;
+  headquarters_email: string;
+  website: string;
+  tax_code: string;
+  business_license: string;
+  logo_url: string;
+  established_date: string;
+  operating_status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
+  manager_id: string;
+  business_hours: BusinessHours;
+  contact_info: ContactInfo;
+  social_media: SocialMedia;
+  service_areas: string[];
+}
+
+export interface UpdateCenterFormData {
+  center_name: string;
+  center_code: string;
+  description: string;
+  headquarters_address: string;
+  headquarters_phone: string;
+  headquarters_email: string;
+  website: string;
+  tax_code: string;
+  business_license: string;
+  logo_url: string;
+  established_date: string;
+  operating_status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
+  business_hours: BusinessHours;
+  contact_info: ContactInfo;
+  social_media: SocialMedia;
+  service_areas: string[];
+  is_active: boolean;
+  manager_id: string;
 }

@@ -1,16 +1,15 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CenterService } from "../services/center.service";
 import {
   CenterDisplay,
   CreateCenterRequest,
   UpdateCenterRequest,
+  CreateCenterFormData,
+  UpdateCenterFormData,
 } from "../types/center.types";
 
-export interface UseCentersParams {
-  // No pagination params needed as API doesn't support them
-  [key: string]: never;
-}
+// Removed UseCentersParams as it's not needed
 
 export interface UseCentersReturn {
   centers: CenterDisplay[];
@@ -28,14 +27,22 @@ export interface UseCentersReturn {
   error: string | null;
   refreshCenters: () => void;
   createCenter: (data: CreateCenterRequest) => Promise<CenterDisplay>;
-  updateCenter: (centerId: string, data: UpdateCenterRequest) => Promise<CenterDisplay>;
+  createCenterWithFormData: (data: CreateCenterFormData) => Promise<CenterDisplay>;
+  updateCenter: (
+    centerId: string,
+    data: UpdateCenterRequest
+  ) => Promise<CenterDisplay>;
+  updateCenterWithFormData: (
+    centerId: string,
+    data: UpdateCenterFormData
+  ) => Promise<CenterDisplay>;
   deleteCenter: (centerId: string) => Promise<void>;
 }
 
 /**
  * Hook for managing centers data
  */
-export const useCenters = (params: UseCentersParams): UseCentersReturn => {
+export const useCenters = (): UseCentersReturn => {
   const [centers, setCenters] = useState<CenterDisplay[]>([]);
   const [pagination, setPagination] = useState({
     page: 0,
@@ -51,15 +58,18 @@ export const useCenters = (params: UseCentersParams): UseCentersReturn => {
   const [error, setError] = useState<string | null>(null);
 
   // Use ref to store params to prevent unnecessary re-renders
-  const paramsRef = useRef(params);
+  // const paramsRef = useRef(params);
 
   const fetchCenters = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      console.log("Fetching centers from API...");
       const response = await CenterService.getAllCenters();
+      console.log("Centers API response:", response);
       setCenters(response.centers);
       setPagination(response.pagination);
+      console.log("Centers state updated:", response.centers);
     } catch (err) {
       console.error("Failed to fetch centers:", err);
       setError("Failed to load centers data.");
@@ -76,50 +86,91 @@ export const useCenters = (params: UseCentersParams): UseCentersReturn => {
     fetchCenters();
   }, [fetchCenters]);
 
-  const createCenter = useCallback(async (data: CreateCenterRequest) => {
-    try {
-      const response = await CenterService.createCenter(data);
-      // Refresh the list after successful creation
-      await fetchCenters();
-      return response;
-    } catch (err) {
-      console.error("Failed to create center:", err);
-      throw err;
-    }
-  }, [fetchCenters]);
+  const createCenter = useCallback(
+    async (data: CreateCenterRequest) => {
+      try {
+        const response = await CenterService.createCenter(data);
+        // Refresh the list after successful creation
+        await fetchCenters();
+        return response;
+      } catch (err) {
+        console.error("Failed to create center:", err);
+        throw err;
+      }
+    },
+    [fetchCenters]
+  );
 
-  const updateCenter = useCallback(async (centerId: string, data: UpdateCenterRequest) => {
-    try {
-      const response = await CenterService.updateCenter(centerId, data);
-      // Refresh the list after successful update
-      await fetchCenters();
-      return response;
-    } catch (err) {
-      console.error("Failed to update center:", err);
-      throw err;
-    }
-  }, [fetchCenters]);
+  const createCenterWithFormData = useCallback(
+    async (data: CreateCenterFormData) => {
+      try {
+        const response = await CenterService.createCenterWithFormData(data);
+        // Refresh the list after successful creation
+        await fetchCenters();
+        return response;
+      } catch (err) {
+        console.error("Failed to create center:", err);
+        throw err;
+      }
+    },
+    [fetchCenters]
+  );
 
-  const deleteCenter = useCallback(async (centerId: string) => {
-    try {
-      await CenterService.deleteCenter(centerId);
-      // Refresh the list after successful deletion
-      await fetchCenters();
-    } catch (err) {
-      console.error("Failed to delete center:", err);
-      throw err;
-    }
-  }, [fetchCenters]);
+  const updateCenter = useCallback(
+    async (centerId: string, data: UpdateCenterRequest) => {
+      try {
+        const response = await CenterService.updateCenter(centerId, data);
+        // Refresh the list after successful update
+        await fetchCenters();
+        return response;
+      } catch (err) {
+        console.error("Failed to update center:", err);
+        throw err;
+      }
+    },
+    [fetchCenters]
+  );
 
-  return { 
-    centers, 
-    pagination, 
-    loading, 
-    error, 
-    refreshCenters, 
+  const updateCenterWithFormData = useCallback(
+    async (centerId: string, data: UpdateCenterFormData) => {
+      try {
+        const response = await CenterService.updateCenterWithFormData(centerId, data);
+        // Refresh the list after successful update
+        await fetchCenters();
+        return response;
+      } catch (err) {
+        console.error("Failed to update center:", err);
+        throw err;
+      }
+    },
+    [fetchCenters]
+  );
+
+  const deleteCenter = useCallback(
+    async (centerId: string) => {
+      try {
+        await CenterService.deleteCenter(centerId);
+        // Refresh the list after successful deletion
+        await fetchCenters();
+      } catch (err) {
+        console.error("Failed to delete center:", err);
+        throw err;
+      }
+    },
+    [fetchCenters]
+  );
+
+  return {
+    centers,
+    pagination,
+    loading,
+    error,
+    refreshCenters,
     createCenter,
+    createCenterWithFormData,
     updateCenter,
-    deleteCenter
+    updateCenterWithFormData,
+    deleteCenter,
   };
 };
 

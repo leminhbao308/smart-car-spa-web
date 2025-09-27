@@ -7,12 +7,12 @@ import {
   Typography,
   Tag,
   Space,
-  Avatar,
   Statistic,
   List,
   Divider,
   Button,
 } from "antd";
+import Image from "next/image";
 import {
   EnvironmentOutlined,
   PhoneOutlined,
@@ -45,19 +45,68 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
     );
   }
 
+  // Helper function to get safe logo URL
+  const getSafeLogoUrl = (logoUrl: string | null | undefined): string => {
+    if (!logoUrl) return "/images/Main Logo_Light.png";
+    
+    // Check if it's a valid local path or external URL
+    if (logoUrl.startsWith("/") || logoUrl.startsWith("./")) {
+      return logoUrl;
+    }
+    
+    // Check if it's a valid external URL (not the problematic one)
+    if (logoUrl.startsWith("http")) {
+      // Filter out problematic URLs
+      if (logoUrl.includes("premium.smartcarspa-hn.com") || 
+          logoUrl.includes("smartcarspa-hn.com")) {
+        return "/images/Main Logo_Light.png";
+      }
+      return logoUrl;
+    }
+    
+    // Default fallback
+    return "/images/Main Logo_Light.png";
+  };
+
   return (
     <div style={{ padding: 24 }}>
       {/* Header với logo và thông tin cơ bản */}
       <Card style={{ marginBottom: 24 }}>
         <Row gutter={24} align="middle">
           <Col span={4}>
-            <Avatar
-              size={100}
-              src={centerInfo.logo_url}
-              style={{ border: "2px solid #f0f0f0" }}
+            <div
+              style={{
+                width: 100,
+                height: 100,
+                borderRadius: "50%",
+                border: "2px solid #f0f0f0",
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#f5f5f5",
+              }}
             >
-              {centerInfo.center_name?.charAt(0) || 'C'}
-            </Avatar>
+              <Image
+                src={getSafeLogoUrl(centerInfo.logo_url)}
+                alt="Smart Car Spa Logo"
+                width={96}
+                height={96}
+                style={{
+                  objectFit: "contain",
+                  borderRadius: "50%",
+                }}
+                onError={(e) => {
+                  // Fallback to text if image fails to load
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = "none";
+                  const parent = target.parentElement;
+                  if (parent) {
+                    parent.innerHTML = `<div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 24px; font-weight: bold; color: #1890ff;">${centerInfo.center_name?.charAt(0) || 'C'}</div>`;
+                  }
+                }}
+              />
+            </div>
           </Col>
           <Col span={16}>
             <div>

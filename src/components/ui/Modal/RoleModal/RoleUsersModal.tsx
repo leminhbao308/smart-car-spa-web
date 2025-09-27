@@ -70,7 +70,7 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
       render: (_, record) => (
         <Space>
           <Avatar 
-            src={record.avatar_url} 
+            src={record.avatar_url || "/images/Main Logo_Light.png"} 
             icon={<UserOutlined />}
             size="large"
           />
