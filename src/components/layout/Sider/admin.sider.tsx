@@ -24,8 +24,8 @@ const AdminSider = () => {
     );
 
     // Tìm parent keys cho menu 3 cấp
-    let parentKeys: string[] = [];
-    
+    const parentKeys: string[] = [];
+
     if (currentKey) {
       // Tìm parent key cấp 1
       const parentKey = adminMenuItems.find(
@@ -35,7 +35,9 @@ const AdminSider = () => {
           item.children?.some((child: MenuItem) => {
             if (child && "children" in child) {
               // Kiểm tra cấp 3
-              return child.children?.some((grandChild: MenuItem) => grandChild?.key === currentKey);
+              return child.children?.some(
+                (grandChild: MenuItem) => grandChild?.key === currentKey
+              );
             }
             return child?.key === currentKey;
           })
@@ -43,17 +45,21 @@ const AdminSider = () => {
 
       if (parentKey) {
         parentKeys.push(parentKey);
-        
+
         // Tìm parent key cấp 2 nếu có
-        const parentItem = adminMenuItems.find(item => item?.key === parentKey);
+        const parentItem = adminMenuItems.find(
+          (item) => item?.key === parentKey
+        );
         if (parentItem && "children" in parentItem) {
           const secondLevelParent = parentItem.children?.find(
             (child: MenuItem) =>
               child &&
               "children" in child &&
-              child.children?.some((grandChild: MenuItem) => grandChild?.key === currentKey)
+              child.children?.some(
+                (grandChild: MenuItem) => grandChild?.key === currentKey
+              )
           )?.key as string;
-          
+
           if (secondLevelParent) {
             parentKeys.push(secondLevelParent);
           }
@@ -131,10 +137,10 @@ const AdminSider = () => {
               width={40}
               height={40}
               preview={false}
-              style={{ 
+              style={{
                 borderRadius: "8px",
                 objectFit: "contain",
-                transition: "all 0.2s ease"
+                transition: "all 0.2s ease",
               }}
             />
           </Tooltip>
@@ -145,11 +151,11 @@ const AdminSider = () => {
             width={"8rem"}
             height={"auto"}
             preview={false}
-            style={{ 
-              margin: "0 auto", 
-              width: "8rem", 
+            style={{
+              margin: "0 auto",
+              width: "8rem",
               height: "auto",
-              transition: "all 0.2s ease"
+              transition: "all 0.2s ease",
             }}
           />
         )}

@@ -61,6 +61,11 @@ export const adminMenuItems: MenuItem[] = [
     icon: React.createElement(TeamOutlined),
   },
   {
+    key: "category-management",
+    label: "Quản lý danh mục",
+    icon: React.createElement(AppstoreOutlined),
+  },
+  {
     key: "customer-service",
     label: "Dịch vụ khách hàng",
     icon: React.createElement(CustomerServiceOutlined),
@@ -75,7 +80,6 @@ export const adminMenuItems: MenuItem[] = [
     label: "Xe đang chăm sóc",
     icon: React.createElement(CarOutlined),
   },
-
   {
     key: "vehicle-records",
     label: "Hồ sơ xe",
@@ -249,6 +253,7 @@ export const menuKeyToPath: Record<string, string> = {
   dashboard: "/dashboard",
   bookings: "/dashboard/bookings",
   "customer-service": "/dashboard/customer-service",
+  "category-management": "/dashboard/category-management",
   "care-processes": "/dashboard/care-processes",
   "vehicles-in-care": "/dashboard/vehicles-in-care",
   permissions: "/dashboard/permissions",

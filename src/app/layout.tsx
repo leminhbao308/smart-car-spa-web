@@ -3,6 +3,7 @@ import { AntdRegistry } from "@ant-design/nextjs-registry";
 import "./globals.css";
 import "@ant-design/v5-patch-for-react-19";
 import { AuthProvider } from "@/lib/api";
+import { QueryProvider } from "@/lib/providers/QueryProvider";
 import { App, ConfigProvider } from "antd";
 
 // Suppress specific React warnings that are false positives
@@ -37,23 +38,25 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body suppressHydrationWarning={true}>
-        <AuthProvider>
-          <AntdRegistry>
-            <ConfigProvider
-              theme={{
-                token: {
-                  colorPrimary: '#1890ff',
-                  colorSuccess: '#52c41a',
-                  colorWarning: '#faad14',
-                  colorError: '#ff4d4f',
-                  colorInfo: '#1890ff',
-                },
-              }}
-            >
-              <App>{children}</App>
-            </ConfigProvider>
-          </AntdRegistry>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <AntdRegistry>
+              <ConfigProvider
+                theme={{
+                  token: {
+                    colorPrimary: '#1890ff',
+                    colorSuccess: '#52c41a',
+                    colorWarning: '#faad14',
+                    colorError: '#ff4d4f',
+                    colorInfo: '#1890ff',
+                  },
+                }}
+              >
+                <App>{children}</App>
+              </ConfigProvider>
+            </AntdRegistry>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

@@ -23,3 +23,6 @@ export * from './center.types';
 
 // Branch types
 export * from './branch.types';
+
+// Category types
+export * from './category.types';
