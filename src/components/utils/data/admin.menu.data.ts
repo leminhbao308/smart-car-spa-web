@@ -108,21 +108,9 @@ export const adminMenuItems: MenuItem[] = [
     ],
   },
   {
-    key: "product-management",
-    label: "Danh mục sản phẩm",
-    icon: React.createElement(AppstoreOutlined),
-    children: [
-      {
-        key: "product-categories",
-        label: "Loại sản phẩm",
-        icon: React.createElement(AppstoreOutlined),
-      },
-      {
-        key: "products",
-        label: "Sản phẩm",
-        icon: React.createElement(BarcodeOutlined),
-      },
-    ],
+    key: "products",
+    label: "Sản phẩm",
+    icon: React.createElement(BarcodeOutlined),
   },
   {
     key: "inventory-management",
@@ -263,7 +251,6 @@ export const menuKeyToPath: Record<string, string> = {
   brands: "/dashboard/vehicle-brands",
   types: "/dashboard/vehicle-types",
   models: "/dashboard/vehicle-models",
-  "product-categories": "/dashboard/product-categories",
   products: "/dashboard/products",
   "import-inventory": "/dashboard/inventory/import",
   "export-inventory": "/dashboard/inventory/export",

@@ -26,3 +26,6 @@ export * from './branch.types';
 
 // Category types
 export * from './category.types';
+
+// Product types
+export * from './product.types';

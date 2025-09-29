@@ -59,7 +59,7 @@ export { default as OwnerDetailModal } from "./CarProfileModal/OwnerDetailModal"
 export { default as ScheduleServiceModal } from "./CarProfileModal/ScheduleServiceModal";
 export { default as ProductCategoryDetailModal } from "./ProductCategoryDetailModal";
 export { default as ProductCategoryEditModal } from "./ProductCategoryEditModal";
-export { default as ProductDetailModal } from "./ProductDetailModal";
-export { default as ProductEditModal } from "./ProductEditModal";
+export { default as ProductDetailModal } from "./Product/ProductDetailModal";
+export { default as ProductEditModal } from "./Product/ProductEditModal";
 export type { ConfirmationModalProps } from "./ConfirmationModal";
 export type { UseConfirmationModalReturn, ShowModalConfig } from "./useConfirmationModal";

@@ -30,6 +30,7 @@ interface SupplierDetailModalProps {
   onEdit: (supplier: Supplier) => void;
   supplier: Supplier | null;
   loading?: boolean;
+  showEditButton?: boolean;
 }
 
 const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
@@ -38,6 +39,7 @@ const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
   onEdit,
   supplier,
   loading = false,
+  showEditButton = true,
 }) => {
   if (!supplier) return null;
 
@@ -52,7 +54,7 @@ const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
       open={visible}
       onCancel={onCancel}
       width={800}
-      footer={[
+      footer={showEditButton ? [
         <button
           key="edit"
           onClick={() => onEdit(supplier)}
@@ -71,7 +73,7 @@ const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
           <EditOutlined />
           Chỉnh sửa
         </button>,
-      ]}
+      ] : null}
       styles={{
         header: {
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",

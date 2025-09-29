@@ -48,6 +48,45 @@ export interface BaseEntity {
   modified_date: string;
 }
 
+// Base Entity with audit fields
+export interface BaseAuditEntity {
+  created_date: string;
+  modified_date: string;
+  created_by: string;
+  modified_by: string;
+  is_active: boolean;
+  is_deleted: boolean;
+}
+
+// Base pagination response
+export interface BasePaginationResponse {
+  pageable: {
+    pageNumber: number;
+    pageSize: number;
+    sort: {
+      empty: boolean;
+      sorted: boolean;
+      unsorted: boolean;
+    };
+    offset: number;
+    paged: boolean;
+    unpaged: boolean;
+  };
+  last: boolean;
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  numberOfElements: number;
+  sort: {
+    empty: boolean;
+    sorted: boolean;
+    unsorted: boolean;
+  };
+  empty: boolean;
+}
+
 // HTTP Methods
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
