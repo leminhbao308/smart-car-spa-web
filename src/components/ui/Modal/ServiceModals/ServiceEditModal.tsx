@@ -14,47 +14,28 @@ import {
   Card,
   Table,
   Popconfirm,
+  Switch,
+  Upload,
 } from "antd";
 import {
   EditOutlined,
   SaveOutlined,
   PlusOutlined,
+  UploadOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
-import { serviceStatuses } from "@/components/utils/data/services.data";
-import { serviceTypesData } from "@/components/utils/data/service-types.data";
-import { productsData } from "@/components/utils/data/products.data";
+import {
+  Service,
+  ServiceProduct,
+  SERVICE_STATUS_OPTIONS,
+} from "@/lib/api/types/service.types";
+import { productService, categoryService } from "@/lib/api/services";
+import { Product } from "@/lib/api/types/product.types";
+import { Category } from "@/lib/api/types/category.types";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
 
 const { Option } = Select;
 const { TextArea } = Input;
-
-interface ServiceProduct {
-  productId: number;
-  productCode: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-}
-
-interface Service {
-  id: number;
-  serviceCode: string;
-  serviceName: string;
-  serviceTypeId: number;
-  serviceTypeName: string;
-  description: string;
-  products: ServiceProduct[];
-  laborCost: number;
-  totalPrice: number;
-  duration: number;
-  status: string;
-  features: string[];
-  requirements: string[];
-  notes: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface ServiceEditModalProps {
   visible: boolean;
@@ -71,74 +52,139 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [features, setFeatures] = useState<string[]>([]);
-  const [requirements, setRequirements] = useState<string[]>([]);
-  const [products, setProducts] = useState<ServiceProduct[]>([]);
-  const [laborCost, setLaborCost] = useState<number>(0);
-  const [totalPrice, setTotalPrice] = useState<number>(0);
+  const [serviceProducts, setServiceProducts] = useState<ServiceProduct[]>([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
+  // Load categories when modal opens
+  const loadCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      console.log("Loading categories...");
+
+      const response = await categoryService.getAllCategories(0, 1000);
+      console.log("Category API response:", response);
+
+      if (response.success && response.data) {
+        console.log("Categories loaded:", response.data.content);
+        setCategories(response.data.content || []);
+      } else {
+        console.log("No categories found or API error");
+        setCategories([]);
+      }
+    } catch (error) {
+      console.log("Error loading categories:", error);
+      message.error(
+        "Không thể tải danh sách danh mục! Vui lòng kiểm tra kết nối mạng hoặc tạo danh mục trước."
+      );
+      setCategories([]);
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  // Load products when modal opens
+  const loadProducts = async () => {
+    try {
+      setProductsLoading(true);
+      console.log("Loading products...");
+
+      const response = await productService.getAllProducts({
+        page: 1,
+        size: 1000, // Load tất cả sản phẩm
+        sort: "productName",
+        direction: "ASC",
+      });
+
+      console.log("Product API response:", response);
+
+      if (response.success && response.data) {
+        console.log("Products loaded:", response.data.content);
+        setProducts(response.data.content || []);
+      } else {
+        console.log("No products found or API error");
+        setProducts([]);
+      }
+    } catch (error) {
+      console.log("Error loading products:", error);
+      message.error(
+        "Không thể tải danh sách sản phẩm! Vui lòng kiểm tra kết nối mạng hoặc tạo sản phẩm trước."
+      );
+      setProducts([]);
+    } finally {
+      setProductsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (visible && editData) {
-      form.setFieldsValue({
-        serviceCode: editData.serviceCode,
-        serviceName: editData.serviceName,
-        serviceTypeName: editData.serviceTypeName,
-        description: editData.description,
-        duration: editData.duration,
-        status: editData.status,
-        notes: editData.notes,
-      });
-      setFeatures(editData.features || []);
-      setRequirements(editData.requirements || []);
-      setProducts(editData.products || []);
-      setLaborCost(editData.laborCost || 0);
-      setTotalPrice(editData.totalPrice || 0);
-    } else if (visible) {
-      form.resetFields();
-      setFeatures([]);
-      setRequirements([]);
-      setProducts([]);
-      setLaborCost(0);
-      setTotalPrice(0);
+    if (visible) {
+      loadCategories(); // Load categories when modal opens
+      loadProducts(); // Load products when modal opens
+
+      if (editData) {
+        form.setFieldsValue({
+          serviceName: editData.serviceName,
+          serviceUrl: editData.serviceUrl,
+          categoryId: editData.categoryId,
+          description: editData.description,
+          standardDuration: editData.standardDuration,
+          requiredSkillLevel: editData.requiredSkillLevel,
+          basePrice: editData.basePrice,
+          laborCost: editData.laborCost,
+          isFeatured: editData.isFeatured,
+          isActive: editData.isActive,
+        });
+        setServiceProducts(editData.serviceProducts || []);
+        setImageUrls(editData.imageUrls ? JSON.parse(editData.imageUrls) : []);
+      } else {
+        form.resetFields();
+        setServiceProducts([]);
+        setImageUrls([]);
+      }
     }
   }, [visible, editData, form]);
 
-  // Tính toán tổng giá khi products hoặc laborCost thay đổi
-  useEffect(() => {
-    const productsTotal = products.reduce((sum, product) => sum + product.totalPrice, 0);
-    const newTotalPrice = productsTotal + laborCost;
-    setTotalPrice(newTotalPrice);
-  }, [products, laborCost]);
+  // Tính toán tổng giá khi serviceProducts thay đổi
+  const calculateTotalPrice = () => {
+    const productsTotal = serviceProducts.reduce(
+      (sum, product) => sum + product.totalPrice,
+      0
+    );
+    const laborCost = form.getFieldValue("laborCost") || 0;
+    return productsTotal + laborCost;
+  };
 
   const handleSubmit = async () => {
     try {
       setLoading(true);
       const values = await form.validateFields();
 
-      const updatedData = {
-        ...editData,
-        ...values,
-        serviceTypeId: serviceTypesData.find(type => type.serviceTypeName === values.serviceTypeName)?.id || 1,
-        products,
-        laborCost,
-        totalPrice,
-        features,
-        requirements,
-        updatedAt: new Date().toISOString(),
-        createdAt: editData?.createdAt || new Date().toISOString(),
+      const updatedData: Service = {
+        serviceId: editData?.serviceId || "",
+        serviceUrl: values.serviceUrl,
+        serviceName: values.serviceName,
+        categoryId: values.categoryId,
+        categoryName: "", // Will be filled by API
+        description: values.description,
+        standardDuration: values.standardDuration,
+        requiredSkillLevel: values.requiredSkillLevel,
+        isPackage: false, // Mặc định không phải gói dịch vụ
+        basePrice: values.basePrice,
+        laborCost: values.laborCost,
+        productCost: serviceProducts.reduce((sum, p) => sum + p.totalPrice, 0),
+        serviceType: "CUSTOM", // Mặc định loại tùy chỉnh
+        photoRequired: false, // Mặc định không yêu cầu ảnh
+        imageUrls: JSON.stringify(imageUrls),
+        isFeatured: values.isFeatured,
+        isActive: values.isActive,
+        serviceProducts,
+        audit: editData?.audit,
       };
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       onSuccess(updatedData);
-      message.success(editData ? "Cập nhật dịch vụ thành công!" : "Thêm dịch vụ thành công!");
-      form.resetFields();
-      setFeatures([]);
-      setRequirements([]);
-      setProducts([]);
-      setLaborCost(0);
-      setTotalPrice(0);
     } catch (error) {
       console.log("Form validation failed:", error);
       message.error("Vui lòng kiểm tra lại thông tin đã nhập!");
@@ -149,87 +195,109 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
 
   const handleCancel = () => {
     form.resetFields();
-    setFeatures([]);
-    setRequirements([]);
-    setProducts([]);
-    setLaborCost(0);
-    setTotalPrice(0);
+    setServiceProducts([]);
+    setImageUrls([]);
     onCancel();
   };
 
-  const addFeature = () => {
-    setFeatures([...features, ""]);
-  };
-
-  const updateFeature = (index: number, value: string) => {
-    const newFeatures = [...features];
-    newFeatures[index] = value;
-    setFeatures(newFeatures);
-  };
-
-  const removeFeature = (index: number) => {
-    const newFeatures = features.filter((_, i) => i !== index);
-    setFeatures(newFeatures);
-  };
-
-  const addRequirement = () => {
-    setRequirements([...requirements, ""]);
-  };
-
-  const updateRequirement = (index: number, value: string) => {
-    const newRequirements = [...requirements];
-    newRequirements[index] = value;
-    setRequirements(newRequirements);
-  };
-
-  const removeRequirement = (index: number) => {
-    const newRequirements = requirements.filter((_, i) => i !== index);
-    setRequirements(newRequirements);
-  };
-
-  // Product management functions
-  const addProduct = () => {
+  // Service Product management functions
+  const addServiceProduct = () => {
     const newProduct: ServiceProduct = {
-      productId: 0,
-      productCode: "",
-      productName: "",
-      quantity: 0,
+      serviceProductId: undefined,
+      serviceId: null,
+      productId: null,
+      productName: null,
+      productUrl: null,
+      productSku: null,
+      productBrand: null,
+      productModel: null,
+      unitOfMeasure: null,
+      quantity: 1,
       unitPrice: 0,
       totalPrice: 0,
+      notes: "",
+      isRequired: true,
+      isActive: true,
+      audit: null,
     };
-    setProducts([...products, newProduct]);
+    setServiceProducts([...serviceProducts, newProduct]);
   };
 
-  const updateProduct = (index: number, field: keyof ServiceProduct, value: any) => {
-    const newProducts = [...products];
+  const updateServiceProduct = (
+    index: number,
+    field: keyof ServiceProduct,
+    value: unknown
+  ) => {
+    const newProducts = [...serviceProducts];
     newProducts[index] = { ...newProducts[index], [field]: value };
-    
+
     // Nếu cập nhật productId, tự động điền thông tin sản phẩm
-    if (field === 'productId' && value) {
-      const selectedProduct = productsData.find(p => p.id === value);
+    if (field === "productId" && value) {
+      const selectedProduct = products.find((p) => p.productId === value);
       if (selectedProduct) {
         newProducts[index] = {
           ...newProducts[index],
-          productCode: selectedProduct.productCode,
-          productName: selectedProduct.name,
-          unitPrice: selectedProduct.price,
-          totalPrice: newProducts[index].quantity * selectedProduct.price,
+          productName: selectedProduct.productName,
+          productSku: selectedProduct.sku,
+          productBrand: selectedProduct.brand,
+          unitPrice: selectedProduct.sellingPrice,
+          totalPrice:
+            newProducts[index].quantity * selectedProduct.sellingPrice,
         };
       }
     }
-    
-    // Nếu cập nhật quantity, tính lại totalPrice
-    if (field === 'quantity') {
-      newProducts[index].totalPrice = value * newProducts[index].unitPrice;
+
+    // Nếu cập nhật quantity hoặc unitPrice, tính lại totalPrice
+    if (field === "quantity" || field === "unitPrice") {
+      newProducts[index].totalPrice =
+        newProducts[index].quantity * newProducts[index].unitPrice;
     }
-    
-    setProducts(newProducts);
+
+    setServiceProducts(newProducts);
   };
 
-  const removeProduct = (index: number) => {
-    const newProducts = products.filter((_, i) => i !== index);
-    setProducts(newProducts);
+  const removeServiceProduct = (index: number) => {
+    const newProducts = serviceProducts.filter((_, i) => i !== index);
+    setServiceProducts(newProducts);
   };
+
+  // Image management functions
+  const handleImageUpload = (info: any) => {
+    if (info.file.status === "done") {
+      const newImageUrl = info.file.response?.url || info.file.url;
+      if (newImageUrl) {
+        setImageUrls([...imageUrls, newImageUrl]);
+        message.success("Tải lên hình ảnh thành công!");
+      }
+    } else if (info.file.status === "error") {
+      message.error("Tải lên hình ảnh thất bại!");
+    }
+  };
+
+  const handleImageUploadBefore = (file: any) => {
+    const isImage = file.type.startsWith("image/");
+    if (!isImage) {
+      message.error("Chỉ được tải lên file hình ảnh!");
+      return false;
+    }
+    const isLt2M = file.size / 1024 / 1024 < 2;
+    if (!isLt2M) {
+      message.error("Kích thước hình ảnh không được vượt quá 2MB!");
+      return false;
+    }
+    return true;
+  };
+
+  const removeImage = (index: number) => {
+    const newImageUrls = imageUrls.filter((_, i) => i !== index);
+    setImageUrls(newImageUrls);
+  };
+
+  // Debug log
+  console.log("Current products state:", products);
+  console.log("Products loading:", productsLoading);
+  console.log("Current categories state:", categories);
+  console.log("Categories loading:", categoriesLoading);
 
   return (
     <Modal
@@ -266,18 +334,6 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <Form.Item
-              label="Mã dịch vụ"
-              name="serviceCode"
-              rules={[
-                { required: true, message: "Vui lòng nhập mã dịch vụ!" },
-                { max: 20, message: "Mã không được quá 20 ký tự!" },
-              ]}
-            >
-              <Input placeholder="Nhập mã dịch vụ" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
               label="Tên dịch vụ"
               name="serviceName"
               rules={[
@@ -288,36 +344,53 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
               <Input placeholder="Nhập tên dịch vụ" />
             </Form.Item>
           </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              label="URL dịch vụ"
+              name="serviceUrl"
+              rules={[
+                { required: true, message: "Vui lòng nhập URL dịch vụ!" },
+                { max: 200, message: "URL không được quá 200 ký tự!" },
+              ]}
+            >
+              <Input placeholder="Nhập URL dịch vụ" />
+            </Form.Item>
+          </Col>
         </Row>
 
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <Form.Item
-              label="Loại dịch vụ"
-              name="serviceTypeName"
-              rules={[{ required: true, message: "Vui lòng chọn loại dịch vụ!" }]}
+              label="Danh mục"
+              name="categoryId"
+              rules={[{ required: true, message: "Vui lòng chọn danh mục!" }]}
             >
-              <Select placeholder="Chọn loại dịch vụ">
-                {serviceTypesData.map((type) => (
-                  <Option key={type.serviceTypeName} value={type.serviceTypeName}>
-                    {type.serviceTypeName}
+              <Select
+                placeholder="Chọn danh mục"
+                loading={categoriesLoading}
+                showSearch
+                filterOption={(input, option) =>
+                  (option?.children as unknown as string)
+                    ?.toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              >
+                {categories.length > 0 ? (
+                  categories.map((category) => (
+                    <Option
+                      key={category.category_id}
+                      value={category.category_id}
+                    >
+                      {category.category_name}
+                    </Option>
+                  ))
+                ) : (
+                  <Option disabled value="no-categories">
+                    {categoriesLoading
+                      ? "Đang tải danh mục..."
+                      : "Không có danh mục nào"}
                   </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              label="Trạng thái"
-              name="status"
-              rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
-            >
-              <Select placeholder="Chọn trạng thái">
-                {serviceStatuses.map((status) => (
-                  <Option key={status.value} value={status.value}>
-                    {status.label}
-                  </Option>
-                ))}
+                )}
               </Select>
             </Form.Item>
           </Col>
@@ -340,46 +413,20 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
         </Form.Item>
 
         <Row gutter={16}>
-          <Col xs={24} sm={8}>
-            <Form.Item
-              label="Chi phí lao động (VNĐ)"
-              rules={[
-                { required: true, message: "Vui lòng nhập chi phí lao động!" },
-                { type: "number", min: 0, message: "Chi phí phải lớn hơn 0!" },
-              ]}
-            >
-              <InputNumber
-                min={0}
-                style={{ width: "100%" }}
-                value={laborCost}
-                onChange={(value) => setLaborCost(value || 0)}
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={(value) => Number(value!.replace(/\$\s?|(,*)/g, ''))}
-                placeholder="Nhập chi phí lao động"
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Form.Item
-              label="Tổng giá dịch vụ (VNĐ)"
-            >
-              <InputNumber
-                style={{ width: "100%" }}
-                value={totalPrice}
-                disabled
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                parser={(value) => Number(value!.replace(/\$\s?|(,*)/g, ''))}
-                placeholder="Tự động tính toán"
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={8}>
+          <Col xs={24} sm={6}>
             <Form.Item
               label="Thời gian thực hiện (phút)"
-              name="duration"
+              name="standardDuration"
               rules={[
-                { required: true, message: "Vui lòng nhập thời gian thực hiện!" },
-                { type: "number", min: 1, message: "Thời gian phải lớn hơn 0!" },
+                {
+                  required: true,
+                  message: "Vui lòng nhập thời gian thực hiện!",
+                },
+                {
+                  type: "number",
+                  min: 1,
+                  message: "Thời gian phải lớn hơn 0!",
+                },
               ]}
             >
               <InputNumber
@@ -389,20 +436,85 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
               />
             </Form.Item>
           </Col>
+          <Col xs={24} sm={6}>
+            <Form.Item
+              label="Kỹ năng yêu cầu"
+              name="requiredSkillLevel"
+              rules={[
+                { required: true, message: "Vui lòng chọn kỹ năng yêu cầu!" },
+              ]}
+            >
+              <Select placeholder="Chọn kỹ năng">
+                {SERVICE_STATUS_OPTIONS.map((skill) => (
+                  <Option key={skill.value} value={skill.value}>
+                    {skill.label}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Form.Item
+              label="Giá cơ bản (VNĐ)"
+              name="basePrice"
+              rules={[
+                { required: true, message: "Vui lòng nhập giá cơ bản!" },
+                { type: "number", min: 0, message: "Giá phải lớn hơn 0!" },
+              ]}
+            >
+              <InputNumber
+                min={0}
+                style={{ width: "100%" }}
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                }
+                parser={(value) => value!.replace(/\$\s?|(,*)/g, "") as any}
+                placeholder="Nhập giá cơ bản"
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={6}>
+            <Form.Item
+              label="Chi phí lao động (VNĐ)"
+              name="laborCost"
+              rules={[
+                { required: true, message: "Vui lòng nhập chi phí lao động!" },
+                { type: "number", min: 0, message: "Chi phí phải lớn hơn 0!" },
+              ]}
+            >
+              <InputNumber
+                min={0}
+                style={{ width: "100%" }}
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                }
+                parser={(value) => value!.replace(/\$\s?|(,*)/g, "") as any}
+                placeholder="Nhập chi phí lao động"
+              />
+            </Form.Item>
+          </Col>
         </Row>
 
-        <Form.Item
-          label="Ghi chú"
-          name="notes"
-          rules={[{ max: 1000, message: "Ghi chú không được quá 1000 ký tự!" }]}
-        >
-          <TextArea
-            rows={2}
-            placeholder="Nhập ghi chú (tùy chọn)"
-            maxLength={1000}
-            showCount
-          />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              label="Dịch vụ nổi bật"
+              name="isFeatured"
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item
+              label="Trạng thái hoạt động"
+              name="isActive"
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+          </Col>
+        </Row>
 
         {/* Quản lý sản phẩm */}
         <Card
@@ -413,17 +525,18 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
               type="dashed"
               size="small"
               icon={<PlusOutlined />}
-              onClick={addProduct}
+              onClick={addServiceProduct}
             >
               Thêm sản phẩm
             </Button>
           }
         >
-          {products.length > 0 ? (
+          {serviceProducts.length > 0 ? (
             <Table
-              dataSource={products}
+              dataSource={serviceProducts}
               pagination={false}
               size="small"
+              rowKey={(record, index) => record.serviceProductId || record.productId || `product-${index}`}
               columns={[
                 {
                   title: "Sản phẩm",
@@ -433,14 +546,35 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                     <Select
                       placeholder="Chọn sản phẩm"
                       value={record.productId || undefined}
-                      onChange={(value) => updateProduct(index, 'productId', value)}
+                      onChange={(value) =>
+                        updateServiceProduct(index, "productId", value)
+                      }
                       style={{ width: "100%" }}
+                      loading={productsLoading}
+                      showSearch
+                      filterOption={(input, option) =>
+                        (option?.children as unknown as string)
+                          ?.toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
                     >
-                      {productsData.map((product) => (
-                        <Option key={product.id} value={product.id}>
-                          {product.name} - {formatCurrency(product.price)}
+                      {products.length > 0 ? (
+                        products.map((product) => (
+                          <Option
+                            key={product.productId}
+                            value={product.productId}
+                          >
+                            {product.productName} -{" "}
+                            {formatCurrency(product.sellingPrice)}
+                          </Option>
+                        ))
+                      ) : (
+                        <Option disabled value="no-products">
+                          {productsLoading
+                            ? "Đang tải sản phẩm..."
+                            : "Không có sản phẩm nào"}
                         </Option>
-                      ))}
+                      )}
                     </Select>
                   ),
                 },
@@ -453,7 +587,9 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                       min={0}
                       step={0.1}
                       value={record.quantity}
-                      onChange={(value) => updateProduct(index, 'quantity', value || 0)}
+                      onChange={(value) =>
+                        updateServiceProduct(index, "quantity", value || 0)
+                      }
                       style={{ width: "100%" }}
                     />
                   ),
@@ -463,7 +599,9 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                   key: "unitPrice",
                   width: 120,
                   render: (_, record) => (
-                    <span>{formatCurrency(record.unitPrice)}</span>
+                    <span style={{ fontWeight: 500, color: "#1890ff" }}>
+                      {formatCurrency(record.unitPrice)}
+                    </span>
                   ),
                 },
                 {
@@ -477,17 +615,51 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                   ),
                 },
                 {
+                  title: "Bắt buộc",
+                  key: "isRequired",
+                  width: 100,
+                  render: (_, record, index) => (
+                    <Switch
+                      checked={record.isRequired}
+                      onChange={(checked) =>
+                        updateServiceProduct(index, "isRequired", checked)
+                      }
+                      size="small"
+                    />
+                  ),
+                },
+                {
+                  title: "Ghi chú",
+                  key: "notes",
+                  width: 150,
+                  render: (_, record, index) => (
+                    <Input
+                      placeholder="Ghi chú"
+                      value={record.notes}
+                      onChange={(e) =>
+                        updateServiceProduct(index, "notes", e.target.value)
+                      }
+                      size="small"
+                    />
+                  ),
+                },
+                {
                   title: "Thao tác",
                   key: "actions",
                   width: 80,
                   render: (_, record, index) => (
                     <Popconfirm
                       title="Xóa sản phẩm này?"
-                      onConfirm={() => removeProduct(index)}
+                      onConfirm={() => removeServiceProduct(index)}
                       okText="Xóa"
                       cancelText="Hủy"
                     >
-                      <Button type="text" danger size="small">
+                      <Button
+                        type="text"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                      >
                         Xóa
                       </Button>
                     </Popconfirm>
@@ -496,31 +668,50 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
               ]}
             />
           ) : (
-            <div style={{ textAlign: "center", color: "#999", padding: "20px" }}>
+            <div
+              style={{ textAlign: "center", color: "#999", padding: "20px" }}
+            >
               Chưa có sản phẩm nào
             </div>
           )}
-          
+
           {/* Tổng kết */}
-          {products.length > 0 && (
-            <div style={{ marginTop: 16, padding: 12, backgroundColor: "#f5f5f5", borderRadius: 6 }}>
+          {serviceProducts.length > 0 && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 12,
+                backgroundColor: "#f5f5f5",
+                borderRadius: 6,
+              }}
+            >
               <Row gutter={16}>
                 <Col span={8}>
-                  <div style={{ fontSize: 12, color: "#666" }}>Tổng sản phẩm:</div>
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    Tổng sản phẩm:
+                  </div>
                   <div style={{ fontWeight: 500, color: "#1890ff" }}>
-                    {formatCurrency(products.reduce((sum, p) => sum + p.totalPrice, 0))}
+                    {formatCurrency(
+                      serviceProducts.reduce((sum, p) => sum + p.totalPrice, 0)
+                    )}
                   </div>
                 </Col>
                 <Col span={8}>
-                  <div style={{ fontSize: 12, color: "#666" }}>Chi phí lao động:</div>
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    Chi phí lao động:
+                  </div>
                   <div style={{ fontWeight: 500, color: "#fa8c16" }}>
-                    {formatCurrency(laborCost)}
+                    {formatCurrency(form.getFieldValue("laborCost") || 0)}
                   </div>
                 </Col>
                 <Col span={8}>
-                  <div style={{ fontSize: 12, color: "#666" }}>Tổng giá dịch vụ:</div>
-                  <div style={{ fontWeight: 500, color: "#52c41a", fontSize: 16 }}>
-                    {formatCurrency(totalPrice)}
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    Tổng giá dịch vụ:
+                  </div>
+                  <div
+                    style={{ fontWeight: 500, color: "#52c41a", fontSize: 16 }}
+                  >
+                    {formatCurrency(calculateTotalPrice())}
                   </div>
                 </Col>
               </Row>
@@ -528,86 +719,57 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
           )}
         </Card>
 
-        {/* Đặc điểm dịch vụ */}
+        {/* Quản lý hình ảnh */}
         <Card
-          title="Đặc điểm dịch vụ"
+          title="Hình ảnh dịch vụ"
           size="small"
           extra={
-            <Button
-              type="dashed"
-              size="small"
-              icon={<PlusOutlined />}
-              onClick={addFeature}
+            <Upload
+              accept="image/*"
+              showUploadList={false}
+              onChange={handleImageUpload}
+              beforeUpload={handleImageUploadBefore}
+              action="/api/upload" // Cần cấu hình endpoint upload thực tế
+              name="file"
             >
-              Thêm đặc điểm
-            </Button>
+              <Button type="dashed" size="small" icon={<UploadOutlined />}>
+                Tải lên ảnh
+              </Button>
+            </Upload>
           }
         >
-          {features.map((feature, index) => (
-            <Row key={index} gutter={8} style={{ marginBottom: 8 }}>
-              <Col span={20}>
-                <Input
-                  placeholder="Nhập đặc điểm"
-                  value={feature}
-                  onChange={(e) => updateFeature(index, e.target.value)}
-                />
-              </Col>
-              <Col span={4}>
-                <Button
-                  type="text"
-                  danger
-                  onClick={() => removeFeature(index)}
-                >
-                  Xóa
-                </Button>
-              </Col>
+          {imageUrls.length > 0 ? (
+            <Row gutter={[16, 16]}>
+              {imageUrls.map((url, index) => (
+                <Col key={index} span={8}>
+                  <div style={{ position: "relative" }}>
+                    <img
+                      src={url}
+                      alt={`Service image ${index + 1}`}
+                      style={{
+                        width: "100%",
+                        height: 100,
+                        objectFit: "cover",
+                        borderRadius: 8,
+                      }}
+                    />
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      style={{ position: "absolute", top: 4, right: 4 }}
+                      onClick={() => removeImage(index)}
+                    />
+                  </div>
+                </Col>
+              ))}
             </Row>
-          ))}
-          {features.length === 0 && (
-            <div style={{ textAlign: "center", color: "#999", padding: "20px" }}>
-              Chưa có đặc điểm nào
-            </div>
-          )}
-        </Card>
-
-        {/* Yêu cầu */}
-        <Card
-          title="Yêu cầu"
-          size="small"
-          extra={
-            <Button
-              type="dashed"
-              size="small"
-              icon={<PlusOutlined />}
-              onClick={addRequirement}
+          ) : (
+            <div
+              style={{ textAlign: "center", color: "#999", padding: "20px" }}
             >
-              Thêm yêu cầu
-            </Button>
-          }
-        >
-          {requirements.map((requirement, index) => (
-            <Row key={index} gutter={8} style={{ marginBottom: 8 }}>
-              <Col span={20}>
-                <Input
-                  placeholder="Nhập yêu cầu"
-                  value={requirement}
-                  onChange={(e) => updateRequirement(index, e.target.value)}
-                />
-              </Col>
-              <Col span={4}>
-                <Button
-                  type="text"
-                  danger
-                  onClick={() => removeRequirement(index)}
-                >
-                  Xóa
-                </Button>
-              </Col>
-            </Row>
-          ))}
-          {requirements.length === 0 && (
-            <div style={{ textAlign: "center", color: "#999", padding: "20px" }}>
-              Chưa có yêu cầu nào
+              Chưa có hình ảnh nào
             </div>
           )}
         </Card>

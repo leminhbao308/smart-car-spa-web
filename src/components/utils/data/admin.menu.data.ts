@@ -112,51 +112,16 @@ export const adminMenuItems: MenuItem[] = [
     label: "Sản phẩm",
     icon: React.createElement(BarcodeOutlined),
   },
+
   {
-    key: "inventory-management",
-    label: "Quản lý kho",
-    icon: React.createElement(InboxOutlined),
-    children: [
-      {
-        key: "import-inventory",
-        label: "Nhập kho",
-        icon: React.createElement(ImportOutlined),
-      },
-      {
-        key: "export-inventory",
-        label: "Xuất kho",
-        icon: React.createElement(ExportOutlined),
-      },
-    ],
+    key: "services",
+    label: "Dịch vụ",
+    icon: React.createElement(ToolOutlined),
   },
   {
-    key: "service-management",
-    label: "Danh mục dịch vụ & gói dịch vụ",
-    icon: React.createElement(ToolOutlined),
-    children: [
-      {
-        key: "service-categories",
-        label: "Danh mục dịch vụ",
-        icon: React.createElement(ToolOutlined),
-        children: [
-          {
-            key: "service-types",
-            label: "Loại dịch vụ",
-            icon: React.createElement(ToolOutlined),
-          },
-          {
-            key: "services",
-            label: "Dịch vụ",
-            icon: React.createElement(ToolOutlined),
-          },
-        ],
-      },
-      {
-        key: "service-packages",
-        label: "Gói dịch vụ",
-        icon: React.createElement(ShoppingCartOutlined),
-      },
-    ],
+    key: "service-packages",
+    label: "Gói dịch vụ",
+    icon: React.createElement(ShoppingCartOutlined),
   },
   {
     key: "promotions",
@@ -218,6 +183,23 @@ export const adminMenuItems: MenuItem[] = [
     ],
   },
   {
+    key: "inventory-management",
+    label: "Quản lý kho",
+    icon: React.createElement(InboxOutlined),
+    children: [
+      {
+        key: "import-inventory",
+        label: "Nhập kho",
+        icon: React.createElement(ImportOutlined),
+      },
+      {
+        key: "export-inventory",
+        label: "Xuất kho",
+        icon: React.createElement(ExportOutlined),
+      },
+    ],
+  },
+  {
     key: "centers",
     label: "Trung tâm",
     icon: React.createElement(BankOutlined),
@@ -254,7 +236,6 @@ export const menuKeyToPath: Record<string, string> = {
   products: "/dashboard/products",
   "import-inventory": "/dashboard/inventory/import",
   "export-inventory": "/dashboard/inventory/export",
-  "service-types": "/dashboard/service-categories/service-types",
   services: "/dashboard/service-categories/services",
   "service-packages": "/dashboard/package-categories",
   promotions: "/dashboard/promotions",

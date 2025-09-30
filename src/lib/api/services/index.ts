@@ -16,3 +16,7 @@ export * from './branch.service';
 export { BranchService } from './branch.service';
 export * from './product.service';
 export { ProductService } from './product.service';
+export * from './service.service';
+export { ServiceService } from './service.service';
+export * from './category.service';
+export { categoryService } from './category.service';
