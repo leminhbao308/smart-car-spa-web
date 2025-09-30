@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Typography, Breadcrumb, Tabs } from "antd";
-import { HomeOutlined, AppstoreOutlined } from "@ant-design/icons";
+import { Typography, Tabs } from "antd";
+import { AppstoreOutlined } from "@ant-design/icons";
 import {
   CategoryTreeTable,
   CategoryModal,

@@ -117,6 +117,12 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
         return "Sản phẩm";
       case "SERVICE":
         return "Dịch vụ";
+      case "PRODUCT_SYS":
+        return "Sản phẩm hệ thống";
+      case "SERVICE_SYS":
+        return "Dịch vụ hệ thống";
+      case "PROMOTION_SYS":
+        return "Khuyến mãi hệ thống";
       default:
         return "Khác";
     }
