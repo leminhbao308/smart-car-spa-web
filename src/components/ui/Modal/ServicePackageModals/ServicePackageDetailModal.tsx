@@ -10,6 +10,7 @@ import {
   List,
   Space,
   Badge,
+  Divider,
 } from "antd";
 import {
   ShoppingCartOutlined,
@@ -19,32 +20,13 @@ import {
   StarOutlined,
   FireOutlined,
   CheckCircleOutlined,
+  ToolOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import { getStatusColor, getStatusLabel } from "@/components/utils/helper/center.helper";
+import { ServicePackage, SERVICE_PACKAGE_TYPE_OPTIONS } from "@/lib/api/types/service-package.types";
 
 const { Title, Text, Paragraph } = Typography;
-
-interface ServicePackage {
-  id: number;
-  packageCode: string;
-  packageName: string;
-  description: string;
-  services: Array<{
-    id: number;
-    serviceName: string;
-    totalPrice: number;
-    quantity: number;
-  }>;
-  totalPrice: number; // Chỉ có totalPrice = tổng giá các dịch vụ
-  status: string;
-  targetCustomers: string[];
-  validityPeriod: number;
-  maxUsage: number;
-  features: string[];
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface ServicePackageDetailModalProps {
   open: boolean;
@@ -59,6 +41,10 @@ const ServicePackageDetailModal: React.FC<ServicePackageDetailModalProps> = ({
 }) => {
   if (!data) return null;
 
+  const packageTypeConfig = SERVICE_PACKAGE_TYPE_OPTIONS.find(
+    (type) => type.value === data.packageType
+  );
+
   return (
     <Modal
       title={
@@ -70,17 +56,17 @@ const ServicePackageDetailModal: React.FC<ServicePackageDetailModalProps> = ({
       open={open}
       onCancel={onCancel}
       footer={null}
-      width={1000}
+      width={1200}
       style={{ top: 20 }}
     >
-      <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+      <div style={{ maxHeight: "80vh", overflowY: "auto" }}>
         {/* Header Information */}
         <Card style={{ marginBottom: 16 }}>
           <Row gutter={[16, 16]}>
             <Col span={16}>
               <div style={{ marginBottom: 8 }}>
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  Mã gói: {data.packageCode}
+                  ID: {data.packageId}
                 </Text>
               </div>
               <Title level={3} style={{ margin: 0, marginBottom: 8 }}>
@@ -89,10 +75,21 @@ const ServicePackageDetailModal: React.FC<ServicePackageDetailModalProps> = ({
               <Paragraph style={{ margin: 0, color: "#666" }}>
                 {data.description}
               </Paragraph>
+              <div style={{ marginTop: 8 }}>
+                <Space>
+                  <Tag color="blue">{data.categoryName}</Tag>
+                  <Tag color={packageTypeConfig?.color}>
+                    {packageTypeConfig?.label}
+                  </Tag>
+                </Space>
+              </div>
             </Col>
             <Col span={8} style={{ textAlign: "right" }}>
-              <Tag color={getStatusColor(data.status)} style={{ fontSize: 14, padding: "4px 12px" }}>
-                {getStatusLabel(data.status)}
+              <Tag 
+                color={data.isActive ? "green" : "red"} 
+                style={{ fontSize: 14, padding: "4px 12px" }}
+              >
+                {data.isActive ? "Hoạt động" : "Không hoạt động"}
               </Tag>
             </Col>
           </Row>
@@ -122,154 +119,218 @@ const ServicePackageDetailModal: React.FC<ServicePackageDetailModalProps> = ({
               marginBottom: 8,
             }}
           >
-            {formatCurrency(data.totalPrice)}
+            {data.packagePrice ? formatCurrency(data.packagePrice) : "Chưa định giá"}
           </div>
           <Row gutter={16} justify="center">
             <Col>
               <Space>
-                <GiftOutlined style={{ color: "#1890ff" }} />
+                <ToolOutlined style={{ color: "#1890ff" }} />
                 <Text type="secondary" style={{ fontSize: 14 }}>
-                  {data.services.length} dịch vụ
+                  DV: {formatCurrency(data.serviceCost)}
+                </Text>
+              </Space>
+            </Col>
+            <Col>
+              <Space>
+                <InboxOutlined style={{ color: "#fa8c16" }} />
+                <Text type="secondary" style={{ fontSize: 14 }}>
+                  SP: {formatCurrency(data.productCost)}
+                </Text>
+              </Space>
+            </Col>
+            <Col>
+              <Space>
+                <ClockCircleOutlined style={{ color: "#52c41a" }} />
+                <Text type="secondary" style={{ fontSize: 14 }}>
+                  {data.totalDuration} phút
                 </Text>
               </Space>
             </Col>
           </Row>
         </div>
 
-        {/* Services Information */}
-        <Card title={
-          <Space>
-            <GiftOutlined />
-            Dịch vụ trong gói ({data.services.length} dịch vụ)
-          </Space>
-        } style={{ marginBottom: 16 }}>
-          <List
-            dataSource={data.services}
-            renderItem={(service, index) => (
-              <List.Item key={service.id}>
-                <List.Item.Meta
-                  avatar={
-                    <Badge count={index + 1} style={{ backgroundColor: "#1890ff" }}>
-                      <div style={{ width: 40, height: 40, backgroundColor: "#f0f0f0", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                      </div>
-                    </Badge>
-                  }
-                  title={
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <Text strong style={{ fontSize: 14 }}>
-                        {service.serviceName}
-                      </Text>
-                      <Tag color="blue">
-                        x{service.quantity}
-                      </Tag>
-                    </div>
-                  }
-                  description={
-                    <div>
-                      <Text style={{ color: "#52c41a", fontSize: 16, fontWeight: "bold" }}>
-                        {formatCurrency(service.totalPrice)}
-                      </Text>
-                      <Text type="secondary" style={{ marginLeft: 8 }}>
-                        / lần
-                      </Text>
-                    </div>
-                  }
+        <Row gutter={[16, 16]}>
+          {/* Services Information */}
+          <Col span={12}>
+            <Card 
+              title={
+                <Space>
+                  <ToolOutlined />
+                  Dịch vụ trong gói ({data.packageServices.length} dịch vụ)
+                </Space>
+              } 
+              style={{ marginBottom: 16 }}
+            >
+              {data.packageServices.length > 0 ? (
+                <List
+                  dataSource={data.packageServices}
+                  renderItem={(service, index) => (
+                    <List.Item key={service.servicePackageServiceId || index}>
+                      <List.Item.Meta
+                        avatar={
+                          <Badge count={index + 1} style={{ backgroundColor: "#1890ff" }}>
+                            <div style={{ 
+                              width: 40, 
+                              height: 40, 
+                              backgroundColor: "#f0f0f0", 
+                              borderRadius: 8, 
+                              display: "flex", 
+                              alignItems: "center", 
+                              justifyContent: "center" 
+                            }}>
+                              <CheckCircleOutlined style={{ color: "#52c41a" }} />
+                            </div>
+                          </Badge>
+                        }
+                        title={
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <Text strong style={{ fontSize: 14 }}>
+                              {service.serviceName || "Dịch vụ không tên"}
+                            </Text>
+                            <Tag color="blue">
+                              x{service.quantity}
+                            </Tag>
+                          </div>
+                        }
+                        description={
+                          <div>
+                            <Text style={{ color: "#52c41a", fontSize: 16, fontWeight: "bold" }}>
+                              {formatCurrency(service.unitPrice)}
+                            </Text>
+                            <Text type="secondary" style={{ marginLeft: 8 }}>
+                              / lần
+                            </Text>
+                            <br />
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              Tổng: {formatCurrency(service.totalPrice)}
+                            </Text>
+                            {service.notes && (
+                              <div style={{ marginTop: 4 }}>
+                                <Text type="secondary" style={{ fontSize: 11 }}>
+                                  {service.notes}
+                                </Text>
+                              </div>
+                            )}
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  )}
                 />
-              </List.Item>
-            )}
-          />
-        </Card>
+              ) : (
+                <div style={{ textAlign: "center", padding: 20, color: "#999" }}>
+                  <ToolOutlined style={{ fontSize: 24, marginBottom: 8 }} />
+                  <div>Chưa có dịch vụ nào</div>
+                </div>
+              )}
+            </Card>
+          </Col>
 
-        {/* Package Information */}
-        <Card title={
-          <Space>
-            <ClockCircleOutlined />
-            Thông tin gói
-          </Space>
-        } style={{ marginBottom: 16 }}>
-          <Row gutter={[16, 16]}>
-            <Col span={8}>
-              <div style={{ textAlign: "center", padding: 16, backgroundColor: "#e6f7ff", borderRadius: 8 }}>
-                <ClockCircleOutlined style={{ fontSize: 24, color: "#1890ff", marginBottom: 8 }} />
-                <div style={{ fontSize: 16, fontWeight: "bold", color: "#1890ff" }}>
-                  {data.validityPeriod} ngày
+          {/* Products Information */}
+          <Col span={12}>
+            <Card 
+              title={
+                <Space>
+                  <InboxOutlined />
+                  Sản phẩm trong gói ({data.packageProducts.length} sản phẩm)
+                </Space>
+              } 
+              style={{ marginBottom: 16 }}
+            >
+              {data.packageProducts.length > 0 ? (
+                <List
+                  dataSource={data.packageProducts}
+                  renderItem={(product, index) => (
+                    <List.Item key={product.servicePackageProductId || index}>
+                      <List.Item.Meta
+                        avatar={
+                          <Badge count={index + 1} style={{ backgroundColor: "#fa8c16" }}>
+                            <div style={{ 
+                              width: 40, 
+                              height: 40, 
+                              backgroundColor: "#f0f0f0", 
+                              borderRadius: 8, 
+                              display: "flex", 
+                              alignItems: "center", 
+                              justifyContent: "center" 
+                            }}>
+                              <InboxOutlined style={{ color: "#fa8c16" }} />
+                            </div>
+                          </Badge>
+                        }
+                        title={
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <Text strong style={{ fontSize: 14 }}>
+                              {product.productName || "Sản phẩm không tên"}
+                            </Text>
+                            <Tag color="orange">
+                              x{product.quantity}
+                            </Tag>
+                          </div>
+                        }
+                        description={
+                          <div>
+                            <Text style={{ color: "#fa8c16", fontSize: 16, fontWeight: "bold" }}>
+                              {formatCurrency(product.unitPrice)}
+                            </Text>
+                            <Text type="secondary" style={{ marginLeft: 8 }}>
+                              / đơn vị
+                            </Text>
+                            <br />
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              Tổng: {formatCurrency(product.totalPrice)}
+                            </Text>
+                            {product.productCode && (
+                              <div style={{ marginTop: 4 }}>
+                                <Text type="secondary" style={{ fontSize: 11 }}>
+                                  Mã: {product.productCode}
+                                </Text>
+                              </div>
+                            )}
+                            {product.notes && (
+                              <div style={{ marginTop: 4 }}>
+                                <Text type="secondary" style={{ fontSize: 11 }}>
+                                  {product.notes}
+                                </Text>
+                              </div>
+                            )}
+                          </div>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <div style={{ textAlign: "center", padding: 20, color: "#999" }}>
+                  <InboxOutlined style={{ fontSize: 24, marginBottom: 8 }} />
+                  <div>Chưa có sản phẩm nào</div>
                 </div>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Thời gian hiệu lực
-                </Text>
-              </div>
-            </Col>
-            <Col span={8}>
-              <div style={{ textAlign: "center", padding: 16, backgroundColor: "#f6ffed", borderRadius: 8 }}>
-                <GiftOutlined style={{ fontSize: 24, color: "#52c41a", marginBottom: 8 }} />
-                <div style={{ fontSize: 16, fontWeight: "bold", color: "#52c41a" }}>
-                  {data.maxUsage} lần
-                </div>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Sử dụng tối đa
-                </Text>
-              </div>
-            </Col>
-            <Col span={8}>
-              <div style={{ textAlign: "center", padding: 16, backgroundColor: "#fff2e8", borderRadius: 8 }}>
-                <StarOutlined style={{ fontSize: 24, color: "#fa8c16", marginBottom: 8 }} />
-                <div style={{ fontSize: 16, fontWeight: "bold", color: "#fa8c16" }}>
-                  {data.targetCustomers.length}
-                </div>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Nhóm khách hàng
-                </Text>
-              </div>
-            </Col>
-          </Row>
-        </Card>
+              )}
+            </Card>
+          </Col>
+        </Row>
 
-        {/* Target Customers */}
-        {data.targetCustomers.length > 0 && (
-          <Card title="Nhóm khách hàng mục tiêu" style={{ marginBottom: 16 }}>
+        {/* Package URL */}
+        {data.packageUrl && (
+          <Card title="Thông tin URL" style={{ marginBottom: 16 }}>
+            <Text type="secondary">URL gói dịch vụ:</Text>
+            <br />
+            <Text code>{data.packageUrl}</Text>
+          </Card>
+        )}
+
+        {/* Images */}
+        {data.imageUrls && data.imageUrls !== "[]" && (
+          <Card title="Hình ảnh" style={{ marginBottom: 16 }}>
             <div>
-              {data.targetCustomers.map((customer, index) => (
-                <Tag key={index} color="blue" style={{ marginBottom: 8 }}>
-                  {customer}
-                </Tag>
-              ))}
+              <Text type="secondary">URL hình ảnh:</Text>
+              <br />
+              <Text code style={{ fontSize: 12 }}>
+                {data.imageUrls}
+              </Text>
             </div>
           </Card>
         )}
-
-        {/* Features */}
-        {data.features.length > 0 && (
-          <Card title="Tính năng nổi bật" style={{ marginBottom: 16 }}>
-            <List
-              dataSource={data.features}
-              renderItem={(feature, index) => (
-                <List.Item key={index}>
-                  <List.Item.Meta
-                    avatar={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
-                    description={feature}
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
-        )}
-
-        {/* Timestamps */}
-        <Card title="Thông tin hệ thống">
-          <Row gutter={[16, 8]}>
-            <Col span={12}>
-              <Text type="secondary">Ngày tạo:</Text>
-              <br />
-              <Text strong>{data.createdAt}</Text>
-            </Col>
-            <Col span={12}>
-              <Text type="secondary">Cập nhật lần cuối:</Text>
-              <br />
-              <Text strong>{data.updatedAt}</Text>
-            </Col>
-          </Row>
-        </Card>
       </div>
     </Modal>
   );

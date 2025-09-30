@@ -17,6 +17,8 @@ import {
   Tag,
   Badge,
   Empty,
+  List,
+  Popconfirm,
 } from "antd";
 import {
   PlusOutlined,
@@ -28,46 +30,32 @@ import {
   FilterOutlined,
   ClockCircleOutlined,
   InfoCircleOutlined,
+  ToolOutlined,
+  PackageOutlined,
 } from "@ant-design/icons";
-import {
-  packageStatuses,
-  targetCustomerGroups,
-  validityPeriods,
-  maxUsageOptions,
-} from "@/components/utils/data/service-packages.data";
-import { servicesData } from "@/components/utils/data/services.data";
+import { servicePackageService } from "@/lib/api/services/service-package.service";
+import { categoryService } from "@/lib/api/services/category.service";
+import { serviceService } from "@/lib/api/services/service.service";
+import { productService } from "@/lib/api/services/product.service";
+import { 
+  ServicePackage, 
+  SERVICE_PACKAGE_TYPE_OPTIONS,
+  ServicePackageProduct,
+  ServicePackageService 
+} from "@/lib/api/types/service-package.types";
+import { Category } from "@/lib/api/types/category.types";
+import { Service } from "@/lib/api/types/service.types";
+import { Product } from "@/lib/api/types/product.types";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import ServiceDetailTooltip from "./ServiceDetailTooltip";
 
 const { Option } = Select;
 const { TextArea } = Input;
 const { Text } = Typography;
 
-interface ServicePackage {
-  id: number;
-  packageCode: string;
-  packageName: string;
-  description: string;
-  services: Array<{
-    id: number;
-    serviceName: string;
-    totalPrice: number;
-    quantity: number;
-  }>;
-  totalPrice: number; // Chỉ có totalPrice = tổng giá các dịch vụ
-  status: string;
-  targetCustomers: string[];
-  validityPeriod: number;
-  maxUsage: number;
-  features: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
 interface ServicePackageModalProps {
   open: boolean;
   onCancel: () => void;
-  onOk: (data: ServicePackage) => void;
+  onOk: (data: any) => void;
   initialData?: ServicePackage | null;
   title?: string;
 }
@@ -81,92 +69,221 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [selectedServices, setSelectedServices] = useState<
-    Array<{
-      id: number;
-      serviceName: string;
-      totalPrice: number;
-      quantity: number;
-    }>
-  >([]);
+  const [packageProducts, setPackageProducts] = useState<ServicePackageProduct[]>([]);
+  const [packageServices, setPackageServices] = useState<ServicePackageService[]>([]);
   const [packageTotalPrice, setPackageTotalPrice] = useState(0);
 
-  // Search and filter states
-  const [searchText, setSearchText] = useState("");
-  const [selectedServiceType, setSelectedServiceType] = useState<
-    string | undefined
-  >(undefined);
-  const [priceRange, setPriceRange] = useState<[number, number] | undefined>(
-    undefined
-  );
+  // Data states
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [servicesLoading, setServicesLoading] = useState(false);
+  const [productsLoading, setProductsLoading] = useState(false);
 
-  // Calculate total price when services change
+  // Search and filter states
+  const [serviceSearchText, setServiceSearchText] = useState("");
+  const [productSearchText, setProductSearchText] = useState("");
+
+  // Load data functions
+  const loadCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      const response = await categoryService.getAllCategories(0, 1000);
+      if (response.success && response.data) {
+        setCategories(response.data.content || []);
+      }
+    } catch (error) {
+      console.error("Error loading categories:", error);
+      message.error("Không thể tải danh sách danh mục");
+    } finally {
+      setCategoriesLoading(false);
+    }
+  };
+
+  const loadServices = async () => {
+    try {
+      setServicesLoading(true);
+      const response = await serviceService.getAllServices(0, 1000);
+      if (response.success && response.data) {
+        setServices(response.data.content || []);
+      }
+    } catch (error) {
+      console.error("Error loading services:", error);
+      message.error("Không thể tải danh sách dịch vụ");
+    } finally {
+      setServicesLoading(false);
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      setProductsLoading(true);
+      const response = await productService.getAllProducts({
+        page: 1,
+        size: 1000,
+        sort: "productName",
+        direction: "ASC",
+      });
+      if (response.success && response.data) {
+        setProducts(response.data.content || []);
+      }
+    } catch (error) {
+      console.error("Error loading products:", error);
+      message.error("Không thể tải danh sách sản phẩm");
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  // Calculate total price when services and products change
   useEffect(() => {
-    const total = selectedServices.reduce(
-      (sum, service) => sum + service.totalPrice * service.quantity,
+    const serviceTotal = packageServices.reduce(
+      (sum, service) => sum + service.totalPrice,
       0
     );
-    setPackageTotalPrice(total);
-  }, [selectedServices]);
+    const productTotal = packageProducts.reduce(
+      (sum, product) => sum + product.totalPrice,
+      0
+    );
+    setPackageTotalPrice(serviceTotal + productTotal);
+  }, [packageServices, packageProducts]);
 
   // Initialize form when modal opens
   useEffect(() => {
     if (open) {
+      loadCategories();
+      loadServices();
+      loadProducts();
+
       if (initialData) {
         form.setFieldsValue({
-          packageCode: initialData.packageCode,
           packageName: initialData.packageName,
+          packageUrl: initialData.packageUrl,
+          categoryId: initialData.categoryId,
           description: initialData.description,
-          status: initialData.status,
-          validityPeriod: initialData.validityPeriod,
-          maxUsage: initialData.maxUsage,
-          features: initialData.features || [],
-          targetCustomers: initialData.targetCustomers || [],
+          packageType: initialData.packageType,
+          imageUrls: initialData.imageUrls,
         });
-        setSelectedServices(initialData.services);
+        setPackageServices(initialData.packageServices || []);
+        setPackageProducts(initialData.packageProducts || []);
       } else {
         form.resetFields();
-        setSelectedServices([]);
+        setPackageServices([]);
+        setPackageProducts([]);
         setPackageTotalPrice(0);
       }
     }
   }, [open, initialData, form]);
 
-  const handleAddService = (serviceId: number) => {
-    const service = servicesData.find((s) => s.id === serviceId);
+  // Service handlers
+  const handleAddService = (serviceId: string) => {
+    const service = services.find((s) => s.serviceId === serviceId);
     if (service) {
-      const existingService = selectedServices.find((s) => s.id === serviceId);
+      const existingService = packageServices.find((s) => s.serviceId === serviceId);
       if (existingService) {
-        setSelectedServices((prev) =>
-          prev.map((s) =>
-            s.id === serviceId ? { ...s, quantity: s.quantity + 1 } : s
-          )
-        );
-      } else {
-        setSelectedServices((prev) => [
-          ...prev,
-          {
-            id: service.id,
-            serviceName: service.serviceName,
-            totalPrice: service.totalPrice,
-            quantity: 1,
-          },
-        ]);
+        message.warning("Dịch vụ này đã được thêm vào gói!");
+        return;
       }
+      
+      const newService: ServicePackageService = {
+        serviceId: service.serviceId,
+        serviceName: service.serviceName,
+        serviceUrl: service.serviceUrl,
+        serviceDescription: service.description,
+        serviceStandardDuration: service.standardDuration,
+        serviceBasePrice: service.basePrice,
+        quantity: 1,
+        unitPrice: service.basePrice,
+        totalPrice: service.basePrice,
+        notes: "",
+        isRequired: true,
+        isActive: true,
+      };
+      
+      setPackageServices((prev) => [...prev, newService]);
     }
   };
 
-  const handleRemoveService = (serviceId: number) => {
-    setSelectedServices((prev) => prev.filter((s) => s.id !== serviceId));
+  const handleRemoveService = (serviceId: string) => {
+    setPackageServices((prev) => prev.filter((s) => s.serviceId !== serviceId));
   };
 
-  const handleUpdateQuantity = (serviceId: number, quantity: number) => {
+  const handleUpdateServiceQuantity = (serviceId: string, quantity: number) => {
     if (quantity <= 0) {
       handleRemoveService(serviceId);
       return;
     }
-    setSelectedServices((prev) =>
-      prev.map((s) => (s.id === serviceId ? { ...s, quantity } : s))
+    setPackageServices((prev) =>
+      prev.map((s) => 
+        s.serviceId === serviceId 
+          ? { ...s, quantity, totalPrice: s.unitPrice * quantity }
+          : s
+      )
+    );
+  };
+
+  const handleUpdateServicePrice = (serviceId: string, unitPrice: number) => {
+    setPackageServices((prev) =>
+      prev.map((s) => 
+        s.serviceId === serviceId 
+          ? { ...s, unitPrice, totalPrice: s.quantity * unitPrice }
+          : s
+      )
+    );
+  };
+
+  // Product handlers
+  const handleAddProduct = (productId: string) => {
+    const product = products.find((p) => p.productId === productId);
+    if (product) {
+      const existingProduct = packageProducts.find((p) => p.productId === productId);
+      if (existingProduct) {
+        message.warning("Sản phẩm này đã được thêm vào gói!");
+        return;
+      }
+      
+      const newProduct: ServicePackageProduct = {
+        productId: product.productId,
+        productName: product.productName,
+        productCode: product.productSku,
+        quantity: 1,
+        unitPrice: product.sellingPrice || 0,
+        totalPrice: product.sellingPrice || 0,
+        notes: "",
+        isRequired: true,
+        isActive: true,
+      };
+      
+      setPackageProducts((prev) => [...prev, newProduct]);
+    }
+  };
+
+  const handleRemoveProduct = (productId: string) => {
+    setPackageProducts((prev) => prev.filter((p) => p.productId !== productId));
+  };
+
+  const handleUpdateProductQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      handleRemoveProduct(productId);
+      return;
+    }
+    setPackageProducts((prev) =>
+      prev.map((p) => 
+        p.productId === productId 
+          ? { ...p, quantity, totalPrice: p.unitPrice * quantity }
+          : p
+      )
+    );
+  };
+
+  const handleUpdateProductPrice = (productId: string, unitPrice: number) => {
+    setPackageProducts((prev) =>
+      prev.map((p) => 
+        p.productId === productId 
+          ? { ...p, unitPrice, totalPrice: p.quantity * unitPrice }
+          : p
+      )
     );
   };
 

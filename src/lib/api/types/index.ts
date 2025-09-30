@@ -29,3 +29,9 @@ export * from './category.types';
 
 // Product types
 export * from './product.types';
+
+// Service types
+export * from './service.types';
+
+// Service Package types
+export * from './service-package.types';
