@@ -148,8 +148,6 @@ export const servicePackageService = {
     data: CreateServicePackageRequest
   ): Promise<ServicePackage> => {
     try {
-      console.log("Creating service package with data:", data);
-
       const response = await apiClient.post("/service-packages/create", data);
 
       console.log("Create service package API response:", response);
@@ -207,7 +205,7 @@ export const servicePackageService = {
     try {
       console.log("Updating service package with data:", data);
 
-      const response = await apiClient.put(
+      const response = await apiClient.post(
         `/service-packages/${packageId}/update`,
         data
       );
@@ -222,35 +220,9 @@ export const servicePackageService = {
         );
       }
     } catch (error: unknown) {
-      console.log("Update service package error:", error);
+      console.error("Update service package error:", error);
 
-      // Handle specific error cases
-      if (error && typeof error === "object" && "response" in error) {
-        const errorResponse = error as {
-          response?: { status?: number; data?: { message?: string } };
-        };
-        if (errorResponse.response?.status === 400) {
-          const errorMessage =
-            errorResponse.response.data?.message ||
-            "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.";
-          throw new Error(errorMessage);
-        } else if (errorResponse.response?.status === 404) {
-          throw new Error("Không tìm thấy gói dịch vụ.");
-        } else if (errorResponse.response?.status === 409) {
-          const errorMessage =
-            errorResponse.response.data?.message ||
-            "Gói dịch vụ đã tồn tại trong hệ thống.";
-          throw new Error(errorMessage);
-        } else if (errorResponse.response?.status === 500) {
-          throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
-        } else if (errorResponse.response?.status === 401) {
-          throw new Error(
-            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
-          );
-        } else if (errorResponse.response?.status === 403) {
-          throw new Error("Bạn không có quyền thực hiện thao tác này.");
-        }
-      }
+      // Handle network errors or other issues
       const errorMessage =
         error && typeof error === "object" && "message" in error
           ? (error as { message: string }).message

@@ -15,7 +15,7 @@ export { default as ServiceTypeDetailModal } from "./ServiceModals/ServiceTypeDe
 export { default as ServiceTypeEditModal } from "./ServiceModals/ServiceTypeEditModal";
 
 // Service Package Modals
-export { default as ServicePackageModal } from "./ServicePackageModals/ServicePackageModalNew";
+export { default as ServicePackageModal } from "./ServicePackageModals/ServicePackageModalSimple";
 export { default as ServicePackageDetailModal } from "./ServicePackageModals/ServicePackageDetailModal";
 export { default as ServicePackageEditModal } from "./ServicePackageModals/ServicePackageEditModal";
 

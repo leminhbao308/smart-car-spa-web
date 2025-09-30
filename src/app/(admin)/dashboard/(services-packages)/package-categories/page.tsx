@@ -481,6 +481,8 @@ const ServicePackagesPage = () => {
 
   const handleModalOk = async (packageData: unknown) => {
     try {
+      setLoading(true);
+      
       // Type assertion for packageData
       const data = packageData as {
         packageName: string;
@@ -505,30 +507,12 @@ const ServicePackagesPage = () => {
         }[];
       };
 
+      console.log("Submitting package data:", data);
+
       if (editingPackage) {
         // Update existing service package
-        await servicePackageService.updateServicePackage(
-          editingPackage.packageId,
-          {
-            package_name: data.packageName,
-            package_url: data.packageUrl,
-            category_id: data.categoryId,
-            description: data.description,
-            package_type: data.packageType as
-              | "MAINTENANCE"
-              | "REPAIR"
-              | "INSPECTION"
-              | "CLEANING"
-              | "CUSTOM",
-            image_urls: data.imageUrls,
-            package_products: data.packageProducts || [],
-            package_services: data.packageServices || [],
-          }
-        );
-        message.success("Cập nhật gói dịch vụ thành công!");
-      } else {
-        // Add new service package
-        await servicePackageService.createServicePackage({
+        console.log("Updating service package:", editingPackage.packageId);
+        const updateData = {
           package_name: data.packageName,
           package_url: data.packageUrl,
           category_id: data.categoryId,
@@ -542,7 +526,35 @@ const ServicePackagesPage = () => {
           image_urls: data.imageUrls,
           package_products: data.packageProducts || [],
           package_services: data.packageServices || [],
-        });
+        };
+        
+        console.log("Update data:", updateData);
+        await servicePackageService.updateServicePackage(
+          editingPackage.packageId,
+          updateData
+        );
+        message.success("Cập nhật gói dịch vụ thành công!");
+      } else {
+        // Add new service package
+        console.log("Creating new service package");
+        const createData = {
+          package_name: data.packageName,
+          package_url: data.packageUrl,
+          category_id: data.categoryId,
+          description: data.description,
+          package_type: data.packageType as
+            | "MAINTENANCE"
+            | "REPAIR"
+            | "INSPECTION"
+            | "CLEANING"
+            | "CUSTOM",
+          image_urls: data.imageUrls,
+          package_products: data.packageProducts || [],
+          package_services: data.packageServices || [],
+        };
+        
+        console.log("Create data:", createData);
+        await servicePackageService.createServicePackage(createData);
         message.success("Thêm gói dịch vụ thành công!");
       }
 
@@ -561,7 +573,16 @@ const ServicePackagesPage = () => {
         errorMessage = errorObj.message;
       }
 
-      message.error(errorMessage);
+      // Show detailed error message
+      message.error({
+        content: errorMessage,
+        duration: 5,
+        style: {
+          marginTop: '20vh',
+        },
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
