@@ -224,7 +224,7 @@ export class UserService {
       }
 
       const response = await apiClient.get(
-        `/users/search?${queryParams.toString()}`
+        `/users/get-all?${queryParams.toString()}`
       );
 
       if (response.data.success && response.data.data) {

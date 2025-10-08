@@ -60,12 +60,12 @@ const PermissionPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [message]);
+  }, []);
 
   // Fetch data
   useEffect(() => {
     fetchRoles();
-  }, [fetchRoles]);
+  }, []);
 
   // Định nghĩa columns cho roles
   const roleColumns: ColumnsType<Role> = [

@@ -22,3 +22,8 @@ export * from './category.service';
 export { categoryService } from './category.service';
 export * from './service-package.service';
 export { servicePackageService } from './service-package.service';
+export { WarehouseService } from './warehouse.service';
+export { CatalogService } from './catalog.service';
+export * from './inventory.service';
+export * from './pricing.service';
+export * from './sales-order.service';

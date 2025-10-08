@@ -1,6 +1,7 @@
 /**
  * Common API types
  */
+import {UUID} from "node:crypto";
 
 // Base API Response
 export interface ApiResponse<T = unknown> {
@@ -96,3 +97,7 @@ export interface RequestConfig {
   retries?: number;
   skipAuth?: boolean;
 }
+
+export interface BranchRef { id: string; }
+export interface WarehouseRef { id: string; }
+export interface ProductRef { id: string; }
