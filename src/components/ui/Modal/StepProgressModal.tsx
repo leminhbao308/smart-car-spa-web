@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Row,
   Col,
   Button,
@@ -21,8 +19,7 @@ import {
   Checkbox,
   Progress,
   Image,
-  Video,
-} from "antd";
+  Video} from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -31,15 +28,14 @@ import {
   VideoCameraOutlined,
   FileOutlined,
   CheckCircleOutlined,
-  ExclamationCircleOutlined,
-} from "@ant-design/icons";
+  ExclamationCircleOutlined} from "@ant-design/icons";
 import { 
   StepProgress,
   VehicleInCare,
   CareStep
 } from "@/components/utils/data/care-processes.data";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
-const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -60,8 +56,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
   initialData,
   vehicle,
   step,
-  title = "Cập nhật tiến độ bước",
-}) => {
+  title = "Cập nhật tiến độ bước"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("progress");
@@ -74,8 +69,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
       form.setFieldsValue({
         ...initialData,
         rating: initialData.rating || 0,
-        notes: initialData.notes || "",
-      });
+        notes: initialData.notes || ""});
       setQualityChecklist(initialData.qualityChecklist || []);
       setMediaFiles(initialData.mediaFiles || []);
       setIssues(initialData.issues || []);
@@ -106,8 +100,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
         staffName: "Nhân viên hiện tại", // TODO: Get from context
         qualityChecklist: qualityChecklist,
         mediaFiles: mediaFiles,
-        issues: issues,
-      };
+        issues: issues};
 
       onOk(stepData);
       message.success("Cập nhật tiến độ bước thành công!");
@@ -142,8 +135,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
       type,
       url,
       description: description || "",
-      uploadedAt: new Date().toISOString(),
-    };
+      uploadedAt: new Date().toISOString()};
     setMediaFiles([...mediaFiles, newFile]);
   };
 
@@ -156,8 +148,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
       id: Date.now(),
       description: "",
       severity: "low" as const,
-      resolved: false,
-    };
+      resolved: false};
     setIssues([...issues, newIssue]);
   };
 
@@ -230,7 +221,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
               name="actualDuration"
               label="Thời gian thực tế (phút)"
             >
-              <InputNumber
+              <MemoizedInputNumber
                 min={0}
                 placeholder="Nhập thời gian thực tế"
                 style={{ width: "100%" }}
@@ -250,15 +241,14 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
               name="notes"
               label="Ghi chú"
             >
-              <TextArea
+              <MemoizedTextArea
                 rows={3}
                 placeholder="Nhập ghi chú về bước này"
               />
             </Form.Item>
           </Col>
         </Row>
-      ),
-    },
+      )},
     {
       key: "quality",
       label: "Kiểm tra chất lượng",
@@ -289,7 +279,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
                       </Text>
                     </Col>
                     <Col span={6}>
-                      <Input
+                      <MemoizedInput
                         value={item.notes}
                         onChange={(e) => updateQualityChecklist(index, "notes", e.target.value)}
                         placeholder="Ghi chú"
@@ -308,8 +298,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
             </div>
           )}
         </div>
-      ),
-    },
+      )},
     {
       key: "media",
       label: "Hình ảnh & Video",
@@ -414,8 +403,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
             </div>
           )}
         </div>
-      ),
-    },
+      )},
     {
       key: "issues",
       label: "Vấn đề & Sự cố",
@@ -442,7 +430,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
                     <Col span={24}>
                       <div style={{ marginBottom: 8 }}>
                         <Text strong>Mô tả vấn đề:</Text>
-                        <Input
+                        <MemoizedInput
                           value={issue.description}
                           onChange={(e) => updateIssue(index, "description", e.target.value)}
                           placeholder="Nhập mô tả vấn đề"
@@ -491,7 +479,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
                       <Col span={24}>
                         <div>
                           <Text strong>Giải pháp:</Text>
-                          <Input
+                          <MemoizedInput
                             value={issue.resolution}
                             onChange={(e) => updateIssue(index, "resolution", e.target.value)}
                             placeholder="Nhập giải pháp đã áp dụng"
@@ -512,8 +500,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
             </div>
           )}
         </div>
-      ),
-    },
+      )},
   ];
 
   return (
@@ -555,8 +542,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
         layout="vertical"
         initialValues={{
           status: "completed",
-          rating: 5,
-        }}
+          rating: 5}}
       >
         <div style={{ marginBottom: 16 }}>
           <Space>
@@ -582,3 +568,4 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
 };
 
 export default StepProgressModal;
+

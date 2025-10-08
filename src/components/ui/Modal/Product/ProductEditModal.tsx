@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Button,
   Space,
   Row,
@@ -13,8 +11,8 @@ import {
   Card,
   Switch,
   Typography,
-  Avatar,
-} from "antd";
+  Avatar} from "antd";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 import {
   EditOutlined,
   SaveOutlined,
@@ -23,22 +21,18 @@ import {
   InfoCircleOutlined,
   InboxOutlined,
   TagOutlined,
-  PictureOutlined,
-} from "@ant-design/icons";
+  PictureOutlined} from "@ant-design/icons";
 import {
   Product,
   CreateProductRequest,
-  UpdateProductRequest,
-} from "@/lib/api/types/product.types";
+  UpdateProductRequest} from "@/lib/api/types/product.types";
 import {
   useCreateProduct,
-  useUpdateProduct,
-} from "@/lib/api/hooks/useProducts";
+  useUpdateProduct} from "@/lib/api/hooks/useProducts";
 import { useCategories } from "@/lib/api/hooks/useCategory";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 
 const { Option } = Select;
-const { TextArea } = Input;
 const { Title, Text } = Typography;
 
 interface ProductEditModalProps {
@@ -52,8 +46,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  editData,
-}) => {
+  editData}) => {
   const [form] = Form.useForm();
   const [specifications, setSpecifications] = useState<{
     [key: string]: string;
@@ -92,8 +85,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
         supplierId: editData.supplierId,
         description: editData.description,
         unitOfMeasure: editData.unitOfMeasure,
-        is_active: editData.is_active,
-      });
+        is_active: editData.is_active});
       setSpecifications(editData.specifications || {});
       setDimensions(editData.dimensions ? Object.fromEntries(
         Object.entries(editData.dimensions).filter(([, value]) => value !== undefined)
@@ -139,13 +131,11 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
           tags: filterEmptyValues(tags),
           supplier_id: values.supplierId,
           is_featured: values.isFeatured,
-          is_active: values.is_active,
-        };
+          is_active: values.is_active};
 
         updateProductMutation.mutate({
           productId: editData.productId,
-          data: updateData,
-        });
+          data: updateData});
       } else {
         // Create new product - transform to API format
         const productData: CreateProductRequest = {
@@ -170,8 +160,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
           tags: filterEmptyValues(tags),
           supplier_id: values.supplierId,
           is_featured: values.isFeatured,
-          is_active: values.is_active,
-        };
+          is_active: values.is_active};
         createProductMutation.mutate(productData);
       }
 
@@ -252,8 +241,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
           size="large"
           style={{
             background: editData ? "#1890ff" : "#52c41a",
-            borderColor: editData ? "#1890ff" : "#52c41a",
-          }}
+            borderColor: editData ? "#1890ff" : "#52c41a"}}
         >
           {editData ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}
         </Button>,
@@ -297,7 +285,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   { max: 100, message: "Tên không được quá 100 ký tự!" },
                 ]}
               >
-                <Input placeholder="Nhập tên sản phẩm" />
+                <MemoizedInput placeholder="Nhập tên sản phẩm" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
@@ -309,7 +297,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   { max: 100, message: "URL không được quá 100 ký tự!" },
                 ]}
               >
-                <Input placeholder="Nhập URL sản phẩm" />
+                <MemoizedInput placeholder="Nhập URL sản phẩm" />
               </Form.Item>
             </Col>
           </Row>
@@ -324,7 +312,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   { max: 50, message: "SKU không được quá 50 ký tự!" },
                 ]}
               >
-                <Input placeholder="Nhập SKU" />
+                <MemoizedInput placeholder="Nhập SKU" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
@@ -336,7 +324,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   { max: 50, message: "Barcode không được quá 50 ký tự!" },
                 ]}
               >
-                <Input placeholder="Nhập barcode" />
+                <MemoizedInput placeholder="Nhập barcode" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
@@ -377,7 +365,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   { max: 50, message: "Thương hiệu không được quá 50 ký tự!" },
                 ]}
               >
-                <Input placeholder="Nhập thương hiệu" />
+                <MemoizedInput placeholder="Nhập thương hiệu" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
@@ -389,7 +377,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   { max: 50, message: "Model không được quá 50 ký tự!" },
                 ]}
               >
-                <Input placeholder="Nhập model" />
+                <MemoizedInput placeholder="Nhập model" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
@@ -398,7 +386,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="unitOfMeasure"
                 rules={[{ required: true, message: "Vui lòng nhập đơn vị!" }]}
               >
-                <Input placeholder="Nhập đơn vị (cái, lít, kg...)" />
+                <MemoizedInput placeholder="Nhập đơn vị (cái, lít, kg...)" />
               </Form.Item>
             </Col>
           </Row>
@@ -411,7 +399,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
               { max: 500, message: "Mô tả không được quá 500 ký tự!" },
             ]}
           >
-            <TextArea
+            <MemoizedTextArea
               rows={3}
               placeholder="Nhập mô tả sản phẩm"
               maxLength={500}
@@ -445,7 +433,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   { type: "number", min: 0, message: "Giá phải lớn hơn 0!" },
                 ]}
               >
-                <InputNumber
+                <MemoizedInputNumber
                   min={0}
                   style={{ width: "100%" }}
                   formatter={(value) =>
@@ -464,7 +452,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   { type: "number", min: 0, message: "Giá phải lớn hơn 0!" },
                 ]}
               >
-                <InputNumber
+                <MemoizedInputNumber
                   min={0}
                   style={{ width: "100%" }}
                   formatter={(value) =>
@@ -483,11 +471,10 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   {
                     type: "number",
                     min: 0,
-                    message: "Trọng lượng phải lớn hơn 0!",
-                  },
+                    message: "Trọng lượng phải lớn hơn 0!"},
                 ]}
               >
-                <InputNumber
+                <MemoizedInputNumber
                   min={0}
                   style={{ width: "100%" }}
                   placeholder="Nhập trọng lượng"
@@ -504,16 +491,14 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 rules={[
                   {
                     required: true,
-                    message: "Vui lòng nhập tồn kho tối thiểu!",
-                  },
+                    message: "Vui lòng nhập tồn kho tối thiểu!"},
                   {
                     type: "number",
                     min: 0,
-                    message: "Tồn kho tối thiểu phải lớn hơn hoặc bằng 0!",
-                  },
+                    message: "Tồn kho tối thiểu phải lớn hơn hoặc bằng 0!"},
                 ]}
               >
-                <InputNumber
+                <MemoizedInputNumber
                   min={0}
                   style={{ width: "100%" }}
                   placeholder="Nhập tồn kho tối thiểu"
@@ -529,11 +514,10 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                   {
                     type: "number",
                     min: 0,
-                    message: "Tồn kho tối đa phải lớn hơn hoặc bằng 0!",
-                  },
+                    message: "Tồn kho tối đa phải lớn hơn hoặc bằng 0!"},
                 ]}
               >
-                <InputNumber
+                <MemoizedInputNumber
                   min={0}
                   style={{ width: "100%" }}
                   placeholder="Nhập tồn kho tối đa"
@@ -566,16 +550,14 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 rules={[
                   {
                     required: true,
-                    message: "Vui lòng nhập thời gian bảo hành!",
-                  },
+                    message: "Vui lòng nhập thời gian bảo hành!"},
                   {
                     type: "number",
                     min: 0,
-                    message: "Thời gian bảo hành phải lớn hơn hoặc bằng 0!",
-                  },
+                    message: "Thời gian bảo hành phải lớn hơn hoặc bằng 0!"},
                 ]}
               >
-                <InputNumber
+                <MemoizedInputNumber
                   min={0}
                   style={{ width: "100%" }}
                   placeholder="Nhập thời gian bảo hành"
@@ -656,7 +638,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="specColor"
                 initialValue={specifications.color || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: xanh dương, đỏ, etc."
                   onChange={(e) => updateSpecification("color", e.target.value)}
                 />
@@ -668,7 +650,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="specSize"
                 initialValue={specifications.size || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: 1L, 30x25cm, etc."
                   onChange={(e) => updateSpecification("size", e.target.value)}
                 />
@@ -680,7 +662,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="specMaterial"
                 initialValue={specifications.material || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: Microfiber, AGM, etc."
                   onChange={(e) => updateSpecification("material", e.target.value)}
                 />
@@ -692,7 +674,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="specFeature"
                 initialValue={specifications.feature || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: chống trượt, thấm hút tốt, etc."
                   onChange={(e) => updateSpecification("feature", e.target.value)}
                 />
@@ -704,7 +686,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="specOther"
                 initialValue={specifications.other || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Thông số bổ sung khác"
                   onChange={(e) => updateSpecification("other", e.target.value)}
                 />
@@ -735,7 +717,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="dimLength"
                 initialValue={dimensions.length || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: 30cm, 10cm"
                   onChange={(e) => updateDimension("length", e.target.value)}
                 />
@@ -747,7 +729,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="dimWidth"
                 initialValue={dimensions.width || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: 25cm, 5cm"
                   onChange={(e) => updateDimension("width", e.target.value)}
                 />
@@ -759,7 +741,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="dimHeight"
                 initialValue={dimensions.height || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: 2cm, 15cm"
                   onChange={(e) => updateDimension("height", e.target.value)}
                 />
@@ -771,7 +753,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="dimDiameter"
                 initialValue={dimensions.diameter || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: 65cm, 16inch"
                   onChange={(e) => updateDimension("diameter", e.target.value)}
                 />
@@ -783,7 +765,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="dimRimSize"
                 initialValue={dimensions.rim_size || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: 16inch, 17inch"
                   onChange={(e) => updateDimension("rim_size", e.target.value)}
                 />
@@ -795,7 +777,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="dimWeight"
                 initialValue={dimensions.weight || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: 1kg, 18kg"
                   onChange={(e) => updateDimension("weight", e.target.value)}
                 />
@@ -826,7 +808,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="tag1"
                 initialValue={tags.tag1 || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: cao cấp, bền bỉ"
                   onChange={(e) => updateTag("tag1", e.target.value)}
                 />
@@ -838,7 +820,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="tag2"
                 initialValue={tags.tag2 || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: tiết kiệm, hiệu quả"
                   onChange={(e) => updateTag("tag2", e.target.value)}
                 />
@@ -850,7 +832,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="tag3"
                 initialValue={tags.tag3 || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: dễ sử dụng, an toàn"
                   onChange={(e) => updateTag("tag3", e.target.value)}
                 />
@@ -862,7 +844,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="tag4"
                 initialValue={tags.tag4 || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: chính hãng, bảo hành"
                   onChange={(e) => updateTag("tag4", e.target.value)}
                 />
@@ -874,7 +856,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="tag5"
                 initialValue={tags.tag5 || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Ví dụ: phù hợp, đa dạng"
                   onChange={(e) => updateTag("tag5", e.target.value)}
                 />
@@ -886,7 +868,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="tag6"
                 initialValue={tags.tag6 || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="Tag bổ sung khác"
                   onChange={(e) => updateTag("tag6", e.target.value)}
                 />
@@ -917,7 +899,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="imgMain"
                 initialValue={imageUrls.main || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="URL hình ảnh chính của sản phẩm"
                   onChange={(e) => updateImageUrl("main", e.target.value)}
                 />
@@ -929,7 +911,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="imgThumbnail"
                 initialValue={imageUrls.thumbnail || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="URL hình ảnh thu nhỏ"
                   onChange={(e) => updateImageUrl("thumbnail", e.target.value)}
                 />
@@ -941,7 +923,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="imgDetail"
                 initialValue={imageUrls.detail || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="URL hình ảnh chi tiết"
                   onChange={(e) => updateImageUrl("detail", e.target.value)}
                 />
@@ -953,7 +935,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="imgLabel"
                 initialValue={imageUrls.label || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="URL hình ảnh nhãn sản phẩm"
                   onChange={(e) => updateImageUrl("label", e.target.value)}
                 />
@@ -965,7 +947,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="imgPackage"
                 initialValue={imageUrls.package || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="URL hình ảnh bao bì"
                   onChange={(e) => updateImageUrl("package", e.target.value)}
                 />
@@ -977,7 +959,7 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
                 name="imgGallery"
                 initialValue={imageUrls.gallery || ""}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="URL hình ảnh gallery"
                   onChange={(e) => updateImageUrl("gallery", e.target.value)}
                 />
@@ -991,3 +973,4 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
 };
 
 export default ProductEditModal;
+

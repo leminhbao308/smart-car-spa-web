@@ -61,5 +61,12 @@ export { default as ProductCategoryDetailModal } from "./ProductCategoryDetailMo
 export { default as ProductCategoryEditModal } from "./ProductCategoryEditModal";
 export { default as ProductDetailModal } from "./Product/ProductDetailModal";
 export { default as ProductEditModal } from "./Product/ProductEditModal";
+
+// Service Bay Modals
+export { 
+  ServiceBayModal,
+  ServiceBayDetailModal
+} from "./ServiceBayModals";
+
 export type { ConfirmationModalProps } from "./ConfirmationModal";
 export type { UseConfirmationModalReturn, ShowModalConfig } from "./useConfirmationModal";

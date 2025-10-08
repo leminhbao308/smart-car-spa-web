@@ -1,18 +1,15 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
-  InputNumber,
   Row,
   Col,
   Card,
   Button,
   Alert,
   Spin,
-  Typography,
-} from "antd";
+  Typography} from "antd";
 import { 
   CarOutlined, 
   InfoCircleOutlined, 
@@ -30,8 +27,7 @@ import { VehicleTypeSelect } from "@/components/ui/VehicleTypeSelect";
 import { VehicleModelSelect } from "@/components/ui/VehicleModelSelect";
 import { CustomerSelect } from "@/components/ui/CustomerSelect";
 import { CustomerModal } from "@/components/ui/Modal";
-
-const { TextArea } = Input;
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 interface CreateVehicleProfileModalProps {
   visible: boolean;
@@ -44,8 +40,7 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  loading = false,
-}) => {
+  loading = false}) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [createCustomerModalVisible, setCreateCustomerModalVisible] = useState(false);
@@ -60,8 +55,7 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
       form.resetFields();
       // Set default values
       form.setFieldsValue({
-        distance_traveled: 0,
-      });
+        distance_traveled: 0});
     }
   }, [visible, form]);
 
@@ -77,8 +71,7 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
         vehicle_type_id: values.vehicle_type_id,
         vehicle_model_id: values.vehicle_model_id,
         owner_id: values.owner_id,
-        distance_traveled: values.distance_traveled,
-      };
+        distance_traveled: values.distance_traveled};
 
       onSuccess(createData);
     } catch (error) {
@@ -335,7 +328,7 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
                   },
                 ]}
               >
-                <Input 
+                <MemoizedInput 
                   placeholder="VD: 51A-12345" 
                   style={{ 
                     textTransform: 'uppercase',
@@ -362,7 +355,7 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
                   { type: 'number', min: 0, message: "Số km phải lớn hơn hoặc bằng 0!" },
                 ]}
               >
-                <InputNumber
+                <MemoizedInputNumber
                   placeholder="0"
                   style={{ 
                     width: '100%',
@@ -541,7 +534,7 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
                 }
                 name="description"
               >
-                <TextArea
+                <MemoizedTextArea
                   rows={4}
                   placeholder="Nhập mô tả chi tiết về xe, tình trạng, lịch sử bảo dưỡng... (tùy chọn)"
                   maxLength={500}
@@ -637,3 +630,4 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
 };
 
 export default CreateVehicleProfileModal;
+

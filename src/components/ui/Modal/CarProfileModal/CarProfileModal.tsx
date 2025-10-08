@@ -1,26 +1,22 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
   DatePicker,
-  InputNumber,
   Row,
   Col,
   Card,
   Divider,
   Space,
   Button,
-  message,
-} from "antd";
+  message} from "antd";
 import {
   CarOutlined,
   UserOutlined,
   CalendarOutlined,
-  ToolOutlined,
-} from "@ant-design/icons";
+  ToolOutlined} from "@ant-design/icons";
 import {
   vehicleTypes,
   vehicleStatuses,
@@ -28,12 +24,11 @@ import {
   vehicleColors,
   engineTypes,
   transmissions,
-  fuelTypes,
-} from "@/components/utils/data/car-profiles.data";
+  fuelTypes} from "@/components/utils/data/car-profiles.data";
 import dayjs from "dayjs";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 const { Option } = Select;
-const { TextArea } = Input;
 
 interface CarProfile {
   id?: number;
@@ -72,8 +67,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  editData,
-}) => {
+  editData}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
@@ -86,8 +80,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
           registrationDate: editData.registrationDate ? dayjs(editData.registrationDate) : null,
           insuranceExpiry: editData.insuranceExpiry ? dayjs(editData.insuranceExpiry) : null,
           lastServiceDate: editData.lastServiceDate ? dayjs(editData.lastServiceDate) : null,
-          nextServiceDate: editData.nextServiceDate ? dayjs(editData.nextServiceDate) : null,
-        });
+          nextServiceDate: editData.nextServiceDate ? dayjs(editData.nextServiceDate) : null});
       } else {
         // Add mode - reset form
         form.resetFields();
@@ -99,8 +92,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
           vehicleType: "sedan",
           engineType: "xăng",
           transmission: "tự động",
-          fuelType: "Xăng A95",
-        });
+          fuelType: "Xăng A95"});
       }
     }
   }, [visible, editData, form]);
@@ -190,7 +182,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                   { min: 3, message: "Mã xe phải có ít nhất 3 ký tự!" },
                 ]}
               >
-                <Input placeholder="VD: X001" />
+                <MemoizedInput placeholder="VD: X001" />
               </Form.Item>
             </Col>
             
@@ -203,7 +195,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                   { pattern: /^[0-9]{2}[A-Z]{1,2}-[0-9]{4,5}$/, message: "Biển số không đúng định dạng!" },
                 ]}
               >
-                <Input placeholder="VD: 51A-12345" style={{ textTransform: 'uppercase' }} />
+                <MemoizedInput placeholder="VD: 51A-12345" style={{ textTransform: 'uppercase' }} />
               </Form.Item>
             </Col>
             
@@ -234,7 +226,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                 <Select
                   placeholder="Chọn hãng xe"
                   showSearch
-                  filterOption={(input, option) =>
+                  filterOption={( option) =>
                     (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
                   }
                 >
@@ -251,7 +243,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                 name="model"
                 rules={[{ required: true, message: "Vui lòng nhập dòng xe!" }]}
               >
-                <Input placeholder="VD: Camry" />
+                <MemoizedInput placeholder="VD: Camry" />
               </Form.Item>
             </Col>
             
@@ -264,7 +256,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                   { type: 'number', min: 1990, max: new Date().getFullYear(), message: "Năm không hợp lệ!" },
                 ]}
               >
-                <InputNumber
+                <MemoizedInputNumber
                   placeholder="2024"
                   style={{ width: '100%' }}
                   min={1990}
@@ -327,7 +319,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                 name="engineCapacity"
                 rules={[{ required: true, message: "Vui lòng nhập dung tích động cơ!" }]}
               >
-                <Input placeholder="VD: 2.5L" />
+                <MemoizedInput placeholder="VD: 2.5L" />
               </Form.Item>
             </Col>
             
@@ -372,7 +364,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                   { type: 'number', min: 0, message: "Số km phải lớn hơn 0!" },
                 ]}
               >
-                <InputNumber
+                <MemoizedInputNumber
                   placeholder="0"
                   style={{ width: '100%' }}
                   min={0}
@@ -419,7 +411,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                   { min: 2, message: "Tên phải có ít nhất 2 ký tự!" },
                 ]}
               >
-                <Input placeholder="Nhập tên chủ xe" />
+                <MemoizedInput placeholder="Nhập tên chủ xe" />
               </Form.Item>
             </Col>
             
@@ -432,7 +424,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                   { pattern: /^[0-9]{10,11}$/, message: "Số điện thoại không hợp lệ!" },
                 ]}
               >
-                <Input placeholder="0123456789" />
+                <MemoizedInput placeholder="0123456789" />
               </Form.Item>
             </Col>
             
@@ -445,7 +437,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                   { type: 'email', message: "Email không hợp lệ!" },
                 ]}
               >
-                <Input placeholder="example@gmail.com" />
+                <MemoizedInput placeholder="example@gmail.com" />
               </Form.Item>
             </Col>
           </Row>
@@ -519,7 +511,7 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
             label="Ghi chú"
             name="notes"
           >
-            <TextArea
+            <MemoizedTextArea
               rows={4}
               placeholder="Nhập ghi chú về xe (tình trạng, lịch sử sửa chữa, v.v.)"
               maxLength={500}
@@ -533,3 +525,4 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
 };
 
 export default CarProfileModal;
+

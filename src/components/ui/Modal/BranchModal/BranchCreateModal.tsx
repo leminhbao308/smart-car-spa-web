@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 import React from "react";
-import { Modal, Form, Input, InputNumber, Select, Button, message, Space } from "antd";
+import { Modal, Form, Select, Button, message, Space } from "antd";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 import { CreateBranchRequest } from "@/lib/api/types/branch.types";
 import { BranchService } from "@/lib/api/services/branch.service";
 
-const { TextArea } = Input;
 
 interface BranchCreateModalProps {
   open: boolean;
@@ -17,8 +17,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
   open,
   onCancel,
   onSuccess,
-  centerId,
-}) => {
+  centerId}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
 
@@ -46,6 +45,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
         parking_spaces: values.parking_spaces,
         established_date: values.established_date,
         center_id: centerId,
+        manager_id: values.manager_id || null, // Add missing manager_id
         operating_status: values.operating_status,
         branch_type: values.branch_type,
         operating_hours: JSON.stringify({
@@ -55,13 +55,11 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
           thursday: { open: "08:00", close: "20:00" },
           friday: { open: "08:00", close: "20:00" },
           saturday: { open: "08:00", close: "18:00" },
-          sunday: { open: "09:00", close: "17:00" },
-        }),
+          sunday: { open: "09:00", close: "17:00" }}),
         contact_info: JSON.stringify({
           emergency_phone: values.emergency_phone || "",
           support_email: values.support_email || "",
-          manager_phone: values.manager_phone || "",
-        }),
+          manager_phone: values.manager_phone || ""}),
         facilities: JSON.stringify([
           "Rửa xe tự động",
           "Rửa xe thủ công",
@@ -79,8 +77,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
           "Thay dầu động cơ",
           "Kiểm tra lốp",
           "Sửa chữa cơ bản"
-        ]),
-      };
+        ])};
 
       await BranchService.createBranch(createData);
       message.success("Tạo chi nhánh thành công!");
@@ -126,7 +123,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập tên chi nhánh" }]}
             style={{ width: "70%", marginRight: 8 }}
           >
-            <Input placeholder="Nhập tên chi nhánh" />
+            <MemoizedInput placeholder="Nhập tên chi nhánh" />
           </Form.Item>
 
           <Form.Item
@@ -135,7 +132,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập mã chi nhánh" }]}
             style={{ width: "30%" }}
           >
-            <Input placeholder="Mã chi nhánh" />
+            <MemoizedInput placeholder="Mã chi nhánh" />
           </Form.Item>
         </Space.Compact>
 
@@ -144,7 +141,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
           label="Mô tả"
           rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
         >
-          <TextArea rows={3} placeholder="Nhập mô tả chi nhánh" />
+          <MemoizedTextArea rows={3} placeholder="Nhập mô tả chi nhánh" />
         </Form.Item>
 
         <Form.Item
@@ -152,7 +149,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
           label="Địa chỉ"
           rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
         >
-          <TextArea rows={2} placeholder="Nhập địa chỉ chi nhánh" />
+          <MemoizedTextArea rows={2} placeholder="Nhập địa chỉ chi nhánh" />
         </Form.Item>
 
         <Space.Compact style={{ width: "100%" }}>
@@ -162,7 +159,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập số điện thoại" }]}
             style={{ width: "50%", marginRight: 8 }}
           >
-            <Input placeholder="Nhập số điện thoại" />
+            <MemoizedInput placeholder="Nhập số điện thoại" />
           </Form.Item>
 
           <Form.Item
@@ -174,7 +171,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
             ]}
             style={{ width: "50%" }}
           >
-            <Input placeholder="Nhập email" />
+            <MemoizedInput placeholder="Nhập email" />
           </Form.Item>
         </Space.Compact>
 
@@ -185,7 +182,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập công suất" }]}
             style={{ width: "50%", marginRight: 8 }}
           >
-            <InputNumber
+            <MemoizedInputNumber
               min={1}
               placeholder="Công suất"
               style={{ width: "100%" }}
@@ -198,7 +195,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập diện tích" }]}
             style={{ width: "50%" }}
           >
-            <InputNumber
+            <MemoizedInputNumber
               min={1}
               placeholder="Diện tích"
               style={{ width: "100%" }}
@@ -213,7 +210,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập số chỗ đỗ xe" }]}
             style={{ width: "50%", marginRight: 8 }}
           >
-            <InputNumber
+            <MemoizedInputNumber
               min={0}
               placeholder="Chỗ đỗ xe"
               style={{ width: "100%" }}
@@ -226,7 +223,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
             rules={[{ required: true, message: "Vui lòng chọn ngày thành lập" }]}
             style={{ width: "50%" }}
           >
-            <Input type="date" />
+            <MemoizedInput type="date" />
           </Form.Item>
         </Space.Compact>
 
@@ -262,7 +259,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
           name="emergency_phone"
           label="Số điện thoại khẩn cấp"
         >
-          <Input placeholder="Nhập số điện thoại khẩn cấp" />
+          <MemoizedInput placeholder="Nhập số điện thoại khẩn cấp" />
         </Form.Item>
       </Form>
     </Modal>
@@ -270,3 +267,4 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
 };
 
 export default BranchCreateModal;
+

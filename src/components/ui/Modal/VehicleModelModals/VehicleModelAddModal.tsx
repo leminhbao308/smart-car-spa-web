@@ -1,20 +1,17 @@
-"use client";
+﻿"use client";
 import React, { useState } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
   Button,
   Row,
   Col,
   message,
   Typography,
-  Card,
-} from "antd";
+  Card} from "antd";
 import {
-  PlusOutlined,
-} from "@ant-design/icons";
+  PlusOutlined} from "@ant-design/icons";
 import { useVehicleBrandsDropdown, useVehicleTypesDropdown } from "@/lib/api/hooks";
 import { useVehicleModels } from "@/lib/api/hooks/useVehicleModels";
 import { CreateVehicleModelRequest } from "@/lib/api/types";
@@ -32,8 +29,7 @@ interface VehicleModelAddModalProps {
 const VehicleModelAddModal: React.FC<VehicleModelAddModalProps> = ({
   visible,
   onCancel,
-  onSuccess,
-}) => {
+  onSuccess}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   
@@ -56,8 +52,7 @@ const VehicleModelAddModal: React.FC<VehicleModelAddModalProps> = ({
         model_code: values.model_code,
         brand_id: values.brand_id,
         type_id: values.type_id,
-        description: values.description,
-      };
+        description: values.description};
 
       // Call API to create model
       await createModel(modelData);
@@ -109,7 +104,7 @@ const VehicleModelAddModal: React.FC<VehicleModelAddModalProps> = ({
                   { min: 2, message: "Tên model phải có ít nhất 2 ký tự!" },
                 ]}
               >
-                <Input placeholder="Nhập tên model" />
+                <MemoizedInput placeholder="Nhập tên model" />
               </Form.Item>
             </Col>
 
@@ -122,11 +117,10 @@ const VehicleModelAddModal: React.FC<VehicleModelAddModalProps> = ({
                   {
                     pattern: /^[A-Z0-9_]+$/,
                     message:
-                      "Mã model chỉ được chứa chữ hoa, số và dấu gạch dưới!",
-                  },
+                      "Mã model chỉ được chứa chữ hoa, số và dấu gạch dưới!"},
                 ]}
               >
-                <Input placeholder="VD: CAMRY, CRV" />
+                <MemoizedInput placeholder="VD: CAMRY, CRV" />
               </Form.Item>
             </Col>
 
@@ -175,7 +169,7 @@ const VehicleModelAddModal: React.FC<VehicleModelAddModalProps> = ({
                   { min: 10, message: "Mô tả phải có ít nhất 10 ký tự!" },
                 ]}
               >
-                <TextArea
+                <MemoizedTextArea
                   rows={4}
                   placeholder="Nhập mô tả về model xe..."
                   showCount

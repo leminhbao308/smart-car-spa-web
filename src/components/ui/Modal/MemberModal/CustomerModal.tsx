@@ -1,9 +1,8 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Modal,
   Form,
-  Input,
   Button,
   App,
   Row,
@@ -12,21 +11,18 @@ import {
   Radio,
   Select,
   Tag,
-  Spin,
-} from "antd";
+  Spin} from "antd";
 import dayjs from "dayjs";
 import {
   UserOutlined,
   PhoneOutlined,
   MailOutlined,
-  HomeOutlined,
-} from "@ant-design/icons";
+  HomeOutlined} from "@ant-design/icons";
 import {
   UserManagementInfo,
   Role,
   UpdateUserRequest,
-  CreateUserRequest,
-} from "@/lib/api/types";
+  CreateUserRequest} from "@/lib/api/types";
 import { RoleService } from "@/lib/api/services/role.service";
 import { UserService } from "@/lib/api/services/user.service";
 
@@ -43,8 +39,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
   onCancel,
   onSuccess,
   editData,
-  title = "Thêm khách hàng mới",
-}) => {
+  title = "Thêm khách hàng mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [rolesLoading, setRolesLoading] = useState(false);
@@ -91,8 +86,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
             : null,
           gender: editData.gender,
           address: editData.address,
-          role_id: editData.role?.role_id,
-        });
+          role_id: editData.role?.role_id});
       } else {
         form.resetFields();
       }
@@ -123,8 +117,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
           is_active: true,
           role_code: selectedRole?.role_code || customerRoles[0]?.role_code,
           customer_rank: "BRONZE", // Default rank for customers
-          accumulated_points: 0,
-        };
+          accumulated_points: 0};
 
         await UserService.updateUser(editData.user_id, updateData);
         message.success("Cập nhật khách hàng thành công!");
@@ -150,8 +143,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
           customer_rank: "BRONZE", // Default rank for new customers
           accumulated_points: 0,
           total_orders: 0,
-          total_spent: 0.0,
-        };
+          total_spent: 0.0};
 
         const response = await UserService.createUser(createData);
         message.success("Tạo khách hàng thành công!");
@@ -204,8 +196,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
           form={form}
           layout="vertical"
           initialValues={{
-            gender: "MALE",
-          }}
+            gender: "MALE"}}
         >
           <Row gutter={16}>
             <Col span={12}>
@@ -217,7 +208,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                   { min: 2, message: "Họ và tên phải có ít nhất 2 ký tự!" },
                 ]}
               >
-                <Input prefix={<UserOutlined />} placeholder="Nhập họ và tên" />
+                <MemoizedInput prefix={<UserOutlined />} placeholder="Nhập họ và tên" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -229,7 +220,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                   { type: "email", message: "Email không hợp lệ!" },
                 ]}
               >
-                <Input prefix={<MailOutlined />} placeholder="Nhập email" />
+                <MemoizedInput prefix={<MailOutlined />} placeholder="Nhập email" />
               </Form.Item>
             </Col>
           </Row>
@@ -245,7 +236,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                     { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
                   ]}
                 >
-                  <Input.Password placeholder="Nhập mật khẩu" />
+                  <MemoizedInput.Password placeholder="Nhập mật khẩu" />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -263,11 +254,10 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                         return Promise.reject(
                           new Error("Mật khẩu xác nhận không khớp!")
                         );
-                      },
-                    }),
+                      }}),
                   ]}
                 >
-                  <Input.Password placeholder="Xác nhận mật khẩu" />
+                  <MemoizedInput.Password placeholder="Xác nhận mật khẩu" />
                 </Form.Item>
               </Col>
             </Row>
@@ -282,7 +272,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                   { required: true, message: "Vui lòng nhập số điện thoại!" },
                 ]}
               >
-                <Input
+                <MemoizedInput
                   prefix={<PhoneOutlined />}
                   placeholder="Nhập số điện thoại"
                 />
@@ -336,8 +326,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: 8,
-                        }}
+                          gap: 8}}
                       >
                         <Tag color="green" style={{ margin: 0 }}>
                           {role.role_name}
@@ -346,8 +335,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                           ({role.role_code})
                         </span>
                       </div>
-                    ),
-                  }))}
+                    )}))}
                 />
               </Form.Item>
             </Col>
@@ -356,7 +344,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
           <Row gutter={16}>
             <Col span={24}>
               <Form.Item label="Địa chỉ" name="address">
-                <Input
+                <MemoizedInput
                   prefix={<HomeOutlined />}
                   placeholder="Nhập địa chỉ (tùy chọn)"
                 />
@@ -370,3 +358,4 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
 };
 
 export default CustomerModal;
+

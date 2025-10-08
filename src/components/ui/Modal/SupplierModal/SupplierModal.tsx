@@ -1,32 +1,28 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
   Row,
   Col,
   message,
   Card,
   DatePicker,
-  Tabs,
-} from "antd";
+  Tabs} from "antd";
 import { 
   BankOutlined,
   PhoneOutlined,
   MailOutlined,
-  GlobalOutlined,
-} from "@ant-design/icons";
+  GlobalOutlined} from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   Supplier,
   supplierStatuses,
   contractStatuses,
-  cities,
-} from "@/components/utils/data/suppliers.data";
+  cities} from "@/components/utils/data/suppliers.data";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
-const { TextArea } = Input;
 const { Option } = Select;
 
 interface SupplierModalProps {
@@ -42,8 +38,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm nhà cung cấp mới",
-}) => {
+  title = "Thêm nhà cung cấp mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
@@ -55,8 +50,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
         form.setFieldsValue({
           ...initialData,
           contractStartDate: dayjs(initialData.contractInfo.startDate),
-          contractEndDate: dayjs(initialData.contractInfo.endDate),
-        } as any);
+          contractEndDate: dayjs(initialData.contractInfo.endDate)} as any);
       } else {
         setIsViewMode(false);
         form.resetFields();
@@ -82,8 +76,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
           productCategories: [],
           serviceTypes: [],
           specialties: [],
-          certifications: [],
-        },
+          certifications: []},
         tags: [], // Bỏ tags
         performance: {
           rating: 0,
@@ -92,22 +85,18 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
           onTimeDelivery: 0,
           qualityScore: 0,
           lastOrderDate: "",
-          totalValue: 0,
-        },
+          totalValue: 0},
         documents: {
           contracts: [],
           certificates: [],
           invoices: [],
-          other: [],
-        },
+          other: []},
         contractInfo: {
           ...values.contractInfo,
           startDate: values.contractStartDate.format("YYYY-MM-DD"),
-          endDate: values.contractEndDate.format("YYYY-MM-DD"),
-        },
+          endDate: values.contractEndDate.format("YYYY-MM-DD")},
         createdAt: initialData?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+        updatedAt: new Date().toISOString()};
 
       // Remove date fields from the data
       delete (formattedData as any).contractStartDate;
@@ -133,7 +122,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             label="Tên nhà cung cấp"
             rules={[{ required: true, message: "Vui lòng nhập tên nhà cung cấp!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập tên nhà cung cấp" 
               disabled={isViewMode}
               prefix={<BankOutlined />}
@@ -146,7 +135,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             label="Mã nhà cung cấp"
             rules={[{ required: true, message: "Vui lòng nhập mã nhà cung cấp!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập mã nhà cung cấp" 
               disabled={isViewMode}
             />
@@ -159,7 +148,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
         label="Danh mục"
         rules={[{ required: true, message: "Vui lòng chọn danh mục!" }]}
       >
-        <Input 
+        <MemoizedInput 
           placeholder="Nhập danh mục sản phẩm/dịch vụ" 
           disabled={isViewMode}
         />
@@ -169,7 +158,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
         name="description"
         label="Mô tả"
       >
-        <TextArea 
+        <MemoizedTextArea 
           rows={3} 
           placeholder="Nhập mô tả về nhà cung cấp" 
           disabled={isViewMode}
@@ -197,7 +186,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             name="notes"
             label="Ghi chú"
           >
-            <TextArea 
+            <MemoizedTextArea 
               rows={2} 
               placeholder="Nhập ghi chú" 
               disabled={isViewMode}
@@ -217,7 +206,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             label="Số điện thoại"
             rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập số điện thoại" 
               disabled={isViewMode}
               prefix={<PhoneOutlined />}
@@ -233,7 +222,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
               { type: "email", message: "Email không hợp lệ!" }
             ]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập email" 
               disabled={isViewMode}
               prefix={<MailOutlined />}
@@ -248,7 +237,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             name={["contactInfo", "website"]}
             label="Website"
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập website" 
               disabled={isViewMode}
               prefix={<GlobalOutlined />}
@@ -277,7 +266,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
         label="Địa chỉ"
         rules={[{ required: true, message: "Vui lòng nhập địa chỉ!" }]}
       >
-        <TextArea 
+        <MemoizedTextArea 
           rows={2} 
           placeholder="Nhập địa chỉ chi tiết" 
           disabled={isViewMode}
@@ -295,7 +284,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             label="Mã số thuế"
             rules={[{ required: true, message: "Vui lòng nhập mã số thuế!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập mã số thuế" 
               disabled={isViewMode}
             />
@@ -307,7 +296,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             label="Giấy phép kinh doanh"
             rules={[{ required: true, message: "Vui lòng nhập giấy phép kinh doanh!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập số giấy phép" 
               disabled={isViewMode}
             />
@@ -322,7 +311,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             label="Người đại diện"
             rules={[{ required: true, message: "Vui lòng nhập tên người đại diện!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập tên người đại diện" 
               disabled={isViewMode}
             />
@@ -334,7 +323,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             label="Chức vụ"
             rules={[{ required: true, message: "Vui lòng nhập chức vụ!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập chức vụ" 
               disabled={isViewMode}
             />
@@ -349,7 +338,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             label="Số tài khoản"
             rules={[{ required: true, message: "Vui lòng nhập số tài khoản!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập số tài khoản" 
               disabled={isViewMode}
             />
@@ -361,7 +350,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             label="Tên ngân hàng"
             rules={[{ required: true, message: "Vui lòng nhập tên ngân hàng!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập tên ngân hàng" 
               disabled={isViewMode}
             />
@@ -380,7 +369,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             label="Số hợp đồng"
             rules={[{ required: true, message: "Vui lòng nhập số hợp đồng!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập số hợp đồng" 
               disabled={isViewMode}
             />
@@ -438,7 +427,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             name={["contractInfo", "paymentTerms"]}
             label="Điều khoản thanh toán"
           >
-            <Input 
+            <MemoizedInput 
               placeholder="VD: 30 ngày" 
               disabled={isViewMode}
             />
@@ -449,7 +438,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             name={["contractInfo", "deliveryTerms"]}
             label="Điều khoản giao hàng"
           >
-            <Input 
+            <MemoizedInput 
               placeholder="VD: FOB" 
               disabled={isViewMode}
             />
@@ -460,7 +449,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
             name={["contractInfo", "warrantyPeriod"]}
             label="Thời gian bảo hành"
           >
-            <Input 
+            <MemoizedInput 
               placeholder="VD: 12 tháng" 
               disabled={isViewMode}
             />
@@ -488,9 +477,7 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
         initialValues={{
           status: "active",
           contractInfo: {
-            status: "active",
-          },
-        }}
+            status: "active"}}}
       >
         <Tabs 
           defaultActiveKey="basic" 
@@ -504,18 +491,15 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
                   {renderBasicInfo()}
                   {renderContactInfo()}
                 </>
-              ),
-            },
+              )},
             {
               key: "business",
               label: "Thông tin doanh nghiệp",
-              children: renderBusinessInfo(),
-            },
+              children: renderBusinessInfo()},
             {
               key: "contract",
               label: "Hợp đồng",
-              children: renderContractInfo(),
-            },
+              children: renderContractInfo()},
           ]}
         />
       </Form>

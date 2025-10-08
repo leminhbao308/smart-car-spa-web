@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
@@ -8,18 +8,16 @@ import {
   Typography,
   Space,
   Button,
-  Input,
   Select,
   Card,
-  Badge,
-} from "antd";
+  Badge} from "antd";
 import {
   UserOutlined,
   SearchOutlined,
   TeamOutlined,
-  SafetyOutlined,
-} from "@ant-design/icons";
+  SafetyOutlined} from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -45,8 +43,7 @@ interface User {
 const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
   visible,
   onCancel,
-  roleData,
-}) => {
+  roleData}) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -63,8 +60,7 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
       department: "Kỹ thuật",
       status: "active",
       lastLogin: "2024-01-15 14:30:00",
-      createdAt: "2023-01-15 08:00:00",
-    },
+      createdAt: "2023-01-15 08:00:00"},
     {
       id: 2,
       name: "Trần Thị B",
@@ -74,8 +70,7 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
       department: "Kinh doanh",
       status: "active",
       lastLogin: "2024-01-14 16:45:00",
-      createdAt: "2023-02-20 10:30:00",
-    },
+      createdAt: "2023-02-20 10:30:00"},
     {
       id: 3,
       name: "Lê Văn C",
@@ -85,8 +80,7 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
       department: "Kỹ thuật",
       status: "inactive",
       lastLogin: "2024-01-10 09:15:00",
-      createdAt: "2023-03-10 14:20:00",
-    },
+      createdAt: "2023-03-10 14:20:00"},
   ];
 
   useEffect(() => {
@@ -106,8 +100,7 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
       dataIndex: "id",
       key: "id",
       width: 80,
-      sorter: (a, b) => a.id - b.id,
-    },
+      sorter: (a, b) => a.id - b.id},
     {
       title: "Người dùng",
       key: "user",
@@ -125,28 +118,24 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
           </div>
         </div>
       ),
-      sorter: (a, b) => a.name.localeCompare(b.name),
-    },
+      sorter: (a, b) => a.name.localeCompare(b.name)},
     {
       title: "Số điện thoại",
       dataIndex: "phone",
       key: "phone",
-      width: 130,
-    },
+      width: 130},
     {
       title: "Chức vụ",
       dataIndex: "position",
       key: "position",
       width: 120,
-      render: (position: string) => position ? <Tag color="blue">{position}</Tag> : "-",
-    },
+      render: (position: string) => position ? <Tag color="blue">{position}</Tag> : "-"},
     {
       title: "Phòng ban",
       dataIndex: "department",
       key: "department",
       width: 120,
-      render: (department: string) => department ? <Tag color="green">{department}</Tag> : "-",
-    },
+      render: (department: string) => department ? <Tag color="green">{department}</Tag> : "-"},
     {
       title: "Trạng thái",
       dataIndex: "status",
@@ -161,24 +150,21 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
         { text: "Hoạt động", value: "active" },
         { text: "Không hoạt động", value: "inactive" },
       ],
-      onFilter: (value, record) => record.status === value,
-    },
+      onFilter: (value, record) => record.status === value},
     {
       title: "Đăng nhập cuối",
       dataIndex: "lastLogin",
       key: "lastLogin",
       width: 150,
       sorter: (a, b) => new Date(a.lastLogin).getTime() - new Date(b.lastLogin).getTime(),
-      render: (date: string) => new Date(date).toLocaleString("vi-VN"),
-    },
+      render: (date: string) => new Date(date).toLocaleString("vi-VN")},
     {
       title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
       width: 120,
       sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      render: (date: string) => new Date(date).toLocaleDateString("vi-VN"),
-    },
+      render: (date: string) => new Date(date).toLocaleDateString("vi-VN")},
   ];
 
   const filteredUsers = users.filter(user => {
@@ -226,7 +212,7 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
         </Card>
 
         <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-          <Input
+          <MemoizedInput
             placeholder="Tìm kiếm theo tên hoặc email..."
             prefix={<SearchOutlined />}
             value={searchText}
@@ -258,8 +244,7 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
           showTotal: (total, range) =>
             `${range[0]}-${range[1]} của ${total} người dùng`,
           pageSizeOptions: ["10", "20", "50"],
-          defaultPageSize: 10,
-        }}
+          defaultPageSize: 10}}
         scroll={{ x: 800 }}
       />
     </Modal>
@@ -267,3 +252,4 @@ const RoleUsersModal: React.FC<RoleUsersModalProps> = ({
 };
 
 export default RoleUsersModal;
+

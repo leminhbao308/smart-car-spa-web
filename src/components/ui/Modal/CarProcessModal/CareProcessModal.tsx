@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Row,
   Col,
   Button,
@@ -17,15 +15,13 @@ import {
   List,
   Tag,
   Switch,
-  TimePicker,
-} from "antd";
+  TimePicker} from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
   EditOutlined,
   UpOutlined,
-  DownOutlined,
-} from "@ant-design/icons";
+  DownOutlined} from "@ant-design/icons";
 import { 
   CareProcess, 
   CareStep,
@@ -33,8 +29,8 @@ import {
   stepCategories,
   vehicleTypes
 } from "@/components/utils/data/care-processes.data";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
-const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -51,8 +47,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm quy trình chăm sóc mới",
-}) => {
+  title = "Thêm quy trình chăm sóc mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [steps, setSteps] = useState<CareStep[]>([]);
@@ -63,8 +58,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
     if (initialData) {
       form.setFieldsValue({
         ...initialData,
-        targetVehicleTypes: initialData.targetVehicleTypes || [],
-      });
+        targetVehicleTypes: initialData.targetVehicleTypes || []});
       setSteps(initialData.steps || []);
     } else {
       form.resetFields();
@@ -83,8 +77,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
         steps: steps,
         estimatedDuration: steps.reduce((total, step) => total + step.estimatedTime, 0),
         createdAt: initialData?.createdAt || new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0],
-      };
+        updatedAt: new Date().toISOString().split('T')[0]};
 
       onOk(formattedData);
       message.success(initialData ? "Cập nhật quy trình thành công!" : "Thêm quy trình thành công!");
@@ -213,7 +206,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
             label="Tên quy trình"
             rules={[{ required: true, message: "Vui lòng nhập tên quy trình!" }]}
           >
-            <Input placeholder="Nhập tên quy trình chăm sóc" />
+            <MemoizedInput placeholder="Nhập tên quy trình chăm sóc" />
           </Form.Item>
         </Col>
         <Col span={12}>
@@ -240,7 +233,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
             label="Mô tả"
             rules={[{ required: true, message: "Vui lòng nhập mô tả!" }]}
           >
-            <TextArea
+            <MemoizedTextArea
               rows={3}
               placeholder="Nhập mô tả quy trình chăm sóc"
             />
@@ -252,7 +245,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
             label="Giá dịch vụ (VNĐ)"
             rules={[{ required: true, message: "Vui lòng nhập giá!" }]}
           >
-            <InputNumber
+            <MemoizedInputNumber
               min={0}
               placeholder="Nhập giá dịch vụ"
               style={{ width: "100%" }}
@@ -430,8 +423,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
           form={form}
           layout="vertical"
           initialValues={{
-            isActive: true,
-          }}
+            isActive: true}}
         >
           {/* Thông tin cơ bản */}
           <BasicInfoSection />
@@ -472,8 +464,7 @@ const StepModal: React.FC<StepModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm bước mới",
-}) => {
+  title = "Thêm bước mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [requiredTools, setRequiredTools] = useState<string[]>([]);
@@ -519,8 +510,7 @@ const StepModal: React.FC<StepModalProps> = ({
         instructions: instructions,
         qualityChecklist: qualityChecklist,
         safetyNotes: safetyNotes,
-        order: initialData?.order || 1,
-      };
+        order: initialData?.order || 1};
 
       onOk(stepData);
       message.success(initialData ? "Cập nhật bước thành công!" : "Thêm bước thành công!");
@@ -578,8 +568,7 @@ const StepModal: React.FC<StepModalProps> = ({
         initialValues={{
           estimatedTime: 15,
           isRequired: true,
-          category: "inspection",
-        }}
+          category: "inspection"}}
       >
         <Row gutter={16}>
           <Col span={12}>
@@ -588,7 +577,7 @@ const StepModal: React.FC<StepModalProps> = ({
               label="Tên bước"
               rules={[{ required: true, message: "Vui lòng nhập tên bước!" }]}
             >
-              <Input placeholder="Nhập tên bước" />
+              <MemoizedInput placeholder="Nhập tên bước" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -615,7 +604,7 @@ const StepModal: React.FC<StepModalProps> = ({
               label="Mô tả"
               rules={[{ required: true, message: "Vui lòng nhập mô tả!" }]}
             >
-              <TextArea
+              <MemoizedTextArea
                 rows={2}
                 placeholder="Nhập mô tả bước"
               />
@@ -627,7 +616,7 @@ const StepModal: React.FC<StepModalProps> = ({
               label="Thời gian ước tính (phút)"
               rules={[{ required: true, message: "Vui lòng nhập thời gian!" }]}
             >
-              <InputNumber
+              <MemoizedInputNumber
                 min={1}
                 placeholder="Nhập thời gian"
                 style={{ width: "100%" }}
@@ -662,7 +651,7 @@ const StepModal: React.FC<StepModalProps> = ({
                 <Card size="small" style={{ width: "100%" }}>
                   <Row gutter={8} align="middle">
                     <Col span={22}>
-                      <Input
+                      <MemoizedInput
                         value={tool}
                         onChange={(e) => updateItem(index, e.target.value, requiredTools, setRequiredTools)}
                         placeholder="Nhập dụng cụ"
@@ -698,7 +687,7 @@ const StepModal: React.FC<StepModalProps> = ({
                 <Card size="small" style={{ width: "100%" }}>
                   <Row gutter={8} align="middle">
                     <Col span={22}>
-                      <Input
+                      <MemoizedInput
                         value={material}
                         onChange={(e) => updateItem(index, e.target.value, requiredMaterials, setRequiredMaterials)}
                         placeholder="Nhập vật liệu"
@@ -734,7 +723,7 @@ const StepModal: React.FC<StepModalProps> = ({
                 <Card size="small" style={{ width: "100%" }}>
                   <Row gutter={8} align="middle">
                     <Col span={22}>
-                      <Input
+                      <MemoizedInput
                         value={instruction}
                         onChange={(e) => updateItem(index, e.target.value, instructions, setInstructions)}
                         placeholder="Nhập hướng dẫn"
@@ -770,7 +759,7 @@ const StepModal: React.FC<StepModalProps> = ({
                 <Card size="small" style={{ width: "100%" }}>
                   <Row gutter={8} align="middle">
                     <Col span={22}>
-                      <Input
+                      <MemoizedInput
                         value={item}
                         onChange={(e) => updateItem(index, e.target.value, qualityChecklist, setQualityChecklist)}
                         placeholder="Nhập tiêu chí kiểm tra"
@@ -806,7 +795,7 @@ const StepModal: React.FC<StepModalProps> = ({
                 <Card size="small" style={{ width: "100%" }}>
                   <Row gutter={8} align="middle">
                     <Col span={22}>
-                      <Input
+                      <MemoizedInput
                         value={note}
                         onChange={(e) => updateItem(index, e.target.value, safetyNotes, setSafetyNotes)}
                         placeholder="Nhập lưu ý an toàn"
@@ -832,3 +821,4 @@ const StepModal: React.FC<StepModalProps> = ({
 };
 
 export default CareProcessModal;
+

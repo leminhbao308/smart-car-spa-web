@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 import React, { useEffect } from "react";
-import { Modal, Form, Input, InputNumber, Select, Button, message, Space } from "antd";
+import { Modal, Form, Select, Button, message, Space } from "antd";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 import { BranchDisplay, UpdateBranchRequest } from "@/lib/api/types/branch.types";
 import { BranchService } from "@/lib/api/services/branch.service";
 
-const { TextArea } = Input;
 
 interface BranchEditModalProps {
   open: boolean;
@@ -19,8 +19,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
   onCancel,
   onSuccess,
   branch,
-  centerId,
-}) => {
+  centerId}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
 
@@ -38,8 +37,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
         parking_spaces: branch.parking_spaces,
         operating_status: branch.operating_status,
         branch_type: branch.branch_type,
-        is_active: branch.is_active,
-      });
+        is_active: branch.is_active});
     }
   }, [branch, open, form]);
 
@@ -62,8 +60,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
         parking_spaces: values.parking_spaces,
         operating_status: values.operating_status,
         branch_type: values.branch_type,
-        is_active: values.is_active,
-      };
+        is_active: values.is_active};
 
       await BranchService.updateBranch(branch.branch_id, updateData);
       message.success("Cập nhật chi nhánh thành công!");
@@ -101,7 +98,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
           label="Tên chi nhánh"
           rules={[{ required: true, message: "Vui lòng nhập tên chi nhánh" }]}
         >
-          <Input placeholder="Nhập tên chi nhánh" />
+          <MemoizedInput placeholder="Nhập tên chi nhánh" />
         </Form.Item>
 
         <Form.Item
@@ -109,7 +106,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
           label="Mô tả"
           rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
         >
-          <TextArea rows={3} placeholder="Nhập mô tả chi nhánh" />
+          <MemoizedTextArea rows={3} placeholder="Nhập mô tả chi nhánh" />
         </Form.Item>
 
         <Form.Item
@@ -117,7 +114,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
           label="Địa chỉ"
           rules={[{ required: true, message: "Vui lòng nhập địa chỉ" }]}
         >
-          <TextArea rows={2} placeholder="Nhập địa chỉ chi nhánh" />
+          <MemoizedTextArea rows={2} placeholder="Nhập địa chỉ chi nhánh" />
         </Form.Item>
 
         <Space.Compact style={{ width: "100%" }}>
@@ -127,7 +124,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập số điện thoại" }]}
             style={{ width: "50%", marginRight: 8 }}
           >
-            <Input placeholder="Nhập số điện thoại" />
+            <MemoizedInput placeholder="Nhập số điện thoại" />
           </Form.Item>
 
           <Form.Item
@@ -139,7 +136,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
             ]}
             style={{ width: "50%" }}
           >
-            <Input placeholder="Nhập email" />
+            <MemoizedInput placeholder="Nhập email" />
           </Form.Item>
         </Space.Compact>
 
@@ -150,7 +147,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập công suất" }]}
             style={{ width: "50%", marginRight: 8 }}
           >
-            <InputNumber
+            <MemoizedInputNumber
               min={1}
               placeholder="Công suất"
               style={{ width: "100%" }}
@@ -163,7 +160,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập khối lượng" }]}
             style={{ width: "50%" }}
           >
-            <InputNumber
+            <MemoizedInputNumber
               min={0}
               placeholder="Khối lượng"
               style={{ width: "100%" }}
@@ -178,7 +175,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập diện tích" }]}
             style={{ width: "50%", marginRight: 8 }}
           >
-            <InputNumber
+            <MemoizedInputNumber
               min={1}
               placeholder="Diện tích"
               style={{ width: "100%" }}
@@ -191,7 +188,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
             rules={[{ required: true, message: "Vui lòng nhập số chỗ đỗ xe" }]}
             style={{ width: "50%" }}
           >
-            <InputNumber
+            <MemoizedInputNumber
               min={0}
               placeholder="Chỗ đỗ xe"
               style={{ width: "100%" }}
@@ -243,3 +240,4 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
 };
 
 export default BranchEditModal;
+

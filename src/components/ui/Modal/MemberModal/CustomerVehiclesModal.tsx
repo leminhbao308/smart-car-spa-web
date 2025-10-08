@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
@@ -7,13 +7,12 @@ import {
   Avatar,
   Typography,
   Button,
-  Input,
   Select,
   Card,
-  Badge,
-} from "antd";
+  Badge} from "antd";
 import { CarOutlined, SearchOutlined } from "@ant-design/icons";
 import { ColumnsType } from "antd/es/table";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 import { UserManagementInfo } from "@/lib/api/types";
 
 const { Text } = Typography;
@@ -43,8 +42,7 @@ interface Vehicle {
 const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
   visible,
   onCancel,
-  customerData,
-}) => {
+  customerData}) => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -64,8 +62,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
       mileage: 45000,
       lastService: "2024-01-10",
       nextService: "2024-04-10",
-      status: "active",
-    },
+      status: "active"},
     {
       id: 2,
       brand: "Honda",
@@ -78,8 +75,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
       mileage: 32000,
       lastService: "2024-01-15",
       nextService: "2024-04-15",
-      status: "active",
-    },
+      status: "active"},
   ];
 
   useEffect(() => {
@@ -99,8 +95,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
       dataIndex: "id",
       key: "id",
       width: 80,
-      sorter: (a, b) => a.id - b.id,
-    },
+      sorter: (a, b) => a.id - b.id},
     {
       title: "Thông tin xe",
       key: "vehicle",
@@ -122,8 +117,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
           </div>
         </div>
       ),
-      sorter: (a, b) => a.brand.localeCompare(b.brand),
-    },
+      sorter: (a, b) => a.brand.localeCompare(b.brand)},
     {
       title: "Biển số",
       dataIndex: "licensePlate",
@@ -133,30 +127,26 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
         <Tag color="blue" style={{ fontFamily: "monospace" }}>
           {plate}
         </Tag>
-      ),
-    },
+      )},
     {
       title: "Màu sắc",
       dataIndex: "color",
       key: "color",
       width: 100,
       render: (color: string) =>
-        color ? <Tag color="default">{color}</Tag> : "-",
-    },
+        color ? <Tag color="default">{color}</Tag> : "-"},
     {
       title: "Động cơ",
       dataIndex: "engineType",
       key: "engineType",
       width: 120,
-      render: (engine: string) => engine || "-",
-    },
+      render: (engine: string) => engine || "-"},
     {
       title: "Nhiên liệu",
       dataIndex: "fuelType",
       key: "fuelType",
       width: 100,
-      render: (fuel: string) => (fuel ? <Tag color="green">{fuel}</Tag> : "-"),
-    },
+      render: (fuel: string) => (fuel ? <Tag color="green">{fuel}</Tag> : "-")},
     {
       title: "Số km",
       dataIndex: "mileage",
@@ -164,8 +154,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
       width: 100,
       sorter: (a, b) => (a.mileage || 0) - (b.mileage || 0),
       render: (mileage: number) =>
-        mileage ? `${mileage.toLocaleString()} km` : "-",
-    },
+        mileage ? `${mileage.toLocaleString()} km` : "-"},
     {
       title: "Bảo dưỡng cuối",
       dataIndex: "lastService",
@@ -175,8 +164,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
         new Date(a.lastService || "").getTime() -
         new Date(b.lastService || "").getTime(),
       render: (date: string) =>
-        date ? new Date(date).toLocaleDateString("vi-VN") : "-",
-    },
+        date ? new Date(date).toLocaleDateString("vi-VN") : "-"},
     {
       title: "Bảo dưỡng tiếp",
       dataIndex: "nextService",
@@ -211,8 +199,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
             </Tag>
           </div>
         );
-      },
-    },
+      }},
     {
       title: "Trạng thái",
       dataIndex: "status",
@@ -227,8 +214,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
         { text: "Hoạt động", value: "active" },
         { text: "Không hoạt động", value: "inactive" },
       ],
-      onFilter: (value, record) => record.status === value,
-    },
+      onFilter: (value, record) => record.status === value},
   ];
 
   const filteredVehicles = vehicles.filter((vehicle) => {
@@ -274,15 +260,14 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
               <Badge
                 count={vehicles.length}
                 style={{
-                  backgroundColor: vehicles.length > 0 ? "#52c41a" : "#d9d9d9",
-                }}
+                  backgroundColor: vehicles.length > 0 ? "#52c41a" : "#d9d9d9"}}
               />
             </div>
           </div>
         </Card>
 
         <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-          <Input
+          <MemoizedInput
             placeholder="Tìm kiếm theo hãng, model hoặc biển số..."
             prefix={<SearchOutlined />}
             value={searchText}
@@ -317,8 +302,7 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
           showTotal: (total, range) =>
             `${range[0]}-${range[1]} của ${total} xe`,
           pageSizeOptions: ["10", "20", "50"],
-          defaultPageSize: 10,
-        }}
+          defaultPageSize: 10}}
         scroll={{ x: 1000 }}
       />
     </Modal>
@@ -326,3 +310,4 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
 };
 
 export default CustomerVehiclesModal;
+

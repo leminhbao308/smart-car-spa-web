@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
-import { Modal, Form, Input, Button, message, Select } from "antd";
+import { Modal, Form, Button, message, Select } from "antd";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 import { Permission } from "@/lib/api/types";
 
-const { TextArea } = Input;
 
 interface PermissionModalProps {
   visible: boolean;
@@ -18,8 +18,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
   onCancel,
   onSuccess,
   editData,
-  title = "Thêm quyền hạn mới",
-}) => {
+  title = "Thêm quyền hạn mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
@@ -61,8 +60,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
         permission_name: values.permission_name,
         permission_code: values.permission_code,
         module: values.module,
-        description: values.description,
-      };
+        description: values.description};
 
       message.success(
         editData
@@ -112,7 +110,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
             { max: 100, message: "Tên quyền hạn không được quá 100 ký tự!" },
           ]}
         >
-          <Input placeholder="Nhập tên quyền hạn" />
+          <MemoizedInput placeholder="Nhập tên quyền hạn" />
         </Form.Item>
 
         <Form.Item
@@ -122,12 +120,11 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
             { required: true, message: "Vui lòng nhập mã quyền hạn!" },
             {
               pattern: /^[A-Z_]+$/,
-              message: "Mã quyền hạn chỉ được chứa chữ hoa và dấu gạch dưới!",
-            },
+              message: "Mã quyền hạn chỉ được chứa chữ hoa và dấu gạch dưới!"},
             { max: 50, message: "Mã quyền hạn không được quá 50 ký tự!" },
           ]}
         >
-          <Input
+          <MemoizedInput
             placeholder="VD: USER_MANAGE, DASHBOARD_VIEW"
             style={{ fontFamily: "monospace" }}
           />
@@ -141,13 +138,12 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
           <Select
             placeholder="Chọn module"
             showSearch
-            filterOption={(input, option) =>
+            filterOption={( option) =>
               (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }
             options={modules.map((module) => ({
               value: module,
-              label: module,
-            }))}
+              label: module}))}
           />
         </Form.Item>
 
@@ -159,7 +155,7 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
             { max: 500, message: "Mô tả không được quá 500 ký tự!" },
           ]}
         >
-          <TextArea
+          <MemoizedTextArea
             rows={3}
             placeholder="Nhập mô tả chi tiết về quyền hạn này"
             showCount
@@ -172,3 +168,4 @@ const PermissionModal: React.FC<PermissionModalProps> = ({
 };
 
 export default PermissionModal;
+

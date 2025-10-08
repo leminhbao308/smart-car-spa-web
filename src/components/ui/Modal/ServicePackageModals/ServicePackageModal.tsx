@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Button,
   Space,
   Card,
@@ -18,8 +16,7 @@ import {
   Badge,
   Empty,
   List,
-  Popconfirm,
-} from "antd";
+  Popconfirm} from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -31,8 +28,7 @@ import {
   ClockCircleOutlined,
   InfoCircleOutlined,
   ToolOutlined,
-  PackageOutlined,
-} from "@ant-design/icons";
+  PackageOutlined} from "@ant-design/icons";
 import { servicePackageService } from "@/lib/api/services/service-package.service";
 import { categoryService } from "@/lib/api/services/category.service";
 import { serviceService } from "@/lib/api/services/service.service";
@@ -47,9 +43,9 @@ import { Category } from "@/lib/api/types/category.types";
 import { Service } from "@/lib/api/types/service.types";
 import { Product } from "@/lib/api/types/product.types";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 const { Option } = Select;
-const { TextArea } = Input;
 const { Text } = Typography;
 
 interface ServicePackageModalProps {
@@ -65,8 +61,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm gói dịch vụ mới",
-}) => {
+  title = "Thêm gói dịch vụ mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [packageProducts, setPackageProducts] = useState<ServicePackageProduct[]>([]);
@@ -123,8 +118,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
         page: 1,
         size: 1000,
         sort: "productName",
-        direction: "ASC",
-      });
+        direction: "ASC"});
       if (response.success && response.data) {
         setProducts(response.data.content || []);
       }
@@ -163,8 +157,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
           categoryId: initialData.categoryId,
           description: initialData.description,
           packageType: initialData.packageType,
-          imageUrls: initialData.imageUrls,
-        });
+          imageUrls: initialData.imageUrls});
         setPackageServices(initialData.packageServices || []);
         setPackageProducts(initialData.packageProducts || []);
       } else {
@@ -198,8 +191,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
         totalPrice: service.basePrice,
         notes: "",
         isRequired: true,
-        isActive: true,
-      };
+        isActive: true};
       
       setPackageServices((prev) => [...prev, newService]);
     }
@@ -252,8 +244,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
         totalPrice: product.sellingPrice || 0,
         notes: "",
         isRequired: true,
-        isActive: true,
-      };
+        isActive: true};
       
       setPackageProducts((prev) => [...prev, newProduct]);
     }
@@ -311,8 +302,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
         features: values.features || [],
         createdAt:
           initialData?.createdAt || new Date().toISOString().split("T")[0],
-        updatedAt: new Date().toISOString().split("T")[0],
-      };
+        updatedAt: new Date().toISOString().split("T")[0]};
 
       onOk(packageData);
       message.success(
@@ -379,9 +369,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
           maxHeight: "85vh",
           overflowY: "auto",
           overflowX: "hidden",
-          padding: "16px 24px",
-        },
-      }}
+          padding: "16px 24px"}}}
     >
       <div>
         <Form
@@ -393,8 +381,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
             validityPeriod: 30,
             maxUsage: 1,
             features: [],
-            targetCustomers: [],
-          }}
+            targetCustomers: []}}
         >
           <Row gutter={[16, 16]}>
             {/* Thông tin cơ bản */}
@@ -406,11 +393,10 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                   rules={[
                     {
                       required: true,
-                      message: "Vui lòng nhập mã gói dịch vụ!",
-                    },
+                      message: "Vui lòng nhập mã gói dịch vụ!"},
                   ]}
                 >
-                  <Input placeholder="Nhập mã gói dịch vụ" />
+                  <MemoizedInput placeholder="Nhập mã gói dịch vụ" />
                 </Form.Item>
 
                 <Form.Item
@@ -419,15 +405,14 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                   rules={[
                     {
                       required: true,
-                      message: "Vui lòng nhập tên gói dịch vụ!",
-                    },
+                      message: "Vui lòng nhập tên gói dịch vụ!"},
                   ]}
                 >
-                  <Input placeholder="Nhập tên gói dịch vụ" />
+                  <MemoizedInput placeholder="Nhập tên gói dịch vụ" />
                 </Form.Item>
 
                 <Form.Item name="description" label="Mô tả">
-                  <TextArea rows={3} placeholder="Nhập mô tả gói dịch vụ" />
+                  <MemoizedTextArea rows={3} placeholder="Nhập mô tả gói dịch vụ" />
                 </Form.Item>
 
                 <Form.Item
@@ -467,8 +452,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                     borderRadius: 12,
                     marginBottom: 16,
                     border: "2px solid #b7eb8f",
-                    textAlign: "center",
-                  }}
+                    textAlign: "center"}}
                 >
                   <div style={{ marginBottom: 12 }}>
                     <Text strong style={{ fontSize: 16, color: "#52c41a" }}>
@@ -480,8 +464,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                       fontSize: 28,
                       color: "#52c41a",
                       fontWeight: "bold",
-                      marginBottom: 8,
-                    }}
+                      marginBottom: 8}}
                   >
                     {formatCurrency(packageTotalPrice)}
                   </div>
@@ -535,7 +518,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                 {/* Bộ lọc và tìm kiếm */}
                 <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
                   <Col span={8}>
-                    <Input
+                    <MemoizedInput
                       placeholder="Tìm kiếm dịch vụ..."
                       prefix={<SearchOutlined />}
                       value={searchText}
@@ -604,8 +587,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                           overflowX: "hidden",
                           border: "1px solid #f0f0f0",
                           borderRadius: 8,
-                          padding: 8,
-                        }}
+                          padding: 8}}
                       >
                         {filteredServices.length > 0 ? (
                           <Row gutter={[8, 8]}>
@@ -617,8 +599,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                                   style={{
                                     border: "1px solid #e8e8e8",
                                     borderRadius: 6,
-                                    marginBottom: 8,
-                                  }}
+                                    marginBottom: 8}}
                                   bodyStyle={{ padding: 12 }}
                                 >
                                   <Row gutter={8} align="middle">
@@ -722,8 +703,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                           overflowX: "hidden",
                           border: "1px solid #f0f0f0",
                           borderRadius: 8,
-                          padding: 8,
-                        }}
+                          padding: 8}}
                       >
                         {selectedServices.length > 0 ? (
                           <div>
@@ -735,8 +715,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                                   border: "1px solid #52c41a",
                                   borderRadius: 6,
                                   marginBottom: 8,
-                                  backgroundColor: "#f6ffed",
-                                }}
+                                  backgroundColor: "#f6ffed"}}
                                 bodyStyle={{ padding: 12 }}
                               >
                                 <Row gutter={8} align="middle">
@@ -764,8 +743,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                                           strong
                                           style={{
                                             fontSize: 12,
-                                            color: "#52c41a",
-                                          }}
+                                            color: "#52c41a"}}
                                         >
                                           ={" "}
                                           {formatCurrency(
@@ -791,7 +769,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                                           }
                                           disabled={service.quantity <= 1}
                                         />
-                                        <InputNumber
+                                        <MemoizedInputNumber
                                           min={1}
                                           max={10}
                                           value={service.quantity}
@@ -856,8 +834,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                       rules={[
                         {
                           required: true,
-                          message: "Vui lòng chọn thời gian hiệu lực!",
-                        },
+                          message: "Vui lòng chọn thời gian hiệu lực!"},
                       ]}
                     >
                       <Select placeholder="Chọn thời gian hiệu lực">
@@ -877,8 +854,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                       rules={[
                         {
                           required: true,
-                          message: "Vui lòng chọn số lần sử dụng!",
-                        },
+                          message: "Vui lòng chọn số lần sử dụng!"},
                       ]}
                     >
                       <Select placeholder="Chọn số lần sử dụng">
@@ -927,3 +903,4 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
 };
 
 export default ServicePackageModal;
+

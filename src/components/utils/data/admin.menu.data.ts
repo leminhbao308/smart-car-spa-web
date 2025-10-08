@@ -214,6 +214,11 @@ export const adminMenuItems: MenuItem[] = [
                 label: "Các chi nhánh",
                 icon: React.createElement(BranchesOutlined),
             },
+            {
+                key: "service-bays",
+                label: "Bệ dịch vụ",
+                icon: React.createElement(ToolOutlined),
+            },
         ],
     },
 ];
@@ -250,4 +255,5 @@ export const menuKeyToPath: Record<string, string> = {
     returns: "/dashboard/sales-management/returns",
     "general-info": "/dashboard/general-information",
     branches: "/dashboard/branches",
+    "service-bays": "/dashboard/bay",
 };
