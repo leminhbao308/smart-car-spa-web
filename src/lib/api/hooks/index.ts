@@ -4,9 +4,9 @@
 
 export * from './useAuth';
 export * from './useUserManagement';
-export * from './useVehicleBrands';
-export * from './useVehicleTypes';
-export * from './useVehicleModels';
+export { useVehicleBrands, useVehicleBrandsDropdown } from './useVehicleBrands';
+export { useVehicleTypes, useVehicleTypesDropdown } from './useVehicleTypes';
+export { useVehicleModels, useVehicleModelsDropdown } from './useVehicleModels';
 export * from './useVehicleProfiles';
 export * from './useProducts';
 export * from './useSuppliers';
@@ -19,8 +19,5 @@ export * from './usePOSCart';
 export * from './usePricing';
 export * from './useSalesOrder';
 export * from './useWarehouseByBranch';
-<<<<<<< HEAD
 export * from './useServiceBays';
-=======
 export * from './usePurchaseOrder';
->>>>>>> remotes/origin/dev/leminhbao

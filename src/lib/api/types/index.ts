@@ -51,10 +51,7 @@ export * from './sale-order.types';
 // Warehouse types
 export * from './warehouse.types';
 
-<<<<<<< HEAD
 // Service Bay types
 export * from './service-bay.types';
-=======
 // Purchase Order types
 export * from './purchase-order.types';
->>>>>>> remotes/origin/dev/leminhbao
