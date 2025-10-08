@@ -27,3 +27,4 @@ export { CatalogService } from './catalog.service';
 export * from './inventory.service';
 export * from './pricing.service';
 export * from './sales-order.service';
+export * from './purchase-order.service';

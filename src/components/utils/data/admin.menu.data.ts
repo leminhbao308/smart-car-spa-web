@@ -197,6 +197,11 @@ export const adminMenuItems: MenuItem[] = [
                 label: "Xuất kho",
                 icon: React.createElement(ExportOutlined),
             },
+            {
+                key: "stock-inventory",
+                label: "Tồn kho",
+                icon: React.createElement(InboxOutlined),
+            },
         ],
     },
     {
@@ -236,6 +241,7 @@ export const menuKeyToPath: Record<string, string> = {
     products: "/dashboard/products",
     "import-inventory": "/dashboard/inventory/import",
     "export-inventory": "/dashboard/inventory/export",
+    "stock-inventory": "/dashboard/inventory/stock",
     services: "/dashboard/service-categories/services",
     "service-packages": "/dashboard/package-categories",
     promotions: "/dashboard/promotions",

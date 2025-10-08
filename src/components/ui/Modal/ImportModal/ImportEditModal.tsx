@@ -1,99 +1,152 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect} from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
   DatePicker,
   Button,
   Table,
   InputNumber,
-  Space,
   message,
   Divider,
+  Spin,
 } from "antd";
-import { ColumnsType } from "antd/es/table";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import {ColumnsType} from "antd/es/table";
+import {PlusOutlined, DeleteOutlined} from "@ant-design/icons";
 import dayjs from "dayjs";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
+import {
+  PurchaseOrder,
+  CreatePORequest,
+  CreatePOLineRequest,
+  BranchService,
+  ProductService,
+  SupplierService,
+  BranchDisplay,
+  Product,
+  Supplier,
+} from "@/lib/api";
+import {useWarehouseByBranch} from "@/lib/api/hooks/useWarehouseByBranch";
 
-const { Option } = Select;
-const { TextArea } = Input;
+const {Option} = Select;
 
-interface ImportItem {
-  id?: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-}
-
-interface ImportRecord {
-  id: number;
-  importCode: string;
-  supplierName: string;
-  totalAmount: number;
-  totalItems: number;
-  status: string;
-  importDate: string;
-  receivedBy: string;
-  notes: string;
-  items: ImportItem[];
+interface ImportLineItem extends CreatePOLineRequest {
+  id: string;
 }
 
 interface ImportEditModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (data: any) => void;
-  record: ImportRecord | null;
+  onSave: (data: CreatePORequest) => void;
+  record: PurchaseOrder | null;
   loading?: boolean;
 }
 
 const ImportEditModal: React.FC<ImportEditModalProps> = ({
-  visible,
-  onClose,
-  onSave,
-  record,
-  loading = false,
-}) => {
+                                                           visible,
+                                                           onClose,
+                                                           onSave,
+                                                           record,
+                                                           loading = false,
+                                                         }) => {
   const [form] = Form.useForm();
-  const [items, setItems] = useState<ImportItem[]>([]);
+  const [items, setItems] = useState<ImportLineItem[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
+
+  // Data states
+  const [branches, setBranches] = useState<BranchDisplay[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
+
+  // Selected branch for warehouse lookup
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const {warehouse, loading: warehouseLoading} = useWarehouseByBranch(selectedBranchId);
+
+  // Load initial data
+  useEffect(() => {
+    if (visible) {
+      loadInitialData();
+    }
+  }, [visible]);
+
+  const loadInitialData = async () => {
+    setLoadingData(true);
+    try {
+      const [branchesRes, productsRes, suppliersRes] = await Promise.all([
+        BranchService.getAllBranches(),
+        ProductService.getAllProducts(),
+        SupplierService.getAllSuppliers(),
+      ]);
+
+      setBranches(branchesRes.branches);
+      setProducts(productsRes.data.content);
+      setSuppliers(suppliersRes.suppliers);
+    } catch (error: any) {
+      message.error("Không thể tải dữ liệu: " + (error?.message || ""));
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   useEffect(() => {
     if (record && visible) {
+      // Edit mode - populate from existing record
       form.setFieldsValue({
-        importCode: record.importCode,
-        supplierName: record.supplierName,
-        importDate: dayjs(record.importDate),
-        receivedBy: record.receivedBy,
-        notes: record.notes,
+        branch_id: record.branch?.branch_id,
+        expected_at: record.expected_at ? dayjs(record.expected_at) : null,
       });
+      setSelectedBranchId(record.branch?.branch_id || null);
+
       setItems(
-        record.items.map((item, index) => ({ ...item, id: `item-${index}` }))
+        record.lines?.map((line, index) => ({
+          id: `item-${index}`,
+          product_id: line.product?.productId || "",
+          supplier_id: line.supplier?.supplier_id || "",
+          qty_ordered: line.qty_ordered,
+          unit_cost: line.unit_cost,
+          lot_code: line.lot_code || undefined,
+          expiry_date: line.expiry_date || undefined,
+        })) || []
       );
-      setTotalAmount(record.totalAmount);
     } else if (visible) {
+      // Create mode - reset form
       form.resetFields();
       setItems([]);
       setTotalAmount(0);
+      setSelectedBranchId(null);
     }
   }, [record, visible, form]);
 
-  // Tính tổng tiền khi items thay đổi
+  // Calculate total amount when items change
   useEffect(() => {
-    const total = items.reduce((sum, item) => sum + item.total, 0);
+    const total = items.reduce(
+      (sum, item) => sum + item.qty * item.unit_cost,
+      0
+    );
     setTotalAmount(total);
   }, [items]);
 
+  // Update warehouse_id when warehouse is loaded
+  useEffect(() => {
+    if (warehouse) {
+      form.setFieldValue("warehouse_id", warehouse.id);
+    }
+  }, [warehouse, form]);
+
+  const handleBranchChange = (branchId: string) => {
+    setSelectedBranchId(branchId);
+    form.setFieldValue("warehouse_id", undefined);
+  };
+
   const handleAddItem = () => {
-    const newItem: ImportItem = {
+    const newItem: ImportLineItem = {
       id: `item-${Date.now()}`,
-      productName: "",
-      quantity: 1,
-      unitPrice: 0,
-      total: 0,
+      product_id: "",
+      supplier_id: "",
+      qty: 1,
+      unit_cost: 0,
     };
     setItems([...items, newItem]);
   };
@@ -104,17 +157,13 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
 
   const handleItemChange = (
     id: string,
-    field: keyof ImportItem,
+    field: keyof ImportLineItem,
     value: any
   ) => {
     setItems(
       items.map((item) => {
         if (item.id === id) {
-          const updatedItem = { ...item, [field]: value };
-          if (field === "quantity" || field === "unitPrice") {
-            updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
-          }
-          return updatedItem;
+          return {...item, [field]: value};
         }
         return item;
       })
@@ -125,13 +174,22 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
     try {
       const values = await form.validateFields();
 
+      if (!warehouse) {
+        message.error("Vui lòng đợi kho được tải");
+        return;
+      }
+
       if (items.length === 0) {
         message.error("Vui lòng thêm ít nhất một sản phẩm");
         return;
       }
 
       const hasEmptyItems = items.some(
-        (item) => !item.productName || item.quantity <= 0 || item.unitPrice <= 0
+        (item) =>
+          !item.product_id ||
+          !item.supplier_id ||
+          item.qty <= 0 ||
+          item.unit_cost <= 0
       );
 
       if (hasEmptyItems) {
@@ -139,12 +197,15 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
         return;
       }
 
-      const data = {
-        ...values,
-        importDate: values.importDate.format("YYYY-MM-DD"),
-        items: items.map(({ id, ...item }) => item),
-        totalAmount,
-        totalItems: items.length,
+      const data: CreatePORequest = {
+        branch_id: values.branch_id,
+        warehouse_id: warehouse.id,
+        expected_at: values.expected_at.toDate(),
+        lines: items.map(({id, ...item}) => ({
+          ...item,
+          lot_code: item.lot_code || undefined,
+          expiry_date: item.expiry_date || undefined,
+        })),
       };
 
       onSave(data);
@@ -154,76 +215,117 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
   };
 
   // Columns cho bảng sản phẩm
-  const itemColumns: ColumnsType<ImportItem> = [
+  const itemColumns: ColumnsType<ImportLineItem> = [
     {
-      title: "Tên sản phẩm",
-      dataIndex: "productName",
-      key: "productName",
+      title: "Sản phẩm",
+      dataIndex: "product_id",
+      key: "product_id",
+      width: 200,
       render: (value, record) => (
-        <Input
-          value={value}
-          onChange={(e) =>
-            handleItemChange(record.id!, "productName", e.target.value)
+        <Select
+          value={value || undefined}
+          onChange={(val) => handleItemChange(record.id, "product_id", val)}
+          placeholder="Chọn sản phẩm"
+          style={{width: "100%"}}
+          showSearch
+          filterOption={(input, option) =>
+            (option?.children as string)
+              .toLowerCase()
+              .indexOf(input.toLowerCase()) >= 0
           }
-          placeholder="Nhập tên sản phẩm"
-        />
+        >
+          {products.map((product) => (
+            <Option key={product.productId} value={product.productId}>
+              {product.productName}
+            </Option>
+          ))}
+        </Select>
+      ),
+    },
+    {
+      title: "Nhà cung cấp",
+      dataIndex: "supplier_id",
+      key: "supplier_id",
+      width: 180,
+      render: (value, record) => (
+        <Select
+          value={value || undefined}
+          onChange={(val) => handleItemChange(record.id, "supplier_id", val)}
+          placeholder="Chọn NCC"
+          style={{width: "100%"}}
+          showSearch
+          filterOption={(input, option) =>
+            (option?.children as string)
+              .toLowerCase()
+              .indexOf(input.toLowerCase()) >= 0
+          }
+        >
+          {suppliers.map((supplier) => (
+            <Option key={supplier.supplier_id} value={supplier.supplier_id}>
+              {supplier.supplier_name}
+            </Option>
+          ))}
+        </Select>
       ),
     },
     {
       title: "Số lượng",
-      dataIndex: "quantity",
-      key: "quantity",
-      width: 120,
+      dataIndex: "qty_ordered",
+      key: "qty_ordered",
+      width: 100,
       render: (value, record) => (
         <InputNumber
           value={value}
-          onChange={(val) => handleItemChange(record.id!, "quantity", val || 0)}
+          onChange={(val) =>
+            handleItemChange(record.id, "qty", val || 0)
+          }
           min={1}
-          style={{ width: "100%" }}
+          style={{width: "100%"}}
         />
       ),
     },
     {
       title: "Đơn giá",
-      dataIndex: "unitPrice",
-      key: "unitPrice",
-      width: 150,
+      dataIndex: "unit_cost",
+      key: "unit_cost",
+      width: 140,
       render: (value, record) => (
         <InputNumber
           value={value}
-          onChange={(val) =>
-            handleItemChange(record.id!, "unitPrice", val || 0)
-          }
+          onChange={(val) => handleItemChange(record.id, "unit_cost", val || 0)}
           min={0}
           formatter={(value) =>
             `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
           }
           parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
-          style={{ width: "100%" }}
+          style={{width: "100%"}}
         />
       ),
     },
     {
       title: "Thành tiền",
-      dataIndex: "total",
       key: "total",
-      width: 150,
-      render: (total) => (
-        <span style={{ fontWeight: 500, color: "#52c41a" }}>
-          {formatCurrency(total)}
-        </span>
-      ),
+      width: 140,
+      render: (_, record) => {
+        const total = record.qty * record.unit_cost;
+        return (
+          <span style={{fontWeight: 500, color: "#52c41a"}}>
+            {formatCurrency(total)}
+          </span>
+        );
+      },
     },
     {
       title: "Thao tác",
       key: "action",
       width: 80,
+      fixed: "right",
       render: (_, record) => (
         <Button
           type="text"
           danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleRemoveItem(record.id!)}
+          icon={<DeleteOutlined/>}
+          onClick={() => handleRemoveItem(record.id)}
         />
       ),
     },
@@ -231,14 +333,10 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
 
   return (
     <Modal
-      title={
-        record
-          ? `Chỉnh sửa phiếu nhập - ${record.importCode}`
-          : "Tạo phiếu nhập mới"
-      }
+      title={record ? `Chỉnh sửa phiếu nhập` : "Tạo phiếu nhập mới"}
       open={visible}
       onCancel={onClose}
-      width={1000}
+      width={1200}
       footer={[
         <Button key="cancel" onClick={onClose}>
           Hủy
@@ -248,110 +346,129 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
           type="primary"
           loading={loading}
           onClick={handleSave}
+          disabled={loadingData || warehouseLoading}
         >
           Lưu
         </Button>,
       ]}
     >
-      <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
-        <Form form={form} layout="vertical">
-          <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}
-          >
-            <Form.Item
-              name="importCode"
-              label="Mã phiếu nhập"
-              rules={[
-                { required: true, message: "Vui lòng nhập mã phiếu nhập" },
-              ]}
+      <Spin spinning={loadingData}>
+        <div style={{maxHeight: "70vh", overflowY: "auto"}}>
+          <Form form={form} layout="vertical">
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 16,
+              }}
             >
-              <Input placeholder="Nhập mã phiếu nhập" />
-            </Form.Item>
+              <Form.Item
+                name="branch_id"
+                label="Chi nhánh"
+                rules={[
+                  {required: true, message: "Vui lòng chọn chi nhánh"},
+                ]}
+              >
+                <Select
+                  placeholder="Chọn chi nhánh"
+                  onChange={handleBranchChange}
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.children as string)
+                      .toLowerCase()
+                      .indexOf(input.toLowerCase()) >= 0
+                  }
+                >
+                  {branches.map((branch) => (
+                    <Option key={branch.branch_id} value={branch.branch_id}>
+                      {branch.branch_name}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
 
-            <Form.Item
-              name="supplierName"
-              label="Nhà cung cấp"
-              rules={[
-                { required: true, message: "Vui lòng nhập tên nhà cung cấp" },
-              ]}
-            >
-              <Input placeholder="Nhập tên nhà cung cấp" />
-            </Form.Item>
+              <Form.Item label="Kho">
+                <Spin spinning={warehouseLoading}>
+                  {warehouse ? (
+                    <div
+                      style={{
+                        padding: "8px 12px",
+                        background: "#f0f0f0",
+                        borderRadius: 4,
+                      }}
+                    >
+                      {warehouse.id.substring(0, 20)}...
+                    </div>
+                  ) : (
+                    <div style={{color: "#999"}}>Chọn chi nhánh trước</div>
+                  )}
+                </Spin>
+              </Form.Item>
 
-            <Form.Item
-              name="importDate"
-              label="Ngày nhập"
-              rules={[{ required: true, message: "Vui lòng chọn ngày nhập" }]}
-            >
-              <DatePicker style={{ width: "100%" }} />
-            </Form.Item>
+              <Form.Item
+                name="expected_at"
+                label="Ngày dự kiến nhận hàng"
+                rules={[
+                  {required: true, message: "Vui lòng chọn ngày dự kiến"},
+                ]}
+              >
+                <DatePicker style={{width: "100%"}} format="DD/MM/YYYY"/>
+              </Form.Item>
+            </div>
+          </Form>
 
-            <Form.Item
-              name="receivedBy"
-              label="Người nhận"
-              rules={[
-                { required: true, message: "Vui lòng nhập tên người nhận" },
-              ]}
+          <Divider/>
+
+          {/* Bảng sản phẩm */}
+          <div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
             >
-              <Input placeholder="Nhập tên người nhận" />
-            </Form.Item>
+              <h4>Chi tiết sản phẩm</h4>
+              <Button
+                type="dashed"
+                icon={<PlusOutlined/>}
+                onClick={handleAddItem}
+              >
+                Thêm sản phẩm
+              </Button>
+            </div>
+
+            <Table
+              dataSource={items}
+              columns={itemColumns}
+              pagination={false}
+              size="small"
+              rowKey="id"
+              scroll={{x: 1000}}
+              summary={() => (
+                <Table.Summary.Row>
+                  <Table.Summary.Cell index={0} colSpan={2}>
+                    <strong>Tổng cộng</strong>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={2}>
+                    <strong>
+                      {items.reduce((sum, item) => sum + item.qty, 0)}
+                    </strong>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={3}></Table.Summary.Cell>
+                  <Table.Summary.Cell index={4}>
+                    <strong style={{color: "#52c41a", fontSize: 16}}>
+                      {formatCurrency(totalAmount)}
+                    </strong>
+                  </Table.Summary.Cell>
+                  <Table.Summary.Cell index={5}></Table.Summary.Cell>
+                </Table.Summary.Row>
+              )}
+            />
           </div>
-
-          <Form.Item name="notes" label="Ghi chú">
-            <TextArea rows={3} placeholder="Nhập ghi chú (tùy chọn)" />
-          </Form.Item>
-        </Form>
-
-        <Divider />
-
-        {/* Bảng sản phẩm */}
-        <div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 16,
-            }}
-          >
-            <h4>Chi tiết sản phẩm</h4>
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={handleAddItem}
-            >
-              Thêm sản phẩm
-            </Button>
-          </div>
-
-          <Table
-            dataSource={items}
-            columns={itemColumns}
-            pagination={false}
-            size="small"
-            rowKey="id"
-            summary={() => (
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0}>
-                  <strong>Tổng cộng</strong>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={1}>
-                  <strong>
-                    {items.reduce((sum, item) => sum + item.quantity, 0)}
-                  </strong>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={2}></Table.Summary.Cell>
-                <Table.Summary.Cell index={3}>
-                  <strong style={{ color: "#52c41a", fontSize: 16 }}>
-                    {formatCurrency(totalAmount)}
-                  </strong>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={4}></Table.Summary.Cell>
-              </Table.Summary.Row>
-            )}
-          />
         </div>
-      </div>
+      </Spin>
     </Modal>
   );
 };

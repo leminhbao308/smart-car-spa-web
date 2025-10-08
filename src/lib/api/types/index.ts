@@ -50,3 +50,6 @@ export * from './sale-order.types';
 
 // Warehouse types
 export * from './warehouse.types';
+
+// Purchase Order types
+export * from './purchase-order.types';

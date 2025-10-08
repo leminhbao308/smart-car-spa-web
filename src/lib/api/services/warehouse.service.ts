@@ -14,7 +14,7 @@ export const WarehouseService = {
   },
 
   getAllWarehouses: async (): Promise<Warehouse[]> => {
-    const response = await api.get(`/warehouses`);
+    const response = await api.get(`/warehouses/get-all`);
     return response.data.data;
   }
 };
