@@ -15,7 +15,7 @@ export const PricingService = {
   },
 
   getPreviewPriceBatch: async (data: PricingPreviewBatchRequest): Promise<PricingPreviewBatchResponse> => {
-    const response = await api.post(`/pricing/preview/batch`, data);
+    const response = await api.post(`/pricing/preview-batch`, data);
     return response.data.data;
   },
 

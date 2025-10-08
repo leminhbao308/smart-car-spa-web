@@ -27,4 +27,8 @@ export { CatalogService } from './catalog.service';
 export * from './inventory.service';
 export * from './pricing.service';
 export * from './sales-order.service';
+<<<<<<< HEAD
 export * from './service-bay.service';
+=======
+export * from './purchase-order.service';
+>>>>>>> remotes/origin/dev/leminhbao
