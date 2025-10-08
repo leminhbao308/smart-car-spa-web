@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Row,
   Col,
   Button,
@@ -17,22 +15,19 @@ import {
   DatePicker,
   Switch,
   Tabs,
-  Tag,
-} from "antd";
+  Tag} from "antd";
 import { 
   GiftOutlined,
   PercentageOutlined,
   DollarOutlined,
   CalendarOutlined,
   UserOutlined,
-  ShoppingCartOutlined,
-} from "@ant-design/icons";
+  ShoppingCartOutlined} from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   PromotionType,
   discountTypes,
-  promotionTypeStatuses,
-} from "@/components/utils/data/promotion-types.data";
+  promotionTypeStatuses} from "@/components/utils/data/promotion-types.data";
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -51,8 +46,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm loại khuyến mãi mới",
-}) => {
+  title = "Thêm loại khuyến mãi mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
@@ -65,8 +59,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
           ...initialData,
           validityStartDate: dayjs(initialData.validityPeriod.startDate),
           validityEndDate: dayjs(initialData.validityPeriod.endDate),
-          validityIsActive: initialData.validityPeriod.isActive,
-        });
+          validityIsActive: initialData.validityPeriod.isActive});
       } else {
         setIsViewMode(false);
         form.resetFields();
@@ -90,11 +83,9 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
         validityPeriod: {
           startDate: values.validityStartDate.format("YYYY-MM-DD"),
           endDate: values.validityEndDate.format("YYYY-MM-DD"),
-          isActive: values.validityIsActive,
-        },
+          isActive: values.validityIsActive},
         createdAt: initialData?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+        updatedAt: new Date().toISOString()};
 
       // Remove date fields from the data
       delete formattedData.validityStartDate;
@@ -126,7 +117,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             label="Tên loại khuyến mãi"
             rules={[{ required: true, message: "Vui lòng nhập tên loại khuyến mãi!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập tên loại khuyến mãi" 
               disabled={isViewMode}
               prefix={<GiftOutlined />}
@@ -139,7 +130,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             label="Mã loại khuyến mãi"
             rules={[{ required: true, message: "Vui lòng nhập mã loại khuyến mãi!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập mã loại khuyến mãi" 
               disabled={isViewMode}
             />
@@ -152,7 +143,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
         label="Mô tả"
         rules={[{ required: true, message: "Vui lòng nhập mô tả!" }]}
       >
-        <TextArea 
+        <MemoizedTextArea 
           rows={3} 
           placeholder="Nhập mô tả về loại khuyến mãi" 
           disabled={isViewMode}
@@ -180,7 +171,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             name="notes"
             label="Ghi chú"
           >
-            <TextArea 
+            <MemoizedTextArea 
               rows={2} 
               placeholder="Nhập ghi chú" 
               disabled={isViewMode}
@@ -223,7 +214,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             label="Giá trị giảm"
             rules={[{ required: true, message: "Vui lòng nhập giá trị giảm!" }]}
           >
-            <InputNumber 
+            <MemoizedInputNumber 
               min={0}
               placeholder="Nhập giá trị giảm" 
               disabled={isViewMode}
@@ -256,7 +247,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             name={["conditions", "minAmount"]}
             label="Số tiền tối thiểu"
           >
-            <InputNumber 
+            <MemoizedInputNumber 
               min={0}
               placeholder="Nhập số tiền tối thiểu" 
               disabled={isViewMode}
@@ -272,7 +263,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             name={["conditions", "maxAmount"]}
             label="Số tiền tối đa được giảm"
           >
-            <InputNumber 
+            <MemoizedInputNumber 
               min={0}
               placeholder="Nhập số tiền tối đa" 
               disabled={isViewMode}
@@ -291,7 +282,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             name={["conditions", "minQuantity"]}
             label="Số lượng tối thiểu"
           >
-            <InputNumber 
+            <MemoizedInputNumber 
               min={1}
               placeholder="Nhập số lượng tối thiểu" 
               disabled={isViewMode}
@@ -304,7 +295,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             name={["conditions", "maxQuantity"]}
             label="Số lượng tối đa"
           >
-            <InputNumber 
+            <MemoizedInputNumber 
               min={1}
               placeholder="Nhập số lượng tối đa" 
               disabled={isViewMode}
@@ -385,7 +376,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             name={["usageLimit", "perCustomer"]}
             label="Số lần/Khách hàng"
           >
-            <InputNumber 
+            <MemoizedInputNumber 
               min={1}
               placeholder="Nhập số lần" 
               disabled={isViewMode}
@@ -398,7 +389,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             name={["usageLimit", "totalUsage"]}
             label="Tổng số lần sử dụng"
           >
-            <InputNumber 
+            <MemoizedInputNumber 
               min={1}
               placeholder="Nhập tổng số lần" 
               disabled={isViewMode}
@@ -411,7 +402,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
             name={["usageLimit", "dailyLimit"]}
             label="Giới hạn/ngày"
           >
-            <InputNumber 
+            <MemoizedInputNumber 
               min={1}
               placeholder="Nhập giới hạn ngày" 
               disabled={isViewMode}
@@ -493,8 +484,7 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
           status: "active",
           discountType: "percentage",
           discountValue: 0,
-          validityIsActive: true,
-        }}
+          validityIsActive: true}}
       >
         <Tabs 
           defaultActiveKey="basic" 
@@ -508,23 +498,19 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
                   {renderBasicInfo()}
                   {renderDiscountInfo()}
                 </>
-              ),
-            },
+              )},
             {
               key: "conditions",
               label: "Điều kiện áp dụng",
-              children: renderConditions(),
-            },
+              children: renderConditions()},
             {
               key: "usage",
               label: "Giới hạn sử dụng",
-              children: renderUsageLimit(),
-            },
+              children: renderUsageLimit()},
             {
               key: "validity",
               label: "Thời gian hiệu lực",
-              children: renderValidityPeriod(),
-            },
+              children: renderValidityPeriod()},
           ]}
         />
       </Form>
@@ -533,3 +519,4 @@ const PromotionTypeModal: React.FC<PromotionTypeModalProps> = ({
 };
 
 export default PromotionTypeModal;
+

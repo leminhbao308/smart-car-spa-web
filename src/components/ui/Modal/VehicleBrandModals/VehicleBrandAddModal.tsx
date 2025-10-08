@@ -1,20 +1,17 @@
-"use client";
+﻿"use client";
 import React, { useState } from "react";
 import {
   Modal,
   Form,
-  Input,
   Button,
   Row,
   Col,
   Upload,
   message,
   Space,
-  Typography,
-} from "antd";
+  Typography} from "antd";
 import {
-  PlusOutlined,
-} from "@ant-design/icons";
+  PlusOutlined} from "@ant-design/icons";
 import Image from "next/image";
 import { CreateVehicleBrandRequest } from "@/lib/api/types";
 import { VehicleService } from "@/lib/api/services/vehicle.service";
@@ -31,8 +28,7 @@ interface VehicleBrandAddModalProps {
 const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
   visible,
   onClose,
-  onSuccess,
-}) => {
+  onSuccess}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>("");
@@ -44,8 +40,7 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
         brand_name: values.brandName,
         brand_code: values.brandCode,
         description: values.description,
-        ...(logoUrl && { brand_logo_url: logoUrl }),
-      };
+        ...(logoUrl && { brand_logo_url: logoUrl })};
 
       console.log("Submitting brand data:", brandData);
       const createdBrand = await VehicleService.createVehicleBrand(brandData);
@@ -100,8 +95,7 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
       footer={null}
       width={700}
       styles={{
-        body: { maxHeight: "70vh", overflowY: "auto" },
-      }}
+        body: { maxHeight: "70vh", overflowY: "auto" }}}
     >
       <Form
         form={form}
@@ -179,11 +173,10 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
                 { max: 100, message: "Tên hãng xe không được quá 100 ký tự!" },
                 {
                   pattern: /^[a-zA-Z0-9\s\-&.,()]+$/,
-                  message: "Tên hãng xe chỉ được chứa chữ cái, số, khoảng trắng và ký tự đặc biệt: -&.,()",
-                },
+                  message: "Tên hãng xe chỉ được chứa chữ cái, số, khoảng trắng và ký tự đặc biệt: -&.,()"},
               ]}
             >
-              <Input 
+              <MemoizedInput 
                 placeholder="Nhập tên hãng xe" 
                 showCount
                 maxLength={100}
@@ -200,13 +193,12 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
                 {
                   pattern: /^[A-Z0-9_]+$/,
                   message:
-                    "Mã hãng xe chỉ được chứa chữ hoa, số và dấu gạch dưới!",
-                },
+                    "Mã hãng xe chỉ được chứa chữ hoa, số và dấu gạch dưới!"},
                 { min: 2, message: "Mã hãng xe phải có ít nhất 2 ký tự!" },
                 { max: 20, message: "Mã hãng xe không được quá 20 ký tự!" },
               ]}
             >
-              <Input 
+              <MemoizedInput 
                 placeholder="VD: TOYOTA, HONDA, BMW" 
                 style={{ textTransform: 'uppercase' }}
                 onChange={(e) => {
@@ -227,7 +219,7 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
                 { max: 500, message: "Mô tả không được quá 500 ký tự!" },
               ]}
             >
-              <TextArea
+              <MemoizedTextArea
                 rows={4}
                 placeholder="Nhập mô tả về hãng xe, lịch sử, đặc điểm nổi bật..."
                 showCount
@@ -265,3 +257,4 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
 };
 
 export default VehicleBrandAddModal;
+

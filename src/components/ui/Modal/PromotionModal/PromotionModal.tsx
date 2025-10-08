@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Row,
   Col,
   Button,
@@ -18,8 +16,7 @@ import {
   Switch,
   Tabs,
   Tag,
-  TimePicker,
-} from "antd";
+  TimePicker} from "antd";
 import { 
   GiftOutlined,
   PercentageOutlined,
@@ -29,18 +26,16 @@ import {
   ShoppingCartOutlined,
   StarOutlined,
   PlusOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+  DeleteOutlined} from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   Promotion,
   promotionTypes,
   promotionStatuses,
   customerTypes,
-  conditionTypes,
-} from "@/components/utils/data/promotions.data";
+  conditionTypes} from "@/components/utils/data/promotions.data";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
-const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -57,8 +52,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm chương trình khuyến mãi mới",
-}) => {
+  title = "Thêm chương trình khuyến mãi mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
@@ -70,8 +64,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
       form.setFieldsValue({
         ...initialData,
           startDate: dayjs(initialData.startDate),
-          endDate: dayjs(initialData.endDate),
-        });
+          endDate: dayjs(initialData.endDate)});
     } else {
         setIsViewMode(false);
       form.resetFields();
@@ -97,8 +90,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
         usedCount: initialData?.usedCount || 0,
         customerUsedCount: initialData?.customerUsedCount || 0,
         createdAt: initialData?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+        updatedAt: new Date().toISOString()};
 
       // Remove date fields from the data
       delete formattedData.startDate;
@@ -129,7 +121,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
               label="Tên chương trình"
             rules={[{ required: true, message: "Vui lòng nhập tên chương trình!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập tên chương trình khuyến mãi" 
               disabled={isViewMode}
               prefix={<GiftOutlined />}
@@ -142,7 +134,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
             label="Mã chương trình"
             rules={[{ required: true, message: "Vui lòng nhập mã chương trình!" }]}
           >
-            <Input 
+            <MemoizedInput 
               placeholder="Nhập mã chương trình" 
               disabled={isViewMode}
             />
@@ -155,7 +147,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
               label="Mô tả"
               rules={[{ required: true, message: "Vui lòng nhập mô tả!" }]}
             >
-              <TextArea
+              <MemoizedTextArea
                 rows={3}
           placeholder="Nhập mô tả về chương trình khuyến mãi" 
           disabled={isViewMode}
@@ -187,7 +179,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
               label="Giá trị khuyến mãi"
             rules={[{ required: true, message: "Vui lòng nhập giá trị khuyến mãi!" }]}
             >
-              <InputNumber
+              <MemoizedInputNumber
                 min={0}
                 placeholder="Nhập giá trị"
               disabled={isViewMode}
@@ -272,7 +264,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
               label="Độ ưu tiên"
               rules={[{ required: true, message: "Vui lòng nhập độ ưu tiên!" }]}
             >
-              <InputNumber
+              <MemoizedInputNumber
                 min={1}
                 max={10}
                 placeholder="1-10"
@@ -287,7 +279,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
         name="notes"
         label="Ghi chú"
       >
-        <TextArea 
+        <MemoizedTextArea 
           rows={2} 
           placeholder="Nhập ghi chú" 
           disabled={isViewMode}
@@ -309,7 +301,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
             name="usageLimit"
             label="Giới hạn sử dụng tổng"
           >
-            <InputNumber 
+            <MemoizedInputNumber 
               min={1}
               placeholder="Nhập giới hạn tổng" 
               disabled={isViewMode}
@@ -322,7 +314,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
             name="customerLimit"
             label="Giới hạn khách hàng"
           >
-            <InputNumber 
+            <MemoizedInputNumber 
               min={1}
               placeholder="Nhập giới hạn khách hàng" 
               disabled={isViewMode}
@@ -491,9 +483,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
             customerTypes: ["all"],
             branches: ["all"],
             services: ["all"],
-            products: ["all"],
-          },
-        }}
+            products: ["all"]}}}
       >
         <Tabs 
           defaultActiveKey="basic" 
@@ -507,18 +497,15 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
                   {renderBasicInfo()}
                   {renderUsageLimit()}
                 </>
-              ),
-            },
+              )},
             {
               key: "audience",
               label: "Đối tượng áp dụng",
-              children: renderTargetAudience(),
-            },
+              children: renderTargetAudience()},
             {
               key: "benefits",
               label: "Lợi ích & Điều khoản",
-              children: renderBenefitsAndTerms(),
-            },
+              children: renderBenefitsAndTerms()},
           ]}
         />
       </Form>

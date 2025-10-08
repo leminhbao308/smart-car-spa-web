@@ -20,3 +20,4 @@ export * from './usePricing';
 export * from './useSalesOrder';
 export * from './useWarehouseByBranch';
 export * from './usePurchaseOrder';
+export * from './useServiceBays';

@@ -1,0 +1,393 @@
+"use client";
+
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Card,
+  Row,
+  Col,
+  Typography,
+  Button,
+  Space,
+  Select,
+  Input,
+  Tag,
+  Statistic,
+  message,
+  Tabs,
+  Divider,
+  Tooltip,
+} from "antd";
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  FilterOutlined,
+  SearchOutlined,
+  ToolOutlined,
+  CarOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
+import {
+  ServiceBay,
+  ServiceBayFilterParam,
+  BayType,
+  BayStatus,
+  BAY_TYPE_OPTIONS,
+  BAY_STATUS_OPTIONS,
+} from "@/lib/api/types/service-bay.types";
+import { useServiceBays, useServiceBayManagement } from "@/lib/api/hooks/useServiceBays";
+import { useBranches } from "@/lib/api/hooks/useBranches";
+import {
+  ServiceBayModal,
+  ServiceBayDetailModal,
+} from "@/components/ui/Modal/ServiceBayModals";
+import {
+  ServiceBayGrid,
+  ServiceBayStatusModal,
+} from "@/components/ui/ServiceBayManagement";
+import { useConfirmationModalContext } from "@/components/ui/Modal";
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+const { Search } = Input;
+
+const ServiceBayManagementPage = () => {
+  // State management
+  const [selectedBranch, setSelectedBranch] = useState<string>("");
+  const [selectedBayType, setSelectedBayType] = useState<BayType | undefined>(undefined);
+  const [selectedStatus, setSelectedStatus] = useState<BayStatus | undefined>(undefined);
+  const [searchText, setSearchText] = useState("");
+  
+  // Modal states
+  const [modalVisible, setModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [selectedBay, setSelectedBay] = useState<ServiceBay | null>(null);
+  const [editData, setEditData] = useState<ServiceBay | null>(null);
+
+  // Hooks
+  const { branches } = useBranches({});
+  const { showModal } = useConfirmationModalContext();
+  const { deleteServiceBay } = useServiceBayManagement();
+
+  // Filter params
+  const filterParams: ServiceBayFilterParam = useMemo(() => ({
+    page: 0,
+    size: 50,
+    branch_id: selectedBranch || undefined,
+    bay_type: selectedBayType,
+    status: selectedStatus,
+    search: searchText || undefined,
+  }), [selectedBranch, selectedBayType, selectedStatus, searchText]);
+
+  const { bays, loading, error, refreshBays } = useServiceBays(filterParams);
+
+  // Statistics
+  const statistics = useMemo(() => {
+    const total = bays.length;
+    const active = bays.filter(bay => bay.status === BayStatus.ACTIVE).length;
+    const maintenance = bays.filter(bay => bay.status === BayStatus.MAINTENANCE).length;
+    const closed = bays.filter(bay => bay.status === BayStatus.CLOSED).length;
+    const available = bays.filter(bay => bay.is_available).length;
+    const totalBookings = bays.reduce((sum, bay) => sum + bay.total_bookings, 0);
+    const activeBookings = bays.reduce((sum, bay) => sum + bay.active_bookings, 0);
+
+    return {
+      total,
+      active,
+      maintenance,
+      closed,
+      available,
+      totalBookings,
+      activeBookings,
+    };
+  }, [bays]);
+
+  // Handlers
+  const handleAdd = () => {
+    setEditData(null);
+    setModalVisible(true);
+  };
+
+  const handleEdit = (bay: ServiceBay) => {
+    setEditData(bay);
+    setModalVisible(true);
+  };
+
+  const handleView = (bay: ServiceBay) => {
+    setSelectedBay(bay);
+    setDetailModalVisible(true);
+  };
+
+  const handleStatusChange = (bay: ServiceBay, currentStatus: BayStatus) => {
+    setSelectedBay(bay);
+    setStatusModalVisible(true);
+  };
+
+  const handleDelete = (bay: ServiceBay) => {
+    showModal({
+      title: "Xác nhận xóa bệ dịch vụ",
+      content: `Bạn có chắc chắn muốn xóa bệ dịch vụ "${bay.bay_name}"?`,
+      onOk: async () => {
+        try {
+          await deleteServiceBay(bay.bay_id);
+          message.success("Xóa bệ dịch vụ thành công!");
+          refreshBays();
+        } catch (error: any) {
+          message.error(error.message || "Có lỗi xảy ra khi xóa bệ dịch vụ");
+        }
+      },
+    });
+  };
+
+  const handleModalSuccess = (bay: ServiceBay) => {
+    setModalVisible(false);
+    setEditData(null);
+    refreshBays();
+  };
+
+  const handleStatusModalSuccess = (bay: ServiceBay) => {
+    setStatusModalVisible(false);
+    setSelectedBay(null);
+    refreshBays();
+  };
+
+  const handleRefresh = () => {
+    refreshBays();
+    message.success("Đã làm mới dữ liệu");
+  };
+
+  const handleFilterReset = () => {
+    setSelectedBranch("");
+    setSelectedBayType(undefined);
+    setSelectedStatus(undefined);
+    setSearchText("");
+  };
+
+  // Filter options
+  const branchOptions = branches.map(branch => ({
+    label: `${branch.branch_name} (${branch.branch_code})`,
+    value: branch.branch_id,
+  }));
+
+  const bayTypeOptions = BAY_TYPE_OPTIONS.map(option => ({
+    label: `${option.icon} ${option.label}`,
+    value: option.value,
+  }));
+
+  const statusOptions = BAY_STATUS_OPTIONS.map(option => ({
+    label: option.label,
+    value: option.value,
+  }));
+
+  return (
+    <div style={{ padding: "24px" }}>
+      {/* Header */}
+      <div style={{ marginBottom: "24px" }}>
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Title level={2} style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+              <ToolOutlined style={{ color: "#1890ff" }} />
+              Quản lý bệ dịch vụ
+            </Title>
+            <Text type="secondary">
+              Quản lý các bệ dịch vụ tại chi nhánh
+            </Text>
+          </Col>
+          <Col>
+            <Space>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleRefresh}
+                loading={loading}
+              >
+                Làm mới
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAdd}
+              >
+                Thêm bệ dịch vụ
+              </Button>
+            </Space>
+          </Col>
+        </Row>
+      </div>
+
+      {/* Statistics */}
+      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Tổng số bệ"
+              value={statistics.total}
+              prefix={<ToolOutlined />}
+              valueStyle={{ color: "#1890ff" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Đang hoạt động"
+              value={statistics.active}
+              prefix={<CheckCircleOutlined />}
+              valueStyle={{ color: "#52c41a" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Có sẵn"
+              value={statistics.available}
+              prefix={<CarOutlined />}
+              valueStyle={{ color: "#13c2c2" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Đang bảo trì"
+              value={statistics.maintenance}
+              prefix={<ExclamationCircleOutlined />}
+              valueStyle={{ color: "#faad14" }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Filters */}
+      <Card style={{ marginBottom: "24px" }}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} sm={12} lg={6}>
+            <Select
+              placeholder="Chọn chi nhánh"
+              value={selectedBranch || undefined}
+              onChange={setSelectedBranch}
+              style={{ width: "100%" }}
+              allowClear
+            >
+              {branchOptions.map(option => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Select
+              placeholder="Chọn loại bệ"
+              value={selectedBayType}
+              onChange={setSelectedBayType}
+              style={{ width: "100%" }}
+              allowClear
+            >
+              {bayTypeOptions.map(option => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Select
+              placeholder="Chọn trạng thái"
+              value={selectedStatus}
+              onChange={setSelectedStatus}
+              style={{ width: "100%" }}
+              allowClear
+            >
+              {statusOptions.map(option => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Space.Compact style={{ width: "100%" }}>
+              <Search
+                placeholder="Tìm kiếm bệ dịch vụ..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                onSearch={setSearchText}
+                enterButton={<SearchOutlined />}
+              />
+            </Space.Compact>
+          </Col>
+        </Row>
+        
+        <Divider style={{ margin: "16px 0" }} />
+        
+        <Row justify="space-between" align="middle">
+          <Col>
+            <Space>
+              <Text type="secondary">
+                Hiển thị {bays.length} bệ dịch vụ
+              </Text>
+              {(selectedBranch || selectedBayType || selectedStatus || searchText) && (
+                <Button
+                  size="small"
+                  onClick={handleFilterReset}
+                  icon={<FilterOutlined />}
+                >
+                  Xóa bộ lọc
+                </Button>
+              )}
+            </Space>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* Content */}
+      <Card>
+        <ServiceBayGrid
+          bays={bays}
+          loading={loading}
+          onEdit={handleEdit}
+          onView={handleView}
+          onStatusChange={handleStatusChange}
+          emptyMessage="Không có bệ dịch vụ nào phù hợp với bộ lọc"
+        />
+      </Card>
+
+      {/* Modals */}
+      <ServiceBayModal
+        visible={modalVisible}
+        onCancel={() => {
+          setModalVisible(false);
+          setEditData(null);
+        }}
+        onSuccess={handleModalSuccess}
+        editData={editData}
+        branchId={selectedBranch || undefined}
+      />
+
+      <ServiceBayDetailModal
+        visible={detailModalVisible}
+        onCancel={() => {
+          setDetailModalVisible(false);
+          setSelectedBay(null);
+        }}
+        data={selectedBay}
+      />
+
+      <ServiceBayStatusModal
+        visible={statusModalVisible}
+        onCancel={() => {
+          setStatusModalVisible(false);
+          setSelectedBay(null);
+        }}
+        onSuccess={handleStatusModalSuccess}
+        bay={selectedBay}
+      />
+    </div>
+  );
+};
+
+export default ServiceBayManagementPage;

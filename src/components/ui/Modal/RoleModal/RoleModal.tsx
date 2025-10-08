@@ -1,9 +1,8 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Button,
   Divider,
   message,
@@ -11,8 +10,7 @@ import {
   Col,
   Space,
   Tag,
-  Typography,
-} from "antd";
+  Typography} from "antd";
 import { 
   UserOutlined, 
   SafetyOutlined,
@@ -22,8 +20,8 @@ import {
 } from "@ant-design/icons";
 import { Role, CreateRoleRequest, UpdateRoleRequest } from "@/lib/api/types";
 import { RoleService } from "@/lib/api/services";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
-const { TextArea } = Input;
 const { Text, Title } = Typography;
 
 interface RoleModalProps {
@@ -41,8 +39,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
   onSuccess,
   editData,
   viewMode = false,
-  title,
-}) => {
+  title}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
@@ -60,8 +57,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
         form.setFieldsValue({
           role_name: editData?.role_name,
           role_code: editData?.role_code,
-          description: editData?.description,
-        });
+          description: editData?.description});
       } else {
         form.resetFields();
       }
@@ -77,8 +73,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
         // Update existing role
         const updateData: UpdateRoleRequest = {
           role_name: values.role_name,
-          description: values.description,
-        };
+          description: values.description};
         
         const response = await RoleService.updateRole(editData.role_id, updateData);
         message.success("Cập nhật vai trò thành công!");
@@ -88,8 +83,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
         const createData: CreateRoleRequest = {
           role_name: values.role_name,
           role_code: values.role_code,
-          description: values.description,
-        };
+          description: values.description};
         
         const response = await RoleService.createRole(createData);
         message.success("Tạo vai trò thành công!");
@@ -169,7 +163,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
                 { max: 100, message: "Tên vai trò không được vượt quá 100 ký tự!" },
               ]}
             >
-              <Input
+              <MemoizedInput
                 prefix={<UserOutlined />}
                 placeholder="Nhập tên vai trò"
                 maxLength={100}
@@ -188,7 +182,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
                 { max: 20, message: "Mã vai trò không được vượt quá 20 ký tự!" },
               ]}
             >
-              <Input
+              <MemoizedInput
                 placeholder="Nhập mã vai trò (vd: ADMIN, MANAGER)"
                 disabled={!!editData || viewMode}
                 style={{ textTransform: 'uppercase' }}
@@ -208,7 +202,7 @@ const RoleModal: React.FC<RoleModalProps> = ({
             { max: 500, message: "Mô tả không được vượt quá 500 ký tự!" },
           ]}
         >
-          <TextArea
+          <MemoizedTextArea
             rows={4}
             placeholder="Nhập mô tả chi tiết về vai trò này..."
             maxLength={500}
@@ -267,3 +261,4 @@ const RoleModal: React.FC<RoleModalProps> = ({
 };
 
 export default RoleModal;
+

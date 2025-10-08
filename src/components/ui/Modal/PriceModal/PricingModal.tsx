@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Row,
   Col,
   Button,
@@ -15,18 +13,16 @@ import {
   message,
   Card,
   List,
-  Tag,
-} from "antd";
+  Tag} from "antd";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import {
   PricingItem,
   PriceRange,
   pricingCategories,
   pricingUnits,
-  pricingStatuses,
-} from "@/components/utils/data/pricing.data";
+  pricingStatuses} from "@/components/utils/data/pricing.data";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
-const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -43,8 +39,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm dịch vụ mới",
-}) => {
+  title = "Thêm dịch vụ mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
@@ -54,8 +49,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
     if (initialData) {
       form.setFieldsValue({
         ...initialData,
-        priceRanges: initialData.priceRanges || [],
-      });
+        priceRanges: initialData.priceRanges || []});
       setPriceRanges(initialData.priceRanges || []);
     } else {
       form.resetFields();
@@ -74,8 +68,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
         priceRanges: priceRanges,
         createdAt:
           initialData?.createdAt || new Date().toISOString().split("T")[0],
-        updatedAt: new Date().toISOString().split("T")[0],
-      };
+        updatedAt: new Date().toISOString().split("T")[0]};
 
       onOk(formattedData);
       message.success(
@@ -105,8 +98,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
       minValue: 0,
       maxValue: 0,
       price: 0,
-      description: "",
-    };
+      description: ""};
     setPriceRanges([...priceRanges, newRange]);
   };
 
@@ -127,8 +119,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
   const addRequirement = () => {
     const currentRequirements = form.getFieldValue("requirements") || [];
     form.setFieldsValue({
-      requirements: [...currentRequirements, ""],
-    });
+      requirements: [...currentRequirements, ""]});
   };
 
   const removeRequirement = (index: number) => {
@@ -137,8 +128,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
       (_: any, i: number) => i !== index
     );
     form.setFieldsValue({
-      requirements: updatedRequirements,
-    });
+      requirements: updatedRequirements});
   };
 
   const tabItems = [
@@ -155,7 +145,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
                 { required: true, message: "Vui lòng nhập tên dịch vụ!" },
               ]}
             >
-              <Input placeholder="Nhập tên dịch vụ" />
+              <MemoizedInput placeholder="Nhập tên dịch vụ" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -182,7 +172,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
               label="Mô tả"
               rules={[{ required: true, message: "Vui lòng nhập mô tả!" }]}
             >
-              <TextArea rows={3} placeholder="Nhập mô tả dịch vụ" />
+              <MemoizedTextArea rows={3} placeholder="Nhập mô tả dịch vụ" />
             </Form.Item>
           </Col>
           <Col span={8}>
@@ -191,7 +181,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
               label="Giá cơ bản (VNĐ)"
               rules={[{ required: true, message: "Vui lòng nhập giá cơ bản!" }]}
             >
-              <InputNumber
+              <MemoizedInputNumber
                 min={0}
                 placeholder="Nhập giá cơ bản"
                 style={{ width: "100%" }}
@@ -223,7 +213,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
               label="Thời gian (phút)"
               rules={[{ required: true, message: "Vui lòng nhập thời gian!" }]}
             >
-              <InputNumber
+              <MemoizedInputNumber
                 min={1}
                 placeholder="Nhập thời gian"
                 style={{ width: "100%" }}
@@ -247,12 +237,11 @@ const PricingModal: React.FC<PricingModalProps> = ({
           </Col>
           <Col span={24}>
             <Form.Item name="notes" label="Ghi chú">
-              <TextArea rows={2} placeholder="Nhập ghi chú (tùy chọn)" />
+              <MemoizedTextArea rows={2} placeholder="Nhập ghi chú (tùy chọn)" />
             </Form.Item>
           </Col>
         </Row>
-      ),
-    },
+      )},
     {
       key: "requirements",
       label: "Yêu cầu",
@@ -263,8 +252,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
               marginBottom: 16,
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center",
-            }}
+              alignItems: "center"}}
           >
             <Title level={5} style={{ margin: 0 }}>
               Yêu cầu dịch vụ
@@ -291,11 +279,10 @@ const PricingModal: React.FC<PricingModalProps> = ({
                           rules={[
                             {
                               required: true,
-                              message: "Vui lòng nhập yêu cầu!",
-                            },
+                              message: "Vui lòng nhập yêu cầu!"},
                           ]}
                         >
-                          <Input placeholder="Nhập yêu cầu dịch vụ" />
+                          <MemoizedInput placeholder="Nhập yêu cầu dịch vụ" />
                         </Form.Item>
                       </Col>
                       <Col span={2}>
@@ -314,8 +301,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
                     style={{
                       textAlign: "center",
                       padding: 20,
-                      color: "#8c8c8c",
-                    }}
+                      color: "#8c8c8c"}}
                   >
                     <Text>
                       Chưa có yêu cầu nào. Click "Thêm yêu cầu" để bắt đầu.
@@ -326,8 +312,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
             )}
           </Form.List>
         </div>
-      ),
-    },
+      )},
     {
       key: "pricing",
       label: "Bảng giá",
@@ -338,8 +323,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
               marginBottom: 16,
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center",
-            }}
+              alignItems: "center"}}
           >
             <Title level={5} style={{ margin: 0 }}>
               Bảng giá theo loại
@@ -374,7 +358,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
                     <Col span={12}>
                       <div style={{ marginBottom: 8 }}>
                         <Text strong>Tên mức giá:</Text>
-                        <Input
+                        <MemoizedInput
                           value={range.name}
                           onChange={(e) =>
                             updatePriceRange(index, "name", e.target.value)
@@ -387,7 +371,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
                     <Col span={6}>
                       <div style={{ marginBottom: 8 }}>
                         <Text strong>Giá trị tối thiểu:</Text>
-                        <InputNumber
+                        <MemoizedInputNumber
                           value={range.minValue}
                           onChange={(value) =>
                             updatePriceRange(index, "minValue", value || 0)
@@ -401,7 +385,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
                     <Col span={6}>
                       <div style={{ marginBottom: 8 }}>
                         <Text strong>Giá trị tối đa:</Text>
-                        <InputNumber
+                        <MemoizedInputNumber
                           value={range.maxValue}
                           onChange={(value) =>
                             updatePriceRange(index, "maxValue", value || 0)
@@ -415,7 +399,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
                     <Col span={8}>
                       <div style={{ marginBottom: 8 }}>
                         <Text strong>Giá (VNĐ):</Text>
-                        <InputNumber
+                        <MemoizedInputNumber
                           value={range.price}
                           onChange={(value) =>
                             updatePriceRange(index, "price", value || 0)
@@ -432,7 +416,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
                     <Col span={16}>
                       <div style={{ marginBottom: 8 }}>
                         <Text strong>Mô tả:</Text>
-                        <Input
+                        <MemoizedInput
                           value={range.description}
                           onChange={(e) =>
                             updatePriceRange(
@@ -458,8 +442,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
             </div>
           )}
         </div>
-      ),
-    },
+      )},
   ];
 
   return (
@@ -478,8 +461,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
         layout="vertical"
         initialValues={{
           status: "active",
-          requirements: [],
-        }}
+          requirements: []}}
       >
         <div style={{ marginBottom: 16 }}>
           <Space>
@@ -505,3 +487,4 @@ const PricingModal: React.FC<PricingModalProps> = ({
 };
 
 export default PricingModal;
+

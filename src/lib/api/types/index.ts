@@ -53,3 +53,6 @@ export * from './warehouse.types';
 
 // Purchase Order types
 export * from './purchase-order.types';
+
+// Service Bay types
+export * from './service-bay.types';

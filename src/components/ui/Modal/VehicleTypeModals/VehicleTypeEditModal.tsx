@@ -1,12 +1,10 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Button,
-  message,
-} from "antd";
+  message} from "antd";
 import { EditOutlined } from "@ant-design/icons";
 import { VehicleType, UpdateVehicleTypeRequest } from "@/lib/api/types";
 import { VehicleService } from "@/lib/api/services/vehicle.service";
@@ -22,8 +20,7 @@ const VehicleTypeEditModal: React.FC<VehicleTypeEditModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  typeData,
-}) => {
+  typeData}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
@@ -32,8 +29,7 @@ const VehicleTypeEditModal: React.FC<VehicleTypeEditModalProps> = ({
       form.setFieldsValue({
         typeName: typeData.type_name,
         typeCode: typeData.type_code,
-        description: typeData.description,
-      });
+        description: typeData.description});
     }
   }, [visible, typeData, form]);
 
@@ -49,8 +45,7 @@ const VehicleTypeEditModal: React.FC<VehicleTypeEditModalProps> = ({
       const updateData: UpdateVehicleTypeRequest = {
         type_name: values.typeName,
         type_code: values.typeCode,
-        description: values.description,
-      };
+        description: values.description};
 
       await VehicleService.updateVehicleType(typeData.type_id, updateData);
       message.success("Cập nhật loại xe thành công!");
@@ -91,7 +86,7 @@ const VehicleTypeEditModal: React.FC<VehicleTypeEditModalProps> = ({
             { max: 100, message: "Tên loại xe không được quá 100 ký tự!" },
           ]}
         >
-          <Input placeholder="Nhập tên loại xe" />
+          <MemoizedInput placeholder="Nhập tên loại xe" />
         </Form.Item>
 
         <Form.Item
@@ -103,11 +98,10 @@ const VehicleTypeEditModal: React.FC<VehicleTypeEditModalProps> = ({
             { max: 20, message: "Mã loại xe không được quá 20 ký tự!" },
             {
               pattern: /^[A-Z0-9_]+$/,
-              message: "Mã loại xe chỉ được chứa chữ hoa, số và dấu gạch dưới!",
-            },
+              message: "Mã loại xe chỉ được chứa chữ hoa, số và dấu gạch dưới!"},
           ]}
         >
-          <Input placeholder="Nhập mã loại xe (VD: SEDAN, SUV)" />
+          <MemoizedInput placeholder="Nhập mã loại xe (VD: SEDAN, SUV)" />
         </Form.Item>
 
         <Form.Item
@@ -117,7 +111,7 @@ const VehicleTypeEditModal: React.FC<VehicleTypeEditModalProps> = ({
             { max: 500, message: "Mô tả không được quá 500 ký tự!" },
           ]}
         >
-          <Input.TextArea
+          <MemoizedInput.TextArea
             rows={4}
             placeholder="Nhập mô tả loại xe"
             showCount

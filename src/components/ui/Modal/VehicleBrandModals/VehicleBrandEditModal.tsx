@@ -1,21 +1,18 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Button,
   Row,
   Col,
   Upload,
   message,
   Space,
-  Typography,
-} from "antd";
+  Typography} from "antd";
 import {
   EditOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
+  PlusOutlined} from "@ant-design/icons";
 import Image from "next/image";
 import { VehicleBrand, UpdateVehicleBrandRequest } from "@/lib/api/types";
 import { VehicleService } from "@/lib/api/services/vehicle.service";
@@ -34,8 +31,7 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
   visible,
   onClose,
   onSuccess,
-  brandData,
-}) => {
+  brandData}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>("");
@@ -45,8 +41,7 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
       form.setFieldsValue({
         brandName: brandData.brand_name,
         brandCode: brandData.brand_code,
-        description: brandData.description,
-      });
+        description: brandData.description});
       setLogoUrl(brandData.brand_logo_url || "");
     }
   }, [visible, brandData, form]);
@@ -60,8 +55,7 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
         brand_name: values.brandName,
         brand_code: values.brandCode,
         description: values.description,
-        ...(logoUrl && { brand_logo_url: logoUrl }),
-      };
+        ...(logoUrl && { brand_logo_url: logoUrl })};
 
       console.log("Submitting update data:", updateData);
       const updatedBrand = await VehicleService.updateVehicleBrand(brandData.brand_id, updateData);
@@ -116,8 +110,7 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
       footer={null}
       width={700}
       styles={{
-        body: { maxHeight: "70vh", overflowY: "auto" },
-      }}
+        body: { maxHeight: "70vh", overflowY: "auto" }}}
     >
       <Form
         form={form}
@@ -195,11 +188,10 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
                 { max: 100, message: "Tên hãng xe không được quá 100 ký tự!" },
                 {
                   pattern: /^[a-zA-Z0-9\s\-&.,()]+$/,
-                  message: "Tên hãng xe chỉ được chứa chữ cái, số, khoảng trắng và ký tự đặc biệt: -&.,()",
-                },
+                  message: "Tên hãng xe chỉ được chứa chữ cái, số, khoảng trắng và ký tự đặc biệt: -&.,()"},
               ]}
             >
-              <Input 
+              <MemoizedInput 
                 placeholder="Nhập tên hãng xe" 
                 showCount
                 maxLength={100}
@@ -216,13 +208,12 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
                 {
                   pattern: /^[A-Z0-9_]+$/,
                   message:
-                    "Mã hãng xe chỉ được chứa chữ hoa, số và dấu gạch dưới!",
-                },
+                    "Mã hãng xe chỉ được chứa chữ hoa, số và dấu gạch dưới!"},
                 { min: 2, message: "Mã hãng xe phải có ít nhất 2 ký tự!" },
                 { max: 20, message: "Mã hãng xe không được quá 20 ký tự!" },
               ]}
             >
-              <Input 
+              <MemoizedInput 
                 placeholder="VD: TOYOTA, HONDA, BMW" 
                 style={{ textTransform: 'uppercase' }}
                 onChange={(e) => {
@@ -242,7 +233,7 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
                 { max: 500, message: "Mô tả không được quá 500 ký tự!" },
               ]}
             >
-              <TextArea
+              <MemoizedTextArea
                 rows={4}
                 placeholder="Nhập mô tả về hãng xe, lịch sử, đặc điểm nổi bật..."
                 showCount

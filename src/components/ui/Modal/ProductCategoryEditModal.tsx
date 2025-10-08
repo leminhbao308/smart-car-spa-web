@@ -1,26 +1,22 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Button,
   Space,
   message,
   Row,
   Col,
-  Card,
-} from "antd";
+  Card} from "antd";
 import {
   EditOutlined,
-  SaveOutlined,
-} from "@ant-design/icons";
+  SaveOutlined} from "@ant-design/icons";
 import { categoryStatuses, categoryColors } from "@/components/utils/data/product-categories.data";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 const { Option } = Select;
-const { TextArea } = Input;
 
 interface ProductCategory {
   id: number;
@@ -48,8 +44,7 @@ const ProductCategoryEditModal: React.FC<ProductCategoryEditModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  editData,
-}) => {
+  editData}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
@@ -62,8 +57,7 @@ const ProductCategoryEditModal: React.FC<ProductCategoryEditModalProps> = ({
         icon: editData.icon,
         color: editData.color,
         status: editData.status,
-        features: editData.features?.join(", ") || "",
-      });
+        features: editData.features?.join(", ") || ""});
     } else if (visible) {
       form.resetFields();
     }
@@ -78,8 +72,7 @@ const ProductCategoryEditModal: React.FC<ProductCategoryEditModalProps> = ({
         ...editData,
         ...values,
         features: values.features ? values.features.split(",").map((f: string) => f.trim()).filter((f: string) => f) : [],
-        updatedAt: new Date().toISOString(),
-      };
+        updatedAt: new Date().toISOString()};
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -142,7 +135,7 @@ const ProductCategoryEditModal: React.FC<ProductCategoryEditModalProps> = ({
                 { max: 100, message: "Tên không được quá 100 ký tự!" },
               ]}
             >
-              <Input placeholder="Nhập tên loại sản phẩm" />
+              <MemoizedInput placeholder="Nhập tên loại sản phẩm" />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
@@ -154,7 +147,7 @@ const ProductCategoryEditModal: React.FC<ProductCategoryEditModalProps> = ({
                 { max: 20, message: "Mã không được quá 20 ký tự!" },
               ]}
             >
-              <Input placeholder="Nhập mã danh mục" />
+              <MemoizedInput placeholder="Nhập mã danh mục" />
             </Form.Item>
           </Col>
         </Row>
@@ -167,7 +160,7 @@ const ProductCategoryEditModal: React.FC<ProductCategoryEditModalProps> = ({
             { max: 500, message: "Mô tả không được quá 500 ký tự!" },
           ]}
         >
-          <TextArea
+          <MemoizedTextArea
             rows={3}
             placeholder="Nhập mô tả loại sản phẩm"
             maxLength={500}
@@ -234,7 +227,7 @@ const ProductCategoryEditModal: React.FC<ProductCategoryEditModalProps> = ({
           name="features"
           rules={[{ max: 1000, message: "Đặc điểm không được quá 1000 ký tự!" }]}
         >
-          <TextArea
+          <MemoizedTextArea
             rows={3}
             placeholder="Nhập các đặc điểm, cách nhau bởi dấu phẩy. Ví dụ: An toàn cho sơn xe, Hiệu quả cao, Dễ sử dụng"
             maxLength={1000}
@@ -247,3 +240,4 @@ const ProductCategoryEditModal: React.FC<ProductCategoryEditModalProps> = ({
 };
 
 export default ProductCategoryEditModal;
+

@@ -1,12 +1,10 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Button,
   Space,
   Card,
@@ -20,8 +18,7 @@ import {
   Empty,
   List,
   Tabs,
-  Statistic,
-} from "antd";
+  Statistic} from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -34,8 +31,7 @@ import {
   EditOutlined,
   ToolOutlined,
   ClockCircleOutlined,
-  InfoCircleOutlined,
-} from "@ant-design/icons";
+  InfoCircleOutlined} from "@ant-design/icons";
 import { categoryService } from "@/lib/api/services/category.service";
 import { serviceService } from "@/lib/api/services/service.service";
 import { productService } from "@/lib/api/services/product.service";
@@ -43,15 +39,14 @@ import {
   ServicePackage,
   SERVICE_PACKAGE_TYPE_OPTIONS,
   ServicePackageProduct,
-  ServicePackageService,
-} from "@/lib/api/types/service-package.types";
+  ServicePackageService} from "@/lib/api/types/service-package.types";
 import { Category, CategoryResponse } from "@/lib/api/types/category.types";
 import { Service } from "@/lib/api/types/service.types";
 import { Product } from "@/lib/api/types/product.types";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 const { Option } = Select;
-const { TextArea } = Input;
 const { Text, Title } = Typography;
 
 interface ServicePackageModalProps {
@@ -88,8 +83,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm gói dịch vụ mới",
-}) => {
+  title = "Thêm gói dịch vụ mới"}) => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -157,8 +151,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
       console.error("Error details:", {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
-        error,
-      });
+        error});
 
       // Don't show error message for timeout or network issues
       if (error instanceof Error && !error.message.includes("timeout")) {
@@ -191,8 +184,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
       console.error("Error details:", {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
-        error,
-      });
+        error});
       message.error("Không thể tải danh sách dịch vụ");
       setServices([]);
     }
@@ -205,8 +197,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
         page: 1,
         size: 1000,
         sort: "productName",
-        direction: "ASC",
-      });
+        direction: "ASC"});
       console.log("Products response:", response);
 
       if (response && response.success && response.data) {
@@ -224,8 +215,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
       console.error("Error details:", {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
-        error,
-      });
+        error});
       message.error("Không thể tải danh sách sản phẩm");
       setProducts([]);
     }
@@ -273,8 +263,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
           categoryId: initialData.categoryId,
           description: initialData.description,
           packageType: initialData.packageType,
-          imageUrls: initialData.imageUrls,
-        });
+          imageUrls: initialData.imageUrls});
         setPackageServices(initialData.packageServices || []);
         setPackageProducts(initialData.packageProducts || []);
         setImageUrls(imageUrlsArray);
@@ -312,8 +301,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
         totalPrice: service.basePrice,
         notes: "",
         isRequired: true,
-        isActive: true,
-      };
+        isActive: true};
 
       setPackageServices((prev) => [...prev, newService]);
       message.success(`Đã thêm "${service.serviceName}" vào gói!`);
@@ -359,8 +347,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
         totalPrice: product.sellingPrice || 0,
         notes: "",
         isRequired: true,
-        isActive: true,
-      };
+        isActive: true};
 
       setPackageProducts((prev) => [...prev, newProduct]);
       message.success(`Đã thêm "${product.productName}" vào gói!`);
@@ -402,16 +389,13 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
           quantity: p.quantity,
           unitPrice: p.unitPrice,
           notes: p.notes,
-          isRequired: p.isRequired,
-        })),
+          isRequired: p.isRequired})),
         packageServices: packageServices.map((s) => ({
           serviceId: s.serviceId || "",
           quantity: s.quantity,
           unitPrice: s.unitPrice,
           notes: s.notes,
-          isRequired: s.isRequired,
-        })),
-      };
+          isRequired: s.isRequired}))};
 
       onOk(packageData);
       message.success(
@@ -480,8 +464,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
             padding: "20px 0",
             background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
             margin: "-24px -24px 24px -24px",
-            borderRadius: "8px 8px 0 0",
-          }}
+            borderRadius: "8px 8px 0 0"}}
         >
           <Space direction="vertical" size="small">
             <div
@@ -493,8 +476,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                margin: "0 auto",
-              }}
+                margin: "0 auto"}}
             >
               <InboxOutlined style={{ fontSize: 28, color: "white" }} />
             </div>
@@ -521,9 +503,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
           overflowY: "auto",
           overflowX: "hidden",
           padding: "0 32px 32px 32px",
-          background: "#fafafa",
-        },
-      }}
+          background: "#fafafa"}}}
     >
       <div>
         <Form
@@ -531,8 +511,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
           layout="vertical"
           onFinish={handleSubmit}
           initialValues={{
-            packageType: "MAINTENANCE",
-          }}
+            packageType: "MAINTENANCE"}}
         >
           <Tabs
             defaultActiveKey="basic"
@@ -541,12 +520,10 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
               background: "white",
               borderRadius: 12,
               padding: "20px",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-            }}
+              boxShadow: "0 4px 12px rgba(0,0,0,0.1)"}}
             tabBarStyle={{
               marginBottom: 24,
-              borderBottom: "2px solid #f0f0f0",
-            }}
+              borderBottom: "2px solid #f0f0f0"}}
             items={[
               {
                 key: "basic",
@@ -561,8 +538,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                         height: 32,
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                        justifyContent: "center"}}
                     >
                       <InfoCircleOutlined
                         style={{ color: "white", fontSize: 16 }}
@@ -588,8 +564,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                                 height: 28,
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
-                              }}
+                                justifyContent: "center"}}
                             >
                               <InfoCircleOutlined
                                 style={{ color: "white", fontSize: 14 }}
@@ -604,16 +579,13 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                           height: "100%",
                           borderRadius: 12,
                           border: "1px solid #e8e8e8",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                        }}
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)"}}
                         styles={{
                           header: {
                             background:
                               "linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%)",
                             borderRadius: "12px 12px 0 0",
-                            borderBottom: "1px solid #e8e8e8",
-                          },
-                        }}
+                            borderBottom: "1px solid #e8e8e8"}}}
                       >
                         <Form.Item
                           name="packageName"
@@ -622,8 +594,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                               style={{
                                 fontWeight: 600,
                                 color: "#333",
-                                fontSize: 14,
-                              }}
+                                fontSize: 14}}
                             >
                               📦 Tên gói dịch vụ
                             </span>
@@ -631,11 +602,10 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                           rules={[
                             {
                               required: true,
-                              message: "Vui lòng nhập tên gói dịch vụ!",
-                            },
+                              message: "Vui lòng nhập tên gói dịch vụ!"},
                           ]}
                         >
-                          <Input
+                          <MemoizedInput
                             placeholder="Nhập tên gói dịch vụ"
                             size="large"
                             prefix={
@@ -649,8 +619,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
-                                  marginRight: 8,
-                                }}
+                                  marginRight: 8}}
                               >
                                 <InboxOutlined
                                   style={{ color: "white", fontSize: 12 }}
@@ -660,8 +629,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                             style={{
                               borderRadius: 8,
                               border: "2px solid #f0f0f0",
-                              transition: "all 0.3s ease",
-                            }}
+                              transition: "all 0.3s ease"}}
                           />
                         </Form.Item>
 
@@ -671,11 +639,10 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                           rules={[
                             {
                               required: true,
-                              message: "Vui lòng nhập URL gói dịch vụ!",
-                            },
+                              message: "Vui lòng nhập URL gói dịch vụ!"},
                           ]}
                         >
-                          <Input
+                          <MemoizedInput
                             placeholder="Nhập URL gói dịch vụ"
                             size="large"
                             prefix={<EditOutlined />}
@@ -688,8 +655,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                           rules={[
                             {
                               required: true,
-                              message: "Vui lòng chọn danh mục!",
-                            },
+                              message: "Vui lòng chọn danh mục!"},
                           ]}
                         >
                           <Select
@@ -729,8 +695,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                                 height: 28,
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
-                              }}
+                                justifyContent: "center"}}
                             >
                               <EditOutlined
                                 style={{ color: "white", fontSize: 14 }}
@@ -745,16 +710,13 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                           height: "100%",
                           borderRadius: 12,
                           border: "1px solid #e8e8e8",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                        }}
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)"}}
                         styles={{
                           header: {
                             background:
                               "linear-gradient(135deg, #f6ffed 0%, #f0f9ff 100%)",
                             borderRadius: "12px 12px 0 0",
-                            borderBottom: "1px solid #e8e8e8",
-                          },
-                        }}
+                            borderBottom: "1px solid #e8e8e8"}}}
                       >
                         <Form.Item
                           name="description"
@@ -763,14 +725,13 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                               style={{
                                 fontWeight: 600,
                                 color: "#333",
-                                fontSize: 14,
-                              }}
+                                fontSize: 14}}
                             >
                               📝 Mô tả gói dịch vụ
                             </span>
                           }
                         >
-                          <TextArea
+                          <MemoizedTextArea
                             rows={6}
                             placeholder="Nhập mô tả chi tiết về gói dịch vụ..."
                             showCount
@@ -778,15 +739,13 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                             style={{
                               borderRadius: 8,
                               border: "2px solid #f0f0f0",
-                              transition: "all 0.3s ease",
-                            }}
+                              transition: "all 0.3s ease"}}
                           />
                         </Form.Item>
                       </Card>
                     </Col>
                   </Row>
-                ),
-              },
+                )},
               {
                 key: "services",
                 label: (
@@ -800,8 +759,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                         height: 32,
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                        justifyContent: "center"}}
                     >
                       <ShoppingCartOutlined
                         style={{ color: "white", fontSize: 16 }}
@@ -836,7 +794,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                         }
                       >
                         <div style={{ marginBottom: 16 }}>
-                          <Input
+                          <MemoizedInput
                             placeholder="Tìm kiếm dịch vụ..."
                             prefix={<SearchOutlined />}
                             value={serviceSearchText}
@@ -852,8 +810,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                           style={{
                             maxHeight: 300,
                             overflowY: "auto",
-                            overflowX: "hidden",
-                          }}
+                            overflowX: "hidden"}}
                         >
                           {filteredServices.length > 0 ? (
                             <Row gutter={[12, 12]}>
@@ -865,8 +822,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                                     style={{
                                       border: "1px solid #e8e8e8",
                                       borderRadius: 8,
-                                      transition: "all 0.3s ease",
-                                    }}
+                                      transition: "all 0.3s ease"}}
                                     styles={{ body: { padding: 12 } }}
                                   >
                                     <Row gutter={8} align="middle">
@@ -944,8 +900,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                                     border: "1px solid #52c41a",
                                     borderRadius: 6,
                                     marginBottom: 8,
-                                    backgroundColor: "#f6ffed",
-                                  }}
+                                    backgroundColor: "#f6ffed"}}
                                   styles={{ body: { padding: 8 } }}
                                 >
                                   <Row gutter={8} align="middle">
@@ -988,7 +943,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                                             }
                                             disabled={service.quantity <= 1}
                                           />
-                                          <InputNumber
+                                          <MemoizedInputNumber
                                             min={1}
                                             max={10}
                                             value={service.quantity}
@@ -1052,7 +1007,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                         }
                       >
                         <div style={{ marginBottom: 16 }}>
-                          <Input
+                          <MemoizedInput
                             placeholder="Tìm kiếm sản phẩm..."
                             prefix={<SearchOutlined />}
                             value={productSearchText}
@@ -1068,8 +1023,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                           style={{
                             maxHeight: 300,
                             overflowY: "auto",
-                            overflowX: "hidden",
-                          }}
+                            overflowX: "hidden"}}
                         >
                           {filteredProducts.length > 0 ? (
                             <Row gutter={[12, 12]}>
@@ -1081,8 +1035,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                                     style={{
                                       border: "1px solid #e8e8e8",
                                       borderRadius: 8,
-                                      transition: "all 0.3s ease",
-                                    }}
+                                      transition: "all 0.3s ease"}}
                                     styles={{ body: { padding: 12 } }}
                                   >
                                     <Row gutter={8} align="middle">
@@ -1163,8 +1116,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                                     border: "1px solid #52c41a",
                                     borderRadius: 6,
                                     marginBottom: 8,
-                                    backgroundColor: "#f6ffed",
-                                  }}
+                                    backgroundColor: "#f6ffed"}}
                                   styles={{ body: { padding: 8 } }}
                                 >
                                   <Row gutter={8} align="middle">
@@ -1207,7 +1159,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                                             }
                                             disabled={product.quantity <= 1}
                                           />
-                                          <InputNumber
+                                          <MemoizedInputNumber
                                             min={1}
                                             max={100}
                                             value={product.quantity}
@@ -1255,8 +1207,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                       </Card>
                     </Col>
                   </Row>
-                ),
-              },
+                )},
               {
                 key: "summary",
                 label: (
@@ -1270,8 +1221,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                         height: 32,
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                      }}
+                        justifyContent: "center"}}
                     >
                       <CheckCircleOutlined
                         style={{ color: "white", fontSize: 16 }}
@@ -1487,8 +1437,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                       </Card>
                     </Col>
                   </Row>
-                ),
-              },
+                )},
             ]}
           />
 
@@ -1502,8 +1451,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
               background: "linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%)",
               margin: "0 -32px -32px -32px",
               borderRadius: "0 0 12px 12px",
-              borderTop: "1px solid #e8e8e8",
-            }}
+              borderTop: "1px solid #e8e8e8"}}
           >
             <Space size="large">
               <Button
@@ -1515,8 +1463,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                   padding: "0 24px",
                   fontWeight: 600,
                   border: "2px solid #d9d9d9",
-                  background: "white",
-                }}
+                  background: "white"}}
               >
                 Hủy
               </Button>
@@ -1534,8 +1481,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
                   background:
                     "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                   border: "none",
-                  boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
-                }}
+                  boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)"}}
               >
                 {initialData ? "Cập nhật gói" : "Tạo gói dịch vụ"}
               </Button>
@@ -1548,3 +1494,4 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
 };
 
 export default ServicePackageModalSimple;
+

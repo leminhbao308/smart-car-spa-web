@@ -1,26 +1,23 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
   Button,
   Space,
   message,
   Row,
   Col,
-  Card,
-} from "antd";
+  Card} from "antd";
 import {
   EditOutlined,
   SaveOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
+  PlusOutlined} from "@ant-design/icons";
 import { serviceTypeStatuses, serviceTypeColors } from "@/components/utils/data/service-types.data";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 const { Option } = Select;
-const { TextArea } = Input;
 
 interface ServiceType {
   id: number;
@@ -47,8 +44,7 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  editData,
-}) => {
+  editData}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [features, setFeatures] = useState<string[]>([]);
@@ -61,8 +57,7 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
         description: editData.description,
         icon: editData.icon,
         color: editData.color,
-        status: editData.status,
-      });
+        status: editData.status});
       setFeatures(editData.features || []);
     } else if (visible) {
       form.resetFields();
@@ -80,8 +75,7 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
         ...values,
         features,
         updatedAt: new Date().toISOString(),
-        createdAt: editData?.createdAt || new Date().toISOString(),
-      };
+        createdAt: editData?.createdAt || new Date().toISOString()};
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -161,7 +155,7 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
                 { max: 100, message: "Tên không được quá 100 ký tự!" },
               ]}
             >
-              <Input placeholder="Nhập tên loại dịch vụ" />
+              <MemoizedInput placeholder="Nhập tên loại dịch vụ" />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
@@ -173,7 +167,7 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
                 { max: 20, message: "Mã không được quá 20 ký tự!" },
               ]}
             >
-              <Input placeholder="Nhập mã loại dịch vụ" />
+              <MemoizedInput placeholder="Nhập mã loại dịch vụ" />
             </Form.Item>
           </Col>
         </Row>
@@ -186,7 +180,7 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
             { max: 500, message: "Mô tả không được quá 500 ký tự!" },
           ]}
         >
-          <TextArea
+          <MemoizedTextArea
             rows={3}
             placeholder="Nhập mô tả loại dịch vụ"
             maxLength={500}
@@ -265,7 +259,7 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
           {features.map((feature, index) => (
             <Row key={index} gutter={8} style={{ marginBottom: 8 }}>
               <Col span={20}>
-                <Input
+                <MemoizedInput
                   placeholder="Nhập đặc điểm"
                   value={feature}
                   onChange={(e) => updateFeature(index, e.target.value)}
@@ -294,3 +288,4 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
 };
 
 export default ServiceTypeEditModal;
+

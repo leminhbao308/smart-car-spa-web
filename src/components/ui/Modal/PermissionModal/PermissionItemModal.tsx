@@ -1,9 +1,8 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
   Button,
   message,
@@ -11,15 +10,14 @@ import {
   Col,
   Card,
   Typography,
-  Tag,
-} from "antd";
+  Tag} from "antd";
 import { 
   SafetyOutlined, 
   InfoCircleOutlined
 } from "@ant-design/icons";
 import { permissionCategories } from "@/components/utils/data/permissions.data";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
-const { TextArea } = Input;
 const { Text } = Typography;
 
 interface PermissionItemModalProps {
@@ -35,8 +33,7 @@ const PermissionItemModal: React.FC<PermissionItemModalProps> = ({
   onCancel,
   onSuccess,
   editData,
-  title = "Thêm quyền hạn mới",
-}) => {
+  title = "Thêm quyền hạn mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
@@ -44,8 +41,7 @@ const PermissionItemModal: React.FC<PermissionItemModalProps> = ({
     if (visible) {
       if (editData) {
         form.setFieldsValue({
-          ...editData,
-        });
+          ...editData});
       } else {
         form.resetFields();
       }
@@ -64,8 +60,7 @@ const PermissionItemModal: React.FC<PermissionItemModalProps> = ({
         ...values,
         id: editData?.id || Date.now(),
         createdAt: editData?.createdAt || new Date().toISOString().replace("T", " ").substring(0, 19),
-        updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
-      };
+        updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19)};
 
       message.success(editData ? "Cập nhật quyền hạn thành công!" : "Tạo quyền hạn thành công!");
       onSuccess(permissionData);
@@ -116,7 +111,7 @@ const PermissionItemModal: React.FC<PermissionItemModalProps> = ({
                 { pattern: /^[a-z_]+$/, message: "Mã quyền hạn chỉ được chứa chữ thường và dấu gạch dưới!" },
               ]}
             >
-              <Input
+              <MemoizedInput
                 placeholder="Nhập mã quyền hạn (vd: user_management)"
                 disabled={!!editData}
               />
@@ -131,7 +126,7 @@ const PermissionItemModal: React.FC<PermissionItemModalProps> = ({
                 { min: 2, message: "Tên quyền hạn phải có ít nhất 2 ký tự!" },
               ]}
             >
-              <Input
+              <MemoizedInput
                 placeholder="Nhập tên quyền hạn"
               />
             </Form.Item>
@@ -155,8 +150,7 @@ const PermissionItemModal: React.FC<PermissionItemModalProps> = ({
                     {cat.label}
                   </Tag>
                 </div>
-              ),
-            }))}
+              )}))}
           />
         </Form.Item>
 
@@ -168,7 +162,7 @@ const PermissionItemModal: React.FC<PermissionItemModalProps> = ({
             { min: 10, message: "Mô tả phải có ít nhất 10 ký tự!" },
           ]}
         >
-          <TextArea
+          <MemoizedTextArea
             rows={3}
             placeholder="Nhập mô tả chi tiết về quyền hạn này..."
           />
@@ -179,3 +173,4 @@ const PermissionItemModal: React.FC<PermissionItemModalProps> = ({
 };
 
 export default PermissionItemModal;
+

@@ -1,20 +1,17 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
   Button,
   Row,
   Col,
   message,
   Typography,
-  Card,
-} from "antd";
+  Card} from "antd";
 import {
-  EditOutlined,
-} from "@ant-design/icons";
+  EditOutlined} from "@ant-design/icons";
 import { useVehicleBrandsDropdown, useVehicleTypesDropdown } from "@/lib/api/hooks";
 import { useVehicleModels } from "@/lib/api/hooks/useVehicleModels";
 import { UpdateVehicleModelRequest, VehicleModel } from "@/lib/api/types";
@@ -34,8 +31,7 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
   visible,
   onClose,
   onSuccess,
-  modelData,
-}) => {
+  modelData}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   
@@ -52,8 +48,7 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
         model_code: modelData.model_code,
         brand_id: modelData.brand_id,
         type_id: modelData.type_id,
-        description: modelData.description,
-      });
+        description: modelData.description});
     }
   }, [visible, modelData, form]);
 
@@ -73,8 +68,7 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
         model_code: values.model_code,
         brand_id: values.brand_id,
         type_id: values.type_id,
-        description: values.description,
-      };
+        description: values.description};
 
       // Call API to update model
       await updateModel(modelData.model_id, updateData);
@@ -126,7 +120,7 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
                   { min: 2, message: "Tên model phải có ít nhất 2 ký tự!" },
                 ]}
               >
-                <Input placeholder="Nhập tên model" />
+                <MemoizedInput placeholder="Nhập tên model" />
               </Form.Item>
             </Col>
 
@@ -139,11 +133,10 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
                   {
                     pattern: /^[A-Z0-9_]+$/,
                     message:
-                      "Mã model chỉ được chứa chữ hoa, số và dấu gạch dưới!",
-                  },
+                      "Mã model chỉ được chứa chữ hoa, số và dấu gạch dưới!"},
                 ]}
               >
-                <Input placeholder="VD: CAMRY, CRV" />
+                <MemoizedInput placeholder="VD: CAMRY, CRV" />
               </Form.Item>
             </Col>
 
@@ -192,7 +185,7 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
                   { min: 10, message: "Mô tả phải có ít nhất 10 ký tự!" },
                 ]}
               >
-                <TextArea
+                <MemoizedTextArea
                   rows={4}
                   placeholder="Nhập mô tả về model xe..."
                   showCount

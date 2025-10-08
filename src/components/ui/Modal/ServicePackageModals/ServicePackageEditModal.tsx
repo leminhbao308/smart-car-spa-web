@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Button,
   Space,
   Card,
@@ -15,26 +13,23 @@ import {
   Typography,
   Tag,
   List,
-  Popconfirm,
-} from "antd";
+  Popconfirm} from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
   ShoppingCartOutlined,
   DollarOutlined,
-  CalculatorOutlined,
-} from "@ant-design/icons";
+  CalculatorOutlined} from "@ant-design/icons";
 import {
   packageStatuses,
   targetCustomerGroups,
   validityPeriods,
-  maxUsageOptions,
-} from "@/components/utils/data/service-packages.data";
+  maxUsageOptions} from "@/components/utils/data/service-packages.data";
 import { servicesData } from "@/components/utils/data/services.data";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 const { Option } = Select;
-const { TextArea } = Input;
 const { Text, Title } = Typography;
 
 interface ServicePackage {
@@ -69,8 +64,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  editData,
-}) => {
+  editData}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [selectedServices, setSelectedServices] = useState<Array<{
@@ -99,8 +93,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
           targetCustomers: editData.targetCustomers,
           validityPeriod: editData.validityPeriod,
           maxUsage: editData.maxUsage,
-          features: editData.features,
-        });
+          features: editData.features});
         setSelectedServices(editData.services);
       } else {
         form.resetFields();
@@ -125,8 +118,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
           id: service.id,
           serviceName: service.serviceName,
           totalPrice: service.totalPrice,
-          quantity: 1,
-        },
+          quantity: 1},
       ]);
     }
   };
@@ -171,8 +163,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
         maxUsage: values.maxUsage,
         features: values.features || [],
         createdAt: editData?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+        updatedAt: new Date().toISOString()};
 
       onSuccess(packageData);
       message.success(editData ? "Cập nhật gói dịch vụ thành công!" : "Thêm gói dịch vụ thành công!");
@@ -212,8 +203,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
             status: "active",
             validityPeriod: 30,
             maxUsage: 1,
-            features: [],
-          }}
+            features: []}}
         >
           <Row gutter={[16, 16]}>
             {/* Thông tin cơ bản */}
@@ -224,7 +214,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
                   label="Mã gói dịch vụ"
                   rules={[{ required: true, message: "Vui lòng nhập mã gói dịch vụ!" }]}
                 >
-                  <Input placeholder="VD: PKG001" />
+                  <MemoizedInput placeholder="VD: PKG001" />
                 </Form.Item>
 
                 <Form.Item
@@ -232,7 +222,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
                   label="Tên gói dịch vụ"
                   rules={[{ required: true, message: "Vui lòng nhập tên gói dịch vụ!" }]}
                 >
-                  <Input placeholder="VD: Gói chăm sóc xe cơ bản" />
+                  <MemoizedInput placeholder="VD: Gói chăm sóc xe cơ bản" />
                 </Form.Item>
 
                 <Form.Item
@@ -240,7 +230,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
                   label="Mô tả"
                   rules={[{ required: true, message: "Vui lòng nhập mô tả!" }]}
                 >
-                  <TextArea rows={3} placeholder="Mô tả chi tiết về gói dịch vụ..." />
+                  <MemoizedTextArea rows={3} placeholder="Mô tả chi tiết về gói dịch vụ..." />
                 </Form.Item>
 
                 <Form.Item
@@ -311,7 +301,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
                 renderItem={(service) => (
                   <List.Item
                     actions={[
-                      <InputNumber
+                      <MemoizedInputNumber
                         min={1}
                         max={10}
                         value={service.quantity}
@@ -430,3 +420,4 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
 };
 
 export default ServicePackageEditModal;
+

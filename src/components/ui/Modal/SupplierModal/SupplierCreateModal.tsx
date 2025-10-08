@@ -1,25 +1,22 @@
-"use client";
+﻿"use client";
 import React from "react";
 import {
   Modal,
   Form,
-  Input,
   Button,
   Card,
   Row,
   Col,
   Typography,
   message,
-  Spin,
-} from "antd";
+  Spin} from "antd";
 import {
   BankOutlined,
   PhoneOutlined,
   MailOutlined,
   EnvironmentOutlined,
   UserOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
+  PlusOutlined} from "@ant-design/icons";
 import { CreateSupplierRequest } from "@/lib/api/types/supplier.types";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 
@@ -36,8 +33,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  loading = false,
-}) => {
+  loading = false}) => {
   const [form] = Form.useForm();
   const { createSupplier } = useSuppliers({});
 
@@ -76,9 +72,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
       styles={{
         header: {
           background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "white",
-        },
-      }}
+          color: "white"}}}
     >
       <Spin spinning={loading}>
         <Form
@@ -107,7 +101,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
                     { min: 2, message: "Tên nhà cung cấp phải có ít nhất 2 ký tự" },
                   ]}
                 >
-                  <Input
+                  <MemoizedInput
                     prefix={<BankOutlined />}
                     placeholder="Nhập tên nhà cung cấp"
                     size="large"
@@ -123,7 +117,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
                     { min: 2, message: "Tên người liên hệ phải có ít nhất 2 ký tự" },
                   ]}
                 >
-                  <Input
+                  <MemoizedInput
                     prefix={<UserOutlined />}
                     placeholder="Nhập tên người liên hệ"
                     size="large"
@@ -153,7 +147,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
                     { pattern: /^[0-9+\-\s()]+$/, message: "Số điện thoại không hợp lệ" },
                   ]}
                 >
-                  <Input
+                  <MemoizedInput
                     prefix={<PhoneOutlined />}
                     placeholder="Nhập số điện thoại"
                     size="large"
@@ -169,7 +163,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
                     { type: "email", message: "Email không hợp lệ" },
                   ]}
                 >
-                  <Input
+                  <MemoizedInput
                     prefix={<MailOutlined />}
                     placeholder="Nhập email"
                     size="large"
@@ -185,7 +179,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
                     { min: 5, message: "Địa chỉ phải có ít nhất 5 ký tự" },
                   ]}
                 >
-                  <Input.TextArea
+                  <MemoizedInput.TextArea
                     prefix={<EnvironmentOutlined />}
                     placeholder="Nhập địa chỉ đầy đủ"
                     rows={3}
@@ -216,7 +210,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
                     { min: 2, message: "Tên ngân hàng phải có ít nhất 2 ký tự" },
                   ]}
                 >
-                  <Input
+                  <MemoizedInput
                     prefix={<BankOutlined />}
                     placeholder="Nhập tên ngân hàng"
                     size="large"
@@ -233,7 +227,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
                     { min: 8, message: "Số tài khoản phải có ít nhất 8 chữ số" },
                   ]}
                 >
-                  <Input
+                  <MemoizedInput
                     prefix={<BankOutlined />}
                     placeholder="Nhập số tài khoản"
                     size="large"
@@ -251,8 +245,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
               justifyContent: "flex-end",
               gap: 12,
               paddingTop: 16,
-              borderTop: "1px solid #f0f0f0",
-            }}
+              borderTop: "1px solid #f0f0f0"}}
           >
             <Button size="large" onClick={handleCancel}>
               Hủy
@@ -264,8 +257,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
               icon={<PlusOutlined />}
               style={{
                 background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                border: "none",
-              }}
+                border: "none"}}
             >
               Thêm mới
             </Button>
@@ -277,3 +269,4 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
 };
 
 export default SupplierCreateModal;
+

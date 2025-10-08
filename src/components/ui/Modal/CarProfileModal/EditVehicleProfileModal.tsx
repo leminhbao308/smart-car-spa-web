@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
-  InputNumber,
   Row,
   Col,
   Card,
@@ -13,16 +11,14 @@ import {
   Alert,
   Spin,
   Typography,
-  message,
-} from "antd";
+  message} from "antd";
 import {
   CarOutlined,
   InfoCircleOutlined,
   NumberOutlined,
   FileTextOutlined,
   UserOutlined,
-  EditOutlined,
-} from "@ant-design/icons";
+  EditOutlined} from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
@@ -33,8 +29,7 @@ import { VehicleTypeSelect } from "@/components/ui/VehicleTypeSelect";
 import { VehicleModelSelect } from "@/components/ui/VehicleModelSelect";
 import { CustomerSelect } from "@/components/ui/CustomerSelect";
 import { VehicleProfileService } from "@/lib/api/services/vehicle-profile.service";
-
-const { TextArea } = Input;
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 interface EditVehicleProfileModalProps {
   visible: boolean;
@@ -49,8 +44,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
   onCancel,
   onSuccess,
   profile,
-  loading = false,
-}) => {
+  loading = false}) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
@@ -68,8 +62,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
         vehicle_type_id: profile.vehicle_type_id,
         vehicle_model_id: profile.vehicle_model_id,
         owner_id: profile.owner_id,
-        distance_traveled: profile.distance_traveled,
-      });
+        distance_traveled: profile.distance_traveled});
     }
   }, [visible, profile, form]);
 
@@ -90,8 +83,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
         vehicle_type_id: values.vehicle_type_id,
         vehicle_model_id: values.vehicle_model_id,
         owner_id: values.owner_id,
-        distance_traveled: values.distance_traveled,
-      };
+        distance_traveled: values.distance_traveled};
 
       console.log("Updating vehicle profile with data:", updateData);
 
@@ -333,7 +325,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
                   },
                 ]}
               >
-                <Input
+                <MemoizedInput
                   placeholder="VD: 51A-12345"
                   style={{
                     textTransform: 'uppercase',
@@ -360,7 +352,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
                   { type: 'number', min: 0, message: "Số km phải lớn hơn hoặc bằng 0!" },
                 ]}
               >
-                <InputNumber
+                <MemoizedInputNumber
                   placeholder="0"
                   style={{
                     width: '100%',
@@ -537,7 +529,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
                 }
                 name="description"
               >
-                <TextArea
+                <MemoizedTextArea
                   rows={4}
                   placeholder="Nhập mô tả chi tiết về xe, tình trạng, lịch sử bảo dưỡng... (tùy chọn)"
                   maxLength={500}
@@ -621,3 +613,4 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
 };
 
 export default EditVehicleProfileModal;
+

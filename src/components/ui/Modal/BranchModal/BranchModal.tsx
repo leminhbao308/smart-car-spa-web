@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Row,
   Col,
   TimePicker,
@@ -14,17 +12,15 @@ import {
   Space,
   Divider,
   Typography,
-  message,
-} from "antd";
+  message} from "antd";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 import {
   PlusOutlined,
   UploadOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+  DeleteOutlined} from "@ant-design/icons";
 import dayjs from "dayjs";
 import { Branch, CareSlot, branchStatuses, branchServices, branchFacilities, branchCertifications } from "@/components/utils/data/branches.data";
 
-const { TextArea } = Input;
 const { Title, Text } = Typography;
 const { Option } = Select;
 
@@ -41,8 +37,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm chi nhánh mới",
-}) => {
+  title = "Thêm chi nhánh mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
@@ -53,9 +48,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
         ...initialData,
         openingHours: {
           weekdays: initialData.openingHours.weekdays.split(" - ").map((time: string) => dayjs(time, "HH:mm")),
-          weekends: initialData.openingHours.weekends.split(" - ").map((time: string) => dayjs(time, "HH:mm")),
-        },
-      });
+          weekends: initialData.openingHours.weekends.split(" - ").map((time: string) => dayjs(time, "HH:mm"))}});
     } else {
       form.resetFields();
     }
@@ -71,15 +64,13 @@ const BranchModal: React.FC<BranchModalProps> = ({
         ...values,
         openingHours: {
           weekdays: `${values.openingHours.weekdays[0].format("HH:mm")} - ${values.openingHours.weekdays[1].format("HH:mm")}`,
-          weekends: `${values.openingHours.weekends[0].format("HH:mm")} - ${values.openingHours.weekends[1].format("HH:mm")}`,
-        },
+          weekends: `${values.openingHours.weekends[0].format("HH:mm")} - ${values.openingHours.weekends[1].format("HH:mm")}`},
         id: initialData?.id || Date.now(),
         currentBookings: initialData?.currentBookings || 0,
         establishedDate: initialData?.establishedDate || dayjs().format("YYYY-MM-DD"),
         careSlots: initialData?.careSlots || [],
         totalSlots: initialData?.totalSlots || 0,
-        availableSlots: initialData?.availableSlots || 0,
-      };
+        availableSlots: initialData?.availableSlots || 0};
 
       onOk(formattedData);
       message.success(initialData ? "Cập nhật chi nhánh thành công!" : "Thêm chi nhánh thành công!");
@@ -115,7 +106,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
               label="Tên chi nhánh"
               rules={[{ required: true, message: "Vui lòng nhập tên chi nhánh!" }]}
             >
-              <Input placeholder="Nhập tên chi nhánh" />
+              <MemoizedInput placeholder="Nhập tên chi nhánh" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -139,7 +130,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
               label="Địa chỉ"
               rules={[{ required: true, message: "Vui lòng nhập địa chỉ!" }]}
             >
-              <Input placeholder="Nhập địa chỉ chi nhánh" />
+              <MemoizedInput placeholder="Nhập địa chỉ chi nhánh" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -151,7 +142,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
                 { pattern: /^[0-9\-\+\(\)\s]+$/, message: "Số điện thoại không hợp lệ!" }
               ]}
             >
-              <Input placeholder="Nhập số điện thoại" />
+              <MemoizedInput placeholder="Nhập số điện thoại" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -163,7 +154,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
                 { type: "email", message: "Email không hợp lệ!" }
               ]}
             >
-              <Input placeholder="Nhập email" />
+              <MemoizedInput placeholder="Nhập email" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -172,7 +163,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
               label="Quản lý chi nhánh"
               rules={[{ required: true, message: "Vui lòng nhập tên quản lý!" }]}
             >
-              <Input placeholder="Nhập tên quản lý" />
+              <MemoizedInput placeholder="Nhập tên quản lý" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -181,7 +172,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
               label="Sức chứa"
               rules={[{ required: true, message: "Vui lòng nhập sức chứa!" }]}
             >
-              <InputNumber
+              <MemoizedInputNumber
                 min={1}
                 max={1000}
                 placeholder="Nhập sức chứa"
@@ -194,15 +185,14 @@ const BranchModal: React.FC<BranchModalProps> = ({
               name="description"
               label="Mô tả"
             >
-              <TextArea
+              <MemoizedTextArea
                 rows={3}
                 placeholder="Nhập mô tả chi nhánh"
               />
             </Form.Item>
           </Col>
         </Row>
-      ),
-    },
+      )},
     {
       key: "hours",
       label: "Giờ hoạt động",
@@ -235,8 +225,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
             </Form.Item>
           </Col>
         </Row>
-      ),
-    },
+      )},
     {
       key: "services",
       label: "Dịch vụ & Tiện ích",
@@ -280,8 +269,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
             </Form.Item>
           </Col>
         </Row>
-      ),
-    },
+      )},
   ];
 
   return (
@@ -305,8 +293,7 @@ const BranchModal: React.FC<BranchModalProps> = ({
           certifications: [],
           careSlots: [],
           totalSlots: 0,
-          availableSlots: 0,
-        }}
+          availableSlots: 0}}
       >
         <div style={{ marginBottom: 16 }}>
           <Space>
@@ -332,3 +319,4 @@ const BranchModal: React.FC<BranchModalProps> = ({
 };
 
 export default BranchModal;
+

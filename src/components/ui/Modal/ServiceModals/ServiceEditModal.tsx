@@ -1,11 +1,9 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
-  InputNumber,
   Button,
   Space,
   message,
@@ -15,27 +13,24 @@ import {
   Table,
   Popconfirm,
   Switch,
-  Upload,
-} from "antd";
+  Upload} from "antd";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 import {
   EditOutlined,
   SaveOutlined,
   PlusOutlined,
   UploadOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+  DeleteOutlined} from "@ant-design/icons";
 import {
   Service,
   ServiceProduct,
-  SERVICE_STATUS_OPTIONS,
-} from "@/lib/api/types/service.types";
+  SERVICE_STATUS_OPTIONS} from "@/lib/api/types/service.types";
 import { productService, categoryService } from "@/lib/api/services";
 import { Product } from "@/lib/api/types/product.types";
 import { Category } from "@/lib/api/types/category.types";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
 
 const { Option } = Select;
-const { TextArea } = Input;
 
 interface ServiceEditModalProps {
   visible: boolean;
@@ -48,8 +43,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  editData,
-}) => {
+  editData}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [serviceProducts, setServiceProducts] = useState<ServiceProduct[]>([]);
@@ -96,8 +90,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
         page: 1,
         size: 1000, // Load tất cả sản phẩm
         sort: "productName",
-        direction: "ASC",
-      });
+        direction: "ASC"});
 
       console.log("Product API response:", response);
 
@@ -135,8 +128,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
           basePrice: editData.basePrice,
           laborCost: editData.laborCost,
           isFeatured: editData.isFeatured,
-          isActive: editData.isActive,
-        });
+          isActive: editData.isActive});
         setServiceProducts(editData.serviceProducts || []);
         setImageUrls(editData.imageUrls ? JSON.parse(editData.imageUrls) : []);
       } else {
@@ -181,8 +173,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
         isFeatured: values.isFeatured,
         isActive: values.isActive,
         serviceProducts,
-        audit: editData?.audit,
-      };
+        audit: editData?.audit};
 
       onSuccess(updatedData);
     } catch (error) {
@@ -218,8 +209,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
       notes: "",
       isRequired: true,
       isActive: true,
-      audit: null,
-    };
+      audit: null};
     setServiceProducts([...serviceProducts, newProduct]);
   };
 
@@ -242,8 +232,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
           productBrand: selectedProduct.brand,
           unitPrice: selectedProduct.sellingPrice,
           totalPrice:
-            newProducts[index].quantity * selectedProduct.sellingPrice,
-        };
+            newProducts[index].quantity * selectedProduct.sellingPrice};
       }
     }
 
@@ -262,6 +251,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
   };
 
   // Image management functions
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleImageUpload = (info: any) => {
     if (info.file.status === "done") {
       const newImageUrl = info.file.response?.url || info.file.url;
@@ -274,7 +264,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
     }
   };
 
-  const handleImageUploadBefore = (file: any) => {
+  const handleImageUploadBefore = (file: File) => {
     const isImage = file.type.startsWith("image/");
     if (!isImage) {
       message.error("Chỉ được tải lên file hình ảnh!");
@@ -341,7 +331,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                 { max: 100, message: "Tên không được quá 100 ký tự!" },
               ]}
             >
-              <Input placeholder="Nhập tên dịch vụ" />
+              <MemoizedInput placeholder="Nhập tên dịch vụ" />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
@@ -353,7 +343,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                 { max: 200, message: "URL không được quá 200 ký tự!" },
               ]}
             >
-              <Input placeholder="Nhập URL dịch vụ" />
+              <MemoizedInput placeholder="Nhập URL dịch vụ" />
             </Form.Item>
           </Col>
         </Row>
@@ -404,7 +394,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
             { max: 500, message: "Mô tả không được quá 500 ký tự!" },
           ]}
         >
-          <TextArea
+          <MemoizedTextArea
             rows={3}
             placeholder="Nhập mô tả dịch vụ"
             maxLength={500}
@@ -420,16 +410,14 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
               rules={[
                 {
                   required: true,
-                  message: "Vui lòng nhập thời gian thực hiện!",
-                },
+                  message: "Vui lòng nhập thời gian thực hiện!"},
                 {
                   type: "number",
                   min: 1,
-                  message: "Thời gian phải lớn hơn 0!",
-                },
+                  message: "Thời gian phải lớn hơn 0!"},
               ]}
             >
-              <InputNumber
+              <MemoizedInputNumber
                 min={1}
                 style={{ width: "100%" }}
                 placeholder="Nhập thời gian (phút)"
@@ -462,13 +450,13 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                 { type: "number", min: 0, message: "Giá phải lớn hơn 0!" },
               ]}
             >
-              <InputNumber
+              <MemoizedInputNumber
                 min={0}
                 style={{ width: "100%" }}
                 formatter={(value) =>
                   `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                 }
-                parser={(value) => value!.replace(/\$\s?|(,*)/g, "") as any}
+                parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
                 placeholder="Nhập giá cơ bản"
               />
             </Form.Item>
@@ -482,13 +470,13 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                 { type: "number", min: 0, message: "Chi phí phải lớn hơn 0!" },
               ]}
             >
-              <InputNumber
+              <MemoizedInputNumber
                 min={0}
                 style={{ width: "100%" }}
                 formatter={(value) =>
                   `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                 }
-                parser={(value) => value!.replace(/\$\s?|(,*)/g, "") as any}
+                parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
                 placeholder="Nhập chi phí lao động"
               />
             </Form.Item>
@@ -576,14 +564,13 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                         </Option>
                       )}
                     </Select>
-                  ),
-                },
+                  )},
                 {
                   title: "Số lượng",
                   key: "quantity",
                   width: 100,
                   render: (_, record, index) => (
-                    <InputNumber
+                    <MemoizedInputNumber
                       min={0}
                       step={0.1}
                       value={record.quantity}
@@ -592,8 +579,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                       }
                       style={{ width: "100%" }}
                     />
-                  ),
-                },
+                  )},
                 {
                   title: "Đơn giá",
                   key: "unitPrice",
@@ -602,8 +588,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                     <span style={{ fontWeight: 500, color: "#1890ff" }}>
                       {formatCurrency(record.unitPrice)}
                     </span>
-                  ),
-                },
+                  )},
                 {
                   title: "Thành tiền",
                   key: "totalPrice",
@@ -612,8 +597,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                     <span style={{ fontWeight: 500, color: "#52c41a" }}>
                       {formatCurrency(record.totalPrice)}
                     </span>
-                  ),
-                },
+                  )},
                 {
                   title: "Bắt buộc",
                   key: "isRequired",
@@ -626,14 +610,13 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                       }
                       size="small"
                     />
-                  ),
-                },
+                  )},
                 {
                   title: "Ghi chú",
                   key: "notes",
                   width: 150,
                   render: (_, record, index) => (
-                    <Input
+                    <MemoizedInput
                       placeholder="Ghi chú"
                       value={record.notes}
                       onChange={(e) =>
@@ -641,8 +624,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                       }
                       size="small"
                     />
-                  ),
-                },
+                  )},
                 {
                   title: "Thao tác",
                   key: "actions",
@@ -663,8 +645,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                         Xóa
                       </Button>
                     </Popconfirm>
-                  ),
-                },
+                  )},
               ]}
             />
           ) : (
@@ -682,8 +663,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                 marginTop: 16,
                 padding: 12,
                 backgroundColor: "#f5f5f5",
-                borderRadius: 6,
-              }}
+                borderRadius: 6}}
             >
               <Row gutter={16}>
                 <Col span={8}>
@@ -743,6 +723,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
               {imageUrls.map((url, index) => (
                 <Col key={index} span={8}>
                   <div style={{ position: "relative" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={url}
                       alt={`Service image ${index + 1}`}
@@ -750,8 +731,7 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
                         width: "100%",
                         height: 100,
                         objectFit: "cover",
-                        borderRadius: 8,
-                      }}
+                        borderRadius: 8}}
                     />
                     <Button
                       type="text"
@@ -779,3 +759,4 @@ const ServiceEditModal: React.FC<ServiceEditModalProps> = ({
 };
 
 export default ServiceEditModal;
+

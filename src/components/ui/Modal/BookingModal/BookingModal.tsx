@@ -1,13 +1,11 @@
-"use client";
+﻿"use client";
 import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
   DatePicker,
   TimePicker,
-  InputNumber,
   Button,
   Space,
   Card,
@@ -15,8 +13,7 @@ import {
   Row,
   Col,
   Avatar,
-  Typography,
-} from "antd";
+  Typography} from "antd";
 import {
   CarOutlined,
   UserOutlined,
@@ -24,22 +21,20 @@ import {
   ClockCircleOutlined,
   DollarOutlined,
   EnvironmentOutlined,
-  PhoneOutlined,
-} from "@ant-design/icons";
+  PhoneOutlined} from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   serviceTypes,
   priorityLevels,
   branches,
   staffMembers,
-  availableServices,
-} from "@/components/utils/data/bookings.data";
+  availableServices} from "@/components/utils/data/bookings.data";
 import { formatDurationVer01 } from "@/components/utils/helper/duration.format.helper";
 import SlotSelectionModal from "../SlotSelectionModal";
 import { branchesData } from "@/components/utils/data/branches.data";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 const { Option } = Select;
-const { TextArea } = Input;
 const { Text } = Typography;
 
 interface BookingModalProps {
@@ -57,8 +52,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   onOk,
   initialData,
   mode = "create",
-  loading = false,
-}) => {
+  loading = false}) => {
   const [form] = Form.useForm();
   const [selectedServices, setSelectedServices] = useState<any[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<any[]>([]);
@@ -76,8 +70,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           bookingDate: dayjs(initialData.bookingDate),
           bookingTime: dayjs(initialData.bookingTime, "HH:mm"),
           preferredDate: dayjs(initialData.preferredDate),
-          preferredTime: dayjs(initialData.preferredTime, "HH:mm"),
-        });
+          preferredTime: dayjs(initialData.preferredTime, "HH:mm")});
         setSelectedServices(initialData.services || []);
         setSelectedStaff(initialData.assignedStaff || []);
         const branch = branches.find((b) => b.id === initialData.branchId);
@@ -151,8 +144,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         bookingDate: values.bookingDate.format("YYYY-MM-DD"),
         bookingTime: values.bookingTime.format("HH:mm"),
         preferredDate: values.preferredDate.format("YYYY-MM-DD"),
-        preferredTime: values.preferredTime.format("HH:mm"),
-      };
+        preferredTime: values.preferredTime.format("HH:mm")};
       onOk(bookingData);
     } catch (error) {
       console.log("Validation failed:", error);
@@ -191,8 +183,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         layout="vertical"
         initialValues={{
           priority: "normal",
-          status: "pending",
-        }}
+          status: "pending"}}
       >
         <Row gutter={16}>
           {/* Thông tin khách hàng */}
@@ -209,7 +200,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   { required: true, message: "Vui lòng nhập tên khách hàng" },
                 ]}
               >
-                <Input
+                <MemoizedInput
                   prefix={<UserOutlined />}
                   placeholder="Nhập tên khách hàng"
                 />
@@ -222,11 +213,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   { required: true, message: "Vui lòng nhập số điện thoại" },
                   {
                     pattern: /^[0-9]{10,11}$/,
-                    message: "Số điện thoại không hợp lệ",
-                  },
+                    message: "Số điện thoại không hợp lệ"},
                 ]}
               >
-                <Input placeholder="Nhập số điện thoại" />
+                <MemoizedInput placeholder="Nhập số điện thoại" />
               </Form.Item>
 
               <Form.Item
@@ -234,7 +224,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 label="Email"
                 rules={[{ type: "email", message: "Email không hợp lệ" }]}
               >
-                <Input placeholder="Nhập email" />
+                <MemoizedInput placeholder="Nhập email" />
               </Form.Item>
             </Card>
           </Col>
@@ -253,7 +243,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   { required: true, message: "Vui lòng nhập biển số xe" },
                 ]}
               >
-                <Input prefix={<CarOutlined />} placeholder="Nhập biển số xe" />
+                <MemoizedInput prefix={<CarOutlined />} placeholder="Nhập biển số xe" />
               </Form.Item>
 
               <Row gutter={8}>
@@ -285,7 +275,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     label="Model"
                     rules={[{ required: true, message: "Vui lòng nhập model" }]}
                   >
-                    <Input placeholder="Nhập model" />
+                    <MemoizedInput placeholder="Nhập model" />
                   </Form.Item>
                 </Col>
               </Row>
@@ -299,7 +289,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       { required: true, message: "Vui lòng nhập năm sản xuất" },
                     ]}
                   >
-                    <InputNumber
+                    <MemoizedInputNumber
                       style={{ width: "100%" }}
                       min={1990}
                       max={2024}
@@ -315,7 +305,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       { required: true, message: "Vui lòng nhập màu sắc" },
                     ]}
                   >
-                    <Input placeholder="Nhập màu sắc" />
+                    <MemoizedInput placeholder="Nhập màu sắc" />
                   </Form.Item>
                 </Col>
               </Row>
@@ -352,8 +342,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 rules={[
                   {
                     required: true,
-                    message: "Vui lòng chọn ít nhất một dịch vụ",
-                  },
+                    message: "Vui lòng chọn ít nhất một dịch vụ"},
                 ]}
               >
                 <Select
@@ -371,8 +360,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       <div
                         style={{
                           display: "flex",
-                          justifyContent: "space-between",
-                        }}
+                          justifyContent: "space-between"}}
                       >
                         <span>{service.name}</span>
                         <span style={{ color: "#52c41a", fontWeight: 500 }}>
@@ -477,8 +465,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                           display: "flex",
                           flexDirection: "column",
                           maxWidth: "100%",
-                          overflow: "hidden",
-                        }}
+                          overflow: "hidden"}}
                       >
                         <div
                           style={{
@@ -486,8 +473,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                             marginBottom: 2,
                             whiteSpace: "nowrap",
                             overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
+                            textOverflow: "ellipsis"}}
                         >
                           {branch.name}
                         </div>
@@ -498,8 +484,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
-                            maxWidth: "250px",
-                          }}
+                            maxWidth: "250px"}}
                         >
                           {branch.address}
                         </div>
@@ -516,16 +501,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     padding: 8,
                     backgroundColor: "#f6ffed",
                     border: "1px solid #b7eb8f",
-                    borderRadius: 4,
-                  }}
+                    borderRadius: 4}}
                 >
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      marginBottom: 4,
-                    }}
+                      marginBottom: 4}}
                   >
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 8 }}
@@ -571,8 +554,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                         marginTop: 8,
                         padding: 8,
                         backgroundColor: "#e6f7ff",
-                        borderRadius: 4,
-                      }}
+                        borderRadius: 4}}
                     >
                       <Text strong style={{ color: "#1890ff" }}>
                         Slot đã chọn: {selectedSlot.name} (
@@ -596,8 +578,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     rules={[
                       {
                         required: true,
-                        message: "Vui lòng chọn mức độ ưu tiên",
-                      },
+                        message: "Vui lòng chọn mức độ ưu tiên"},
                     ]}
                   >
                     <Select placeholder="Chọn mức độ ưu tiên">
@@ -654,8 +635,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: 8,
-                        }}
+                          gap: 8}}
                       >
                         <Avatar
                           size="small"
@@ -704,8 +684,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       textAlign: "center",
                       padding: 8,
                       backgroundColor: "#f0f0f0",
-                      borderRadius: 4,
-                    }}
+                      borderRadius: 4}}
                   >
                     <DollarOutlined
                       style={{ color: "#52c41a", fontSize: 20 }}
@@ -726,8 +705,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       textAlign: "center",
                       padding: 8,
                       backgroundColor: "#f0f0f0",
-                      borderRadius: 4,
-                    }}
+                      borderRadius: 4}}
                   >
                     <ClockCircleOutlined
                       style={{ color: "#1890ff", fontSize: 20 }}
@@ -750,7 +728,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         {/* Ghi chú và yêu cầu đặc biệt */}
         <Card size="small" title="Ghi chú và yêu cầu đặc biệt">
           <Form.Item name="notes" label="Ghi chú">
-            <TextArea rows={3} placeholder="Nhập ghi chú cho lịch đặt..." />
+            <MemoizedTextArea rows={3} placeholder="Nhập ghi chú cho lịch đặt..." />
           </Form.Item>
 
           <Form.Item name="specialRequests" label="Yêu cầu đặc biệt">
@@ -779,3 +757,4 @@ const BookingModal: React.FC<BookingModalProps> = ({
 };
 
 export default BookingModal;
+

@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Input,
   Select,
   DatePicker,
   Switch,
@@ -17,28 +16,24 @@ import {
   Divider,
   message,
   Badge,
-  Empty,
-  InputNumber,
-} from "antd";
+  Empty} from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
   InfoCircleOutlined,
   DollarOutlined,
   TagOutlined,
-  FileTextOutlined,
-} from "@ant-design/icons";
+  FileTextOutlined} from "@ant-design/icons";
 import {
   PriceTable,
   PriceTableService,
   DiscountProgram,
   branchesData,
   discountProgramsData,
-  PRICE_TABLE_STATUSES,
-} from "@/components/utils/data/price-table.data";
+  PRICE_TABLE_STATUSES} from "@/components/utils/data/price-table.data";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
-const { TextArea } = Input;
 const { Option } = Select;
 const { Text } = Typography;
 
@@ -55,8 +50,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
   onOk,
   onCancel,
   initialData,
-  title = "Thêm bảng giá mới",
-}) => {
+  title = "Thêm bảng giá mới"}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [selectedServices, setSelectedServices] = useState<PriceTableService[]>(
@@ -84,26 +78,22 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
           minValue: 0,
           maxValue: 4.5,
           price: 120000,
-          description: "Sedan, hatchback, coupe",
-        },
+          description: "Sedan, hatchback, coupe"},
         {
           id: 2,
           name: "Xe trung bình (4.5m - 5m)",
           minValue: 4.5,
           maxValue: 5.0,
           price: 150000,
-          description: "SUV, crossover, wagon",
-        },
+          description: "SUV, crossover, wagon"},
         {
           id: 3,
           name: "Xe lớn (trên 5m)",
           minValue: 5.0,
           maxValue: 999,
           price: 180000,
-          description: "Pickup, van, xe tải nhỏ",
-        },
-      ],
-    },
+          description: "Pickup, van, xe tải nhỏ"},
+      ]},
     {
       id: 2,
       serviceName: "Đánh bóng và phủ ceramic",
@@ -116,26 +106,22 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
           minValue: 0,
           maxValue: 4.5,
           price: 400000,
-          description: "Sedan, hatchback, coupe",
-        },
+          description: "Sedan, hatchback, coupe"},
         {
           id: 5,
           name: "Xe trung bình (4.5m - 5m)",
           minValue: 4.5,
           maxValue: 5.0,
           price: 500000,
-          description: "SUV, crossover, wagon",
-        },
+          description: "SUV, crossover, wagon"},
         {
           id: 6,
           name: "Xe lớn (trên 5m)",
           minValue: 5.0,
           maxValue: 999,
           price: 600000,
-          description: "Pickup, van, xe tải nhỏ",
-        },
-      ],
-    },
+          description: "Pickup, van, xe tải nhỏ"},
+      ]},
     {
       id: 3,
       serviceName: "Thay dầu động cơ",
@@ -148,26 +134,22 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
           minValue: 0,
           maxValue: 0,
           price: 250000,
-          description: "Dầu động cơ thông thường",
-        },
+          description: "Dầu động cơ thông thường"},
         {
           id: 8,
           name: "Dầu cao cấp (0W-20)",
           minValue: 0,
           maxValue: 0,
           price: 350000,
-          description: "Dầu động cơ cao cấp",
-        },
+          description: "Dầu động cơ cao cấp"},
         {
           id: 9,
           name: "Dầu tổng hợp (5W-40)",
           minValue: 0,
           maxValue: 0,
           price: 400000,
-          description: "Dầu tổng hợp cao cấp",
-        },
-      ],
-    },
+          description: "Dầu tổng hợp cao cấp"},
+      ]},
   ];
 
   useEffect(() => {
@@ -180,8 +162,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
         status: initialData.status,
         effectiveDate: initialData.effectiveDate,
         expiryDate: initialData.expiryDate,
-        isDefault: initialData.isDefault,
-      });
+        isDefault: initialData.isDefault});
       setSelectedServices(initialData.services);
       setSelectedDiscountPrograms(initialData.discountPrograms);
     } else {
@@ -220,8 +201,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
         finalPrice: service.basePrice,
         discountPercentage: 0,
         priceRanges: service.priceRanges,
-        status: "active",
-      };
+        status: "active"};
       setSelectedServices([...selectedServices, newService]);
     }
   };
@@ -280,8 +260,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
           initialData?.createdAt || new Date().toISOString().split("T")[0],
         updatedAt: new Date().toISOString().split("T")[0],
         createdBy: "admin",
-        updatedBy: "admin",
-      };
+        updatedBy: "admin"};
 
       onOk(priceTableData);
       message.success(
@@ -322,8 +301,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
             {record.serviceCategory}
           </Text>
         </div>
-      ),
-    },
+      )},
     {
       title: "Giá gốc",
       dataIndex: "basePrice",
@@ -332,14 +310,13 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
         <Text strong style={{ color: "#52c41a" }}>
           {formatCurrency(price)}
         </Text>
-      ),
-    },
+      )},
     {
       title: "Giảm giá (%)",
       dataIndex: "discountPercentage",
       key: "discountPercentage",
       render: (value: number, record: PriceTableService) => (
-        <InputNumber
+        <MemoizedInputNumber
           min={0}
           max={100}
           value={value}
@@ -355,8 +332,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
           size="small"
           style={{ width: 80 }}
         />
-      ),
-    },
+      )},
     {
       title: "Giá cuối",
       dataIndex: "finalPrice",
@@ -365,8 +341,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
         <Text strong style={{ color: "#1890ff" }}>
           {formatCurrency(price)}
         </Text>
-      ),
-    },
+      )},
     {
       title: "Trạng thái",
       dataIndex: "status",
@@ -375,8 +350,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
         <Tag color={status === "active" ? "green" : "red"}>
           {status === "active" ? "Hoạt động" : "Ngừng hoạt động"}
         </Tag>
-      ),
-    },
+      )},
     {
       title: "Thao tác",
       key: "actions",
@@ -388,8 +362,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
           onClick={() => handleRemoveService(record.serviceId)}
           size="small"
         />
-      ),
-    },
+      )},
   ];
 
   return (
@@ -410,9 +383,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
           maxHeight: "85vh",
           overflowY: "auto",
           overflowX: "hidden",
-          padding: "16px 24px",
-        },
-      }}
+          padding: "16px 24px"}}}
     >
       <Form
         form={form}
@@ -420,8 +391,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
         onFinish={handleSubmit}
         initialValues={{
           status: "active",
-          isDefault: false,
-        }}
+          isDefault: false}}
       >
         <Row gutter={[16, 16]}>
           {/* Thông tin cơ bản */}
@@ -435,11 +405,10 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
                     rules={[
                       {
                         required: true,
-                        message: "Vui lòng nhập tên bảng giá!",
-                      },
+                        message: "Vui lòng nhập tên bảng giá!"},
                     ]}
                   >
-                    <Input placeholder="Nhập tên bảng giá" />
+                    <MemoizedInput placeholder="Nhập tên bảng giá" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
@@ -450,7 +419,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
                       { required: true, message: "Vui lòng nhập mã bảng giá!" },
                     ]}
                   >
-                    <Input placeholder="Nhập mã bảng giá" />
+                    <MemoizedInput placeholder="Nhập mã bảng giá" />
                   </Form.Item>
                 </Col>
               </Row>
@@ -458,7 +427,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
               <Row gutter={16}>
                 <Col span={24}>
                   <Form.Item name="description" label="Mô tả">
-                    <TextArea rows={3} placeholder="Nhập mô tả bảng giá" />
+                    <MemoizedTextArea rows={3} placeholder="Nhập mô tả bảng giá" />
                   </Form.Item>
                 </Col>
               </Row>
@@ -518,8 +487,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
                     rules={[
                       {
                         required: true,
-                        message: "Vui lòng chọn ngày hiệu lực!",
-                      },
+                        message: "Vui lòng chọn ngày hiệu lực!"},
                     ]}
                   >
                     <DatePicker style={{ width: "100%" }} />
@@ -555,7 +523,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
                 <Col span={24}>
                   <Row gutter={8}>
                     <Col span={8}>
-                      <Input
+                      <MemoizedInput
                         placeholder="Tìm kiếm dịch vụ..."
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
@@ -605,8 +573,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
                       overflowX: "hidden",
                       border: "1px solid #f0f0f0",
                       borderRadius: 8,
-                      padding: 8,
-                    }}
+                      padding: 8}}
                   >
                     {filteredServices.length > 0 ? (
                       <div>
@@ -618,11 +585,9 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
                             style={{
                               border: "1px solid #e8e8e8",
                               borderRadius: 6,
-                              marginBottom: 8,
-                            }}
+                              marginBottom: 8}}
                             styles={{
-                              body: { padding: 12 },
-                            }}
+                              body: { padding: 12 }}}
                           >
                             <Row gutter={8}>
                               <Col span={16}>
@@ -681,8 +646,7 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
                       overflowX: "hidden",
                       border: "1px solid #f0f0f0",
                       borderRadius: 8,
-                      padding: 8,
-                    }}
+                      padding: 8}}
                   >
                     {selectedServices.length > 0 ? (
                       <Table
@@ -772,3 +736,4 @@ const PriceTableModal: React.FC<PriceTableModalProps> = ({
 };
 
 export default PriceTableModal;
+
