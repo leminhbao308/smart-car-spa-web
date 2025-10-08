@@ -54,6 +54,8 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
   useEffect(() => {
     if (visible) {
       if (isEdit && editData) {
+        // Khi chỉnh sửa, gán sẵn tất cả thông tin bao gồm chi nhánh
+        console.log("Setting form values for edit:", editData);
         form.setFieldsValue({
           branch_id: editData.branch_id,
           bay_name: editData.bay_name,
@@ -64,6 +66,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           display_order: editData.display_order,
           notes: editData.notes});
       } else {
+        // Khi tạo mới, reset form và gán chi nhánh nếu có
         form.resetFields();
         if (branchId) {
           form.setFieldsValue({ branch_id: branchId });
@@ -71,6 +74,26 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
       }
     }
   }, [visible, isEdit, editData, branchId, form]);
+
+  // Đảm bảo form được set giá trị sau khi branches đã load
+  useEffect(() => {
+    if (visible && isEdit && editData && branches.length > 0) {
+      const branchExists = branches.some(branch => branch.branch_id === editData.branch_id);
+      if (branchExists) {
+        form.setFieldsValue({
+          branch_id: editData.branch_id,
+          bay_name: editData.bay_name,
+          bay_code: editData.bay_code,
+          bay_type: editData.bay_type,
+          description: editData.description,
+          capacity: editData.capacity,
+          display_order: editData.display_order,
+          notes: editData.notes});
+      } else {
+        console.warn("Branch not found in branches list:", editData.branch_id);
+      }
+    }
+  }, [visible, isEdit, editData, branches, form]);
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
@@ -176,22 +199,41 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
         requiredMark={false}
         scrollToFirstError
       >
+        {isEdit && (
+          <div style={{ 
+            background: "#f6ffed", 
+            border: "1px solid #b7eb8f", 
+            borderRadius: "6px", 
+            padding: "8px 12px", 
+            marginBottom: "16px",
+            fontSize: "13px",
+            color: "#52c41a"
+          }}>
+            📍 Đang chỉnh sửa bệ dịch vụ - Chi nhánh đã được gán sẵn và không thể thay đổi
+            {editData?.branch_id && (
+              <div style={{ marginTop: "4px", fontSize: "12px", opacity: 0.8 }}>
+                Branch ID: {editData.branch_id}
+              </div>
+            )}
+          </div>
+        )}
+        
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="branch_id"
               label="Chi nhánh"
-              rules={[{ required: true, message: "Vui lòng chọn chi nhánh" }]}
+              rules={isEdit ? [] : [{ required: true, message: "Vui lòng chọn chi nhánh" }]}
             >
               <Select
-                placeholder="Chọn chi nhánh"
+                placeholder={isEdit ? "Chi nhánh của bệ dịch vụ" : "Chọn chi nhánh"}
                 disabled={!!branchId || isEdit}
                 showSearch
                 optionFilterProp="children"
-                filterOption={( option) =>
-                  (option?.children as string)
-                    ?.toLowerCase()
-                    .includes(input.toLowerCase()) ?? false
+                filterOption={(input, option) =>
+                  String(option?.children || '')
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
                 }
               >
                 {branches.map((branch) => (
