@@ -4,7 +4,7 @@
  */
 
 // Types
-export * from './types';
+// export * from './types';
 
 // Services
 export * from './services';

@@ -118,19 +118,26 @@ const StockInventoryPage = () => {
           })),
         });
         pricingResult.items.forEach((item) => {
-          sellingPrices[item.product.id] = item.total_price;
+          if (item.product && item.product.id) {
+            sellingPrices[item.product.id] = item.total_price;
+          }
         });
       } catch (error) {
         console.error("Failed to fetch pricing:", error);
       }
 
       const selectedWh = warehouses.find((w) => w.id === selectedWarehouse);
+      if (!selectedWh) {
+        console.error("Selected warehouse not found:", selectedWarehouse);
+        return;
+      }
+
       const branchName = selectedWh?.branch?.id
         ? branchMap.get(selectedWh.branch.id)
         : "N/A";
 
       const stockItems: StockTableItem[] = products.map((product: Product) => {
-        const invData = batchResult.items[product.productId];
+        const invData = batchResult.items?.[product.productId];
         const onHand = invData?.on_hand || 0;
         const reserved = invData?.reserved || 0;
         const available = invData?.available || 0;
@@ -138,9 +145,9 @@ const StockInventoryPage = () => {
         let stockStatus: "low" | "normal" | "high" | "out" = "normal";
         if (onHand === 0) {
           stockStatus = "out";
-        } else if (onHand < product.minStockLevel) {
+        } else if (product.minStockLevel && onHand < product.minStockLevel) {
           stockStatus = "low";
-        } else if (onHand > product.maxStockLevel) {
+        } else if (product.maxStockLevel && onHand > product.maxStockLevel) {
           stockStatus = "high";
         }
 
@@ -154,7 +161,7 @@ const StockInventoryPage = () => {
           key: product.productId,
           id: product.productId,
           product: product,
-          warehouse: selectedWh!,
+          warehouse: selectedWh,
           on_hand: onHand,
           reserved: reserved,
           available: available,

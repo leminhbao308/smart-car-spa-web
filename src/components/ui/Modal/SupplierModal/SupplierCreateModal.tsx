@@ -19,6 +19,7 @@ import {
   PlusOutlined} from "@ant-design/icons";
 import { CreateSupplierRequest } from "@/lib/api/types/supplier.types";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
+import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
 const { Title } = Typography;
 
@@ -179,7 +180,7 @@ const SupplierCreateModal: React.FC<SupplierCreateModalProps> = ({
                     { min: 5, message: "Địa chỉ phải có ít nhất 5 ký tự" },
                   ]}
                 >
-                  <MemoizedInput.TextArea
+                  <MemoizedTextArea
                     prefix={<EnvironmentOutlined />}
                     placeholder="Nhập địa chỉ đầy đủ"
                     rows={3}
