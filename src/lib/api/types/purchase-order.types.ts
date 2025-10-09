@@ -4,8 +4,6 @@ export interface PurchaseOrder extends BaseAuditEntity {
   id: string;
   branch: Branch;
   warehouse: Warehouse;
-  status: "DRAFT" | "PENDING_DELIVERY" | "RECEIVED" | "CANCELLED";
-  expected_at: string;
   lines: PurchaseOrderLine[];
 }
 
@@ -22,7 +20,6 @@ export interface PurchaseOrderLine extends BaseAuditEntity{
 export interface CreatePORequest {
   branch_id: string;
   warehouse_id: string;
-  expected_at: string;
   lines: CreatePOLineRequest[];
 }
 
