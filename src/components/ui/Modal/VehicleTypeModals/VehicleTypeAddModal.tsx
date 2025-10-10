@@ -1,15 +1,6 @@
 ﻿"use client";
-import React, { useState } from "react";
-import {
-  Modal,
-  Form,
-  Button,
-  Row,
-  Col,
-  message,
-  Typography,
-  Card,
-} from "antd";
+import React from "react";
+import { Modal, Form, Button, Row, Col, Typography, Card } from "antd";
 import { PlusOutlined, CarOutlined } from "@ant-design/icons";
 import { CreateVehicleTypeRequest } from "@/lib/api/types";
 import { useCreateVehicleType } from "@/lib/api/hooks/useVehicleTypes";
@@ -366,7 +357,7 @@ const VehicleTypeAddModal: React.FC<VehicleTypeAddModalProps> = ({
                           e.target.value = upperValue;
                           // Use setTimeout to avoid circular reference
                           setTimeout(() => {
-                            form.setFieldValue('typeCode', upperValue);
+                            form.setFieldValue("typeCode", upperValue);
                           }, 0);
                         }}
                       />
@@ -449,7 +440,9 @@ const VehicleTypeAddModal: React.FC<VehicleTypeAddModalProps> = ({
                 boxShadow: "0 4px 12px rgba(82, 196, 26, 0.3)",
               }}
             >
-              {createVehicleTypeMutation.isPending ? "Đang thêm..." : "Thêm loại xe"}
+              {createVehicleTypeMutation.isPending
+                ? "Đang thêm..."
+                : "Thêm loại xe"}
             </Button>
           </div>
         </Form>
