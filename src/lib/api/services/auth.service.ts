@@ -91,11 +91,36 @@ export class AuthService {
 
 
   /**
+   * Refresh JWT token using refresh token
+   */
+  static async refreshToken(refreshToken: string): Promise<LoginResponse> {
+    try {
+      const response = await apiClient.post("/auth/refresh-token", {
+        refresh_token: refreshToken,
+      });
+
+      if (response.data.success && response.data.data) {
+        const { access_token, refresh_token, user_info } = response.data.data;
+
+        // Store new tokens and user info
+        TokenManager.setTokens(access_token, refresh_token, user_info);
+
+        return response.data.data;
+      } else {
+        throw new Error(response.data.message || "Token refresh failed");
+      }
+    } catch (error) {
+      console.log("Token refresh error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Verify if current token is valid
    */
   static async verifyToken(): Promise<boolean> {
     try {
-      const response = await apiClient.get("/auth/verify-token");
+      const response = await apiClient.post("/auth/verify-token");
       return response.data.success;
     } catch (error) {
       console.log("Token verification error:", error);

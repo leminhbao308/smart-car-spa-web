@@ -5,8 +5,10 @@ import { useConfirmationModalContext } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import { Tag, Avatar, message } from "antd";
 import { VehicleBrand } from "@/lib/api/types";
-import { VehicleService } from "@/lib/api/services/vehicle.service";
-import { useVehicleBrands } from "@/lib/api/hooks/useVehicleBrands";
+import { 
+  useVehicleBrands, 
+  useDeleteVehicleBrand 
+} from "@/lib/api/hooks/useVehicleBrands";
 import {
   VehicleBrandDetailModal,
   VehicleBrandAddModal,
@@ -31,6 +33,9 @@ const VehicleBrandsPage = () => {
     error,
     refetch: fetchVehicleBrands,
   } = useVehicleBrands(params);
+
+  // Use delete mutation hook
+  const deleteBrandMutation = useDeleteVehicleBrand();
 
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -168,19 +173,7 @@ const VehicleBrandsPage = () => {
       content: `Bạn có chắc chắn muốn xóa hãng xe "${record.brand_name}"? Hành động này không thể hoàn tác.`,
       type: "error",
       onConfirm: async () => {
-        try {
-          await VehicleService.deleteVehicleBrand(record.brand_id);
-          // Refresh data using hook
-          await fetchVehicleBrands();
-          message.success(`Đã xóa hãng xe ${record.brand_name} thành công!`);
-        } catch (error) {
-          console.error("Error deleting vehicle brand:", error);
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : "Có lỗi xảy ra khi xóa hãng xe!";
-          message.error(errorMessage);
-        }
+        deleteBrandMutation.mutate(record.brand_id);
       },
     });
   };
@@ -191,7 +184,7 @@ const VehicleBrandsPage = () => {
         title="Quản lý hãng xe"
         dataSource={data}
         columns={columns}
-        loading={loading}
+        loading={loading || deleteBrandMutation.isPending}
         onAdd={handleAdd}
         onEdit={handleEdit}
         onEditCondition={(record: VehicleBrand) => !record.is_deleted}

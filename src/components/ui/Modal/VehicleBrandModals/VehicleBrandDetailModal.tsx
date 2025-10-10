@@ -232,7 +232,7 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
                     {brand.brand_code}
                   </Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="Mô tả" span={2} labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                <Descriptions.Item label="Mô tả" span={{ xs: 1, sm: 2 }} labelStyle={{ fontWeight: 500, color: "#595959" }}>
                   <div style={{
                     backgroundColor: "#fafafa",
                     padding: "12px",

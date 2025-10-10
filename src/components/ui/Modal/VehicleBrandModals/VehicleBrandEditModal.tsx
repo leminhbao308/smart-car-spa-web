@@ -14,7 +14,7 @@ import {
 import { EditOutlined, PlusOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import { VehicleBrand, UpdateVehicleBrandRequest } from "@/lib/api/types";
-import { VehicleService } from "@/lib/api/services/vehicle.service";
+import { useUpdateVehicleBrand } from "@/lib/api/hooks/useVehicleBrands";
 import { MemoizedInput, MemoizedTextArea } from "../../MemoizedComponents";
 
 const { Title, Text } = Typography;
@@ -33,8 +33,8 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
   brandData,
 }) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>("");
+  const updateVehicleBrandMutation = useUpdateVehicleBrand();
 
   useEffect(() => {
     if (visible && brandData) {
@@ -53,37 +53,29 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
     description: string;
   }) => {
     if (!brandData) return;
-    
-    setLoading(true);
+
+    const updateData: UpdateVehicleBrandRequest = {
+      brand_name: values.brandName,
+      brand_code: values.brandCode,
+      description: values.description,
+      ...(logoUrl && logoUrl.trim() !== "" && { brand_logo_url: logoUrl }),
+    };
+
+    console.log("Submitting update data:", updateData);
+
     try {
-      const updateData: UpdateVehicleBrandRequest = {
-        brand_name: values.brandName,
-        brand_code: values.brandCode,
-        description: values.description,
-        ...(logoUrl && { brand_logo_url: logoUrl }),
-      };
+      await updateVehicleBrandMutation.mutateAsync({
+        brandId: brandData.brand_id,
+        data: updateData,
+      });
 
-      console.log("Submitting update data:", updateData);
-      const updatedBrand = await VehicleService.updateVehicleBrand(
-        brandData.brand_id,
-        updateData
-      );
-      console.log("Updated brand:", updatedBrand);
-
-      message.success("Cập nhật hãng xe thành công!");
       form.resetFields();
       setLogoUrl("");
       onSuccess();
       onClose();
     } catch (error) {
       console.error("Error updating vehicle brand:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Có lỗi xảy ra khi cập nhật hãng xe!";
-      message.error(errorMessage);
-    } finally {
-      setLoading(false);
+      // Error handling is done in the hook
     }
   };
 
@@ -98,7 +90,7 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
     file: { originFileObj?: File; status?: string };
   }) => {
     const { file } = info;
-    
+
     if (file.originFileObj) {
       // Tạo URL preview cho file local
       const reader = new FileReader();
@@ -144,8 +136,8 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
           }
         }
       `}</style>
-    <Modal
-      title={
+      <Modal
+        title={
           <div
             style={{
               display: "flex",
@@ -177,20 +169,20 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
                   fontWeight: 600,
                 }}
               >
-            Chỉnh sửa hãng xe
-          </Title>
+                Chỉnh sửa hãng xe
+              </Title>
               <Text type="secondary" style={{ fontSize: "14px" }}>
                 Cập nhật thông tin hãng xe
               </Text>
             </div>
-        </div>
-      }
-      open={visible}
-      onCancel={handleCancel}
-      footer={null}
+          </div>
+        }
+        open={visible}
+        onCancel={handleCancel}
+        footer={null}
         width="60%"
         style={{ maxWidth: "700px" }}
-      styles={{
+        styles={{
           body: {
             maxHeight: "70vh",
             overflowY: "auto",
@@ -198,16 +190,16 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
             padding: "16px",
           },
         }}
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSubmit}
-        initialValues={{}}
       >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          initialValues={{}}
+        >
           <Row gutter={[20, 20]}>
-          {/* Logo */}
-          <Col span={24}>
+            {/* Logo */}
+            <Col span={24}>
               <Card
                 title={
                   <div
@@ -238,265 +230,267 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
                   border: "1px solid #f0f0f0",
                 }}
               >
-                 <div style={{ textAlign: "center" }}>
-                   <div
-                     style={{
-                       position: "relative",
-                       display: "inline-block",
-                       marginBottom: 16,
-                     }}
-                   >
-                     {logoUrl ? (
-                       <div style={{ position: "relative" }}>
-                         <div
-                           style={{
-                             width: 120,
-                             height: 120,
-                             borderRadius: 12,
-                             overflow: "hidden",
-                             border: "3px solid #e6f7ff",
-                             boxShadow: "0 4px 16px rgba(24, 144, 255, 0.15)",
-                             position: "relative",
-                             backgroundColor: "#fafafa",
-                           }}
-                         >
-                           <Image
-                             src={logoUrl}
-                             alt="logo"
-                             width={120}
-                             height={120}
-                             style={{
-                               objectFit: "cover",
-                               width: "100%",
-                               height: "100%",
-                             }}
-                           />
-                           <div
-                             style={{
-                               position: "absolute",
-                               top: 0,
-                               left: 0,
-                               right: 0,
-                               bottom: 0,
-                               background: "linear-gradient(135deg, rgba(24, 144, 255, 0.1) 0%, rgba(24, 144, 255, 0.05) 100%)",
-                               display: "flex",
-                               alignItems: "center",
-                               justifyContent: "center",
-                               opacity: 0,
-                               transition: "opacity 0.3s ease",
-                               cursor: "pointer",
-                             }}
-                             onMouseEnter={(e) => {
-                               e.currentTarget.style.opacity = "1";
-                             }}
-                             onMouseLeave={(e) => {
-                               e.currentTarget.style.opacity = "0";
-                             }}
-                             onClick={() => {
-                               const input = document.createElement("input");
-                               input.type = "file";
-                               input.accept = "image/*";
-                               input.onchange = (e) => {
-                                 const file = (e.target as HTMLInputElement).files?.[0];
-                                 if (file) {
-                                   const reader = new FileReader();
-                                   reader.onload = (e) => {
-                                     setLogoUrl(e.target?.result as string);
-                                   };
-                                   reader.readAsDataURL(file);
-                                 }
-                               };
-                               input.click();
-                             }}
-                           >
-                             <div
-                               style={{
-                                 backgroundColor: "rgba(255, 255, 255, 0.9)",
-                                 borderRadius: 6,
-                                 padding: "8px 12px",
-                                 fontSize: "12px",
-                                 fontWeight: 500,
-                                 color: "#1890ff",
-                                 boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                               }}
-                             >
-                               Thay đổi
-                             </div>
-                           </div>
-                         </div>
-                         <div
-                           style={{
-                             position: "absolute",
-                             top: -6,
-                             right: -6,
-                             width: 28,
-                             height: 28,
-                             backgroundColor: "#ff4d4f",
-                             borderRadius: "50%",
-                             display: "flex",
-                             alignItems: "center",
-                             justifyContent: "center",
-                             cursor: "pointer",
-                             boxShadow: "0 2px 8px rgba(255, 77, 79, 0.3)",
-                             border: "2px solid #fff",
-                             transition: "all 0.2s ease",
-                           }}
-                           onClick={(e) => {
-                             e.stopPropagation();
-                             setLogoUrl("");
-                           }}
-                           onMouseEnter={(e) => {
-                             e.currentTarget.style.transform = "scale(1.1)";
-                             e.currentTarget.style.backgroundColor = "#ff7875";
-                           }}
-                           onMouseLeave={(e) => {
-                             e.currentTarget.style.transform = "scale(1)";
-                             e.currentTarget.style.backgroundColor = "#ff4d4f";
-                           }}
-                         >
-                           <span
-                             style={{
-                               color: "#fff",
-                               fontSize: "14px",
-                               fontWeight: "bold",
-                               lineHeight: 1,
-                             }}
-                           >
-                             ×
-                           </span>
-                         </div>
-                       </div>
-                     ) : (
-                       <div
-                         style={{
-                           width: 120,
-                           height: 120,
-                           borderRadius: 12,
-                           border: "2px dashed #d9d9d9",
-                           backgroundColor: "#fafafa",
-                           display: "flex",
-                           flexDirection: "column",
-                           alignItems: "center",
-                           justifyContent: "center",
-                           transition: "all 0.3s ease",
-                           cursor: "pointer",
-                         }}
-                         onMouseEnter={(e) => {
-                           e.currentTarget.style.borderColor = "#1890ff";
-                           e.currentTarget.style.backgroundColor = "#f0f8ff";
-                         }}
-                         onMouseLeave={(e) => {
-                           e.currentTarget.style.borderColor = "#d9d9d9";
-                           e.currentTarget.style.backgroundColor = "#fafafa";
-                         }}
-            >
-              <Upload
-                name="logo"
-                listType="picture-card"
-                showUploadList={false}
-                onChange={handleFileChange}
-                beforeUpload={(file) => {
-                             const isImage = file.type.startsWith("image/");
-                  if (!isImage) {
-                               message.error("Chỉ được tải lên file hình ảnh!");
-                    return false;
-                  }
-                  const isLt2M = file.size / 1024 / 1024 < 2;
-                  if (!isLt2M) {
-                               message.error(
-                                 "Kích thước file không được vượt quá 2MB!"
-                               );
-                    return false;
-                  }
-                             return false;
-                }}
-                accept="image/*"
-                           style={{
-                             width: "100%",
-                             height: "100%",
-                             display: "flex",
-                             flexDirection: "column",
-                             alignItems: "center",
-                             justifyContent: "center",
-                             border: "none",
-                             background: "transparent",
-                           }}
-                         >
-                           <div
-                             style={{
-                               display: "flex",
-                               flexDirection: "column",
-                               alignItems: "center",
-                               justifyContent: "center",
-                               height: "100%",
-                             }}
-                           >
-                             <div
-                               style={{
-                                 width: 40,
-                                 height: 40,
-                                 borderRadius: "50%",
-                                 backgroundColor: "#e6f7ff",
-                                 display: "flex",
-                                 alignItems: "center",
-                                 justifyContent: "center",
-                                 marginBottom: 8,
-                                 border: "2px solid #91d5ff",
-                               }}
-                             >
-                               <PlusOutlined
-                    style={{ 
-                                   fontSize: "20px",
-                                   color: "#1890ff",
-                                 }}
-                               />
-                             </div>
-                             <div
-                               style={{
-                                 fontSize: "13px",
-                                 color: "#1890ff",
-                                 fontWeight: 500,
-                                 textAlign: "center",
-                               }}
-                             >
-                               Tải logo
-                             </div>
-                             <div
-                               style={{
-                                 fontSize: "11px",
-                                 color: "#8c8c8c",
-                                 marginTop: 2,
-                                 textAlign: "center",
-                               }}
-                             >
-                               120x120px
-                             </div>
-                           </div>
-                         </Upload>
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{
+                      position: "relative",
+                      display: "inline-block",
+                      marginBottom: 16,
+                    }}
+                  >
+                    {logoUrl ? (
+                      <div style={{ position: "relative" }}>
+                        <div
+                          style={{
+                            width: 120,
+                            height: 120,
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            border: "3px solid #e6f7ff",
+                            boxShadow: "0 4px 16px rgba(24, 144, 255, 0.15)",
+                            position: "relative",
+                            backgroundColor: "#fafafa",
+                          }}
+                        >
+                          <Image
+                            src={logoUrl}
+                            alt="logo"
+                            width={120}
+                            height={120}
+                            style={{
+                              objectFit: "cover",
+                              width: "100%",
+                              height: "100%",
+                            }}
+                          />
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              background:
+                                "linear-gradient(135deg, rgba(24, 144, 255, 0.1) 0%, rgba(24, 144, 255, 0.05) 100%)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              opacity: 0,
+                              transition: "opacity 0.3s ease",
+                              cursor: "pointer",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.opacity = "1";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = "0";
+                            }}
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "image/*";
+                              input.onchange = (e) => {
+                                const file = (e.target as HTMLInputElement)
+                                  .files?.[0];
+                                if (file) {
+                                  const reader = new FileReader();
+                                  reader.onload = (e) => {
+                                    setLogoUrl(e.target?.result as string);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              };
+                              input.click();
+                            }}
+                          >
+                            <div
+                              style={{
+                                backgroundColor: "rgba(255, 255, 255, 0.9)",
+                                borderRadius: 6,
+                                padding: "8px 12px",
+                                fontSize: "12px",
+                                fontWeight: 500,
+                                color: "#1890ff",
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                              }}
+                            >
+                              Thay đổi
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: -6,
+                            right: -6,
+                            width: 28,
+                            height: 28,
+                            backgroundColor: "#ff4d4f",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 8px rgba(255, 77, 79, 0.3)",
+                            border: "2px solid #fff",
+                            transition: "all 0.2s ease",
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLogoUrl("");
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "scale(1.1)";
+                            e.currentTarget.style.backgroundColor = "#ff7875";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "scale(1)";
+                            e.currentTarget.style.backgroundColor = "#ff4d4f";
+                          }}
+                        >
+                          <span
+                            style={{
+                              color: "#fff",
+                              fontSize: "14px",
+                              fontWeight: "bold",
+                              lineHeight: 1,
+                            }}
+                          >
+                            ×
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          width: 120,
+                          height: 120,
+                          borderRadius: 12,
+                          border: "2px dashed #d9d9d9",
+                          backgroundColor: "#fafafa",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          transition: "all 0.3s ease",
+                          cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.borderColor = "#1890ff";
+                          e.currentTarget.style.backgroundColor = "#f0f8ff";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.borderColor = "#d9d9d9";
+                          e.currentTarget.style.backgroundColor = "#fafafa";
+                        }}
+                      >
+                        <Upload
+                          name="logo"
+                          listType="picture-card"
+                          showUploadList={false}
+                          onChange={handleFileChange}
+                          beforeUpload={(file) => {
+                            const isImage = file.type.startsWith("image/");
+                            if (!isImage) {
+                              message.error("Chỉ được tải lên file hình ảnh!");
+                              return false;
+                            }
+                            const isLt2M = file.size / 1024 / 1024 < 2;
+                            if (!isLt2M) {
+                              message.error(
+                                "Kích thước file không được vượt quá 2MB!"
+                              );
+                              return false;
+                            }
+                            return false;
+                          }}
+                          accept="image/*"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            border: "none",
+                            background: "transparent",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              height: "100%",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: "50%",
+                                backgroundColor: "#e6f7ff",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                marginBottom: 8,
+                                border: "2px solid #91d5ff",
+                              }}
+                            >
+                              <PlusOutlined
+                                style={{
+                                  fontSize: "20px",
+                                  color: "#1890ff",
+                                }}
+                              />
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "13px",
+                                color: "#1890ff",
+                                fontWeight: 500,
+                                textAlign: "center",
+                              }}
+                            >
+                              Tải logo
+                            </div>
+                            <div
+                              style={{
+                                fontSize: "11px",
+                                color: "#8c8c8c",
+                                marginTop: 2,
+                                textAlign: "center",
+                              }}
+                            >
+                              120x120px
+                            </div>
+                          </div>
+                        </Upload>
+                      </div>
+                    )}
                   </div>
-                )}
-                   </div>
-                   
-                   <div
-                     style={{
-                       fontSize: "12px",
-                       color: "#8c8c8c",
-                       lineHeight: 1.4,
-                       maxWidth: 200,
-                       margin: "0 auto",
-                     }}
-                   >
-                     Hỗ trợ định dạng: JPG, PNG, GIF
-                     <br />
-                     Kích thước tối đa: 2MB
-                     <br />
-                     Khuyến nghị: 120x120px
-                   </div>
+
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#8c8c8c",
+                      lineHeight: 1.4,
+                      maxWidth: 200,
+                      margin: "0 auto",
+                    }}
+                  >
+                    Hỗ trợ định dạng: JPG, PNG, GIF
+                    <br />
+                    Kích thước tối đa: 2MB
+                    <br />
+                    Khuyến nghị: 120x120px
+                  </div>
                 </div>
               </Card>
-          </Col>
+            </Col>
 
-          {/* Thông tin cơ bản */}
+            {/* Thông tin cơ bản */}
             <Col span={24}>
               <Card
                 title={
@@ -529,16 +523,15 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
                 }}
               >
                 <Row gutter={[16, 16]}>
-          <Col span={12}>
-            <Form.Item
+                  <Col span={12}>
+                    <Form.Item
                       label={
                         <span style={{ fontWeight: 500, color: "#595959" }}>
-                          Tên hãng xe{" "}
-                          <span style={{ color: "#ff4d4f" }}>*</span>
+                          Tên hãng xe
                         </span>
                       }
-              name="brandName"
-              rules={[
+                      name="brandName"
+                      rules={[
                         {
                           required: true,
                           message: "Vui lòng nhập tên hãng xe!",
@@ -551,41 +544,41 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
                           max: 100,
                           message: "Tên hãng xe không được quá 100 ký tự!",
                         },
-                {
-                  pattern: /^[a-zA-Z0-9\s\-&.,()]+$/,
+                        {
+                          pattern: /^[a-zA-Z0-9\s\-&.,()]+$/,
                           message:
                             "Tên hãng xe chỉ được chứa chữ cái, số, khoảng trắng và ký tự đặc biệt: -&.,()",
                         },
-              ]}
-            >
-              <MemoizedInput 
-                placeholder="Nhập tên hãng xe" 
-                showCount
-                maxLength={100}
+                      ]}
+                    >
+                      <MemoizedInput
+                        placeholder="Nhập tên hãng xe"
+                        showCount
+                        maxLength={100}
                         style={{
                           borderRadius: 6,
                           border: "1px solid #d9d9d9",
                         }}
-              />
-            </Form.Item>
-          </Col>
+                      />
+                    </Form.Item>
+                  </Col>
 
-          <Col span={12}>
-            <Form.Item
+                  <Col span={12}>
+                    <Form.Item
                       label={
                         <span style={{ fontWeight: 500, color: "#595959" }}>
-                          Mã hãng xe <span style={{ color: "#ff4d4f" }}>*</span>
+                          Mã hãng xe
                         </span>
                       }
-              name="brandCode"
-              rules={[
+                      name="brandCode"
+                      rules={[
                         {
                           required: true,
                           message: "Vui lòng nhập mã hãng xe!",
                         },
-                {
-                  pattern: /^[A-Z0-9_]+$/,
-                  message:
+                        {
+                          pattern: /^[A-Z0-9_]+$/,
+                          message:
                             "Mã hãng xe chỉ được chứa chữ hoa, số và dấu gạch dưới!",
                         },
                         {
@@ -596,56 +589,61 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
                           max: 20,
                           message: "Mã hãng xe không được quá 20 ký tự!",
                         },
-              ]}
-            >
-              <MemoizedInput 
-                placeholder="VD: TOYOTA, HONDA, BMW" 
-                        style={{
-                          textTransform: "uppercase",
-                          borderRadius: 6,
-                          border: "1px solid #d9d9d9",
-                        }}
-                onChange={(e) => {
-                  e.target.value = e.target.value.toUpperCase();
-                }}
-              />
-            </Form.Item>
-          </Col>
+                      ]}
+                    >
+                       <MemoizedInput
+                         placeholder="VD: TOYOTA, HONDA, BMW"
+                         style={{
+                           textTransform: "uppercase",
+                           borderRadius: 6,
+                           border: "1px solid #d9d9d9",
+                         }}
+                         onChange={(e) => {
+                           const upperValue = e.target.value.toUpperCase();
+                           e.target.value = upperValue;
+                           // Use setTimeout to avoid circular reference
+                           setTimeout(() => {
+                             form.setFieldValue('brandCode', upperValue);
+                           }, 0);
+                         }}
+                       />
+                    </Form.Item>
+                  </Col>
 
-          <Col span={24}>
-            <Form.Item
+                  <Col span={24}>
+                    <Form.Item
                       label={
                         <span style={{ fontWeight: 500, color: "#595959" }}>
-                          Mô tả <span style={{ color: "#ff4d4f" }}>*</span>
+                          Mô tả
                         </span>
                       }
-              name="description"
-              rules={[
-                { required: true, message: "Vui lòng nhập mô tả!" },
-                { min: 10, message: "Mô tả phải có ít nhất 10 ký tự!" },
+                      name="description"
+                      rules={[
+                        { required: true, message: "Vui lòng nhập mô tả!" },
+                        { min: 10, message: "Mô tả phải có ít nhất 10 ký tự!" },
                         {
                           max: 500,
                           message: "Mô tả không được quá 500 ký tự!",
                         },
-              ]}
-            >
-              <MemoizedTextArea
-                rows={4}
-                placeholder="Nhập mô tả về hãng xe, lịch sử, đặc điểm nổi bật..."
-                showCount
-                maxLength={500}
+                      ]}
+                    >
+                      <MemoizedTextArea
+                        rows={4}
+                        placeholder="Nhập mô tả về hãng xe, lịch sử, đặc điểm nổi bật..."
+                        showCount
+                        maxLength={500}
                         style={{
                           resize: "vertical",
                           borderRadius: 6,
                           border: "1px solid #d9d9d9",
                         }}
-              />
-            </Form.Item>
+                      />
+                    </Form.Item>
                   </Col>
                 </Row>
               </Card>
-          </Col>
-        </Row>
+            </Col>
+          </Row>
 
           <div
             style={{
@@ -658,9 +656,9 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
               flexWrap: "wrap",
             }}
           >
-            <Button 
+            <Button
               onClick={handleCancel}
-              disabled={loading}
+              disabled={updateVehicleBrandMutation.isPending}
               size="large"
               style={{
                 minWidth: 100,
@@ -672,10 +670,10 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
             >
               Hủy
             </Button>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
-              loading={loading}
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={updateVehicleBrandMutation.isPending}
               size="large"
               icon={<EditOutlined />}
               style={{
@@ -688,11 +686,13 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
                 boxShadow: "0 4px 12px rgba(24, 144, 255, 0.3)",
               }}
             >
-              {loading ? "Đang cập nhật..." : "Cập nhật"}
+              {updateVehicleBrandMutation.isPending
+                ? "Đang cập nhật..."
+                : "Cập nhật hãng xe"}
             </Button>
-        </div>
-      </Form>
-    </Modal>
+          </div>
+        </Form>
+      </Modal>
     </>
   );
 };
