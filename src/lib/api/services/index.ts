@@ -30,3 +30,8 @@ export * from './purchase-order.service';
 export * from './service-bay.service';
 export * from './purchase-order.service';
 export * from './promotion.service';
+export * from './booking.service';
+export * from './service-process.service';
+export * from './service-process-tracking.service';
+export * from './media.service';
+export * from './product-attribute.service';
