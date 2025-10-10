@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import {
   Modal,
   Descriptions,
@@ -13,11 +13,8 @@ import {
   Spin,
   message,
 } from "antd";
-import {
-  CarOutlined,
-} from "@ant-design/icons";
-import { VehicleModel } from "@/lib/api/types";
-import { useVehicleModels } from "@/lib/api/hooks/useVehicleModels";
+import { useVehicleModel } from "@/lib/api/hooks/useVehicleModels";
+import { useVehicleBrandsDropdown, useVehicleTypesDropdown } from "@/lib/api/hooks";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -32,34 +29,25 @@ const VehicleModelDetailModal: React.FC<VehicleModelDetailModalProps> = ({
   onCancel,
   modelId,
 }) => {
-  const [model, setModel] = useState<VehicleModel | null>(null);
-  const [loading, setLoading] = useState(false);
-  const { getModelById } = useVehicleModels();
+  const { model, loading, error } = useVehicleModel(modelId);
+  const { dropdownData: brandsData } = useVehicleBrandsDropdown();
+  const { dropdownData: typesData } = useVehicleTypesDropdown();
 
-  const fetchModelDetails = useCallback(async () => {
-    if (!modelId) return;
-    
-    setLoading(true);
-    try {
-      const modelData = await getModelById(modelId);
-      setModel(modelData);
-    } catch (error) {
-      console.error("Error fetching model details:", error);
-      message.error("Không thể tải thông tin chi tiết model xe");
-    } finally {
-      setLoading(false);
-    }
-  }, [modelId, getModelById]);
+  // Helper functions to get names by ID
+  const getBrandName = (brandId: string) => {
+    const brand = brandsData.find(b => b.brand_id === brandId);
+    return brand ? brand.brand_name : `Brand ID: ${brandId}`;
+  };
 
-  useEffect(() => {
-    if (visible && modelId) {
-      fetchModelDetails();
-    } else {
-      setModel(null);
-    }
-  }, [visible, modelId, fetchModelDetails]);
+  const getTypeName = (typeId: string) => {
+    const type = typesData.find(t => t.type_id === typeId);
+    return type ? type.type_name : `Type ID: ${typeId}`;
+  };
 
-  if (!model && !loading) return null;
+  // Show error message if there's an error
+  if (error) {
+    message.error("Không thể tải thông tin chi tiết model xe");
+  }
 
   return (
     <Modal
@@ -81,7 +69,7 @@ const VehicleModelDetailModal: React.FC<VehicleModelDetailModalProps> = ({
               {model?.model_name || "Đang tải..."}
             </Title>
             <Text type="secondary">
-              {model ? `${model.brand_name || `Brand ID: ${model.brand_id}`} • ${model.type_name || `Type ID: ${model.type_id}`}` : ""}
+              {model ? `${getBrandName(model.brand_id)} • ${getTypeName(model.type_id)}` : ""}
             </Text>
           </div>
         </div>
@@ -93,21 +81,29 @@ const VehicleModelDetailModal: React.FC<VehicleModelDetailModalProps> = ({
           Đóng
         </Button>,
       ]}
-      width={800}
+      width={900}
       styles={{
-        body: { maxHeight: "70vh", overflowY: "auto" },
+        body: { 
+          maxHeight: "70vh", 
+          overflowY: "auto",
+          overflowX: "hidden"
+        },
       }}
     >
       {loading ? (
         <div style={{ textAlign: "center", padding: "50px 0" }}>
           <Spin size="large" />
         </div>
+      ) : error ? (
+        <div style={{ textAlign: "center", padding: "50px" }}>
+          <Text type="danger">Không thể tải thông tin model xe</Text>
+        </div>
       ) : model ? (
         <Row gutter={[24, 24]}>
           {/* Thông tin cơ bản */}
           <Col span={24}>
             <Card title="Thông tin cơ bản" size="small">
-              <Descriptions column={2} size="small">
+              <Descriptions column={{ xs: 1, sm: 2 }} size="small">
                 <Descriptions.Item label="Tên model">
                   <Text strong>{model.model_name}</Text>
                 </Descriptions.Item>
@@ -115,10 +111,10 @@ const VehicleModelDetailModal: React.FC<VehicleModelDetailModalProps> = ({
                   <Tag color="blue">{model.model_code}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Hãng xe">
-                  <Text>{model.brand_name || `Brand ID: ${model.brand_id}`}</Text>
+                  <Text>{getBrandName(model.brand_id)}</Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Loại xe">
-                  <Tag color="green">{model.type_name || `Type ID: ${model.type_id}`}</Tag>
+                  <Tag color="green">{getTypeName(model.type_id)}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Trạng thái">
                   <Tag color={model.is_active ? "green" : "red"}>
@@ -144,7 +140,7 @@ const VehicleModelDetailModal: React.FC<VehicleModelDetailModalProps> = ({
           {/* Thông tin hệ thống */}
           <Col span={24}>
             <Card title="Thông tin hệ thống" size="small">
-              <Descriptions column={2} size="small">
+              <Descriptions column={{ xs: 1, sm: 2 }} size="small">
                 <Descriptions.Item label="Ngày tạo">
                   <Text>{new Date(model.created_date).toLocaleDateString("vi-VN")}</Text>
                 </Descriptions.Item>

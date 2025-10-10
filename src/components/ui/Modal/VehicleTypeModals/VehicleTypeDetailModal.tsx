@@ -258,25 +258,6 @@ const VehicleTypeDetailModal: React.FC<VehicleTypeDetailModalProps> = ({
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item
-                    label="Mô tả"
-                    span={{ xs: 1, sm: 2 }}
-                    labelStyle={{ fontWeight: 500, color: "#595959" }}
-                  >
-                    <div
-                      style={{
-                        backgroundColor: "#fafafa",
-                        padding: "12px",
-                        borderRadius: 6,
-                        border: "1px solid #f0f0f0",
-                        fontSize: "14px",
-                        lineHeight: 1.6,
-                        color: "#595959",
-                      }}
-                    >
-                      {type.description || "Không có mô tả"}
-                    </div>
-                  </Descriptions.Item>
-                  <Descriptions.Item
                     label="Trạng thái"
                     labelStyle={{ fontWeight: 500, color: "#595959" }}
                   >
@@ -299,6 +280,26 @@ const VehicleTypeDetailModal: React.FC<VehicleTypeDetailModalProps> = ({
                     </Tag>
                   </Descriptions.Item>
                 </Descriptions>
+                
+                {/* Mô tả riêng biệt */}
+                <div style={{ marginTop: 16 }}>
+                  <div style={{ fontWeight: 500, color: "#595959", marginBottom: 8 }}>
+                    Mô tả
+                  </div>
+                  <div
+                    style={{
+                      backgroundColor: "#fafafa",
+                      padding: "12px",
+                      borderRadius: 6,
+                      border: "1px solid #f0f0f0",
+                      fontSize: "14px",
+                      lineHeight: 1.6,
+                      color: "#595959",
+                    }}
+                  >
+                    {type.description || "Không có mô tả"}
+                  </div>
+                </div>
               </Card>
             </Col>
 
