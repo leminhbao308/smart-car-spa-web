@@ -51,7 +51,7 @@ interface PriceTableDetailModalProps {
   priceTable: PriceTable | null;
 }
 
-const PriceTableDetailModal: React.FC<PriceTableDetailModalProps> = ({
+const PriceBookDetailModal: React.FC<PriceTableDetailModalProps> = ({
   open,
   onCancel,
   priceTable,
@@ -171,7 +171,7 @@ const PriceTableDetailModal: React.FC<PriceTableDetailModalProps> = ({
         // Calculate price based on vehicle type multiplier
         const basePrice = record.finalPrice || record.basePrice;
         const finalPrice = Math.round(basePrice * vehicleType.multiplier);
-        
+
         return (
           <Text strong style={{ fontSize: 14 }}>
             {formatCurrency(finalPrice)}
@@ -402,7 +402,7 @@ const PriceTableDetailModal: React.FC<PriceTableDetailModalProps> = ({
       ),
       children: (
         <div>
-          <Card 
+          <Card
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <DollarOutlined style={{ color: '#1890ff' }} />
@@ -418,7 +418,7 @@ const PriceTableDetailModal: React.FC<PriceTableDetailModalProps> = ({
                 Giá được tính dựa trên hệ số nhân của từng loại xe.
               </Text>
             </div>
-            
+
             {priceTableData.length > 0 ? (
               <Table
                 dataSource={priceTableData}
@@ -442,9 +442,9 @@ const PriceTableDetailModal: React.FC<PriceTableDetailModalProps> = ({
               <Row gutter={[16, 8]}>
                 {vehicleTypes.map(vehicleType => (
                   <Col span={8} key={vehicleType.id}>
-                    <div style={{ 
-                      padding: 12, 
-                      backgroundColor: '#f6ffed', 
+                    <div style={{
+                      padding: 12,
+                      backgroundColor: '#f6ffed',
                       borderRadius: 6,
                       border: '1px solid #b7eb8f'
                     }}>
@@ -525,4 +525,4 @@ const PriceTableDetailModal: React.FC<PriceTableDetailModalProps> = ({
   );
 };
 
-export default PriceTableDetailModal;
+export default PriceBookDetailModal;

@@ -93,7 +93,7 @@ const ProductsPage = () => {
   };
 
   // Định nghĩa columns cho sản phẩm
-  const productColumns: ColumnsType<Product> = [  
+  const productColumns: ColumnsType<Product> = [
     {
       title: "Hình ảnh",
       key: "image",
@@ -107,8 +107,8 @@ const ProductsPage = () => {
                 alt={record.productName}
                 width={60}
                 height={60}
-                style={{ 
-                  borderRadius: 8, 
+                style={{
+                  borderRadius: 8,
                   objectFit: "cover",
                   border: "2px solid #f0f0f0",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
@@ -193,18 +193,6 @@ const ProductsPage = () => {
       key: "unitOfMeasure",
       width: 80,
       render: (unit: string) => <Tag color="green">{unit}</Tag>,
-    },
-    {
-      title: "Giá bán",
-      dataIndex: "sellingPrice",
-      key: "sellingPrice",
-      width: 120,
-      sorter: (a, b) => a.sellingPrice - b.sellingPrice,
-      render: (price: number) => (
-        <div style={{ fontWeight: 500, color: "#52c41a" }}>
-          {formatCurrency(price)}
-        </div>
-      ),
     },
     {
       title: "Trạng thái",

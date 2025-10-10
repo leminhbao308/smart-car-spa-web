@@ -1,9 +1,9 @@
 export { default as ConfirmationModal } from "./ConfirmationModal";
 export { useConfirmationModal } from "./useConfirmationModal";
-export { 
-  ConfirmationModalProvider, 
-  ConfirmationModalContext, 
-  useConfirmationModalContext 
+export {
+  ConfirmationModalProvider,
+  ConfirmationModalContext,
+  useConfirmationModalContext
 } from "./ConfirmationModalProvider";
 export { default as BranchModal } from "./BranchModal/BranchModal";
 export { default as PricingModal } from "./PriceModal/PricingModal";
@@ -21,16 +21,16 @@ export { default as ServicePackageEditModal } from "./ServicePackageModals/Servi
 
 // Price Table Modals
 export { default as PriceTableModal } from "./PriceTableModals/PriceTableModal";
-export { default as PriceTableDetailModal } from "./PriceTableModals/PriceTableDetailModal";
+export { default as PriceTableDetailModal } from "./PriceTableModals/PriceBookDetailModal";
 export { default as PriceTableEditModal } from "./PriceTableModals/PriceTableEditModal";
 export { default as PromotionModal } from "./PromotionModal/PromotionModal";
 export { default as SupplierModal } from "./SupplierModal/SupplierModal";
-export { 
+export {
   SupplierDetailModal,
   SupplierEditModal,
   SupplierCreateModal
 } from "./SupplierModal";
-export { 
+export {
   BranchDetailModal,
   BranchEditModal,
   BranchCreateModal
@@ -63,7 +63,7 @@ export { default as ProductDetailModal } from "./Product/ProductDetailModal";
 export { default as ProductEditModal } from "./Product/ProductEditModal";
 
 // Service Bay Modals
-export { 
+export {
   ServiceBayModal,
   ServiceBayDetailModal
 } from "./ServiceBayModals";
