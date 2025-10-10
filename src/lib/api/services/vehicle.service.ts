@@ -21,10 +21,7 @@ import {
   GetAllVehicleModelsRequest,
   GetAllVehicleModelsResponse,
   CreateVehicleModelRequest,
-  CreateVehicleModelResponse,
   UpdateVehicleModelRequest,
-  UpdateVehicleModelResponse,
-  DeleteVehicleModelResponse,
   VehicleModelDropdownResponse,
 } from "../types";
 
@@ -358,7 +355,7 @@ export class VehicleService {
   /**
    * Delete vehicle type
    */
-  static async deleteVehicleType(typeId: string): Promise<string> {
+  static async deleteVehicleType(typeId: string): Promise<void> {
     try {
       console.log("Deleting vehicle type with ID:", typeId);
 
@@ -366,7 +363,7 @@ export class VehicleService {
       console.log("Delete vehicle type API response:", response);
 
       if (response.data.success) {
-        return response.data.data || response.data.message;
+        return;
       } else {
         throw new Error(
           response.data.message || "Failed to delete vehicle type"
@@ -491,7 +488,7 @@ export class VehicleService {
    */
   static async createVehicleModel(
     modelData: CreateVehicleModelRequest
-  ): Promise<CreateVehicleModelResponse["data"]> {
+  ): Promise<VehicleModel> {
     try {
       console.log("Creating vehicle model with data:", modelData);
 
@@ -520,7 +517,7 @@ export class VehicleService {
   static async updateVehicleModel(
     modelId: string,
     modelData: UpdateVehicleModelRequest
-  ): Promise<UpdateVehicleModelResponse["data"]> {
+  ): Promise<VehicleModel> {
     try {
       console.log("Updating vehicle model with data:", modelData);
 
@@ -547,9 +544,7 @@ export class VehicleService {
   /**
    * Delete vehicle model
    */
-  static async deleteVehicleModel(
-    modelId: string
-  ): Promise<DeleteVehicleModelResponse["data"]> {
+  static async deleteVehicleModel(modelId: string): Promise<void> {
     try {
       console.log("Deleting vehicle model with ID:", modelId);
 
@@ -559,7 +554,7 @@ export class VehicleService {
       console.log("Delete vehicle model API response:", response);
 
       if (response.data.success) {
-        return response.data.data;
+        return;
       } else {
         throw new Error(
           response.data.message || "Failed to delete vehicle model"

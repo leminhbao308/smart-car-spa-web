@@ -9,11 +9,21 @@ export * from './useVehicleBrands';
 export { 
   useVehicleTypes, 
   useVehicleTypesDropdown,
-  convertToSelectOptions as convertVehicleTypesToSelectOptions
+  useVehicleType,
+  useCreateVehicleType,
+  useUpdateVehicleType,
+  useDeleteVehicleType,
+  convertToSelectOptions as convertVehicleTypesToSelectOptions,
+  findTypeById,
+  findTypeByCode
 } from './useVehicleTypes';
 export { 
   useVehicleModels, 
-  useVehicleModelsDropdown
+  useVehicleModelsDropdown,
+  useVehicleModel,
+  useCreateVehicleModel,
+  useUpdateVehicleModel,
+  useDeleteVehicleModel
 } from './useVehicleModels';
 export * from './useVehicleProfiles';
 export * from './useProducts';

@@ -202,7 +202,7 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
             Hủy
           </Button>
           <Button type="primary" htmlType="submit" loading={loading}>
-            Cập nhật model xe
+            Cập nhật
           </Button>
         </div>
       </Form>

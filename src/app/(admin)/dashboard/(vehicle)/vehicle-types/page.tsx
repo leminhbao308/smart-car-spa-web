@@ -4,9 +4,7 @@ import { AdminTable } from "@/components/ui/Table";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import { Tag, Avatar, message } from "antd";
-import {
-  VehicleType,
-} from "@/lib/api/types";
+import { VehicleType } from "@/lib/api/types";
 import { VehicleService } from "@/lib/api/services/vehicle.service";
 import {
   VehicleTypeDetailModal,
@@ -18,7 +16,7 @@ const VehicleTypesPage = () => {
   const [data, setData] = useState<VehicleType[]>([]);
   const [loading, setLoading] = useState(false);
   const { showModal } = useConfirmationModalContext();
-  
+
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -37,9 +35,9 @@ const VehicleTypesPage = () => {
         page: 0,
         size: 100, // Get all types for now
         direction: "DESC",
-        sort: "createdDate"
+        sort: "createdDate",
       });
-      
+
       setData(response.data.content);
     } catch (error) {
       console.error("Error fetching vehicle types:", error);
@@ -48,8 +46,6 @@ const VehicleTypesPage = () => {
       setLoading(false);
     }
   };
-
-
 
   // Handlers
   const handleAdd = () => {
@@ -96,7 +92,10 @@ const VehicleTypesPage = () => {
           fetchVehicleTypes();
         } catch (error) {
           console.error("Error deleting vehicle type:", error);
-          const errorMessage = error instanceof Error ? error.message : "Có lỗi xảy ra khi xóa loại xe!";
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Có lỗi xảy ra khi xóa loại xe!";
           message.error(errorMessage);
         } finally {
           setLoading(false);
@@ -105,33 +104,6 @@ const VehicleTypesPage = () => {
     });
   };
 
-  const handleToggleStatus = (record: VehicleType) => {
-    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
-    showModal({
-      title: `${
-        action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"
-      } loại xe`,
-      content: `Bạn có chắc chắn muốn ${action} loại xe ${record.type_name}?`,
-      type: "warning",
-      onConfirm: async () => {
-        try {
-          setLoading(true);
-          await VehicleService.updateVehicleTypeStatus(record.type_id, !record.is_active);
-          setData(prev => prev.map(item => 
-            item.type_id === record.type_id 
-              ? { ...item, is_active: !item.is_active }
-              : item
-          ));
-          message.success(`Đã ${action} loại xe ${record.type_name} thành công!`);
-        } catch (error) {
-          console.error("Error updating vehicle type status:", error);
-          message.error(`Không thể ${action} loại xe ${record.type_name}`);
-        } finally {
-          setLoading(false);
-        }
-      },
-    });
-  };
 
   // Định nghĩa columns
   const columns: ColumnsType<VehicleType> = [
@@ -141,10 +113,7 @@ const VehicleTypesPage = () => {
       key: "type_code",
       width: 80,
       render: (typeCode: string, record: VehicleType) => (
-        <Avatar 
-          size={50} 
-          style={{ backgroundColor: "#f0f0f0" }}
-        >
+        <Avatar size={50} style={{ backgroundColor: "#f0f0f0" }}>
           {record.type_name.charAt(0)}
         </Avatar>
       ),
@@ -158,7 +127,14 @@ const VehicleTypesPage = () => {
           <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
             {record.type_name}
           </div>
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 2, fontFamily: "monospace" }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: "#666",
+              marginBottom: 2,
+              fontFamily: "monospace",
+            }}
+          >
             {record.type_code}
           </div>
           <div style={{ fontSize: 11, color: "#999" }}>
@@ -178,7 +154,8 @@ const VehicleTypesPage = () => {
           {new Date(createdDate).toLocaleDateString("vi-VN")}
         </div>
       ),
-      sorter: (a, b) => new Date(a.created_date).getTime() - new Date(b.created_date).getTime(),
+      sorter: (a, b) =>
+        new Date(a.created_date).getTime() - new Date(b.created_date).getTime(),
     },
     {
       title: "Ngày cập nhật",
@@ -190,7 +167,9 @@ const VehicleTypesPage = () => {
           {new Date(modifiedDate).toLocaleDateString("vi-VN")}
         </div>
       ),
-      sorter: (a, b) => new Date(a.modified_date).getTime() - new Date(b.modified_date).getTime(),
+      sorter: (a, b) =>
+        new Date(a.modified_date).getTime() -
+        new Date(b.modified_date).getTime(),
     },
     {
       title: "Người tạo",
@@ -217,22 +196,6 @@ const VehicleTypesPage = () => {
       ],
       onFilter: (value, record: VehicleType) => record.is_active === value,
     },
-    {
-      title: "Đã xóa",
-      dataIndex: "is_deleted",
-      key: "is_deleted",
-      width: 100,
-      render: (isDeleted: boolean) => (
-        <Tag color={isDeleted ? "red" : "green"}>
-          {isDeleted ? "Đã xóa" : "Chưa xóa"}
-        </Tag>
-      ),
-      filters: [
-        { text: "Đã xóa", value: true },
-        { text: "Chưa xóa", value: false },
-      ],
-      onFilter: (value, record: VehicleType) => record.is_deleted === value,
-    },
   ];
 
   return (
@@ -248,15 +211,6 @@ const VehicleTypesPage = () => {
         onView={handleView}
         addButtonText="Thêm loại xe"
         actions={[
-          {
-            key: "toggle-status",
-            label: (record: VehicleType) =>
-              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
-            type: "default",
-            danger: (record: VehicleType) => record.is_active,
-            onClick: handleToggleStatus,
-            condition: (record: VehicleType) => !record.is_deleted,
-          },
           {
             key: "delete",
             label: "Xóa",
@@ -276,19 +230,19 @@ const VehicleTypesPage = () => {
       {/* Modals */}
       <VehicleTypeDetailModal
         visible={detailModalVisible}
-        onCancel={() => setDetailModalVisible(false)}
+        onClose={() => setDetailModalVisible(false)}
         typeId={selectedType?.type_id || null}
       />
 
       <VehicleTypeAddModal
         visible={addModalVisible}
-        onCancel={() => setAddModalVisible(false)}
+        onClose={() => setAddModalVisible(false)}
         onSuccess={handleAddSuccess}
       />
 
       <VehicleTypeEditModal
         visible={editModalVisible}
-        onCancel={() => setEditModalVisible(false)}
+        onClose={() => setEditModalVisible(false)}
         onSuccess={handleEditSuccess}
         typeData={selectedType}
       />
