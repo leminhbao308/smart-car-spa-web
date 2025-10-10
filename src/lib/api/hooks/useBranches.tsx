@@ -1,161 +1,150 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { BranchService } from "../services/branch.service";
 import {
   BranchDisplay,
   CreateBranchRequest,
   UpdateBranchRequest,
 } from "../types/branch.types";
+import { message } from "antd";
 
 export interface UseBranchesParams {
   // No pagination params needed as API doesn't support them
 }
 
-export interface UseBranchesReturn {
-  branches: BranchDisplay[];
-  pagination: {
-    page: number;
-    size: number;
-    total_elements: number;
-    total_pages: number;
-    first: boolean;
-    last: boolean;
-    has_next: boolean;
-    has_previous: boolean;
-  };
-  loading: boolean;
-  error: string | null;
-  refreshBranches: () => void;
-  createBranch: (data: CreateBranchRequest) => Promise<BranchDisplay>;
-  updateBranch: (branchId: string, data: UpdateBranchRequest) => Promise<BranchDisplay>;
-  deleteBranch: (branchId: string) => Promise<void>;
-}
-
 /**
  * Hook for managing branches data
+ * Migrated to TanStack React Query for better performance and caching
  */
-export const useBranches = (params: UseBranchesParams): UseBranchesReturn => {
-  const [branches, setBranches] = useState<BranchDisplay[]>([]);
-  const [pagination, setPagination] = useState({
-    page: 0,
-    size: 10,
-    total_elements: 0,
-    total_pages: 0,
-    first: true,
-    last: true,
-    has_next: false,
-    has_previous: false,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Use ref to store params to prevent unnecessary re-renders
-  const paramsRef = useRef(params);
-
-  const fetchBranches = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+export const useBranches = (params?: UseBranchesParams) => {
+  const {
+    data: branchesResponse,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["branches", "list", params],
+    queryFn: async () => {
+      console.log("Fetching branches from API...");
       const response = await BranchService.getAllBranches();
-      setBranches(response.branches);
-      setPagination(response.pagination);
-    } catch (err) {
-      console.error("Failed to fetch branches:", err);
-      setError("Failed to load branches data.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchBranches();
-  }, [fetchBranches]);
-
-  const refreshBranches = useCallback(() => {
-    fetchBranches();
-  }, [fetchBranches]);
-
-  const createBranch = useCallback(async (data: CreateBranchRequest) => {
-    try {
-      const response = await BranchService.createBranch(data);
-      // Refresh the list after successful creation
-      await fetchBranches();
+      console.log("Branches API response:", response);
       return response;
-    } catch (err) {
-      console.error("Failed to create branch:", err);
-      throw err;
-    }
-  }, [fetchBranches]);
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 
-  const updateBranch = useCallback(async (branchId: string, data: UpdateBranchRequest) => {
-    try {
-      const response = await BranchService.updateBranch(branchId, data);
-      // Refresh the list after successful update
-      await fetchBranches();
-      return response;
-    } catch (err) {
-      console.error("Failed to update branch:", err);
-      throw err;
-    }
-  }, [fetchBranches]);
-
-  const deleteBranch = useCallback(async (branchId: string) => {
-    try {
-      await BranchService.deleteBranch(branchId);
-      // Refresh the list after successful deletion
-      await fetchBranches();
-    } catch (err) {
-      console.error("Failed to delete branch:", err);
-      throw err;
-    }
-  }, [fetchBranches]);
-
-  return { 
-    branches, 
-    pagination, 
-    loading, 
-    error, 
-    refreshBranches, 
-    createBranch,
-    updateBranch,
-    deleteBranch
+  return {
+    branches: branchesResponse?.branches || [],
+    pagination: branchesResponse?.pagination || {
+      page: 0,
+      size: 10,
+      total_elements: 0,
+      total_pages: 0,
+      first: true,
+      last: true,
+      has_next: false,
+      has_previous: false,
+    },
+    loading,
+    error,
+    refreshBranches: refetch,
   };
 };
 
 /**
+ * Hook for creating a new branch
+ */
+export const useCreateBranch = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateBranchRequest) => {
+      return await BranchService.createBranch(data);
+    },
+    onSuccess: (newBranch) => {
+      // Invalidate and refetch branches list
+      queryClient.invalidateQueries({ queryKey: ["branches", "list"] });
+      message.success("Tạo chi nhánh thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi tạo chi nhánh");
+    },
+  });
+};
+
+/**
+ * Hook for updating a branch
+ */
+export const useUpdateBranch = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ branchId, data }: { branchId: string; data: UpdateBranchRequest }) => {
+      return await BranchService.updateBranch(branchId, data);
+    },
+    onSuccess: (updatedBranch, variables) => {
+      // Invalidate and refetch branches list
+      queryClient.invalidateQueries({ queryKey: ["branches", "list"] });
+      // Invalidate specific branch detail
+      queryClient.invalidateQueries({ queryKey: ["branches", "detail", variables.branchId] });
+      message.success("Cập nhật chi nhánh thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi cập nhật chi nhánh");
+    },
+  });
+};
+
+/**
+ * Hook for deleting a branch
+ */
+export const useDeleteBranch = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (branchId: string) => {
+      return await BranchService.deleteBranch(branchId);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch branches list
+      queryClient.invalidateQueries({ queryKey: ["branches", "list"] });
+      message.success("Xóa chi nhánh thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi xóa chi nhánh");
+    },
+  });
+};
+
+/**
  * Hook for a single branch by ID
+ * Migrated to TanStack React Query for better performance and caching
  */
 export const useBranch = (branchId: string | null) => {
-  const [branch, setBranch] = useState<BranchDisplay | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: branch,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["branches", "detail", branchId],
+    queryFn: async () => {
+      if (!branchId) return null;
+      return await BranchService.getBranchById(branchId);
+    },
+    enabled: !!branchId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 
-  const fetchBranch = useCallback(async () => {
-    if (!branchId) {
-      setBranch(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const fetchedBranch = await BranchService.getBranchById(branchId);
-      setBranch(fetchedBranch);
-    } catch (err) {
-      console.error(`Failed to fetch branch with ID ${branchId}:`, err);
-      setError("Failed to load branch details.");
-    } finally {
-      setLoading(false);
-    }
-  }, [branchId]);
-
-  useEffect(() => {
-    fetchBranch();
-  }, [fetchBranch]);
-
-  const refreshBranch = useCallback(() => {
-    fetchBranch();
-  }, [fetchBranch]);
-
-  return { branch, loading, error, refreshBranch };
+  return {
+    branch,
+    loading,
+    error,
+    refetch,
+  };
 };

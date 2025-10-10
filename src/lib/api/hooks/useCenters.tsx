@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CenterService } from "../services/center.service";
 import {
   CenterDisplay,
@@ -8,206 +8,187 @@ import {
   CreateCenterFormData,
   UpdateCenterFormData,
 } from "../types/center.types";
-
-// Removed UseCentersParams as it's not needed
-
-export interface UseCentersReturn {
-  centers: CenterDisplay[];
-  pagination: {
-    page: number;
-    size: number;
-    total_elements: number;
-    total_pages: number;
-    first: boolean;
-    last: boolean;
-    has_next: boolean;
-    has_previous: boolean;
-  };
-  loading: boolean;
-  error: string | null;
-  refreshCenters: () => void;
-  createCenter: (data: CreateCenterRequest) => Promise<CenterDisplay>;
-  createCenterWithFormData: (data: CreateCenterFormData) => Promise<CenterDisplay>;
-  updateCenter: (
-    centerId: string,
-    data: UpdateCenterRequest
-  ) => Promise<CenterDisplay>;
-  updateCenterWithFormData: (
-    centerId: string,
-    data: UpdateCenterFormData
-  ) => Promise<CenterDisplay>;
-  deleteCenter: (centerId: string) => Promise<void>;
-}
+import { message } from "antd";
 
 /**
  * Hook for managing centers data
+ * Migrated to TanStack React Query for better performance and caching
  */
-export const useCenters = (): UseCentersReturn => {
-  const [centers, setCenters] = useState<CenterDisplay[]>([]);
-  const [pagination, setPagination] = useState({
-    page: 0,
-    size: 10,
-    total_elements: 0,
-    total_pages: 0,
-    first: true,
-    last: true,
-    has_next: false,
-    has_previous: false,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Use ref to store params to prevent unnecessary re-renders
-  // const paramsRef = useRef(params);
-
-  const fetchCenters = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+export const useCenters = () => {
+  const {
+    data: centersResponse,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["centers", "list"],
+    queryFn: async () => {
       console.log("Fetching centers from API...");
       const response = await CenterService.getAllCenters();
       console.log("Centers API response:", response);
-      setCenters(response.centers);
-      setPagination(response.pagination);
-      console.log("Centers state updated:", response.centers);
-    } catch (err) {
-      console.error("Failed to fetch centers:", err);
-      setError("Failed to load centers data.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCenters();
-  }, [fetchCenters]);
-
-  const refreshCenters = useCallback(() => {
-    fetchCenters();
-  }, [fetchCenters]);
-
-  const createCenter = useCallback(
-    async (data: CreateCenterRequest) => {
-      try {
-        const response = await CenterService.createCenter(data);
-        // Refresh the list after successful creation
-        await fetchCenters();
-        return response;
-      } catch (err) {
-        console.error("Failed to create center:", err);
-        throw err;
-      }
+      return response;
     },
-    [fetchCenters]
-  );
-
-  const createCenterWithFormData = useCallback(
-    async (data: CreateCenterFormData) => {
-      try {
-        const response = await CenterService.createCenterWithFormData(data);
-        // Refresh the list after successful creation
-        await fetchCenters();
-        return response;
-      } catch (err) {
-        console.error("Failed to create center:", err);
-        throw err;
-      }
-    },
-    [fetchCenters]
-  );
-
-  const updateCenter = useCallback(
-    async (centerId: string, data: UpdateCenterRequest) => {
-      try {
-        const response = await CenterService.updateCenter(centerId, data);
-        // Refresh the list after successful update
-        await fetchCenters();
-        return response;
-      } catch (err) {
-        console.error("Failed to update center:", err);
-        throw err;
-      }
-    },
-    [fetchCenters]
-  );
-
-  const updateCenterWithFormData = useCallback(
-    async (centerId: string, data: UpdateCenterFormData) => {
-      try {
-        const response = await CenterService.updateCenterWithFormData(centerId, data);
-        // Refresh the list after successful update
-        await fetchCenters();
-        return response;
-      } catch (err) {
-        console.error("Failed to update center:", err);
-        throw err;
-      }
-    },
-    [fetchCenters]
-  );
-
-  const deleteCenter = useCallback(
-    async (centerId: string) => {
-      try {
-        await CenterService.deleteCenter(centerId);
-        // Refresh the list after successful deletion
-        await fetchCenters();
-      } catch (err) {
-        console.error("Failed to delete center:", err);
-        throw err;
-      }
-    },
-    [fetchCenters]
-  );
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 
   return {
-    centers,
-    pagination,
+    centers: centersResponse?.centers || [],
+    pagination: centersResponse?.pagination || {
+      page: 0,
+      size: 10,
+      total_elements: 0,
+      total_pages: 0,
+      first: true,
+      last: true,
+      has_next: false,
+      has_previous: false,
+    },
     loading,
     error,
-    refreshCenters,
-    createCenter,
-    createCenterWithFormData,
-    updateCenter,
-    updateCenterWithFormData,
-    deleteCenter,
+    refreshCenters: refetch,
   };
 };
 
 /**
+ * Hook for creating a new center
+ */
+export const useCreateCenter = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateCenterRequest) => {
+      return await CenterService.createCenter(data);
+    },
+    onSuccess: (newCenter) => {
+      // Invalidate and refetch centers list
+      queryClient.invalidateQueries({ queryKey: ["centers", "list"] });
+      message.success("Tạo trung tâm thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi tạo trung tâm");
+    },
+  });
+};
+
+/**
+ * Hook for creating a new center with form data
+ */
+export const useCreateCenterWithFormData = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateCenterFormData) => {
+      return await CenterService.createCenterWithFormData(data);
+    },
+    onSuccess: (newCenter) => {
+      // Invalidate and refetch centers list
+      queryClient.invalidateQueries({ queryKey: ["centers", "list"] });
+      message.success("Tạo trung tâm thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi tạo trung tâm");
+    },
+  });
+};
+
+/**
+ * Hook for updating a center
+ */
+export const useUpdateCenter = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ centerId, data }: { centerId: string; data: UpdateCenterRequest }) => {
+      return await CenterService.updateCenter(centerId, data);
+    },
+    onSuccess: (updatedCenter, variables) => {
+      // Invalidate and refetch centers list
+      queryClient.invalidateQueries({ queryKey: ["centers", "list"] });
+      // Invalidate specific center detail
+      queryClient.invalidateQueries({ queryKey: ["centers", "detail", variables.centerId] });
+      message.success("Cập nhật trung tâm thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi cập nhật trung tâm");
+    },
+  });
+};
+
+/**
+ * Hook for updating a center with form data
+ */
+export const useUpdateCenterWithFormData = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ centerId, data }: { centerId: string; data: UpdateCenterFormData }) => {
+      return await CenterService.updateCenterWithFormData(centerId, data);
+    },
+    onSuccess: (updatedCenter, variables) => {
+      // Invalidate and refetch centers list
+      queryClient.invalidateQueries({ queryKey: ["centers", "list"] });
+      // Invalidate specific center detail
+      queryClient.invalidateQueries({ queryKey: ["centers", "detail", variables.centerId] });
+      message.success("Cập nhật trung tâm thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi cập nhật trung tâm");
+    },
+  });
+};
+
+/**
+ * Hook for deleting a center
+ */
+export const useDeleteCenter = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (centerId: string) => {
+      return await CenterService.deleteCenter(centerId);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch centers list
+      queryClient.invalidateQueries({ queryKey: ["centers", "list"] });
+      message.success("Xóa trung tâm thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi xóa trung tâm");
+    },
+  });
+};
+
+/**
  * Hook for a single center by ID
+ * Migrated to TanStack React Query for better performance and caching
  */
 export const useCenter = (centerId: string | null) => {
-  const [center, setCenter] = useState<CenterDisplay | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: center,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["centers", "detail", centerId],
+    queryFn: async () => {
+      if (!centerId) return null;
+      return await CenterService.getCenterById(centerId);
+    },
+    enabled: !!centerId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 
-  const fetchCenter = useCallback(async () => {
-    if (!centerId) {
-      setCenter(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const fetchedCenter = await CenterService.getCenterById(centerId);
-      setCenter(fetchedCenter);
-    } catch (err) {
-      console.error(`Failed to fetch center with ID ${centerId}:`, err);
-      setError("Failed to load center details.");
-    } finally {
-      setLoading(false);
-    }
-  }, [centerId]);
-
-  useEffect(() => {
-    fetchCenter();
-  }, [fetchCenter]);
-
-  const refreshCenter = useCallback(() => {
-    fetchCenter();
-  }, [fetchCenter]);
-
-  return { center, loading, error, refreshCenter };
+  return {
+    center,
+    loading,
+    error,
+    refetch,
+  };
 };

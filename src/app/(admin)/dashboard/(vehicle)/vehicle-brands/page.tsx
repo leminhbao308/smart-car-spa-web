@@ -1,54 +1,49 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import { Tag, Avatar, message } from "antd";
-import {
-  VehicleBrand,
-} from "@/lib/api/types";
+import { VehicleBrand } from "@/lib/api/types";
 import { VehicleService } from "@/lib/api/services/vehicle.service";
+import { useVehicleBrands } from "@/lib/api/hooks/useVehicleBrands";
 import {
   VehicleBrandDetailModal,
   VehicleBrandAddModal,
   VehicleBrandEditModal,
 } from "@/components/ui/Modal/VehicleBrandModals";
 
-
 const VehicleBrandsPage = () => {
-  const [data, setData] = useState<VehicleBrand[]>([]);
-  const [loading, setLoading] = useState(false);
   const { showModal } = useConfirmationModalContext();
-  
+
+  // Memoize params to prevent unnecessary re-renders
+  const params = useMemo(() => ({
+    page: 0,
+    size: 100, // Get all brands for now
+    direction: "DESC" as const,
+    sort: "createdDate",
+  }), []);
+
+  // Use the vehicle brands hook
+  const {
+    brands: data,
+    loading,
+    error,
+    refetch: fetchVehicleBrands,
+  } = useVehicleBrands(params);
+
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<VehicleBrand | null>(null);
 
-  // Fetch vehicle brands data
+  // Handle error from hook
   useEffect(() => {
-    fetchVehicleBrands();
-  }, []);
-
-  const fetchVehicleBrands = async () => {
-    setLoading(true);
-    try {
-      const response = await VehicleService.getAllVehicleBrands({
-        page: 0,
-        size: 100, // Get all brands for now
-        direction: "DESC",
-        sort: "createdDate"
-      });
-      
-      setData(response.data.content);
-    } catch (error) {
-      console.error("Error fetching vehicle brands:", error);
+    if (error) {
       message.error("Không thể tải danh sách hãng xe");
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [error]);
 
   // Định nghĩa columns
   const columns: ColumnsType<VehicleBrand> = [
@@ -58,11 +53,7 @@ const VehicleBrandsPage = () => {
       key: "brand_logo_url",
       width: 80,
       render: (logoUrl: string | null, record: VehicleBrand) => (
-        <Avatar 
-          size={50} 
-          src={logoUrl} 
-          style={{ backgroundColor: "#f0f0f0" }}
-        >
+        <Avatar size={50} src={logoUrl} style={{ backgroundColor: "#f0f0f0" }}>
           {record.brand_name.charAt(0)}
         </Avatar>
       ),
@@ -76,7 +67,14 @@ const VehicleBrandsPage = () => {
           <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
             {record.brand_name}
           </div>
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 2, fontFamily: "monospace" }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: "#666",
+              marginBottom: 2,
+              fontFamily: "monospace",
+            }}
+          >
             {record.brand_code}
           </div>
           <div style={{ fontSize: 11, color: "#999" }}>
@@ -96,7 +94,8 @@ const VehicleBrandsPage = () => {
           {new Date(createdDate).toLocaleDateString("vi-VN")}
         </div>
       ),
-      sorter: (a, b) => new Date(a.created_date).getTime() - new Date(b.created_date).getTime(),
+      sorter: (a, b) =>
+        new Date(a.created_date).getTime() - new Date(b.created_date).getTime(),
     },
     {
       title: "Ngày cập nhật",
@@ -108,7 +107,9 @@ const VehicleBrandsPage = () => {
           {new Date(modifiedDate).toLocaleDateString("vi-VN")}
         </div>
       ),
-      sorter: (a, b) => new Date(a.modified_date).getTime() - new Date(b.modified_date).getTime(),
+      sorter: (a, b) =>
+        new Date(a.modified_date).getTime() -
+        new Date(b.modified_date).getTime(),
     },
     {
       title: "Người tạo",
@@ -135,22 +136,6 @@ const VehicleBrandsPage = () => {
       ],
       onFilter: (value, record: VehicleBrand) => record.is_active === value,
     },
-    {
-      title: "Đã xóa",
-      dataIndex: "is_deleted",
-      key: "is_deleted",
-      width: 100,
-      render: (isDeleted: boolean) => (
-        <Tag color={isDeleted ? "red" : "green"}>
-          {isDeleted ? "Đã xóa" : "Chưa xóa"}
-        </Tag>
-      ),
-      filters: [
-        { text: "Đã xóa", value: true },
-        { text: "Chưa xóa", value: false },
-      ],
-      onFilter: (value, record: VehicleBrand) => record.is_deleted === value,
-    },
   ];
 
   // Handlers
@@ -172,13 +157,8 @@ const VehicleBrandsPage = () => {
     setDetailModalVisible(true);
   };
 
-  const handleAddSuccess = () => {
-    // Refresh the brands list after create
-    fetchVehicleBrands();
-  };
-
-  const handleEditSuccess = () => {
-    // Refresh the brands list after update
+  const refreshData = () => {
+    // Refresh the brands list after update or create
     fetchVehicleBrands();
   };
 
@@ -189,45 +169,17 @@ const VehicleBrandsPage = () => {
       type: "error",
       onConfirm: async () => {
         try {
-          setLoading(true);
           await VehicleService.deleteVehicleBrand(record.brand_id);
-          setData(prev => prev.filter(item => item.brand_id !== record.brand_id));
+          // Refresh data using hook
+          await fetchVehicleBrands();
           message.success(`Đã xóa hãng xe ${record.brand_name} thành công!`);
         } catch (error) {
           console.error("Error deleting vehicle brand:", error);
-          const errorMessage = error instanceof Error ? error.message : "Có lỗi xảy ra khi xóa hãng xe!";
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Có lỗi xảy ra khi xóa hãng xe!";
           message.error(errorMessage);
-        } finally {
-          setLoading(false);
-        }
-      },
-    });
-  };
-
-
-  const handleToggleStatus = (record: VehicleBrand) => {
-    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
-    showModal({
-      title: `${
-        action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"
-      } hãng xe`,
-      content: `Bạn có chắc chắn muốn ${action} hãng xe ${record.brand_name}?`,
-      type: "warning",
-      onConfirm: async () => {
-        try {
-          setLoading(true);
-          await VehicleService.updateVehicleBrandStatus(record.brand_id, !record.is_active);
-          setData(prev => prev.map(item => 
-            item.brand_id === record.brand_id 
-              ? { ...item, is_active: !item.is_active }
-              : item
-          ));
-          message.success(`Đã ${action} hãng xe ${record.brand_name} thành công!`);
-        } catch (error) {
-          console.error("Error updating vehicle brand status:", error);
-          message.error(`Không thể ${action} hãng xe ${record.brand_name}`);
-        } finally {
-          setLoading(false);
         }
       },
     });
@@ -246,15 +198,6 @@ const VehicleBrandsPage = () => {
         onView={handleView}
         addButtonText="Thêm hãng xe"
         actions={[
-          {
-            key: "toggle-status",
-            label: (record: VehicleBrand) =>
-              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
-            type: "default",
-            danger: (record: VehicleBrand) => record.is_active,
-            onClick: handleToggleStatus,
-            condition: (record: VehicleBrand) => !record.is_deleted,
-          },
           {
             key: "delete",
             label: "Xóa",
@@ -281,13 +224,13 @@ const VehicleBrandsPage = () => {
       <VehicleBrandAddModal
         visible={addModalVisible}
         onClose={() => setAddModalVisible(false)}
-        onSuccess={handleAddSuccess}
+        onSuccess={refreshData}
       />
 
       <VehicleBrandEditModal
         visible={editModalVisible}
         onClose={() => setEditModalVisible(false)}
-        onSuccess={handleEditSuccess}
+        onSuccess={refreshData}
         brandData={selectedBrand}
       />
     </>
