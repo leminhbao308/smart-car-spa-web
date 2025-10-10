@@ -8,7 +8,6 @@ import {
   GetAllVehicleBrandsRequest,
   GetAllVehicleBrandsResponse,
   VehicleBrand,
-  VehicleBrandStatistics,
   VehicleBrandDropdownResponse,
   CreateVehicleBrandRequest,
   UpdateVehicleBrandRequest,
@@ -169,31 +168,6 @@ export class VehicleService {
     }
   }
 
-  /**
-   * Update vehicle brand status (active/inactive)
-   */
-  static async updateVehicleBrandStatus(
-    brandId: string,
-    isActive: boolean
-  ): Promise<void> {
-    try {
-      const response = await apiClient.patch(
-        `/vehicles/brands/${brandId}/status`,
-        {
-          is_active: isActive,
-        }
-      );
-
-      if (!response.data.success) {
-        throw new Error(
-          response.data.message || "Failed to update vehicle brand status"
-        );
-      }
-    } catch (error) {
-      console.error("Update vehicle brand status error:", error);
-      throw error;
-    }
-  }
 
   /**
    * Delete vehicle brand
@@ -220,103 +194,6 @@ export class VehicleService {
     }
   }
 
-  /**
-   * Get vehicle brand statistics
-   */
-  static async getVehicleBrandStatistics(): Promise<VehicleBrandStatistics> {
-    try {
-      const response = await apiClient.get("/vehicles/brands/statistics");
-
-      if (response.data.success && response.data.data) {
-        return response.data.data;
-      } else {
-        throw new Error(
-          response.data.message || "Failed to fetch vehicle brand statistics"
-        );
-      }
-    } catch (error) {
-      console.error("Get vehicle brand statistics error:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Search vehicle brands
-   */
-  static async searchVehicleBrands(
-    query: string,
-    params: GetAllVehicleBrandsRequest = {}
-  ): Promise<GetAllVehicleBrandsResponse> {
-    try {
-      const queryParams = new URLSearchParams();
-
-      queryParams.append("search", query);
-
-      if (params.page !== undefined) {
-        queryParams.append("page", params.page.toString());
-      }
-      if (params.size !== undefined) {
-        queryParams.append("size", params.size.toString());
-      }
-      if (params.direction) {
-        queryParams.append("direction", params.direction);
-      }
-      if (params.sort) {
-        queryParams.append("sort", params.sort);
-      }
-
-      const response = await apiClient.get(
-        `/vehicles/brands/search?${queryParams.toString()}`
-      );
-
-      if (response.data.success && response.data.data) {
-        return response.data;
-      } else {
-        throw new Error(
-          response.data.message || "Failed to search vehicle brands"
-        );
-      }
-    } catch (error) {
-      console.error("Search vehicle brands error:", error);
-      throw error;
-    }
-  }
-
-  /**
-   * Export vehicle brands to CSV
-   */
-  static async exportVehicleBrands(
-    params: GetAllVehicleBrandsRequest = {}
-  ): Promise<Blob> {
-    try {
-      const queryParams = new URLSearchParams();
-
-      if (params.page !== undefined) {
-        queryParams.append("page", params.page.toString());
-      }
-      if (params.size !== undefined) {
-        queryParams.append("size", params.size.toString());
-      }
-      if (params.direction) {
-        queryParams.append("direction", params.direction);
-      }
-      if (params.sort) {
-        queryParams.append("sort", params.sort);
-      }
-
-      const response = await apiClient.get(
-        `/vehicles/brands/export?${queryParams.toString()}`,
-        {
-          responseType: "blob",
-        }
-      );
-
-      return response.data;
-    } catch (error) {
-      console.error("Export vehicle brands error:", error);
-      throw error;
-    }
-  }
 
   // ==================== VEHICLE TYPE METHODS ====================
 
@@ -477,31 +354,6 @@ export class VehicleService {
     }
   }
 
-  /**
-   * Update vehicle type status (active/inactive)
-   */
-  static async updateVehicleTypeStatus(
-    typeId: string,
-    isActive: boolean
-  ): Promise<void> {
-    try {
-      const response = await apiClient.patch(
-        `/vehicles/types/${typeId}/status`,
-        {
-          is_active: isActive,
-        }
-      );
-
-      if (!response.data.success) {
-        throw new Error(
-          response.data.message || "Failed to update vehicle type status"
-        );
-      }
-    } catch (error) {
-      console.error("Update vehicle type status error:", error);
-      throw error;
-    }
-  }
 
   /**
    * Delete vehicle type
@@ -691,31 +543,6 @@ export class VehicleService {
     }
   }
 
-  /**
-   * Update vehicle model status (active/inactive)
-   */
-  static async updateVehicleModelStatus(
-    modelId: string,
-    isActive: boolean
-  ): Promise<void> {
-    try {
-      const response = await apiClient.patch(
-        `/vehicles/models/${modelId}/status`,
-        {
-          is_active: isActive,
-        }
-      );
-
-      if (!response.data.success) {
-        throw new Error(
-          response.data.message || "Failed to update vehicle model status"
-        );
-      }
-    } catch (error) {
-      console.error("Update vehicle model status error:", error);
-      throw error;
-    }
-  }
 
   /**
    * Delete vehicle model

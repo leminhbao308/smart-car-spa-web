@@ -70,14 +70,6 @@ export interface VehicleBrandManagementState {
   sort: VehicleBrandSortOptions;
 }
 
-// Vehicle Brand Statistics
-export interface VehicleBrandStatistics {
-  totalBrands: number;
-  activeBrands: number;
-  inactiveBrands: number;
-  brandsWithLogo: number;
-  brandsWithoutLogo: number;
-}
 
 // Vehicle Brand Dropdown Item
 export interface VehicleBrandDropdownItem {
