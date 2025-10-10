@@ -3,9 +3,23 @@ export interface VehicleProfileRequest {
   size?: number;
   sort?: string;
   direction?: string;
+  vehicle_brand_id?: string;
+  vehicle_type_id?: string;
+  vehicle_model_id?: string;
+  owner_id?: string;
 }
 
 export interface CreateVehicleProfileRequest {
+  license_plate: string;
+  description?: string;
+  vehicle_brand_id: string;
+  vehicle_type_id: string;
+  vehicle_model_id: string;
+  owner_id: string;
+  distance_traveled: number;
+}
+
+export interface UpdateVehicleProfileRequest {
   license_plate: string;
   description?: string;
   vehicle_brand_id: string;
