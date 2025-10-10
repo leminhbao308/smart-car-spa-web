@@ -1,22 +1,21 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
-import { AdminTable } from "@/components/ui/Table";
-import { useConfirmationModalContext } from "@/components/ui/Modal";
-import { ColumnsType } from "antd/es/table";
-import { Tag, Badge, message, Select, Space, Tooltip } from "antd";
+import React, {useState, useEffect, useMemo} from "react";
+import {AdminTable} from "@/components/ui/Table";
+import {useConfirmationModalContext} from "@/components/ui/Modal";
+import {ColumnsType} from "antd/es/table";
+import {Tag, message, Select, Space, Tooltip} from "antd";
 import {
   EyeOutlined,
-  WarningOutlined,
-  CheckCircleOutlined,
   DollarOutlined,
 } from "@ant-design/icons";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import { InventoryService, WarehouseService, PurchaseOrderService } from "@/lib/api";
-import { useInventoryLevels } from "@/lib/api/hooks";
-import { useProducts } from "@/lib/api/hooks/useProducts";
-import { useBranches } from "@/lib/api/hooks/useBranches";
-import { usePricing } from "@/lib/api/hooks/usePricing";
-import { InventoryLevel, Warehouse, Product, PurchaseOrder } from "@/lib/api";
+import {InventoryService, PurchaseOrderService} from "@/lib/api";
+import {useInventoryLevels} from "@/lib/api/hooks";
+import {useProducts} from "@/lib/api/hooks/useProducts";
+import {useBranches} from "@/lib/api/hooks/useBranches";
+import {usePricing} from "@/lib/api/hooks/usePricing";
+import {useWarehouseByBranch} from "@/lib/api/hooks/useWarehouseByBranch";
+import {InventoryLevel, Warehouse, Product, PurchaseOrder} from "@/lib/api";
 
 interface StockTableItem extends InventoryLevel {
   key: string;
@@ -30,14 +29,16 @@ interface StockTableItem extends InventoryLevel {
 const StockInventoryPage = () => {
   const [data, setData] = useState<StockTableItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
-  const { showModal } = useConfirmationModalContext();
+  const {showModal} = useConfirmationModalContext();
   const inventoryHook = useInventoryLevels();
-  const { products } = useProducts({});
-  const { branches, loading: branchesLoading } = useBranches({});
+  const {products} = useProducts({});
+  const {branches, loading: branchesLoading} = useBranches({});
   const pricingHook = usePricing();
+
+  // Get warehouse based on selected branch
+  const {warehouse, loading: warehouseLoading} = useWarehouseByBranch(selectedBranch);
 
   // Create branch map for quick lookup
   const branchMap = useMemo(() => {
@@ -48,35 +49,29 @@ const StockInventoryPage = () => {
     return map;
   }, [branches]);
 
-  // Fetch warehouses and purchase orders on mount
+  // Set default branch when branches are loaded
   useEffect(() => {
-    fetchWarehouses();
+    if (branches.length > 0 && !selectedBranch) {
+      setSelectedBranch(branches[0].branch_id);
+    }
+  }, [branches, selectedBranch]);
+
+  // Fetch purchase orders on mount
+  useEffect(() => {
     fetchPurchaseOrders();
   }, []);
 
-  // Fetch inventory when warehouse selected
+  // Fetch inventory when warehouse is available
   useEffect(() => {
-    if (selectedWarehouse && products.length > 0 && branches.length > 0) {
+    if (warehouse && products.length > 0 && branches.length > 0) {
       fetchInventoryLevels();
     }
-  }, [selectedWarehouse, products, branches, purchaseOrders]);
-
-  const fetchWarehouses = async () => {
-    try {
-      const warehouseList = await WarehouseService.getAllWarehouses();
-      setWarehouses(warehouseList);
-      if (warehouseList.length > 0) {
-        setSelectedWarehouse(warehouseList[0].id);
-      }
-    } catch (error: any) {
-      message.error(error?.message || "Không thể tải danh sách kho");
-    }
-  };
+  }, [warehouse, products, branches, purchaseOrders]);
 
   const fetchPurchaseOrders = async () => {
     try {
       const orders = await PurchaseOrderService.getAllPurchaseOrders();
-      setPurchaseOrders(orders.filter(po => po.status === "RECEIVED"));
+      setPurchaseOrders(orders);
     } catch (error: any) {
       console.error("Failed to fetch purchase orders:", error);
     }
@@ -98,13 +93,13 @@ const StockInventoryPage = () => {
   };
 
   const fetchInventoryLevels = async () => {
-    if (!selectedWarehouse || products.length === 0) return;
+    if (!warehouse || products.length === 0) return;
 
     setLoading(true);
     try {
       const productIds = products.map((p: Product) => p.productId);
       const batchResult = await inventoryHook.levelsBatch({
-        warehouse_id: selectedWarehouse,
+        warehouse_id: warehouse.id,
         product_ids: productIds,
       });
 
@@ -126,14 +121,8 @@ const StockInventoryPage = () => {
         console.error("Failed to fetch pricing:", error);
       }
 
-      const selectedWh = warehouses.find((w) => w.id === selectedWarehouse);
-      if (!selectedWh) {
-        console.error("Selected warehouse not found:", selectedWarehouse);
-        return;
-      }
-      
-      const branchName = selectedWh?.branch?.id
-        ? branchMap.get(selectedWh.branch.id)
+      const branchName = warehouse?.branch?.id
+        ? branchMap.get(warehouse.branch.id)
         : "N/A";
 
       const stockItems: StockTableItem[] = products.map((product: Product) => {
@@ -151,7 +140,7 @@ const StockInventoryPage = () => {
           stockStatus = "high";
         }
 
-        const lastPurchasePrice = getLastPurchasePrice(product.productId, selectedWarehouse);
+        const lastPurchasePrice = getLastPurchasePrice(product.productId, warehouse.id);
         const sellingPrice = sellingPrices[product.productId];
         const profitMargin = lastPurchasePrice && sellingPrice
           ? ((sellingPrice - lastPurchasePrice) / lastPurchasePrice) * 100
@@ -161,7 +150,7 @@ const StockInventoryPage = () => {
           key: product.productId,
           id: product.productId,
           product: product,
-          warehouse: selectedWh,
+          warehouse: warehouse,
           on_hand: onHand,
           reserved: reserved,
           available: available,
@@ -186,15 +175,6 @@ const StockInventoryPage = () => {
     }
   };
 
-  // Get warehouse display name
-  const getWarehouseName = (warehouse: Warehouse) => {
-    if (warehouse?.branch?.id) {
-      const branchName = branchMap.get(warehouse.branch.id);
-      return branchName || warehouse.id.substring(0, 8);
-    }
-    return warehouse?.id?.substring(0, 8) || "N/A";
-  };
-
   // Định nghĩa columns
   const columns: ColumnsType<StockTableItem> = [
     {
@@ -203,7 +183,7 @@ const StockInventoryPage = () => {
       key: "sku",
       width: 100,
       fixed: "left",
-      render: (sku: string) => <div style={{ fontWeight: 500 }}>{sku}</div>,
+      render: (sku: string) => <div style={{fontWeight: 500}}>{sku}</div>,
     },
     {
       title: "Tên sản phẩm",
@@ -212,12 +192,6 @@ const StockInventoryPage = () => {
       width: 250,
       fixed: "left",
       ellipsis: true,
-    },
-    {
-      title: "Danh mục",
-      dataIndex: ["product", "categoryName"],
-      key: "categoryName",
-      width: 150,
     },
     {
       title: "Thương hiệu",
@@ -232,10 +206,10 @@ const StockInventoryPage = () => {
       width: 100,
       sorter: (a, b) => a.on_hand - b.on_hand,
       render: (qty: number, record) => (
-        <div style={{ fontWeight: 600 }}>
+        <div style={{fontWeight: 600}}>
           {qty}
           {record.stockStatus === "out" && (
-            <Tag color="red" style={{ marginLeft: 8, fontSize: 10 }}>
+            <Tag color="red" style={{marginLeft: 8, fontSize: 10}}>
               Hết
             </Tag>
           )}
@@ -248,7 +222,7 @@ const StockInventoryPage = () => {
       key: "reserved",
       width: 90,
       render: (qty: number) => (
-        <div style={{ color: "#faad14" }}>{qty}</div>
+        <div style={{color: "#faad14"}}>{qty}</div>
       ),
     },
     {
@@ -257,76 +231,43 @@ const StockInventoryPage = () => {
       key: "available",
       width: 90,
       render: (qty: number) => (
-        <div style={{ color: "#52c41a", fontWeight: 500 }}>{qty}</div>
+        <div style={{color: "#52c41a", fontWeight: 500}}>{qty}</div>
       ),
-    },
-    {
-      title: "Min/Max",
-      key: "minMax",
-      width: 100,
-      render: (_, record) => (
-        <div style={{ fontSize: 12 }}>
-          {record.product.minStockLevel}/{record.product.maxStockLevel}
-        </div>
-      ),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "stockStatus",
-      key: "stockStatus",
-      width: 120,
-      render: (status: string) => {
-        const statusConfig = {
-          out: { label: "Hết hàng", color: "red" },
-          low: { label: "Sắp hết", color: "orange" },
-          normal: { label: "Bình thường", color: "green" },
-          high: { label: "Dư thừa", color: "blue" },
-        };
-        const config = statusConfig[status as keyof typeof statusConfig];
-        return <Tag color={config.color}>{config.label}</Tag>;
-      },
-      filters: [
-        { text: "Hết hàng", value: "out" },
-        { text: "Sắp hết", value: "low" },
-        { text: "Bình thường", value: "normal" },
-        { text: "Dư thừa", value: "high" },
-      ],
-      onFilter: (value, record) => record.stockStatus === value,
     },
     {
       title: (
         <Tooltip title="Giá nhập gần nhất">
-          <span>Giá nhập <DollarOutlined style={{ fontSize: 12 }} /></span>
+          <span>Giá nhập <DollarOutlined style={{fontSize: 12}}/></span>
         </Tooltip>
       ),
       dataIndex: "lastPurchasePrice",
       key: "lastPurchasePrice",
       width: 130,
       render: (price?: number) => (
-        <div style={{ color: "#1890ff" }}>
-          {price !== undefined ? formatCurrency(price) : <span style={{ color: "#999" }}>N/A</span>}
+        <div style={{color: "#1890ff"}}>
+          {price !== undefined ? formatCurrency(price) : <span style={{color: "#999"}}>Sản phẩm này chưa được nhập vào lần nào</span>}
         </div>
       ),
     },
     {
       title: (
         <Tooltip title="Giá bán hiện tại">
-          <span>Giá bán <DollarOutlined style={{ fontSize: 12 }} /></span>
+          <span>Giá bán <DollarOutlined style={{fontSize: 12}}/></span>
         </Tooltip>
       ),
       dataIndex: "sellingPrice",
       key: "sellingPrice",
       width: 130,
       render: (price?: number) => (
-        <div style={{ color: "#52c41a", fontWeight: 500 }}>
-          {price !== undefined ? formatCurrency(price) : <span style={{ color: "#999" }}>N/A</span>}
+        <div style={{color: "#52c41a", fontWeight: 500}}>
+          {price !== undefined ? formatCurrency(price) : <span style={{color: "#999"}}>Hãy tạo bảng giá cho sản phẩm này</span>}
         </div>
       ),
     },
     {
       title: (
         <Tooltip title="Tỷ suất lợi nhuận">
-          <span>Lãi suất</span>
+          <span>% lợi nhuận</span>
         </Tooltip>
       ),
       dataIndex: "profitMargin",
@@ -334,10 +275,10 @@ const StockInventoryPage = () => {
       width: 100,
       sorter: (a, b) => (a.profitMargin || 0) - (b.profitMargin || 0),
       render: (margin?: number) => {
-        if (margin === undefined) return <span style={{ color: "#999" }}>N/A</span>;
+        if (margin === undefined) return <span style={{color: "#999"}}>N/A</span>;
         const color = margin > 30 ? "#52c41a" : margin > 15 ? "#faad14" : "#ff4d4f";
         return (
-          <div style={{ color, fontWeight: 600 }}>
+          <div style={{color, fontWeight: 600}}>
             {margin.toFixed(1)}%
           </div>
         );
@@ -356,7 +297,7 @@ const StockInventoryPage = () => {
         const price = record.lastPurchasePrice || record.product.costPrice;
         const totalValue = record.on_hand * price;
         return (
-          <div style={{ fontWeight: 600, color: "#52c41a" }}>
+          <div style={{fontWeight: 600, color: "#52c41a"}}>
             {formatCurrency(totalValue)}
           </div>
         );
@@ -382,25 +323,26 @@ const StockInventoryPage = () => {
     showModal({
       title: "Chi tiết tồn kho",
       content: (
-        <div style={{ lineHeight: 2 }}>
+        <div style={{lineHeight: 2}}>
           <p><strong>Sản phẩm:</strong> {record.product.productName}</p>
           <p><strong>SKU:</strong> {record.product.sku}</p>
           <p><strong>Chi nhánh:</strong> {record.branchName}</p>
-          <hr style={{ margin: "12px 0", borderColor: "#f0f0f0" }} />
+          <hr style={{margin: "12px 0", borderColor: "#f0f0f0"}}/>
           <p><strong>Tồn kho:</strong> {record.on_hand}</p>
           <p><strong>Đã đặt:</strong> {record.reserved}</p>
           <p><strong>Khả dụng:</strong> {record.available}</p>
-          <hr style={{ margin: "12px 0", borderColor: "#f0f0f0" }} />
+          <hr style={{margin: "12px 0", borderColor: "#f0f0f0"}}/>
           <p><strong>Giá nhập:</strong> {record.lastPurchasePrice !== undefined ? formatCurrency(record.lastPurchasePrice) : "N/A"}</p>
           <p><strong>Giá bán:</strong> {record.sellingPrice !== undefined ? formatCurrency(record.sellingPrice) : "N/A"}</p>
           {profit !== undefined && (
             <>
-              <p><strong>Lợi nhuận/sp:</strong> <span style={{ color: "#52c41a" }}>{formatCurrency(profit)}</span></p>
-              <p><strong>Tỷ suất lãi:</strong> <span style={{ color: "#52c41a" }}>{record.profitMargin?.toFixed(1)}%</span></p>
+              <p><strong>Lợi nhuận/sp:</strong> <span style={{color: "#52c41a"}}>{formatCurrency(profit)}</span></p>
+              <p><strong>Tỷ suất lãi:</strong> <span style={{color: "#52c41a"}}>{record.profitMargin?.toFixed(1)}%</span></p>
             </>
           )}
-          <hr style={{ margin: "12px 0", borderColor: "#f0f0f0" }} />
-          <p><strong>Giá trị tồn:</strong> <span style={{ color: "#52c41a", fontWeight: 600 }}>{formatCurrency(record.on_hand * (record.lastPurchasePrice || record.product.costPrice))}</span></p>
+          <hr style={{margin: "12px 0", borderColor: "#f0f0f0"}}/>
+          <p><strong>Giá trị tồn:</strong> <span
+            style={{color: "#52c41a", fontWeight: 600}}>{formatCurrency(record.on_hand * (record.lastPurchasePrice || record.product.costPrice))}</span></p>
         </div>
       ),
       type: "info",
@@ -420,58 +362,58 @@ const StockInventoryPage = () => {
     data.filter(item => item.profitMargin !== undefined).length
     : 0;
 
-  const isLoading = loading || inventoryHook.loading || branchesLoading || pricingHook.loading;
+  const isLoading = loading || inventoryHook.loading || branchesLoading || pricingHook.loading || warehouseLoading;
 
   return (
     <div>
       {/* Summary cards */}
-      <div style={{ marginBottom: 16 }}>
+      <div style={{marginBottom: 16}}>
         <Space size="large" wrap>
-          <div style={{ padding: "12px 20px", background: "#f0f2f5", borderRadius: 8 }}>
-            <div style={{ fontSize: 12, color: "#666" }}>Tổng sản phẩm</div>
-            <div style={{ fontSize: 24, fontWeight: 600 }}>{totalProducts}</div>
+          <div style={{padding: "12px 20px", background: "#f0f2f5", borderRadius: 8}}>
+            <div style={{fontSize: 12, color: "#666"}}>Tổng sản phẩm</div>
+            <div style={{fontSize: 24, fontWeight: 600}}>{totalProducts}</div>
           </div>
-          <div style={{ padding: "12px 20px", background: "#fff1f0", borderRadius: 8 }}>
-            <div style={{ fontSize: 12, color: "#666" }}>Hết hàng</div>
-            <div style={{ fontSize: 24, fontWeight: 600, color: "#ff4d4f" }}>
+          <div style={{padding: "12px 20px", background: "#fff1f0", borderRadius: 8}}>
+            <div style={{fontSize: 12, color: "#666"}}>Hết hàng</div>
+            <div style={{fontSize: 24, fontWeight: 600, color: "#ff4d4f"}}>
               {outOfStock}
             </div>
           </div>
-          <div style={{ padding: "12px 20px", background: "#fff7e6", borderRadius: 8 }}>
-            <div style={{ fontSize: 12, color: "#666" }}>Sắp hết</div>
-            <div style={{ fontSize: 24, fontWeight: 600, color: "#faad14" }}>
+          <div style={{padding: "12px 20px", background: "#fff7e6", borderRadius: 8}}>
+            <div style={{fontSize: 12, color: "#666"}}>Sắp hết</div>
+            <div style={{fontSize: 24, fontWeight: 600, color: "#faad14"}}>
               {lowStock}
             </div>
           </div>
-          <div style={{ padding: "12px 20px", background: "#f6ffed", borderRadius: 8 }}>
-            <div style={{ fontSize: 12, color: "#666" }}>Tổng giá trị</div>
-            <div style={{ fontSize: 24, fontWeight: 600, color: "#52c41a" }}>
+          <div style={{padding: "12px 20px", background: "#f6ffed", borderRadius: 8}}>
+            <div style={{fontSize: 12, color: "#666"}}>Tổng giá trị</div>
+            <div style={{fontSize: 24, fontWeight: 600, color: "#52c41a"}}>
               {formatCurrency(totalValue)}
             </div>
           </div>
-          <div style={{ padding: "12px 20px", background: "#e6f7ff", borderRadius: 8 }}>
-            <div style={{ fontSize: 12, color: "#666" }}>Lãi suất TB</div>
-            <div style={{ fontSize: 24, fontWeight: 600, color: "#1890ff" }}>
+          <div style={{padding: "12px 20px", background: "#e6f7ff", borderRadius: 8}}>
+            <div style={{fontSize: 12, color: "#666"}}>Lãi suất TB</div>
+            <div style={{fontSize: 24, fontWeight: 600, color: "#1890ff"}}>
               {avgProfitMargin.toFixed(1)}%
             </div>
           </div>
         </Space>
       </div>
 
-      {/* Warehouse selector */}
-      <div style={{ marginBottom: 16 }}>
+      {/* Branch selector */}
+      <div style={{marginBottom: 16}}>
         <Space>
-          <span style={{ fontWeight: 500 }}>Chọn kho:</span>
+          <span style={{fontWeight: 500}}>Chọn chi nhánh:</span>
           <Select
-            style={{ width: 300 }}
-            value={selectedWarehouse}
-            onChange={setSelectedWarehouse}
-            placeholder="Chọn kho"
+            style={{width: 300}}
+            value={selectedBranch}
+            onChange={setSelectedBranch}
+            placeholder="Chọn chi nhánh"
             loading={branchesLoading}
           >
-            {warehouses.map((wh) => (
-              <Select.Option key={wh.id} value={wh.id}>
-                {getWarehouseName(wh)}
+            {branches.map((branch) => (
+              <Select.Option key={branch.branch_id} value={branch.branch_id}>
+                {branch.branch_name}
               </Select.Option>
             ))}
           </Select>
@@ -491,11 +433,11 @@ const StockInventoryPage = () => {
             key: "view",
             label: "Xem chi tiết",
             type: "default",
-            icon: <EyeOutlined />,
+            icon: <EyeOutlined/>,
             onClick: handleView,
           },
         ]}
-        scroll={{ x: 2000 }}
+        scroll={{x: 2000}}
       />
     </div>
   );

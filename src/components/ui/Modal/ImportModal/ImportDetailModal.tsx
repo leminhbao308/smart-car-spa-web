@@ -11,21 +11,12 @@ interface ImportDetailModalProps {
   record: PurchaseOrder | null;
 }
 
-const purchaseOrderStatuses = [
-  {value: "DRAFT", label: "Nháp", color: "default"},
-  {value: "PENDING_DELIVERY", label: "Chờ giao hàng", color: "orange"},
-  {value: "RECEIVED", label: "Đã nhận hàng", color: "green"},
-  {value: "CANCELLED", label: "Đã hủy", color: "red"},
-];
-
 const ImportDetailModal: React.FC<ImportDetailModalProps> = ({
                                                                visible,
                                                                onClose,
                                                                record,
                                                              }) => {
   if (!record) return null;
-
-  const statusConfig = purchaseOrderStatuses.find((s) => s.value === record.status);
 
   // Columns cho bảng chi tiết sản phẩm
   const itemColumns: ColumnsType<PurchaseOrderLine> = [
@@ -116,7 +107,7 @@ const ImportDetailModal: React.FC<ImportDetailModalProps> = ({
             <strong>{record.id}</strong>
           </Descriptions.Item>
           <Descriptions.Item label="Trạng thái" span={1}>
-            <Tag color={statusConfig?.color}>{statusConfig?.label}</Tag>
+            <Tag color="green">Đã nhập kho</Tag>
           </Descriptions.Item>
 
           <Descriptions.Item label="Chi nhánh" span={2}>
@@ -127,22 +118,12 @@ const ImportDetailModal: React.FC<ImportDetailModalProps> = ({
             {record.warehouse?.id || "N/A"}
           </Descriptions.Item>
 
-          <Descriptions.Item label="Ngày dự kiến nhận" span={1}>
-            {record.expected_at
-              ? new Date(record.expected_at).toLocaleDateString("vi-VN")
-              : "N/A"}
+          <Descriptions.Item label="Ngày nhập" span={1}>
+            {new Date(record.created_date).toLocaleString("vi-VN")}
           </Descriptions.Item>
 
-          <Descriptions.Item label="Ngày tạo" span={1}>
-            {new Date(record.created_date).toLocaleDateString("vi-VN")}
-          </Descriptions.Item>
-
-          <Descriptions.Item label="Người tạo" span={1}>
+          <Descriptions.Item label="Người nhập" span={1}>
             {record.created_by || "N/A"}
-          </Descriptions.Item>
-
-          <Descriptions.Item label="Cập nhật lần cuối" span={1}>
-            {new Date(record.modified_date).toLocaleDateString("vi-VN")}
           </Descriptions.Item>
 
           <Descriptions.Item label="Tổng số sản phẩm" span={1}>
@@ -168,7 +149,7 @@ const ImportDetailModal: React.FC<ImportDetailModalProps> = ({
 
         {/* Chi tiết sản phẩm */}
         <div>
-          <h4>Chi tiết sản phẩm nhập kho</h4>
+          <h4>Chi tiết sản phẩm đã nhập</h4>
           <Table
             dataSource={record.lines || []}
             columns={itemColumns}

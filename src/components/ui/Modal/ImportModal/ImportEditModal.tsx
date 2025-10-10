@@ -11,6 +11,7 @@ import {
   message,
   Divider,
   Spin,
+  Input,
 } from "antd";
 import {ColumnsType} from "antd/es/table";
 import {PlusOutlined, DeleteOutlined} from "@ant-design/icons";
@@ -91,38 +92,19 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
   };
 
   useEffect(() => {
-    if (record && visible) {
-      // Edit mode - populate from existing record
-      form.setFieldsValue({
-        branch_id: record.branch?.branch_id,
-        expected_at: record.expected_at ? dayjs(record.expected_at) : null,
-      });
-      setSelectedBranchId(record.branch?.branch_id || null);
-
-      setItems(
-        record.lines?.map((line, index) => ({
-          id: `item-${index}`,
-          product_id: line.product?.productId || "",
-          supplier_id: line.supplier?.supplier_id || "",
-          qty_ordered: line.qty_ordered,
-          unit_cost: line.unit_cost,
-          lot_code: line.lot_code || undefined,
-          expiry_date: line.expiry_date || undefined,
-        })) || []
-      );
-    } else if (visible) {
-      // Create mode - reset form
+    if (visible && !record) {
+      // Create mode only - reset form
       form.resetFields();
       setItems([]);
       setTotalAmount(0);
       setSelectedBranchId(null);
     }
-  }, [record, visible, form]);
+  }, [visible, record, form]);
 
   // Calculate total amount when items change
   useEffect(() => {
     const total = items.reduce(
-      (sum, item) => sum + item.qty * item.unit_cost,
+      (sum, item) => sum + (item.qty || 0) * (item.unit_cost || 0),
       0
     );
     setTotalAmount(total);
@@ -200,7 +182,6 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
       const data: CreatePORequest = {
         branch_id: values.branch_id,
         warehouse_id: warehouse.id,
-        expected_at: values.expected_at.toDate(),
         lines: items.map(({id, ...item}) => ({
           ...item,
           lot_code: item.lot_code || undefined,
@@ -307,13 +288,49 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
       key: "total",
       width: 140,
       render: (_, record) => {
-        const total = record.qty * record.unit_cost;
+        const total = (record.qty || 0) * (record.unit_cost || 0);
         return (
           <span style={{fontWeight: 500, color: "#52c41a"}}>
             {formatCurrency(total)}
           </span>
         );
       },
+    },
+    {
+      title: "Mã lô",
+      dataIndex: "lot_code",
+      key: "lot_code",
+      width: 120,
+      render: (value, record) => (
+        <Input
+          value={value}
+          onChange={(e) =>
+            handleItemChange(record.id, "lot_code", e.target.value)
+          }
+          placeholder="Mã lô (tùy chọn)"
+        />
+      ),
+    },
+    {
+      title: "Hạn SD",
+      dataIndex: "expiry_date",
+      key: "expiry_date",
+      width: 140,
+      render: (value, record) => (
+        <DatePicker
+          value={value ? dayjs(value) : null}
+          onChange={(date) =>
+            handleItemChange(
+              record.id,
+              "expiry_date",
+              date ? date.toDate() : undefined
+            )
+          }
+          format="DD/MM/YYYY"
+          placeholder="Hạn SD"
+          style={{width: "100%"}}
+        />
+      ),
     },
     {
       title: "Thao tác",
@@ -333,10 +350,10 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
 
   return (
     <Modal
-      title={record ? `Chỉnh sửa phiếu nhập` : "Tạo phiếu nhập mới"}
+      title="Nhập hàng mới"
       open={visible}
       onCancel={onClose}
-      width={1200}
+      width={1400}
       footer={[
         <Button key="cancel" onClick={onClose}>
           Hủy
@@ -348,7 +365,7 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
           onClick={handleSave}
           disabled={loadingData || warehouseLoading}
         >
-          Lưu
+          Nhập hàng
         </Button>,
       ]}
     >
@@ -364,7 +381,7 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
             >
               <Form.Item
                 name="branch_id"
-                label="Chi nhánh"
+                label="Chi nhánh cần nhập hàng"
                 rules={[
                   {required: true, message: "Vui lòng chọn chi nhánh"},
                 ]}
@@ -381,13 +398,13 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
                 >
                   {branches.map((branch) => (
                     <Option key={branch.branch_id} value={branch.branch_id}>
-                      {branch.branch_name}
+                      {branch.branch_name} - {branch.address}
                     </Option>
                   ))}
                 </Select>
               </Form.Item>
 
-              <Form.Item label="Kho">
+              <Form.Item label="Kho nhập" hidden={true}>
                 <Spin spinning={warehouseLoading}>
                   {warehouse ? (
                     <div
@@ -404,16 +421,6 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
                   )}
                 </Spin>
               </Form.Item>
-
-              <Form.Item
-                name="expected_at"
-                label="Ngày dự kiến nhận hàng"
-                rules={[
-                  {required: true, message: "Vui lòng chọn ngày dự kiến"},
-                ]}
-              >
-                <DatePicker style={{width: "100%"}} format="DD/MM/YYYY"/>
-              </Form.Item>
             </div>
           </Form>
 
@@ -429,7 +436,7 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
                 marginBottom: 16,
               }}
             >
-              <h4>Chi tiết sản phẩm</h4>
+              <h4>Chi tiết sản phẩm nhập</h4>
               <Button
                 type="dashed"
                 icon={<PlusOutlined/>}
@@ -445,7 +452,7 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
               pagination={false}
               size="small"
               rowKey="id"
-              scroll={{x: 1000}}
+              scroll={{x: 1200}}
               summary={() => (
                 <Table.Summary.Row>
                   <Table.Summary.Cell index={0} colSpan={2}>
@@ -453,7 +460,7 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={2}>
                     <strong>
-                      {items.reduce((sum, item) => sum + item.qty, 0)}
+                      {items.reduce((sum, item) => sum + (item.qty || 0), 0)}
                     </strong>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={3}></Table.Summary.Cell>
@@ -463,6 +470,8 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
                     </strong>
                   </Table.Summary.Cell>
                   <Table.Summary.Cell index={5}></Table.Summary.Cell>
+                  <Table.Summary.Cell index={6}></Table.Summary.Cell>
+                  <Table.Summary.Cell index={7}></Table.Summary.Cell>
                 </Table.Summary.Row>
               )}
             />
