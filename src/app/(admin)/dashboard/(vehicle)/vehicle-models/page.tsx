@@ -5,7 +5,7 @@ import { useConfirmationModalContext } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import { Tag, Avatar, message } from "antd";
 import { VehicleModel } from "@/lib/api/types";
-import { useVehicleModels } from "@/lib/api/hooks";
+import { useVehicleModels, useDeleteVehicleModel } from "@/lib/api/hooks";
 import {
   VehicleModelDetailModal,
   VehicleModelAddModal,
@@ -16,20 +16,25 @@ import { VehicleModelFilterPanel } from "@/components/ui/FilterPanel";
 const VehicleModelsPage = () => {
   const { showModal } = useConfirmationModalContext();
 
+  const params = useMemo(
+    () => ({
+      page: 0,
+      size: 10,
+      direction: "DESC" as const,
+      sort: "createdDate",
+    }),
+    []
+  );
+
   // Use the custom hook for vehicle models
   const {
     models: data,
-    isLoading: loading,
-    fetchModels,
-    refreshModels,
-    deleteModel,
-    toggleModelStatus,
-  } = useVehicleModels({
-    page: 0,
-    size: 10,
-    direction: "DESC",
-    sort: "createdDate",
-  });
+    loading,
+    error,
+    refetch: refreshModels,
+  } = useVehicleModels(params);
+
+  const deleteModelMutation = useDeleteVehicleModel();
 
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -121,22 +126,6 @@ const VehicleModelsPage = () => {
         ],
         onFilter: (value, record: VehicleModel) => record.is_active === value,
       },
-      {
-        title: "Đã xóa",
-        dataIndex: "is_deleted",
-        key: "is_deleted",
-        width: 100,
-        render: (isDeleted: boolean) => (
-          <Tag color={isDeleted ? "red" : "green"}>
-            {isDeleted ? "Đã xóa" : "Chưa xóa"}
-          </Tag>
-        ),
-        filters: [
-          { text: "Đã xóa", value: true },
-          { text: "Chưa xóa", value: false },
-        ],
-        onFilter: (value, record: VehicleModel) => record.is_deleted === value,
-      },
     ],
     []
   );
@@ -172,95 +161,13 @@ const VehicleModelsPage = () => {
     refreshModels();
   };
 
-  const handleFilter = (filters: {
-    search: string;
-    brandId: string;
-    typeId: string;
-    status: string;
-    yearRange: [number | null, number | null];
-    fuelType: string;
-    priceSegment: string;
-    averageRating: number | null;
-  }) => {
-    // Use API filtering instead of client-side filtering
-    const apiFilters: {
-      page: number;
-      size: number;
-      direction: "ASC" | "DESC";
-      sort: string;
-      search?: string;
-      brand_id?: string;
-      type_id?: string;
-      year_from?: number;
-      year_to?: number;
-      fuel_type?: string;
-    } = {
-      page: 0,
-      size: 10,
-      direction: "DESC",
-      sort: "createdDate",
-    };
-
-    if (filters.search) {
-      apiFilters.search = filters.search;
-    }
-    if (filters.brandId) {
-      apiFilters.brand_id = filters.brandId;
-    }
-    if (filters.typeId) {
-      apiFilters.type_id = filters.typeId;
-    }
-    if (filters.yearRange[0] || filters.yearRange[1]) {
-      if (filters.yearRange[0]) {
-        apiFilters.year_from = filters.yearRange[0];
-      }
-      if (filters.yearRange[1]) {
-        apiFilters.year_to = filters.yearRange[1];
-      }
-    }
-    if (filters.fuelType) {
-      apiFilters.fuel_type = filters.fuelType;
-    }
-
-    fetchModels(apiFilters);
-  };
-
-  const handleClearFilter = () => {
-    fetchModels({
-      page: 0,
-      size: 10,
-      direction: "DESC",
-      sort: "createdDate",
-    });
-  };
-
-  const handleToggleStatus = (record: VehicleModel) => {
-    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
-    showModal({
-      title: `${action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"} model`,
-      content: `Bạn có chắc chắn muốn ${action} model ${record.model_name}?`,
-      type: "warning",
-      onConfirm: async () => {
-        try {
-          await toggleModelStatus(record.model_id, !record.is_active);
-        } catch (error) {
-          console.error("Error toggling model status:", error);
-        }
-      },
-    });
-  };
-
   const handleDelete = (record: VehicleModel) => {
     showModal({
       title: "Xóa model xe",
       content: `Bạn có chắc chắn muốn xóa model xe "${record.model_name}"? Hành động này không thể hoàn tác.`,
       type: "error",
       onConfirm: async () => {
-        try {
-          await deleteModel(record.model_id);
-        } catch (error) {
-          console.error("Error deleting model:", error);
-        }
+        deleteModelMutation.mutate(record.model_id);
       },
     });
   };
@@ -276,22 +183,13 @@ const VehicleModelsPage = () => {
         title="Quản lý model xe"
         dataSource={data}
         columns={columns}
-        loading={loading}
+        loading={loading || deleteModelMutation.isPending}
         onAdd={handleAdd}
         onEdit={handleEdit}
         onEditCondition={(record: VehicleModel) => !record.is_deleted}
         onView={handleView}
         addButtonText="Thêm model xe"
         actions={[
-          {
-            key: "toggle-status",
-            label: (record: VehicleModel) =>
-              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
-            type: "default",
-            danger: (record: VehicleModel) => record.is_active,
-            onClick: handleToggleStatus,
-            condition: (record: VehicleModel) => !record.is_deleted,
-          },
           {
             key: "delete",
             label: "Xóa",

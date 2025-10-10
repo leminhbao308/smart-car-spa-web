@@ -1,120 +1,174 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { VehicleService } from "../services/vehicle.service";
 import {
   VehicleModel,
   GetAllVehicleModelsRequest,
+  GetAllVehicleModelsResponse,
+  CreateVehicleModelRequest,
+  UpdateVehicleModelRequest,
 } from "../types";
+import { message } from "antd";
 
 /**
- * Hook for all vehicle models data with pagination and filtering
+ * Hook for vehicle models management
+ * Uses React Query for caching and automatic refetching
  */
-export const useVehicleModels = (params: GetAllVehicleModelsRequest = {}) => {
-  const [models, setModels] = useState<VehicleModel[]>([]);
-  const [pagination, setPagination] = useState({
-    page: 0,
-    size: 10,
-    total_elements: 0,
-    total_pages: 0,
+export const useVehicleModels = (params?: GetAllVehicleModelsRequest) => {
+  const {
+    data: modelsResponse,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery<GetAllVehicleModelsResponse>({
+    queryKey: ["vehicle-models", "list", params],
+    queryFn: async () => {
+      const response = await VehicleService.getAllVehicleModels(params);
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchModels = useCallback(async (currentParams: GetAllVehicleModelsRequest) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await VehicleService.getAllVehicleModels(currentParams);
-      setModels(response.data.content);
-      setPagination({
-        page: response.data.page,
-        size: response.data.size,
-        total_elements: response.data.total_elements,
-        total_pages: response.data.total_pages,
-      });
-    } catch (err) {
-      console.error("Failed to fetch vehicle models:", err);
-      setError("Failed to load vehicle models.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchModels(params);
-  }, [fetchModels, params]);
-
-  const refreshModels = useCallback(() => {
-    fetchModels(params);
-  }, [fetchModels, params]);
-
-  return { models, pagination, loading, error, refreshModels };
+  return {
+    models: modelsResponse?.content || [],
+    totalElements: modelsResponse?.total_elements || 0,
+    totalPages: modelsResponse?.total_pages || 0,
+    currentPage: modelsResponse?.page || 0,
+    loading,
+    error,
+    refetch,
+  };
 };
 
 /**
  * Hook for vehicle models dropdown data
+ * Uses React Query for caching and automatic refetching
  */
 export const useVehicleModelsDropdown = () => {
-  const [dropdownData, setDropdownData] = useState<{model_id: string, model_name: string}[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchDropdownData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const {
+    data: dropdownData = [],
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["vehicle-models", "dropdown"],
+    queryFn: async () => {
       const response = await VehicleService.getVehicleModelsForDropdown();
-      setDropdownData(response.data);
-    } catch (err) {
-      console.error("Failed to fetch vehicle models for dropdown:", err);
-      setError("Failed to load vehicle models for dropdown.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return response.data;
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes - dropdown data changes rarely
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
 
-  useEffect(() => {
-    fetchDropdownData();
-  }, [fetchDropdownData]);
-
-  return { dropdownData, loading, error, refetch: fetchDropdownData };
+  return {
+    dropdownData,
+    loading,
+    error,
+    refetch,
+  };
 };
 
 /**
- * Hook for a single vehicle model by ID
+ * Hook for single vehicle model
+ * Uses React Query for caching and automatic refetching
  */
 export const useVehicleModel = (modelId: string | null) => {
-  const [model, setModel] = useState<VehicleModel | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: model,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery<VehicleModel | null>({
+    queryKey: ["vehicle-models", "detail", modelId],
+    queryFn: async () => {
+      if (!modelId) return null;
+      return await VehicleService.getVehicleModelById(modelId);
+    },
+    enabled: !!modelId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 
-  const fetchModel = useCallback(async () => {
-    if (!modelId) {
-      setModel(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const fetchedModel = await VehicleService.getVehicleModelById(modelId);
-      setModel(fetchedModel);
-    } catch (err) {
-      console.error(`Failed to fetch vehicle model with ID ${modelId}:`, err);
-      setError("Failed to load vehicle model details.");
-    } finally {
-      setLoading(false);
-    }
-  }, [modelId]);
+  return {
+    model,
+    loading,
+    error,
+    refetch,
+  };
+};
 
-  useEffect(() => {
-    fetchModel();
-  }, [fetchModel]);
+/**
+ * Hook for creating a new vehicle model
+ */
+export const useCreateVehicleModel = () => {
+  const queryClient = useQueryClient();
 
-  const refreshModel = useCallback(() => {
-    fetchModel();
-  }, [fetchModel]);
+  return useMutation({
+    mutationFn: async (data: CreateVehicleModelRequest) => {
+      return await VehicleService.createVehicleModel(data);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch vehicle models list
+      queryClient.invalidateQueries({ queryKey: ["vehicle-models", "list"] });
+      // Invalidate dropdown data
+      queryClient.invalidateQueries({ queryKey: ["vehicle-models", "dropdown"] });
+      message.success("Tạo model xe thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi tạo model xe");
+    },
+  });
+};
 
-  return { model, loading, error, refreshModel };
+/**
+ * Hook for updating a vehicle model
+ */
+export const useUpdateVehicleModel = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ modelId, data }: { modelId: string; data: UpdateVehicleModelRequest }) => {
+      return await VehicleService.updateVehicleModel(modelId, data);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate and refetch vehicle models list
+      queryClient.invalidateQueries({ queryKey: ["vehicle-models", "list"] });
+      // Invalidate dropdown data
+      queryClient.invalidateQueries({ queryKey: ["vehicle-models", "dropdown"] });
+      // Invalidate specific model detail
+      queryClient.invalidateQueries({ queryKey: ["vehicle-models", "detail", variables.modelId] });
+      message.success("Cập nhật model xe thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi cập nhật model xe");
+    },
+  });
+};
+
+/**
+ * Hook for deleting a vehicle model
+ */
+export const useDeleteVehicleModel = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (modelId: string) => {
+      return await VehicleService.deleteVehicleModel(modelId);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch vehicle models list
+      queryClient.invalidateQueries({ queryKey: ["vehicle-models", "list"] });
+      // Invalidate dropdown data
+      queryClient.invalidateQueries({ queryKey: ["vehicle-models", "dropdown"] });
+      message.success("Xóa model xe thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi xóa model xe");
+    },
+  });
 };
