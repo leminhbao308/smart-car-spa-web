@@ -100,7 +100,87 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         },
       }}
     >
-      <div style={{width: "100%", overflowX: "hidden"}}>
+      <div style={{ width: "100%", overflowX: "hidden" }}>
+        {/* Header với thông tin tổng quan */}
+        <Card
+          size="small"
+          style={{
+            marginBottom: 16,
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            color: "white",
+          }}
+        >
+          <Row gutter={24} align="middle">
+            {/* <Col span={6}>
+              <Statistic
+                title={
+                  <span style={{ color: "rgba(255,255,255,0.8)" }}>
+                    Giá bán
+                  </span>
+                }
+                value={data.sellingPrice}
+                formatter={(value) => formatCurrency(Number(value))}
+                valueStyle={{ color: "#fff", fontSize: 20 }}
+              />
+            </Col>
+            <Col span={6}>
+              <Statistic
+                title={
+                  <span style={{ color: "rgba(255,255,255,0.8)" }}>
+                    Lợi nhuận
+                  </span>
+                }
+                value={profit}
+                formatter={(value) => formatCurrency(Number(value))}
+                valueStyle={{
+                  color: profit > 0 ? "#52c41a" : "#ff4d4f",
+                  fontSize: 20,
+                }}
+                suffix={`(${profitMargin}%)`}
+              />
+            </Col> */}
+            <Col span={6}>
+              <Statistic
+                title={
+                  <span style={{ color: "rgba(255,255,255,0.8)" }}>Đơn vị</span>
+                }
+                value={data.unitOfMeasure}
+                valueStyle={{ color: "#fff", fontSize: 20 }}
+                prefix={<TagOutlined />}
+              />
+            </Col>
+            <Col span={6}>
+              <div style={{ textAlign: "center" }}>
+                <Badge
+                  status={
+                    data.is_deleted
+                      ? "default"
+                      : data.is_active
+                        ? "success"
+                        : "error"
+                  }
+                  text={
+                    <span
+                      style={{
+                        color: data.is_deleted ? "#999" : "white",
+                        fontSize: 16,
+                        fontWeight: 500
+                      }}
+                    >
+                      {data.is_deleted
+                        ? "Đã xóa"
+                        : data.is_active
+                          ? "Hoạt động"
+                          : "Tạm dừng"
+                      }
+                    </span>
+                  }
+                />
+              </div>
+            </Col>
+          </Row>
+        </Card>
+
         <Row gutter={[16, 16]}>
           {/* Cột trái - Hình ảnh và thông tin cơ bản */}
           <Col xs={24} lg={10}>
@@ -141,6 +221,137 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <Text type="secondary">Chưa có hình ảnh</Text>
                 </div>
               )}
+            </Card>
+
+            {/* Thông tin cơ bản */}
+            <Card
+              title={
+                <Space>
+                  <InfoCircleOutlined />
+                  Thông tin cơ bản
+                </Space>
+              }
+              size="small"
+            >
+              <Descriptions column={1} size="small">
+                <Descriptions.Item label="Product ID">
+                  <Text code>{data.productId}</Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="SKU">
+                  <Text code>{data.sku}</Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Barcode">
+                  <Space>
+                    <BarcodeOutlined />
+                    <Text code>{data.barcode}</Text>
+                  </Space>
+                </Descriptions.Item>
+                <Descriptions.Item label="URL">
+                  <Text code>{data.productUrl}</Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Danh mục">
+                  <Tag color="blue">{data.categoryName}</Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Đơn vị">
+                  <Tag color="green">{data.unitOfMeasure}</Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Nhà cung cấp">
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => setSupplierModalVisible(true)}
+                    style={{ padding: 0, height: "auto" }}
+                  >
+                    <Text code>Xem chi tiết</Text>
+                  </Button>
+                </Descriptions.Item>
+                <Descriptions.Item label="Mô tả">
+                  <Paragraph
+                    ellipsis={{ rows: 3, expandable: true, symbol: "Xem thêm" }}
+                    style={{ margin: 0 }}
+                  >
+                    {data.description}
+                  </Paragraph>
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+          </Col>
+
+          {/* Cột phải - Thông tin chi tiết */}
+          <Col xs={24} lg={14}>
+            {/* Thông tin giá cả */}
+            {/* <Card
+              title={
+                <Space>
+                  <DollarOutlined />
+                  Thông tin giá cả
+                </Space>
+              }
+              size="small"
+              style={{ marginBottom: 16 }}
+            >
+              <Row gutter={[8, 8]}>
+                <Col xs={24} sm={8}>
+                  <Statistic
+                    title="Giá nhập"
+                    value={data.costPrice}
+                    formatter={(value) => formatCurrency(Number(value))}
+                    valueStyle={{ color: "#1890ff" }}
+                    prefix={<ShopOutlined />}
+                  />
+                </Col>
+                <Col xs={24} sm={8}>
+                  <Statistic
+                    title="Giá bán"
+                    value={data.sellingPrice}
+                    formatter={(value) => formatCurrency(Number(value))}
+                    valueStyle={{ color: "#52c41a" }}
+                    prefix={<DollarOutlined />}
+                  />
+                </Col>
+                <Col xs={24} sm={8}>
+                  <Statistic
+                    title="Tỷ lệ lợi nhuận"
+                    value={profitMargin}
+                    suffix="%"
+                    valueStyle={{ color: profit > 0 ? "#52c41a" : "#f5222d" }}
+                    prefix={<TagOutlined />}
+                  />
+                </Col>
+              </Row>
+            </Card> */}
+
+            {/* Thông tin tồn kho */}
+            <Card
+              title={
+                <Space>
+                  <InboxOutlined />
+                  Cài đặt tồn kho
+                </Space>
+              }
+              size="small"
+              style={{ marginBottom: 16 }}
+            >
+              <Row gutter={[8, 8]}>
+                <Col xs={24} sm={8}>
+                  <Statistic
+                    title="Mức tối thiểu"
+                    value={data.minStockLevel}
+                    suffix={data.unitOfMeasure}
+                    valueStyle={{ color: "#ff4d4f" }}
+                    prefix={<InboxOutlined />}
+                  />
+                </Col>
+                <Col xs={24} sm={8}>
+                  <Statistic
+                    title="Mức tối đa"
+                    value={data.maxStockLevel}
+                    suffix={data.unitOfMeasure}
+                    valueStyle={{ color: "#52c41a" }}
+                    prefix={<InboxOutlined />}
+                  />
+                </Col>
+              </Row>
             </Card>
 
             {/* Thông tin kỹ thuật */}
