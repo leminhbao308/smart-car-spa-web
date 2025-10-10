@@ -8,6 +8,25 @@ interface MemoizedInputProps extends InputProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
+// Safe comparison function for objects that might contain circular references
+const safeCompare = (a: any, b: any): boolean => {
+  if (a === b) return true;
+  if (a == null || b == null) return a === b;
+  
+  // For React elements, compare by reference
+  if (React.isValidElement(a) && React.isValidElement(b)) {
+    return a === b;
+  }
+  
+  // For objects, try JSON.stringify with error handling
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch (error) {
+    // If JSON.stringify fails (circular reference), fall back to reference comparison
+    return a === b;
+  }
+};
+
 const MemoizedInput = memo<MemoizedInputProps>(({ value, onChange, ...props }) => {
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     onChange?.(e);
@@ -21,9 +40,9 @@ const MemoizedInput = memo<MemoizedInputProps>(({ value, onChange, ...props }) =
     prevProps.placeholder === nextProps.placeholder &&
     prevProps.disabled === nextProps.disabled &&
     prevProps.size === nextProps.size &&
-    JSON.stringify(prevProps.style) === JSON.stringify(nextProps.style) &&
-    JSON.stringify(prevProps.prefix) === JSON.stringify(nextProps.prefix) &&
-    JSON.stringify(prevProps.suffix) === JSON.stringify(nextProps.suffix)
+    safeCompare(prevProps.style, nextProps.style) &&
+    safeCompare(prevProps.prefix, nextProps.prefix) &&
+    safeCompare(prevProps.suffix, nextProps.suffix)
   );
 });
 

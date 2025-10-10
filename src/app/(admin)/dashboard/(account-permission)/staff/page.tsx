@@ -20,7 +20,6 @@ const StaffPage = () => {
     pagination,
     isLoading,
     error,
-    updateUserStatus,
     deleteUser,
     setFilters,
     goToPage,
@@ -53,7 +52,7 @@ const StaffPage = () => {
   // Định nghĩa columns
   const columns: ColumnsType<UserManagementInfo> = [
     {
-      title: "Nhân viên",
+      title: "Tên nhân viên",
       key: "staff",
       width: 250,
       render: (_, record: UserManagementInfo) => (
@@ -105,14 +104,7 @@ const StaffPage = () => {
       onFilter: (value, record: UserManagementInfo) =>
         record.role.role_code === value,
     },
-    {
-      title: "Địa chỉ",
-      dataIndex: "address",
-      key: "address",
-      width: 200,
-      ellipsis: true,
-      render: (address: string | null) => address || "Chưa cập nhật",
-    },
+
     {
       title: "Ngày tuyển dụng",
       dataIndex: "hired_at",
@@ -129,13 +121,7 @@ const StaffPage = () => {
         return new Date(a.hired_at).getTime() - new Date(b.hired_at).getTime();
       },
     },
-    {
-      title: "CMND/CCCD",
-      dataIndex: "citizen_id",
-      key: "citizen_id",
-      width: 120,
-      render: (citizenId: string | null) => citizenId || "Chưa cập nhật",
-    },
+
     {
       title: "Trạng thái",
       dataIndex: "is_active",
@@ -173,27 +159,6 @@ const StaffPage = () => {
   const handleView = (record: UserManagementInfo) => {
     setDetailData(record);
     setDetailModalVisible(true);
-  };
-
-  const handleToggleStatus = (record: UserManagementInfo) => {
-    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
-    showModal({
-      title: `${
-        action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"
-      } nhân viên`,
-      content: `Bạn có chắc chắn muốn ${action} nhân viên ${record.full_name}?`,
-      type: "warning",
-      onConfirm: async () => {
-        try {
-          await updateUserStatus(record.user_id, !record.is_active);
-          message.success(
-            `Đã ${action} nhân viên ${record.full_name} thành công`
-          );
-        } catch {
-          message.error(`Không thể ${action} nhân viên`);
-        }
-      },
-    });
   };
 
   const handleDeleteUser = (record: UserManagementInfo) => {
@@ -251,7 +216,8 @@ const StaffPage = () => {
             type: "default",
             danger: true,
             onClick: handleDeleteUser,
-            condition: (record: UserManagementInfo) => record.is_active && !record.is_deleted,
+            condition: (record: UserManagementInfo) =>
+              record.is_active && !record.is_deleted,
           },
         ]}
         scroll={{ x: 1200 }}
