@@ -61,8 +61,8 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
           category_name: category.category_name,
           category_url: category.category_url,
           description: category.description,
-          type: category.type,
-          parent_category_id: category.parent_category?.category_id || null,
+          category_type: category.category_type,
+          parent_category_id: category.parent_category_id || null,
           is_active: category.is_active,
         };
         console.log("Setting edit values:", editValues);
@@ -70,7 +70,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
       } else if (isSubCategory && parentCategory) {
         const subCategoryValues = {
           parent_category_id: parentCategory.category_id,
-          type: parentCategory.type, // Inherit type from parent
+          category_type: parentCategory.category_type, // Inherit type from parent
           is_active: true,
         };
         console.log("Setting sub-category values:", subCategoryValues);
@@ -108,7 +108,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
       if (!values.category_url || values.category_url.trim() === "") {
         throw new Error("URL danh mục không được để trống");
       }
-      if (!values.type) {
+      if (!values.category_type) {
         throw new Error("Loại danh mục không được để trống");
       }
 
@@ -284,7 +284,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
           <Col span={12}>
             <Form.Item
               label="Loại danh mục"
-              name="type"
+              name="category_type"
               rules={[
                 { required: true, message: "Vui lòng chọn loại danh mục!" },
               ]}
