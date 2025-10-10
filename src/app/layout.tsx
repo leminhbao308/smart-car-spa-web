@@ -4,26 +4,9 @@ import "./globals.css";
 import "@ant-design/v5-patch-for-react-19";
 import { AuthProvider } from "@/lib/api";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
-import { App, ConfigProvider } from "antd";
-
-// Suppress specific React warnings that are false positives
-if (typeof window !== "undefined") {
-  const originalWarn = console.warn;
-  console.warn = (...args) => {
-    const message = args[0];
-    if (
-      typeof message === "string" &&
-      (message.includes(
-        "Instance created by `useForm` is not connected to any Form element"
-      ) ||
-      message.includes("You are registering a cleanup function after unmount") ||
-      message.includes("Ant Design CSS-in-JS"))
-    ) {
-      return; // Suppress these specific warnings
-    }
-    originalWarn.apply(console, args);
-  };
-}
+import { App } from "antd";
+import { AntdConfigProvider } from "@/lib/antd-config";
+import "@/lib/suppress-warnings"; // Import warning suppression
 
 export const metadata: Metadata = {
   title: "Smart Car Spa",
@@ -41,19 +24,9 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <AntdRegistry>
-              <ConfigProvider
-                theme={{
-                  token: {
-                    colorPrimary: '#1890ff',
-                    colorSuccess: '#52c41a',
-                    colorWarning: '#faad14',
-                    colorError: '#ff4d4f',
-                    colorInfo: '#1890ff',
-                  },
-                }}
-              >
+              <AntdConfigProvider>
                 <App>{children}</App>
-              </ConfigProvider>
+              </AntdConfigProvider>
             </AntdRegistry>
           </AuthProvider>
         </QueryProvider>

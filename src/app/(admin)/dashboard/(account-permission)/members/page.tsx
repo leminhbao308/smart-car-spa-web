@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import { Tag, Avatar, message } from "antd";
-import { CarOutlined, PhoneOutlined } from "@ant-design/icons";
+import { PhoneOutlined } from "@ant-design/icons";
 import { UserManagementInfo } from "@/lib/api/types";
 import { useUserManagement } from "@/lib/api/hooks/useUserManagement";
 import { calculateAge } from "@/components/utils/helper/member.helper";
@@ -22,8 +22,7 @@ const MembersPage = () => {
     users,
     pagination,
     isLoading,
-    error,
-    updateUserStatus,
+    error, 
     deleteUser,
     setFilters,
     goToPage,
@@ -57,7 +56,7 @@ const MembersPage = () => {
   // Định nghĩa columns
   const columns: ColumnsType<UserManagementInfo> = [
     {
-      title: "Khách hàng",
+      title: "Tên khách hàng",
       key: "customer",
       width: 300,
       render: (_, record: UserManagementInfo) => (
@@ -97,11 +96,6 @@ const MembersPage = () => {
             <PhoneOutlined style={{ fontSize: 12, color: "#666" }} />
             <span style={{ fontSize: 12 }}>{record.phone_number}</span>
           </div>
-          <div style={{ fontSize: 11, color: "#666", lineHeight: 1.2 }}>
-            {record.address && record.address.length > 30
-              ? `${record.address.substring(0, 30)}...`
-              : record.address || "Chưa cập nhật"}
-          </div>
         </div>
       ),
     },
@@ -139,41 +133,6 @@ const MembersPage = () => {
         };
         return <Tag color={rankColors[rank] || "default"}>{rank}</Tag>;
       },
-    },
-    {
-      title: "Điểm tích lũy",
-      dataIndex: "accumulated_points",
-      key: "accumulated_points",
-      width: 120,
-      render: (points: number | null) => (
-        <span style={{ fontWeight: 500 }}>
-          {points !== null ? points.toLocaleString() : "0"}
-        </span>
-      ),
-      sorter: (a, b) =>
-        (a.accumulated_points || 0) - (b.accumulated_points || 0),
-    },
-    {
-      title: "Tổng đơn hàng",
-      dataIndex: "total_orders",
-      key: "total_orders",
-      width: 120,
-      render: (orders: number | null) => (
-        <span>{orders !== null ? orders : "0"}</span>
-      ),
-      sorter: (a, b) => (a.total_orders || 0) - (b.total_orders || 0),
-    },
-    {
-      title: "Tổng chi tiêu",
-      dataIndex: "total_spent",
-      key: "total_spent",
-      width: 120,
-      render: (spent: number | null) => (
-        <span style={{ fontWeight: 500, color: "#52c41a" }}>
-          {spent !== null ? `${spent.toLocaleString()} VNĐ` : "0 VNĐ"}
-        </span>
-      ),
-      sorter: (a, b) => (a.total_spent || 0) - (b.total_spent || 0),
     },
     {
       title: "Trạng thái",
@@ -217,27 +176,6 @@ const MembersPage = () => {
   const handleViewVehicles = (record: UserManagementInfo) => {
     setDetailData(record);
     setVehiclesModalVisible(true);
-  };
-
-  const handleToggleStatus = (record: UserManagementInfo) => {
-    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
-    showModal({
-      title: `${
-        action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"
-      } khách hàng`,
-      content: `Bạn có chắc chắn muốn ${action} khách hàng ${record.full_name}?`,
-      type: "warning",
-      onConfirm: async () => {
-        try {
-          await updateUserStatus(record.user_id, !record.is_active);
-          message.success(
-            `Đã ${action} khách hàng ${record.full_name} thành công`
-          );
-        } catch {
-          message.error(`Không thể ${action} khách hàng`);
-        }
-      },
-    });
   };
 
   const handleDeleteUser = (record: UserManagementInfo) => {
@@ -295,7 +233,8 @@ const MembersPage = () => {
             type: "default",
             danger: true,
             onClick: handleDeleteUser,
-            condition: (record: UserManagementInfo) => record.is_active && !record.is_deleted,
+            condition: (record: UserManagementInfo) =>
+              record.is_active && !record.is_deleted,
           },
         ]}
         scroll={{ x: 1200 }}
