@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   },
   
   // Webpack configuration for better Ant Design compatibility
-  webpack: (config, { isServer }) => {
+  webpack: (config) => {
     // Ensure proper module resolution for Ant Design
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -23,7 +23,7 @@ const nextConfig: NextConfig = {
   
   // Compiler options for React 19
   compiler: {
-    // Remove console logs in production
+    // Remove console logs in productions
     removeConsole: process.env.NODE_ENV === 'production',
   },
 };

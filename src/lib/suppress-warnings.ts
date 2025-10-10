@@ -14,6 +14,7 @@ if (typeof window !== "undefined") {
     "antd v5 support React is 16 ~ 18",
     "[antd: compatible]",
     "antd v5 support React is 16 ~ 18. see https://u.ant.design/v5-for-19 for compatible",
+    "Warning: [antd: compatible] antd v5 support React is 16 ~ 18. see https://u.ant.design/v5-for-19 for compatible.",
     
     // React 19 specific warnings
     "Instance created by `useForm` is not connected to any Form element",
@@ -45,6 +46,18 @@ if (typeof window !== "undefined") {
       }
     }
     
+    // Also check for Ant Design React 19 compatibility warnings in the full message
+    const fullMessage = args.join(' ');
+    if (typeof fullMessage === "string") {
+      const shouldSuppressFull = suppressedWarnings.some(suppressedWarning => 
+        fullMessage.includes(suppressedWarning)
+      );
+      
+      if (shouldSuppressFull) {
+        return; // Suppress this warning
+      }
+    }
+    
     // Log the warning normally if it's not in our suppression list
     originalWarn.apply(console, args);
   };
@@ -60,6 +73,18 @@ if (typeof window !== "undefined") {
       );
       
       if (shouldSuppress) {
+        return; // Suppress this error
+      }
+    }
+    
+    // Also check for Ant Design React 19 compatibility warnings in the full message
+    const fullMessage = args.join(' ');
+    if (typeof fullMessage === "string") {
+      const shouldSuppressFull = suppressedWarnings.some(suppressedWarning => 
+        fullMessage.includes(suppressedWarning)
+      );
+      
+      if (shouldSuppressFull) {
         return; // Suppress this error
       }
     }
