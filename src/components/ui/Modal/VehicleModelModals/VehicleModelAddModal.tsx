@@ -13,12 +13,12 @@ import {
 import {
   PlusOutlined} from "@ant-design/icons";
 import { useVehicleBrandsDropdown, useVehicleTypesDropdown } from "@/lib/api/hooks";
-import { useVehicleModels } from "@/lib/api/hooks/useVehicleModels";
 import { CreateVehicleModelRequest } from "@/lib/api/types";
+import { VehicleService } from "@/lib/api/services/vehicle.service";
+import { MemoizedInput, MemoizedTextArea } from "@/components/ui/MemoizedComponents";
 
 const { Title } = Typography;
 const { Option } = Select;
-const { TextArea } = Input;
 
 interface VehicleModelAddModalProps {
   visible: boolean;
@@ -36,7 +36,6 @@ const VehicleModelAddModal: React.FC<VehicleModelAddModalProps> = ({
   // Get brands and types for dropdowns
   const { dropdownData: brands, loading: brandsLoading } = useVehicleBrandsDropdown();
   const { dropdownData: types, loading: typesLoading } = useVehicleTypesDropdown();
-  const { createModel } = useVehicleModels();
 
   const handleSubmit = async (values: {
     model_name: string;
@@ -55,7 +54,7 @@ const VehicleModelAddModal: React.FC<VehicleModelAddModalProps> = ({
         description: values.description};
 
       // Call API to create model
-      await createModel(modelData);
+      await VehicleService.createVehicleModel(modelData);
       onSuccess();
       form.resetFields();
       onCancel();

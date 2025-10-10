@@ -180,13 +180,13 @@ const ProductsPage = () => {
         </div>
       ),
     },
-    {
-      title: "Danh mục",
-      dataIndex: "categoryName",
-      key: "categoryName",
-      width: 120,
-      render: (categoryName: string) => <Tag color="blue">{categoryName}</Tag>,
-    },
+    // {
+    //   title: "Danh mục",
+    //   dataIndex: "categoryName",
+    //   key: "categoryName",
+    //   width: 120,
+    //   render: (categoryName: string) => <Tag color="blue">{categoryName}</Tag>,
+    // },
     {
       title: "Đơn vị",
       dataIndex: "unitOfMeasure",
@@ -194,6 +194,18 @@ const ProductsPage = () => {
       width: 80,
       render: (unit: string) => <Tag color="green">{unit}</Tag>,
     },
+    // {
+    //   title: "Giá bán",
+    //   dataIndex: "sellingPrice",
+    //   key: "sellingPrice",
+    //   width: 120,
+    //   sorter: (a, b) => a.sellingPrice - b.sellingPrice,
+    //   render: (price: number) => (
+    //     <div style={{ fontWeight: 500, color: "#52c41a" }}>
+    //       {formatCurrency(price)}
+    //     </div>
+    //   ),
+    // },
     {
       title: "Trạng thái",
       dataIndex: "is_active",

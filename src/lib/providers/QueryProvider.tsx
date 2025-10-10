@@ -14,20 +14,33 @@ export function QueryProvider({ children }: QueryProviderProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // With SSR, we usually want to set some default staleTime
-            // above 0 to avoid refetching immediately on the client
-            staleTime: 60 * 1000, // 1 minute
+            // Cache data for 5 minutes by default
+            staleTime: 5 * 60 * 1000, // 5 minutes
+            // Keep data in cache for 10 minutes
+            gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+            // Retry logic
             retry: (failureCount, error: any) => {
-              // Don't retry on 4xx errors
+              // Don't retry on 4xx errors (client errors)
               if (error?.response?.status >= 400 && error?.response?.status < 500) {
                 return false;
               }
-              // Retry up to 3 times for other errors
+              // Retry up to 3 times for server errors
               return failureCount < 3;
             },
+            // Retry delay
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+            // Refetch on window focus for real-time data
+            refetchOnWindowFocus: false,
+            // Refetch on reconnect
+            refetchOnReconnect: true,
+            // Refetch on mount
+            refetchOnMount: true,
           },
           mutations: {
+            // Don't retry mutations by default
             retry: false,
+            // Retry delay for mutations
+            retryDelay: 1000,
           },
         },
       })

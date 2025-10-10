@@ -10,6 +10,7 @@ import {
   VehicleProfileDisplay,
   VehicleProfile,
   CreateVehicleProfileRequest,
+  UpdateVehicleProfileRequest,
   CreateVehicleProfileResponse,
 } from "../types/vehicle-profile.types";
 import { VehicleService } from "./vehicle.service";
@@ -213,15 +214,7 @@ export class VehicleProfileService {
    */
   static async updateVehicleProfile(
     profileId: string,
-    data: {
-      license_plate: string;
-      description?: string;
-      vehicle_brand_id: string;
-      vehicle_type_id: string;
-      vehicle_model_id: string;
-      owner_id: string;
-      distance_traveled: number;
-    }
+    data: UpdateVehicleProfileRequest
   ): Promise<VehicleProfileDisplay> {
     try {
       console.log(
@@ -279,39 +272,6 @@ export class VehicleProfileService {
     }
   }
 
-  /**
-   * Update vehicle profile status
-   */
-  static async updateVehicleProfileStatus(
-    profileId: string,
-    status: string
-  ): Promise<VehicleProfileDisplay> {
-    try {
-      console.log(
-        "Updating vehicle profile status with ID:",
-        profileId,
-        "to status:",
-        status
-      );
-
-      const response = await apiClient.patch(
-        `/vehicles/profiles/${profileId}/status`,
-        { status }
-      );
-      console.log("Update vehicle profile status API response:", response);
-
-      if (response.data.success && response.data.data) {
-        return response.data.data;
-      } else {
-        throw new Error(
-          response.data.message || "Failed to update vehicle profile status"
-        );
-      }
-    } catch (error) {
-      console.error("Update vehicle profile status error:", error);
-      throw error;
-    }
-  }
 }
 
 // Export for backward compatibility
@@ -321,5 +281,4 @@ export const vehicleProfileService = {
   create: VehicleProfileService.createVehicleProfile,
   update: VehicleProfileService.updateVehicleProfile,
   delete: VehicleProfileService.deleteVehicleProfile,
-  updateStatus: VehicleProfileService.updateVehicleProfileStatus,
 };

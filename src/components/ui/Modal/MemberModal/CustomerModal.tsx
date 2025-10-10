@@ -11,13 +11,15 @@ import {
   Radio,
   Select,
   Tag,
-  Spin} from "antd";
+  Spin,
+  Input} from "antd";
 import dayjs from "dayjs";
 import {
   UserOutlined,
   PhoneOutlined,
   MailOutlined,
   HomeOutlined} from "@ant-design/icons";
+import { MemoizedInput } from "@/components/ui/MemoizedComponents";
 import {
   UserManagementInfo,
   Role,
@@ -236,7 +238,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                     { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
                   ]}
                 >
-                  <MemoizedInput.Password placeholder="Nhập mật khẩu" />
+                  <Input.Password placeholder="Nhập mật khẩu" />
                 </Form.Item>
               </Col>
               <Col span={12}>
@@ -257,7 +259,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
                       }}),
                   ]}
                 >
-                  <MemoizedInput.Password placeholder="Xác nhận mật khẩu" />
+                  <Input.Password placeholder="Xác nhận mật khẩu" />
                 </Form.Item>
               </Col>
             </Row>

@@ -1,5 +1,5 @@
 ﻿"use client";
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import {
   Modal,
   Form,
@@ -7,18 +7,17 @@ import {
   Button,
   Row,
   Col,
-  message,
   Typography,
   Card} from "antd";
 import {
   EditOutlined} from "@ant-design/icons";
 import { useVehicleBrandsDropdown, useVehicleTypesDropdown } from "@/lib/api/hooks";
-import { useVehicleModels } from "@/lib/api/hooks/useVehicleModels";
+import { useUpdateVehicleModel } from "@/lib/api/hooks/useVehicleModels";
 import { UpdateVehicleModelRequest, VehicleModel } from "@/lib/api/types";
+import { MemoizedInput, MemoizedTextArea } from "@/components/ui/MemoizedComponents";
 
 const { Title } = Typography;
 const { Option } = Select;
-const { TextArea } = Input;
 
 interface VehicleModelEditModalProps {
   visible: boolean;
@@ -33,12 +32,11 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
   onSuccess,
   modelData}) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   
   // Get brands and types for dropdowns
   const { dropdownData: brands, loading: brandsLoading } = useVehicleBrandsDropdown();
   const { dropdownData: types, loading: typesLoading } = useVehicleTypesDropdown();
-  const { updateModel } = useVehicleModels();
+  const updateModelMutation = useUpdateVehicleModel();
 
   // Set form values when modelData changes
   useEffect(() => {
@@ -61,26 +59,28 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
   }) => {
     if (!modelData) return;
     
-    setLoading(true);
-    try {
-      const updateData: UpdateVehicleModelRequest = {
-        model_name: values.model_name,
-        model_code: values.model_code,
-        brand_id: values.brand_id,
-        type_id: values.type_id,
-        description: values.description};
+    const updateData: UpdateVehicleModelRequest = {
+      model_name: values.model_name,
+      model_code: values.model_code,
+      brand_id: values.brand_id,
+      type_id: values.type_id,
+      description: values.description
+    };
 
-      // Call API to update model
-      await updateModel(modelData.model_id, updateData);
-      onSuccess();
-      form.resetFields();
-      onClose();
-    } catch (error) {
-      console.error("Error updating model:", error);
-      message.error("Có lỗi xảy ra khi cập nhật model xe!");
-    } finally {
-      setLoading(false);
-    }
+    // Use mutation hook
+    updateModelMutation.mutate(
+      { modelId: modelData.model_id, data: updateData },
+      {
+        onSuccess: () => {
+          onSuccess();
+          form.resetFields();
+          onClose();
+        },
+        onError: (error) => {
+          console.error("Error updating model:", error);
+        }
+      }
+    );
   };
 
   const handleCancel = () => {
@@ -200,8 +200,8 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
           <Button onClick={handleCancel} style={{ marginRight: 8 }}>
             Hủy
           </Button>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            Cập nhật model xe
+          <Button type="primary" htmlType="submit" loading={updateModelMutation.isPending}>
+            Cập nhật
           </Button>
         </div>
       </Form>

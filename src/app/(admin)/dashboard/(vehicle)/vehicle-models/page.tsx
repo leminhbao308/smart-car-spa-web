@@ -1,41 +1,91 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Avatar, message } from "antd";
+import { Tag, Avatar, message, Card, Row, Col, Select, Input, Typography } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import { VehicleModel } from "@/lib/api/types";
-import { useVehicleModels } from "@/lib/api/hooks";
+import { useVehicleModels, useDeleteVehicleModel, useVehicleBrandsDropdown, useVehicleTypesDropdown } from "@/lib/api/hooks";
 import {
   VehicleModelDetailModal,
   VehicleModelAddModal,
   VehicleModelEditModal,
 } from "@/components/ui/Modal/VehicleModelModals";
-import { VehicleModelFilterPanel } from "@/components/ui/FilterPanel";
+
+const { Option } = Select;
 
 const VehicleModelsPage = () => {
   const { showModal } = useConfirmationModalContext();
 
+  // Filter states
+  const [searchText, setSearchText] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState<string>("");
+  const [selectedType, setSelectedType] = useState<string>("");
+
+  const params = useMemo(
+    () => ({
+      page: 0,
+      size: 100, // Get more data for filtering
+      direction: "DESC" as const,
+      sort: "createdDate",
+    }),
+    []
+  );
+
   // Use the custom hook for vehicle models
   const {
-    models: data,
-    isLoading: loading,
-    fetchModels,
-    refreshModels,
-    deleteModel,
-    toggleModelStatus,
-  } = useVehicleModels({
-    page: 0,
-    size: 10,
-    direction: "DESC",
-    sort: "createdDate",
-  });
+    models: allModels,
+    loading,
+    refetch: refreshModels,
+  } = useVehicleModels(params);
+
+  const deleteModelMutation = useDeleteVehicleModel();
+  const { dropdownData: brandsData } = useVehicleBrandsDropdown();
+  const { dropdownData: typesData } = useVehicleTypesDropdown();
 
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedModel, setSelectedModel] = useState<VehicleModel | null>(null);
+
+  // Filter models based on search and filters
+  const filteredModels = useMemo(() => {
+    let filtered = allModels;
+
+    // Search filter
+    if (searchText) {
+      filtered = filtered.filter((model: VehicleModel) =>
+        model.model_name.toLowerCase().includes(searchText.toLowerCase()) ||
+        model.model_code.toLowerCase().includes(searchText.toLowerCase()) ||
+        model.description?.toLowerCase().includes(searchText.toLowerCase())
+      );
+    }
+
+    // Brand filter
+    if (selectedBrand) {
+      filtered = filtered.filter((model: VehicleModel) => model.brand_id === selectedBrand);
+    }
+
+    // Type filter
+    if (selectedType) {
+      filtered = filtered.filter((model: VehicleModel) => model.type_id === selectedType);
+    }
+
+    return filtered;
+  }, [allModels, searchText, selectedBrand, selectedType]);
+
+  // Helper functions
+  const getBrandName = useCallback((brandId: string) => {
+    const brand = brandsData.find(b => b.brand_id === brandId);
+    return brand ? brand.brand_name : `Brand ID: ${brandId}`;
+  }, [brandsData]);
+
+  const getTypeName = useCallback((typeId: string) => {
+    const type = typesData.find(t => t.type_id === typeId);
+    return type ? type.type_name : `Type ID: ${typeId}`;
+  }, [typesData]);
 
   // Định nghĩa columns
   const columns: ColumnsType<VehicleModel> = useMemo(
@@ -71,8 +121,7 @@ const VehicleModelsPage = () => {
               {record.model_code}
             </div>
             <div style={{ fontSize: 11, color: "#999", marginBottom: 2 }}>
-              {record.brand_name || `Brand ID: ${record.brand_id}`} •{" "}
-              {record.type_name || `Type ID: ${record.type_id}`}
+              {getBrandName(record.brand_id)} • {getTypeName(record.type_id)}
             </div>
           </div>
         ),
@@ -87,7 +136,7 @@ const VehicleModelsPage = () => {
           <div style={{ fontSize: 12, color: "#666" }}>
             {description && description.length > 50
               ? `${description.substring(0, 50)}...`
-              : description}
+              : description || "Không có mô tả"}
           </div>
         ),
       },
@@ -121,24 +170,8 @@ const VehicleModelsPage = () => {
         ],
         onFilter: (value, record: VehicleModel) => record.is_active === value,
       },
-      {
-        title: "Đã xóa",
-        dataIndex: "is_deleted",
-        key: "is_deleted",
-        width: 100,
-        render: (isDeleted: boolean) => (
-          <Tag color={isDeleted ? "red" : "green"}>
-            {isDeleted ? "Đã xóa" : "Chưa xóa"}
-          </Tag>
-        ),
-        filters: [
-          { text: "Đã xóa", value: true },
-          { text: "Chưa xóa", value: false },
-        ],
-        onFilter: (value, record: VehicleModel) => record.is_deleted === value,
-      },
     ],
-    []
+    [getBrandName, getTypeName]
   );
 
   // Handlers
@@ -172,126 +205,80 @@ const VehicleModelsPage = () => {
     refreshModels();
   };
 
-  const handleFilter = (filters: {
-    search: string;
-    brandId: string;
-    typeId: string;
-    status: string;
-    yearRange: [number | null, number | null];
-    fuelType: string;
-    priceSegment: string;
-    averageRating: number | null;
-  }) => {
-    // Use API filtering instead of client-side filtering
-    const apiFilters: {
-      page: number;
-      size: number;
-      direction: "ASC" | "DESC";
-      sort: string;
-      search?: string;
-      brand_id?: string;
-      type_id?: string;
-      year_from?: number;
-      year_to?: number;
-      fuel_type?: string;
-    } = {
-      page: 0,
-      size: 10,
-      direction: "DESC",
-      sort: "createdDate",
-    };
-
-    if (filters.search) {
-      apiFilters.search = filters.search;
-    }
-    if (filters.brandId) {
-      apiFilters.brand_id = filters.brandId;
-    }
-    if (filters.typeId) {
-      apiFilters.type_id = filters.typeId;
-    }
-    if (filters.yearRange[0] || filters.yearRange[1]) {
-      if (filters.yearRange[0]) {
-        apiFilters.year_from = filters.yearRange[0];
-      }
-      if (filters.yearRange[1]) {
-        apiFilters.year_to = filters.yearRange[1];
-      }
-    }
-    if (filters.fuelType) {
-      apiFilters.fuel_type = filters.fuelType;
-    }
-
-    fetchModels(apiFilters);
-  };
-
-  const handleClearFilter = () => {
-    fetchModels({
-      page: 0,
-      size: 10,
-      direction: "DESC",
-      sort: "createdDate",
-    });
-  };
-
-  const handleToggleStatus = (record: VehicleModel) => {
-    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
-    showModal({
-      title: `${action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"} model`,
-      content: `Bạn có chắc chắn muốn ${action} model ${record.model_name}?`,
-      type: "warning",
-      onConfirm: async () => {
-        try {
-          await toggleModelStatus(record.model_id, !record.is_active);
-        } catch (error) {
-          console.error("Error toggling model status:", error);
-        }
-      },
-    });
-  };
-
   const handleDelete = (record: VehicleModel) => {
     showModal({
       title: "Xóa model xe",
       content: `Bạn có chắc chắn muốn xóa model xe "${record.model_name}"? Hành động này không thể hoàn tác.`,
       type: "error",
       onConfirm: async () => {
-        try {
-          await deleteModel(record.model_id);
-        } catch (error) {
-          console.error("Error deleting model:", error);
-        }
+        deleteModelMutation.mutate(record.model_id);
       },
     });
   };
 
   return (
     <>
-      {/* <VehicleModelFilterPanel
-        onFilter={handleFilter}
-        onClear={handleClearFilter}
-      /> */}
+      {/* Filter Panel */}
+      <Card style={{ marginBottom: 16 }}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} sm={8} md={6}>
+            <Input
+              placeholder="Tìm kiếm model xe..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={8} md={6}>
+            <Select
+              placeholder="Chọn hãng xe"
+              value={selectedBrand}
+              onChange={setSelectedBrand}
+              allowClear
+              style={{ width: "100%" }}
+            >
+              {brandsData.map(brand => (
+                <Option key={brand.brand_id} value={brand.brand_id}>
+                  {brand.brand_name}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={8} md={6}>
+            <Select
+              placeholder="Chọn loại xe"
+              value={selectedType}
+              onChange={setSelectedType}
+              allowClear
+              style={{ width: "100%" }}
+            >
+              {typesData.map(type => (
+                <Option key={type.type_id} value={type.type_id}>
+                  {type.type_name}
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} sm={24} md={6}>
+            <Typography.Text type="secondary">
+              Hiển thị: {filteredModels.length} / {allModels.length} model
+            </Typography.Text>
+          </Col>
+        </Row>
+      </Card>
 
       <AdminTable
         title="Quản lý model xe"
-        dataSource={data}
+        dataSource={filteredModels}
         columns={columns}
-        loading={loading}
+        loading={loading || deleteModelMutation.isPending}
         onAdd={handleAdd}
         onEdit={handleEdit}
         onEditCondition={(record: VehicleModel) => !record.is_deleted}
         onView={handleView}
         addButtonText="Thêm model xe"
         actions={[
-          {
-            key: "toggle-status",
-            label: (record: VehicleModel) =>
-              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
-            type: "default",
-            danger: (record: VehicleModel) => record.is_active,
-            onClick: handleToggleStatus,
-            condition: (record: VehicleModel) => !record.is_deleted,
-          },
           {
             key: "delete",
             label: "Xóa",
@@ -301,9 +288,7 @@ const VehicleModelsPage = () => {
             condition: (record: VehicleModel) => !record.is_deleted,
           },
         ]}
-        searchable={true}
-        searchPlaceholder="Tìm kiếm model xe theo tên, mã..."
-        searchFields={["model_name", "model_code", "description"]}
+        searchable={false} // Disable built-in search since we have custom filter
         scroll={{ x: 1000 }}
         rowKey="model_id"
       />

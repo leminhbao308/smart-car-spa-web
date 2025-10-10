@@ -1,124 +1,173 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserService } from "../services/user.service";
 import {
   GetAllUsersRequest,
-  UserManagementInfo,
+  CreateUserRequest,
+  UpdateUserRequest,
 } from "../types";
-
-/**
- * Hook for all users data with pagination and filtering
- */
-export const useUsers = (params: GetAllUsersRequest = {}) => {
-  const [users, setUsers] = useState<UserManagementInfo[]>([]);
-  const [pagination, setPagination] = useState({
-    page: 0,
-    size: 10,
-    total_elements: 0,
-    total_pages: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchUsers = useCallback(async (currentParams: GetAllUsersRequest) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await UserService.getAllUsers(currentParams);
-      setUsers(response.data.content);
-      setPagination({
-        page: response.data.page,
-        size: response.data.size,
-        total_elements: response.data.total_elements,
-        total_pages: response.data.total_pages,
-      });
-    } catch (err) {
-      console.error("Failed to fetch users:", err);
-      setError("Failed to load users.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUsers(params);
-  }, [fetchUsers, params]);
-
-  const refreshUsers = useCallback(() => {
-    fetchUsers(params);
-  }, [fetchUsers, params]);
-
-  return { users, pagination, loading, error, refreshUsers };
-};
+import { message } from "antd";
 
 /**
  * Hook for customers dropdown data
+ * Uses React Query for caching and automatic refetching
  */
 export const useCustomersDropdown = () => {
-  const [customers, setCustomers] = useState<UserManagementInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchCustomers = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await UserService.getAllUsers({
-        userType: "CUSTOMER",
-        size: 1000, // Get all customers
-        page: 0,
+  const {
+    data: customersResponse,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["customers", "dropdown"],
+    queryFn: async () => {
+      const response = await UserService.getAllUsers({ 
+        page: 0, 
+        size: 1000, // Get all customers for dropdown
+        userType: 'CUSTOMER' // Only customers
       });
-      setCustomers(response.data.content);
-    } catch (err) {
-      console.error("Failed to fetch customers for dropdown:", err);
-      setError("Failed to load customers for dropdown.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return response.data;
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes - dropdown data changes rarely
+    gcTime: 30 * 60 * 1000, // 30 minutes
+  });
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+  return {
+    customers: customersResponse?.content || [],
+    loading,
+    error,
+    refetch,
+  };
+};
 
-  return { customers, loading, error, refetch: fetchCustomers };
+/**
+ * Hook for all users data with pagination and filtering
+ * Migrated to TanStack React Query for better performance and caching
+ */
+export const useUsers = (params: GetAllUsersRequest = {}) => {
+  const {
+    data: usersResponse,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["users", "list", params],
+    queryFn: async () => {
+      const response = await UserService.getAllUsers(params);
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  return {
+    users: usersResponse?.content || [],
+    pagination: {
+      page: usersResponse?.page || 0,
+      size: usersResponse?.size || 10,
+      total_elements: usersResponse?.total_elements || 0,
+      total_pages: usersResponse?.total_pages || 0,
+    },
+    loading,
+    error,
+    refreshUsers: refetch,
+  };
+};
+
+/**
+ * Hook for creating a new user
+ */
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: CreateUserRequest) => {
+      return await UserService.createUser(data);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch users list
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      message.success("Tạo người dùng thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi tạo người dùng");
+    },
+  });
+};
+
+/**
+ * Hook for updating a user
+ */
+export const useUpdateUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, data }: { userId: string; data: UpdateUserRequest }) => {
+      return await UserService.updateUser(userId, data);
+    },
+    onSuccess: (updatedUser, variables) => {
+      // Invalidate and refetch users list
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      // Invalidate specific user detail
+      queryClient.invalidateQueries({ queryKey: ["users", "detail", variables.userId] });
+      message.success("Cập nhật người dùng thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi cập nhật người dùng");
+    },
+  });
+};
+
+/**
+ * Hook for deleting a user
+ */
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      return await UserService.deleteUser(userId);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch users list
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+      message.success("Xóa người dùng thành công!");
+    },
+    onError: (error: Error) => {
+      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi xóa người dùng");
+    },
+  });
 };
 
 /**
  * Hook for a single user by ID
+ * Migrated to TanStack React Query for better performance and caching
  */
 export const useUser = (userId: string | null) => {
-  const [user, setUser] = useState<UserManagementInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: user,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["users", "detail", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      return await UserService.getUserById(userId);
+    },
+    enabled: !!userId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 
-  const fetchUser = useCallback(async () => {
-    if (!userId) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const fetchedUser = await UserService.getUserById(userId);
-      setUser(fetchedUser);
-    } catch (err) {
-      console.error(`Failed to fetch user with ID ${userId}:`, err);
-      setError("Failed to load user details.");
-    } finally {
-      setLoading(false);
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
-
-  const refreshUser = useCallback(() => {
-    fetchUser();
-  }, [fetchUser]);
-
-  return { user, loading, error, refreshUser };
+  return {
+    user,
+    loading,
+    error,
+    refetch,
+  };
 };

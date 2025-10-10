@@ -57,34 +57,129 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
   if (!brand && !loading) return null;
 
   return (
-    <Modal
+    <>
+      <style jsx global>{`
+        .ant-modal {
+          max-width: 90vw !important;
+        }
+        .ant-modal-content {
+          max-height: 90vh;
+          overflow: hidden;
+        }
+        .ant-modal-body {
+          padding: 16px !important;
+          max-height: calc(90vh - 120px);
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+        .ant-descriptions {
+          overflow-x: hidden;
+        }
+        .ant-descriptions-item-label {
+          min-width: 100px;
+          word-break: break-word;
+        }
+        .ant-descriptions-item-content {
+          word-break: break-word;
+        }
+        @media (max-width: 768px) {
+          .ant-modal {
+            margin: 10px !important;
+            max-width: calc(100vw - 20px) !important;
+          }
+          .ant-descriptions-bordered .ant-descriptions-item {
+            padding: 8px 12px !important;
+          }
+        }
+      `}</style>
+      <Modal
       title={
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Avatar
-            size={40}
-            src={brand?.brand_logo_url || undefined}
-            style={{ backgroundColor: "#f0f0f0" }}
-          >
-            {brand?.brand_name.charAt(0)}
-          </Avatar>
-          <div>
-            <Title level={4} style={{ margin: 0 }}>
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          gap: 16,
+          padding: "8px 0"
+        }}>
+          <div style={{
+            position: "relative",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
+            <Avatar
+              size={50}
+              src={brand?.brand_logo_url || undefined}
+              style={{ 
+                backgroundColor: "#1890ff",
+                border: "3px solid #e6f7ff",
+                boxShadow: "0 4px 12px rgba(24, 144, 255, 0.15)"
+              }}
+            >
+              {brand?.brand_name?.charAt(0)?.toUpperCase()}
+            </Avatar>
+            {brand?.is_active && (
+              <div style={{
+                position: "absolute",
+                bottom: -2,
+                right: -2,
+                width: 16,
+                height: 16,
+                backgroundColor: "#52c41a",
+                border: "2px solid #fff",
+                borderRadius: "50%",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+              }} />
+            )}
+          </div>
+          <div style={{ flex: 1 }}>
+            <Title level={3} style={{ 
+              margin: 0, 
+              color: "#262626",
+              fontWeight: 600,
+              lineHeight: 1.2
+            }}>
               {brand?.brand_name}
             </Title>
-            <Text type="secondary">{brand?.brand_code}</Text>
+            <div style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 8,
+              marginTop: 4
+            }}>
+              <Tag color="blue" style={{ margin: 0 }}>
+                {brand?.brand_code}
+              </Tag>
+              <Tag color={brand?.is_active ? "green" : "red"} style={{ margin: 0 }}>
+                {brand?.is_active ? "Hoạt động" : "Không hoạt động"}
+              </Tag>
+            </div>
           </div>
         </div>
       }
       open={visible}
       onCancel={onClose}
       footer={[
-        <Button key="close" onClick={onClose}>
+        <Button 
+          key="close" 
+          onClick={onClose}
+          size="large"
+          style={{
+            minWidth: 100,
+            height: 40,
+            borderRadius: 6,
+            fontWeight: 500
+          }}
+        >
           Đóng
         </Button>,
       ]}
-      width={800}
+      width="60%"
       styles={{
-        body: { maxHeight: "70vh", overflowY: "auto" },
+        body: { 
+          maxHeight: "70vh", 
+          overflowY: "auto",
+          padding: "16px"
+        },
       }}
     >
       {loading ? (
@@ -92,27 +187,77 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
           <Spin size="large" />
         </div>
       ) : brand ? (
-        <Row gutter={[24, 24]}>
+        <Row gutter={[20, 20]}>
           {/* Thông tin cơ bản */}
           <Col span={24}>
-            <Card title="Thông tin cơ bản" size="small">
-              <Descriptions column={2} size="small">
-                <Descriptions.Item label="Tên hãng">
-                  <Text strong>{brand.brand_name}</Text>
+            <Card 
+              title={
+                <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: 8,
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  color: "#262626"
+                }}>
+                  <div style={{
+                    width: 4,
+                    height: 20,
+                    backgroundColor: "#1890ff",
+                    borderRadius: 2
+                  }} />
+                  Thông tin cơ bản
+                </div>
+              } 
+              size="small"
+              style={{
+                borderRadius: 8,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                border: "1px solid #f0f0f0"
+              }}
+            >
+              <Descriptions 
+                column={{ xs: 1, sm: 2 }} 
+                size="small"
+                bordered={false}
+                style={{ marginTop: 8 }}
+              >
+                <Descriptions.Item label="Tên hãng" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                  <Text strong style={{ fontSize: "15px", color: "#262626" }}>
+                    {brand.brand_name}
+                  </Text>
                 </Descriptions.Item>
-                <Descriptions.Item label="Mã hãng">
-                  <Tag color="blue">{brand.brand_code}</Tag>
+                <Descriptions.Item label="Mã hãng" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                  <Tag color="blue" style={{ fontSize: "12px", padding: "2px 8px" }}>
+                    {brand.brand_code}
+                  </Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="Mô tả" span={2}>
-                  <Text>{brand.description}</Text>
+                <Descriptions.Item label="Mô tả" span={{ xs: 1, sm: 2 }} labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                  <div style={{
+                    backgroundColor: "#fafafa",
+                    padding: "12px",
+                    borderRadius: 6,
+                    border: "1px solid #f0f0f0",
+                    fontSize: "14px",
+                    lineHeight: 1.6,
+                    color: "#595959"
+                  }}>
+                    {brand.description || "Không có mô tả"}
+                  </div>
                 </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">
-                  <Tag color={brand.is_active ? "green" : "red"}>
+                <Descriptions.Item label="Trạng thái" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                  <Tag 
+                    color={brand.is_active ? "green" : "red"} 
+                    style={{ fontSize: "12px", padding: "2px 8px" }}
+                  >
                     {brand.is_active ? "Hoạt động" : "Không hoạt động"}
                   </Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="Đã xóa">
-                  <Tag color={brand.is_deleted ? "red" : "green"}>
+                <Descriptions.Item label="Trạng thái xóa" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                  <Tag 
+                    color={brand.is_deleted ? "red" : "green"} 
+                    style={{ fontSize: "12px", padding: "2px 8px" }}
+                  >
                     {brand.is_deleted ? "Đã xóa" : "Chưa xóa"}
                   </Tag>
                 </Descriptions.Item>
@@ -122,29 +267,93 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
 
           {/* Thông tin hệ thống */}
           <Col span={24}>
-            <Card title="Thông tin hệ thống" size="small">
-              <Descriptions column={2} size="small">
-                <Descriptions.Item label="Ngày tạo">
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <CalendarOutlined style={{ color: "#666" }} />
-                    <Text>
+            <Card 
+              title={
+                <div style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: 8,
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  color: "#262626"
+                }}>
+                  <div style={{
+                    width: 4,
+                    height: 20,
+                    backgroundColor: "#52c41a",
+                    borderRadius: 2
+                  }} />
+                  Thông tin hệ thống
+                </div>
+              } 
+              size="small"
+              style={{
+                borderRadius: 8,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                border: "1px solid #f0f0f0"
+              }}
+            >
+              <Descriptions 
+                column={{ xs: 1, sm: 2 }} 
+                size="small"
+                bordered={false}
+                style={{ marginTop: 8 }}
+              >
+                <Descriptions.Item label="Ngày tạo" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: 6,
+                    backgroundColor: "#f6ffed",
+                    padding: "6px 10px",
+                    borderRadius: 4,
+                    border: "1px solid #b7eb8f"
+                  }}>
+                    <CalendarOutlined style={{ color: "#52c41a", fontSize: "14px" }} />
+                    <Text style={{ color: "#389e0d", fontSize: "13px", fontWeight: 500 }}>
                       {new Date(brand.created_date).toLocaleDateString("vi-VN")}
                     </Text>
                   </div>
                 </Descriptions.Item>
-                <Descriptions.Item label="Ngày cập nhật">
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <CalendarOutlined style={{ color: "#666" }} />
-                    <Text>
+                <Descriptions.Item label="Ngày cập nhật" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: 6,
+                    backgroundColor: "#e6f7ff",
+                    padding: "6px 10px",
+                    borderRadius: 4,
+                    border: "1px solid #91d5ff"
+                  }}>
+                    <CalendarOutlined style={{ color: "#1890ff", fontSize: "14px" }} />
+                    <Text style={{ color: "#0958d9", fontSize: "13px", fontWeight: 500 }}>
                       {new Date(brand.modified_date).toLocaleDateString("vi-VN")}
                     </Text>
                   </div>
                 </Descriptions.Item>
-                <Descriptions.Item label="Người tạo">
-                  <Text>{brand.created_by}</Text>
+                <Descriptions.Item label="Người tạo" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                  <div style={{
+                    backgroundColor: "#fafafa",
+                    padding: "6px 10px",
+                    borderRadius: 4,
+                    border: "1px solid #f0f0f0"
+                  }}>
+                    <Text code style={{ fontSize: "13px", color: "#262626" }}>
+                      {brand.created_by}
+                    </Text>
+                  </div>
                 </Descriptions.Item>
-                <Descriptions.Item label="Người cập nhật">
-                  <Text>{brand.modified_by}</Text>
+                <Descriptions.Item label="Người cập nhật" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                  <div style={{
+                    backgroundColor: "#fafafa",
+                    padding: "6px 10px",
+                    borderRadius: 4,
+                    border: "1px solid #f0f0f0"
+                  }}>
+                    <Text code style={{ fontSize: "13px", color: "#262626" }}>
+                      {brand.modified_by}
+                    </Text>
+                  </div>
                 </Descriptions.Item>
               </Descriptions>
             </Card>
@@ -153,15 +362,75 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
           {/* Logo */}
           {brand.brand_logo_url && (
             <Col span={24}>
-              <Card title="Logo hãng xe" size="small">
-                <div style={{ textAlign: "center" }}>
-                  <Avatar
-                    size={120}
-                    src={brand.brand_logo_url}
-                    style={{ backgroundColor: "#f0f0f0" }}
-                  >
-                    {brand.brand_name.charAt(0)}
-                  </Avatar>
+              <Card 
+                title={
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: 8,
+                    fontSize: "16px",
+                    fontWeight: 600,
+                    color: "#262626"
+                  }}>
+                    <div style={{
+                      width: 4,
+                      height: 20,
+                      backgroundColor: "#fa8c16",
+                      borderRadius: 2
+                    }} />
+                    Logo hãng xe
+                  </div>
+                } 
+                size="small"
+                style={{
+                  borderRadius: 8,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                  border: "1px solid #f0f0f0"
+                }}
+              >
+                <div style={{ 
+                  textAlign: "center",
+                  padding: "20px 0"
+                }}>
+                  <div style={{
+                    position: "relative",
+                    display: "inline-block"
+                  }}>
+                    <Avatar
+                      size={120}
+                      src={brand.brand_logo_url}
+                      style={{ 
+                        backgroundColor: "#f0f0f0",
+                        border: "4px solid #fff",
+                        boxShadow: "0 8px 24px rgba(0,0,0,0.12)"
+                      }}
+                    >
+                      {brand.brand_name.charAt(0).toUpperCase()}
+                    </Avatar>
+                    {brand.is_active && (
+                      <div style={{
+                        position: "absolute",
+                        bottom: 8,
+                        right: 8,
+                        width: 24,
+                        height: 24,
+                        backgroundColor: "#52c41a",
+                        border: "3px solid #fff",
+                        borderRadius: "50%",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}>
+                        <div style={{
+                          width: 8,
+                          height: 8,
+                          backgroundColor: "#fff",
+                          borderRadius: "50%"
+                        }} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Card>
             </Col>
@@ -169,6 +438,7 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
         </Row>
       ) : null}
     </Modal>
+    </>
   );
 };
 
