@@ -20,6 +20,7 @@ import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
 import {
   VehicleProfileDisplay,
   CreateVehicleProfileRequest,
+  UpdateVehicleProfileRequest,
 } from "@/lib/api/types/vehicle-profile.types";
 
 const CarProfilesPage = () => {
@@ -37,7 +38,7 @@ const CarProfilesPage = () => {
   );
 
   // Use custom hook for API data management
-  const { profiles, loading, pagination, refreshProfiles, createProfile, deleteProfile } =
+  const { profiles, loading, pagination, refreshProfiles, createProfile, updateProfile, deleteProfile } =
     useVehicleProfiles(initialParams);
 
   // Modal states
@@ -91,13 +92,17 @@ const CarProfilesPage = () => {
   // Định nghĩa columns
   const columns: ColumnsType<VehicleProfileDisplay> = [
     {
-      title: "ID",
-      dataIndex: "vehicle_id",
-      key: "vehicle_id",
-      width: 80,
-      render: (id: string) => (
-        <span style={{ fontFamily: "monospace", fontSize: 12 }}>
-          {id.slice(-8)}
+      title: "STT",
+      key: "index",
+      width: 60,
+      align: "center",
+      render: (_, record: VehicleProfileDisplay, index: number) => (
+        <span style={{ 
+          fontSize: "14px", 
+          fontWeight: 500,
+          color: "#666"
+        }}>
+          {index + 1}
         </span>
       ),
     },
@@ -283,28 +288,6 @@ const CarProfilesPage = () => {
   //   setScheduleServiceModalVisible(true);
   // };
 
-  const handleUpdateStatus = (record: VehicleProfileDisplay) => {
-    const currentStatus = record.is_active;
-    const newStatus = !currentStatus;
-
-    showModal({
-      title: "Cập nhật trạng thái",
-      content: `Cập nhật trạng thái xe ${record.license_plate} từ "${
-        currentStatus ? "Hoạt động" : "Không hoạt động"
-      }" thành "${newStatus ? "Hoạt động" : "Không hoạt động"}"?`,
-      type: "warning",
-      onConfirm: async () => {
-        try {
-          // Note: This would need to be implemented in the service
-          // await updateStatus(record.vehicle_id, newStatus ? 'active' : 'inactive');
-          message.success("Cập nhật trạng thái thành công");
-          refreshProfiles();
-        } catch {
-          message.error("Có lỗi xảy ra khi cập nhật trạng thái");
-        }
-      },
-    });
-  };
 
   // Modal success handlers
   const handleCreateModalSuccess = async (
@@ -323,12 +306,14 @@ const CarProfilesPage = () => {
     }
   };
 
-  const handleEditModalSuccess = async () => {
+  const handleEditModalSuccess = async (data: UpdateVehicleProfileRequest) => {
     try {
-      await refreshProfiles();
-      message.success("Cập nhật hồ sơ xe thành công");
-      setEditModalVisible(false);
-      setEditData(null);
+      if (editData) {
+        await updateProfile(editData.vehicle_id, data);
+        message.success("Cập nhật hồ sơ xe thành công");
+        setEditModalVisible(false);
+        setEditData(null);
+      }
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error
@@ -506,35 +491,6 @@ const CarProfilesPage = () => {
           },
         }}
         actions={[
-          // {
-          //   key: "view-service-history",
-          //   label: "Lịch sử bảo dưỡng",
-          //   type: "default",
-          //   icon: <ToolOutlined />,
-          //   onClick: handleViewServiceHistory,
-          // },
-          // {
-          //   key: "view-owner",
-          //   label: "Xem chủ xe",
-          //   type: "default",
-          //   icon: <CarOutlined />,
-          //   onClick: handleViewOwner,
-          // },
-          // {
-          //   key: "schedule-service",
-          //   label: "Đặt lịch bảo dưỡng",
-          //   type: "primary",
-          //   icon: <CalendarOutlined />,
-          //   onClick: handleScheduleService,
-          // },
-          {
-            key: "update-status",
-            label: (record: VehicleProfileDisplay) =>
-              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
-            type: "default",
-            danger: (record: VehicleProfileDisplay) => record.is_active,
-            onClick: handleUpdateStatus,
-          },
           {
             key: "delete",
             label: "Xóa",

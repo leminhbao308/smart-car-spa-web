@@ -6,6 +6,7 @@ import {
   VehicleProfile,
   VehicleProfileRequest,
   CreateVehicleProfileRequest,
+  UpdateVehicleProfileRequest,
 } from "../types/vehicle-profile.types";
 
 /**
@@ -66,6 +67,18 @@ export const useVehicleProfiles = (params: VehicleProfileRequest = {}) => {
     }
   }, [fetchProfiles]);
 
+  const updateProfile = useCallback(async (profileId: string, data: UpdateVehicleProfileRequest) => {
+    try {
+      const response = await VehicleProfileService.updateVehicleProfile(profileId, data);
+      // Refresh the list after successful update
+      await fetchProfiles(paramsRef.current);
+      return response;
+    } catch (err) {
+      console.error("Failed to update vehicle profile:", err);
+      throw err;
+    }
+  }, [fetchProfiles]);
+
   const deleteProfile = useCallback(async (profileId: string) => {
     try {
       await VehicleProfileService.deleteVehicleProfile(profileId);
@@ -77,7 +90,7 @@ export const useVehicleProfiles = (params: VehicleProfileRequest = {}) => {
     }
   }, [fetchProfiles]);
 
-  return { profiles, pagination, loading, error, refreshProfiles, createProfile, deleteProfile };
+  return { profiles, pagination, loading, error, refreshProfiles, createProfile, updateProfile, deleteProfile };
 };
 
 /**
