@@ -8,6 +8,7 @@ import {
 import { PlusOutlined } from "@ant-design/icons";
 import { CreateVehicleTypeRequest } from "@/lib/api/types";
 import { VehicleService } from "@/lib/api/services/vehicle.service";
+import { MemoizedInput } from "@/components/ui/MemoizedComponents";
 
 interface VehicleTypeAddModalProps {
   visible: boolean;

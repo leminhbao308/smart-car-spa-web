@@ -8,6 +8,7 @@ import {
 import { EditOutlined } from "@ant-design/icons";
 import { VehicleType, UpdateVehicleTypeRequest } from "@/lib/api/types";
 import { VehicleService } from "@/lib/api/services/vehicle.service";
+import { MemoizedInput, MemoizedTextArea } from "../../MemoizedComponents";
 
 interface VehicleTypeEditModalProps {
   visible: boolean;
@@ -111,7 +112,7 @@ const VehicleTypeEditModal: React.FC<VehicleTypeEditModalProps> = ({
             { max: 500, message: "Mô tả không được quá 500 ký tự!" },
           ]}
         >
-          <MemoizedInput.TextArea
+          <MemoizedTextArea
             rows={4}
             placeholder="Nhập mô tả loại xe"
             showCount

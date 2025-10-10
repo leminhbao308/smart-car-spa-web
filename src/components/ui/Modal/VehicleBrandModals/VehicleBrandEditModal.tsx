@@ -9,13 +9,15 @@ import {
   Upload,
   message,
   Space,
-  Typography} from "antd";
+  Typography,
+  Input} from "antd";
 import {
   EditOutlined,
   PlusOutlined} from "@ant-design/icons";
 import Image from "next/image";
 import { VehicleBrand, UpdateVehicleBrandRequest } from "@/lib/api/types";
 import { VehicleService } from "@/lib/api/services/vehicle.service";
+import { MemoizedInput, MemoizedTextArea } from "../../MemoizedComponents";
 
 const { Title } = Typography;
 const { TextArea } = Input;

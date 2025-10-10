@@ -9,15 +9,16 @@ import {
   Upload,
   message,
   Space,
-  Typography} from "antd";
+  Typography,
+  Input} from "antd";
 import {
   PlusOutlined} from "@ant-design/icons";
 import Image from "next/image";
 import { CreateVehicleBrandRequest } from "@/lib/api/types";
 import { VehicleService } from "@/lib/api/services/vehicle.service";
+import { MemoizedInput, MemoizedTextArea } from "@/components/ui/MemoizedComponents";
 
 const { Title } = Typography;
-const { TextArea } = Input;
 
 interface VehicleBrandAddModalProps {
   visible: boolean;

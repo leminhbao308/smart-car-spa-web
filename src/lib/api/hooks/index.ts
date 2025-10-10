@@ -21,4 +21,5 @@ export * from './useSalesOrder';
 export * from './useWarehouseByBranch';
 export * from './usePurchaseOrder';
 export * from './useServiceBays';
+export * from './usePromotions';
 export * from './usePurchaseOrder';
