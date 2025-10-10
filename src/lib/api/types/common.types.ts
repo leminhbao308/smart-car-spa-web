@@ -100,4 +100,7 @@ export interface RequestConfig {
 
 export interface BranchRef { id: string; }
 export interface WarehouseRef { id: string; }
-export interface ProductRef { id: string; }
+export interface ProductRef {
+  id: string;
+  product_id: string;
+}

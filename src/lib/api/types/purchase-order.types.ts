@@ -7,7 +7,7 @@ export interface PurchaseOrder extends BaseAuditEntity {
   lines: PurchaseOrderLine[];
 }
 
-export interface PurchaseOrderLine extends BaseAuditEntity{
+export interface PurchaseOrderLine extends BaseAuditEntity {
   id: string;
   product: Product;
   supplier: Supplier;
@@ -30,4 +30,9 @@ export interface CreatePOLineRequest {
   unit_cost: number;
   lot_code?: string;
   expiry_date?: string;
+}
+
+export interface PurchaseHistory {
+  peak_unit_cost: number;
+  lines: PurchaseOrderLine[];
 }
