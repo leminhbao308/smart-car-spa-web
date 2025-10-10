@@ -9,8 +9,12 @@
 // Services
 export * from './services';
 
+// Types
+export * from './types';
+
 // Hooks
 export * from './hooks/useAuth';
+export * from './hooks/usePromotions';
 
 // Utils
 export { TokenManager } from './utils/token.manager';

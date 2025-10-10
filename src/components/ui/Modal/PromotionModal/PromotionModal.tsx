@@ -16,7 +16,10 @@ import {
   Switch,
   Tabs,
   Tag,
-  TimePicker} from "antd";
+  Alert,
+  Tooltip,
+  Input,
+} from "antd";
 import { 
   GiftOutlined,
   PercentageOutlined,
@@ -26,15 +29,24 @@ import {
   ShoppingCartOutlined,
   StarOutlined,
   PlusOutlined,
-  DeleteOutlined} from "@ant-design/icons";
+  DeleteOutlined,
+  InfoCircleOutlined,
+  ExclamationCircleOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   Promotion,
-  promotionTypes,
-  promotionStatuses,
-  customerTypes,
-  conditionTypes} from "@/components/utils/data/promotions.data";
+  CreatePromotionRequest,
+  UpdatePromotionRequest,
+  PROMOTION_TYPE_OPTIONS,
+  PROMOTION_STATUS_OPTIONS,
+  CUSTOMER_TYPE_OPTIONS,
+  CUSTOMER_TIER_OPTIONS,
+  getPromotionTypeLabel,
+  getPromotionTypeIcon,
+} from "@/lib/api/types/promotion.types";
 import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
+import { PromotionConditionsBuilder } from "@/components/ui/PromotionConditionsBuilder";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -42,9 +54,10 @@ const { Option } = Select;
 interface PromotionModalProps {
   open: boolean;
   onCancel: () => void;
-  onOk: (data: Promotion) => void;
+  onOk: (data: CreatePromotionRequest | UpdatePromotionRequest) => void;
   initialData?: Promotion | null;
   title?: string;
+  loading?: boolean;
 }
 
 const PromotionModal: React.FC<PromotionModalProps> = ({
@@ -52,22 +65,41 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm chương trình khuyến mãi mới"}) => {
+  title = "Thêm chương trình khuyến mãi mới",
+  loading = false,
+}) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
+  const [selectedType, setSelectedType] = useState<string>("percentage");
 
   useEffect(() => {
     if (open) {
-    if (initialData) {
+      if (initialData) {
         setIsViewMode(title.includes("Chi tiết"));
-      form.setFieldsValue({
-        ...initialData,
+        setSelectedType(initialData.type);
+        form.setFieldsValue({
+          ...initialData,
           startDate: dayjs(initialData.startDate),
-          endDate: dayjs(initialData.endDate)});
-    } else {
+          endDate: dayjs(initialData.endDate),
+        });
+      } else {
         setIsViewMode(false);
-      form.resetFields();
+        setSelectedType("percentage");
+        form.resetFields();
+        form.setFieldsValue({
+          status: "draft",
+          type: "percentage",
+          isPublic: true,
+          priority: 5,
+          targetAudience: {
+            customerTypes: ["all"],
+            customerTiers: [],
+            branches: ["all"],
+            services: ["all"],
+            products: ["all"],
+            servicePackages: [],
+          },
+        });
       }
     }
   }, [open, initialData, form, title]);
@@ -79,31 +111,17 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
     }
 
     try {
-      setLoading(true);
       const values = await form.validateFields();
 
-      const formattedData: Promotion = {
+      const formattedData = {
         ...values,
-        id: initialData?.id || Date.now(),
         startDate: values.startDate.format("YYYY-MM-DD"),
         endDate: values.endDate.format("YYYY-MM-DD"),
-        usedCount: initialData?.usedCount || 0,
-        customerUsedCount: initialData?.customerUsedCount || 0,
-        createdAt: initialData?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()};
-
-      // Remove date fields from the data
-      delete formattedData.startDate;
-      delete formattedData.endDate;
+      };
 
       onOk(formattedData);
-      message.success(
-        initialData ? "Cập nhật chương trình khuyến mãi thành công!" : "Thêm chương trình khuyến mãi thành công!"
-      );
     } catch (error) {
       console.log("Validation failed:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -161,13 +179,22 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
             label="Loại khuyến mãi"
             rules={[{ required: true, message: "Vui lòng chọn loại khuyến mãi!" }]}
           >
-            <Select placeholder="Chọn loại khuyến mãi" disabled={isViewMode}>
-              {promotionTypes.map((type) => (
+            <Select 
+              placeholder="Chọn loại khuyến mãi" 
+              disabled={isViewMode}
+              onChange={(value) => setSelectedType(value)}
+            >
+              {PROMOTION_TYPE_OPTIONS.map((type) => (
                 <Option key={type.value} value={type.value}>
-                  <Space>
-                    <span>{type.icon}</span>
-                    {type.label}
-                  </Space>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span>{type.icon}</span>
+                      <span>{type.label}</span>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {type.description}
+                    </Text>
+                  </div>
                 </Option>
               ))}
             </Select>
@@ -182,19 +209,20 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
               <MemoizedInputNumber
                 min={0}
                 placeholder="Nhập giá trị"
-              disabled={isViewMode}
-              style={{ width: '100%' }}
-              addonAfter={
-                <Form.Item noStyle shouldUpdate>
-                  {({ getFieldValue }) => {
-                    const type = getFieldValue('type');
-                    if (type === 'percentage') return '%';
-                    if (type === 'fixed') return '₫';
-                    if (type === 'gift') return 'sản phẩm';
-                    return '';
-                  }}
-            </Form.Item>
-              }
+                disabled={isViewMode}
+                style={{ width: '100%' }}
+                addonAfter={
+                  <Form.Item noStyle shouldUpdate>
+                    {({ getFieldValue }) => {
+                      const type = getFieldValue('type');
+                      if (type === 'percentage') return '%';
+                      if (type === 'fixed') return '₫';
+                      if (type === 'gift') return 'sản phẩm';
+                      if (type === 'buy_x_get_y') return 'sản phẩm';
+                      return '';
+                    }}
+                  </Form.Item>
+                }
               />
             </Form.Item>
           </Col>
@@ -205,12 +233,19 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
               rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
             >
             <Select placeholder="Chọn trạng thái" disabled={isViewMode}>
-                {promotionStatuses.map((status) => (
-                  <Option key={status.value} value={status.value}>
-                  <Tag color={status.color}>{status.label}</Tag>
-                  </Option>
-                ))}
-              </Select>
+              {PROMOTION_STATUS_OPTIONS.map((status) => (
+                <Option key={status.value} value={status.value}>
+                  <div>
+                    <Tag color={status.color}>{status.label}</Tag>
+                    <div style={{ marginTop: 4 }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {status.description}
+                      </Text>
+                    </div>
+                  </div>
+                </Option>
+              ))}
+            </Select>
             </Form.Item>
           </Col>
       </Row>
@@ -345,12 +380,12 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
               disabled={isViewMode}
               allowClear
             >
-              {customerTypes.map((type) => (
-                            <Option key={type.value} value={type.value}>
+              {CUSTOMER_TYPE_OPTIONS.map((type) => (
+                <Option key={type.value} value={type.value}>
                   {type.label}
-                            </Option>
-                          ))}
-                        </Select>
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
                     </Col>
         <Col span={12}>
@@ -416,12 +451,28 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
                 </Card>
   );
 
+  const renderConditions = () => (
+    <Card title={
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <InfoCircleOutlined style={{ color: '#13c2c2' }} />
+        <span>Điều kiện áp dụng</span>
+      </div>
+    } size="small">
+      <Form.Item name="conditions">
+        <PromotionConditionsBuilder
+          disabled={isViewMode}
+          showPreview={true}
+        />
+      </Form.Item>
+    </Card>
+  );
+
   const renderBenefitsAndTerms = () => (
     <Card title={
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <ShoppingCartOutlined style={{ color: '#52c41a' }} />
         <span>Lợi ích và điều khoản</span>
-            </div>
+      </div>
     } size="small">
       <Row gutter={16}>
         <Col span={12}>
@@ -437,7 +488,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
               style={{ width: '100%' }}
             />
           </Form.Item>
-                    </Col>
+        </Col>
         <Col span={12}>
           <Form.Item
             name="terms"
@@ -451,9 +502,9 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
               style={{ width: '100%' }}
             />
           </Form.Item>
-                    </Col>
-                  </Row>
-                </Card>
+        </Col>
+      </Row>
+    </Card>
   );
 
   return (
@@ -472,18 +523,23 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
         form={form}
         layout="vertical"
         initialValues={{
-          status: "active",
+          status: "draft",
           type: "percentage",
           value: 0,
           isPublic: true,
           priority: 5,
           benefits: [],
           terms: [],
+          conditions: [],
           targetAudience: {
             customerTypes: ["all"],
+            customerTiers: [],
             branches: ["all"],
             services: ["all"],
-            products: ["all"]}}}
+            products: ["all"],
+            servicePackages: [],
+          }
+        }}
       >
         <Tabs 
           defaultActiveKey="basic" 
@@ -497,15 +553,23 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
                   {renderBasicInfo()}
                   {renderUsageLimit()}
                 </>
-              )},
+              )
+            },
             {
               key: "audience",
               label: "Đối tượng áp dụng",
-              children: renderTargetAudience()},
+              children: renderTargetAudience()
+            },
+            {
+              key: "conditions",
+              label: "Điều kiện áp dụng",
+              children: renderConditions()
+            },
             {
               key: "benefits",
               label: "Lợi ích & Điều khoản",
-              children: renderBenefitsAndTerms()},
+              children: renderBenefitsAndTerms()
+            },
           ]}
         />
       </Form>

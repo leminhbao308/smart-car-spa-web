@@ -55,3 +55,5 @@ export * from './warehouse.types';
 export * from './service-bay.types';
 // Purchase Order types
 export * from './purchase-order.types';
+// Promotion types
+export * from './promotion.types';

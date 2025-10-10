@@ -9,16 +9,17 @@ import {
   Col,
   message,
   Typography,
-  Card} from "antd";
+  Card,
+  Input} from "antd";
 import {
   EditOutlined} from "@ant-design/icons";
 import { useVehicleBrandsDropdown, useVehicleTypesDropdown } from "@/lib/api/hooks";
 import { useVehicleModels } from "@/lib/api/hooks/useVehicleModels";
 import { UpdateVehicleModelRequest, VehicleModel } from "@/lib/api/types";
+import { MemoizedInput, MemoizedTextArea } from "@/components/ui/MemoizedComponents";
 
 const { Title } = Typography;
 const { Option } = Select;
-const { TextArea } = Input;
 
 interface VehicleModelEditModalProps {
   visible: boolean;

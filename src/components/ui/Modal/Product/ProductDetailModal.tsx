@@ -109,7 +109,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           }}
         >
           <Row gutter={24} align="middle">
-            <Col span={6}>
+            {/* <Col span={6}>
               <Statistic
                 title={
                   <span style={{ color: "rgba(255,255,255,0.8)" }}>
@@ -136,7 +136,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 }}
                 suffix={`(${profitMargin}%)`}
               />
-            </Col>
+            </Col> */}
             <Col span={6}>
               <Statistic
                 title={
@@ -278,7 +278,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           {/* Cột phải - Thông tin chi tiết */}
           <Col xs={24} lg={14}>
             {/* Thông tin giá cả */}
-            <Card
+            {/* <Card
               title={
                 <Space>
                   <DollarOutlined />
@@ -317,7 +317,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   />
                 </Col>
               </Row>
-            </Card>
+            </Card> */}
 
             {/* Thông tin tồn kho */}
             <Card

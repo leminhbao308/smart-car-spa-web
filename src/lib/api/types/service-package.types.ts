@@ -15,7 +15,7 @@ export interface ServicePackageProduct {
   audit?: any;
 }
 
-export interface ServicePackageService {
+export interface ServicePackageServiceItem {
   servicePackageServiceId?: string;
   packageId?: string;
   serviceId?: string | null;
@@ -50,7 +50,7 @@ export interface ServicePackage {
   isActive: boolean;
   is_deleted?: boolean;
   packageProducts: ServicePackageProduct[];
-  packageServices: ServicePackageService[];
+  packageServices: ServicePackageServiceItem[];
   audit?: any;
 }
 
