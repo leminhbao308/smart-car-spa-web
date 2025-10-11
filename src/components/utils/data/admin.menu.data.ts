@@ -119,9 +119,21 @@ export const adminMenuItems: MenuItem[] = [
   },
 
   {
-    key: "services",
-    label: "Dịch vụ",
+    key: "service-management",
+    label: "Quản lý dịch vụ",
     icon: React.createElement(ToolOutlined),
+    children: [
+      {
+        key: "service-types",
+        label: "Loại dịch vụ",
+        icon: React.createElement(AppstoreOutlined),
+      },
+      {
+        key: "services",
+        label: "Dịch vụ",
+        icon: React.createElement(ToolOutlined),
+      },
+    ],
   },
   {
     key: "service-packages",
@@ -247,6 +259,7 @@ export const menuKeyToPath: Record<string, string> = {
   "import-inventory": "/dashboard/inventory/import",
   "export-inventory": "/dashboard/inventory/export",
   "stock-inventory": "/dashboard/inventory/stock",
+  "service-types": "/dashboard/service-categories/service-types",
   services: "/dashboard/service-categories/services",
   "service-packages": "/dashboard/package-categories",
   promotions: "/dashboard/promotions",

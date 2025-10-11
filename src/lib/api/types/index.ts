@@ -32,6 +32,7 @@ export * from './product.types';
 
 // Service types
 export * from './service.types';
+export * from './service-type.types';
 
 // Service Package types
 export * from './service-package.types';

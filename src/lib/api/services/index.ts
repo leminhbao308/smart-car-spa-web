@@ -18,6 +18,8 @@ export * from './product.service';
 export { ProductService } from './product.service';
 export * from './service.service';
 export { ServiceService } from './service.service';
+export * from './service-type.service';
+export { ServiceTypeService } from './service-type.service';
 export * from './category.service';
 export { categoryService } from './category.service';
 export * from './service-package.service';

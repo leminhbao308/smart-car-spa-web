@@ -4,7 +4,7 @@ import { AdminTable } from "@/components/ui/Table";
 import {
   useConfirmationModalContext,
   ServiceDetailModal,
-  ServiceEditModal,
+  ServiceModal,
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import {
@@ -25,10 +25,9 @@ import {
 } from "@ant-design/icons";
 import {
   Service,
-  SERVICE_STATUS_OPTIONS,
   SERVICE_TYPE_OPTIONS,
 } from "@/lib/api/types/service.types";
-import { serviceService } from "@/lib/api/services/service.service";
+import { ServiceService } from "@/lib/api/services/service.service";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
 
 const { Search } = Input;
@@ -67,7 +66,7 @@ const ServicesPage = () => {
     try {
       setLoading(true);
       console.log("Loading services...", { page, size });
-      const response = await serviceService.getAllServices(page, size);
+      const response = await ServiceService.getAllServices({ page, size });
       console.log("Services loaded:", response.data.content?.length, "items");
       setServiceData(response.data.content);
       setPagination({
@@ -134,7 +133,7 @@ const ServicesPage = () => {
     // Service type filter
     if (filters.serviceType) {
       filtered = filtered.filter(
-        (item) => item.serviceType === filters.serviceType
+        (item) => item.serviceTypeId === filters.serviceType
       );
     }
 
@@ -153,20 +152,23 @@ const ServicesPage = () => {
   // Định nghĩa columns cho dịch vụ
   const serviceColumns: ColumnsType<Service> = [
     {
+      title: "STT",
+      key: "index",
+      width: 60,
+      align: "center",
+      render: (_, __, index) => {
+        const currentPage = pagination?.current || 1;
+        const pageSize = pagination?.pageSize || 10;
+        return (currentPage - 1) * pageSize + index + 1;
+      },
+    },
+    {
       title: "Tên dịch vụ",
       key: "service",
       width: 280,
       render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
-            {record.serviceName}
-          </div>
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 2 }}>
-            {record.description}
-          </div>
-          <div style={{ fontSize: 11, color: "#999" }}>
-            URL: {record.serviceUrl}
-          </div>
+        <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
+          {record.serviceName}
         </div>
       ),
     },
@@ -187,12 +189,6 @@ const ServicesPage = () => {
           <div style={{ fontWeight: 500, color: "#52c41a", fontSize: 14 }}>
             {formatCurrency(record.basePrice)}
           </div>
-          <div style={{ fontSize: 11, color: "#666" }}>
-            SP: {formatCurrency(record.productCost)}
-          </div>
-          <div style={{ fontSize: 11, color: "#666" }}>
-            Công: {formatCurrency(record.laborCost)}
-          </div>
         </div>
       ),
     },
@@ -206,18 +202,7 @@ const ServicesPage = () => {
         <div style={{ color: "#1890ff" }}>{duration} phút</div>
       ),
     },
-    {
-      title: "Kỹ năng",
-      dataIndex: "requiredSkillLevel",
-      key: "requiredSkillLevel",
-      width: 100,
-      render: (skillLevel: string) => {
-        const skillConfig = SERVICE_STATUS_OPTIONS.find(
-          (s) => s.value === skillLevel
-        );
-        return <Tag color={skillConfig?.color}>{skillConfig?.label}</Tag>;
-      },
-    },
+
     {
       title: "Trạng thái",
       key: "status",
@@ -231,11 +216,7 @@ const ServicesPage = () => {
             <Tag color={record.isActive ? "green" : "red"}>
               {record.isActive ? "Hoạt động" : "Không hoạt động"}
             </Tag>
-            {record.isFeatured && (
-              <Tag color="gold" style={{ marginTop: 4, display: "block" }}>
-                Nổi bật
-              </Tag>
-            )}
+   
           </div>
         );
       },
@@ -269,73 +250,14 @@ const ServicesPage = () => {
     setDetailModalVisible(true);
   };
 
-  const handleEditModalSuccess = async (data: Service) => {
-    try {
-      if (editData) {
-        // Update existing service
-        await serviceService.updateService(editData.serviceId, {
-          service_name: data.serviceName,
-          service_url: data.serviceUrl,
-          category_id: data.categoryId,
-          description: data.description,
-          standard_duration: data.standardDuration,
-          required_skill_level: data.requiredSkillLevel,
-          is_package: data.isPackage,
-          base_price: data.basePrice,
-          labor_cost: data.laborCost,
-          service_type: data.serviceType,
-          photo_required: data.photoRequired,
-          image_urls: data.imageUrls,
-          is_featured: data.isFeatured,
-          is_active: data.isActive,
-          service_products: data.serviceProducts.map((sp) => ({
-            service_product_id: sp.serviceProductId,
-            product_id: sp.productId || "",
-            quantity: sp.quantity,
-            unit_price: sp.unitPrice,
-            notes: sp.notes,
-            is_required: sp.isRequired,
-            is_active: sp.isActive,
-          })),
-        });
-        message.success("Cập nhật dịch vụ thành công!");
-      } else {
-        // Add new service
-        await serviceService.createService({
-          service_name: data.serviceName,
-          service_url: data.serviceUrl,
-          category_id: data.categoryId,
-          description: data.description,
-          standard_duration: data.standardDuration,
-          required_skill_level: data.requiredSkillLevel,
-          is_package: data.isPackage,
-          base_price: data.basePrice,
-          labor_cost: data.laborCost,
-          service_type: data.serviceType,
-          photo_required: data.photoRequired,
-          image_urls: data.imageUrls,
-          is_featured: data.isFeatured,
-          service_products: data.serviceProducts.map((sp) => ({
-            product_id: sp.productId || "",
-            quantity: sp.quantity,
-            unit_price: sp.unitPrice,
-            notes: sp.notes,
-            is_required: sp.isRequired,
-          })),
-        });
-        message.success("Thêm dịch vụ thành công!");
-      }
-
-      // Close modal and refresh data after successful API call
-      setEditModalVisible(false);
-      setEditData(null);
-      // Refresh data immediately after successful API call
-      await loadServices(pagination.current - 1, pagination.pageSize);
-      setTableKey((prev) => prev + 1); // Force table re-render
-    } catch (error) {
-      message.error("Có lỗi xảy ra khi lưu dịch vụ");
-      console.error("Error saving service:", error);
-    }
+  const handleEditModalSuccess = () => {
+    // ServiceModal đã xử lý create/update và hiển thị message
+    // Chỉ cần đóng modal và refresh data
+    setEditModalVisible(false);
+    setEditData(null);
+    // Refresh data
+    loadServices(pagination.current - 1, pagination.pageSize);
+    setTableKey((prev) => prev + 1); // Force table re-render
   };
 
   const handleToggleStatus = (record: Service) => {
@@ -359,25 +281,14 @@ const ServicesPage = () => {
             serviceId: record.serviceId,
             newStatus: !record.isActive,
           });
-          const updatedService = await serviceService.updateServiceStatus(
+          await ServiceService.updateServiceStatus(
             record.serviceId,
             {
               is_active: !record.isActive,
             }
           );
           message.success(`${action} dịch vụ thành công!`);
-          console.log("Service status updated successfully", updatedService);
-
-          // Update with the actual response data if available
-          if (updatedService && updatedService.isActive !== undefined) {
-            setServiceData((prevData) =>
-              prevData.map((service) =>
-                service.serviceId === record.serviceId
-                  ? { ...service, isActive: updatedService.isActive }
-                  : service
-              )
-            );
-          }
+          console.log("Service status updated successfully");
         } catch (error) {
           // Revert optimistic update on error
           setServiceData((prevData) =>
@@ -401,7 +312,7 @@ const ServicesPage = () => {
       type: "error",
       onConfirm: async () => {
         try {
-          await serviceService.deleteService(record.serviceId);
+          await ServiceService.deleteService(record.serviceId);
           message.success("Xóa dịch vụ thành công!");
 
           // Update the service as deleted in local state immediately
@@ -590,11 +501,11 @@ const ServicesPage = () => {
         data={selectedData}
       />
 
-      <ServiceEditModal
+      <ServiceModal
         visible={editModalVisible}
         onCancel={() => setEditModalVisible(false)}
         onSuccess={handleEditModalSuccess}
-        editData={editData}
+        editData={editData || undefined}
       />
     </div>
   );

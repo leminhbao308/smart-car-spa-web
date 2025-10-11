@@ -1,6 +1,7 @@
 /**
  * Service Process Management Service
  * Handles all service process-related API calls
+ * Updated to match backend ServiceProcessManagementController
  */
 
 import apiClient from "../axios";
@@ -57,10 +58,13 @@ export class ServiceProcessService {
       const url = `/service-processes${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       const response = await apiClient.get(url);
 
-      if (response.data.success) {
-        return response.data.data || response.data;
+      // Backend returns Page<ServiceProcessInfoDto> directly
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data && response.data.content) {
+        return response.data.content;
       } else {
-        throw new Error(response.data.message || "Failed to fetch service processes");
+        throw new Error("Invalid response format");
       }
     } catch (error) {
       console.error("Get all service processes error:", error);
@@ -75,10 +79,11 @@ export class ServiceProcessService {
     try {
       const response = await apiClient.get(`/service-processes/${processId}`);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch service process");
+        throw new Error("Failed to fetch service process");
       }
     } catch (error) {
       console.error("Get service process by ID error:", error);
@@ -93,10 +98,11 @@ export class ServiceProcessService {
     try {
       const response = await apiClient.get(`/service-processes/code/${code}`);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch service process");
+        throw new Error("Failed to fetch service process");
       }
     } catch (error) {
       console.error("Get service process by code error:", error);
@@ -111,8 +117,9 @@ export class ServiceProcessService {
     try {
       const response = await apiClient.get("/service-processes/default");
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
         throw new Error(response.data.message || "Failed to fetch default service process");
       }
@@ -127,16 +134,26 @@ export class ServiceProcessService {
    */
   static async getAllActiveServiceProcesses(): Promise<ServiceProcessInfoDto[]> {
     try {
-      const response = await apiClient.get("/service-processes/active");
+      // Use the main endpoint and filter for active processes
+      const response = await apiClient.get("/service-processes");
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Check if response has the expected structure
+      if (response.data && response.data.success && response.data.data && Array.isArray(response.data.data)) {
+        // Filter for active processes
+        const activeProcesses = response.data.data.filter((process: ServiceProcessInfoDto) => process.isActive);
+        return activeProcesses;
+      } else if (response.data && Array.isArray(response.data)) {
+        // If response is directly an array, filter for active processes
+        const activeProcesses = response.data.filter((process: ServiceProcessInfoDto) => process.isActive);
+        return activeProcesses;
       } else {
-        throw new Error(response.data.message || "Failed to fetch active service processes");
+        console.warn("Unexpected response format for service processes:", response.data);
+        return []; // Return empty array instead of throwing error
       }
     } catch (error) {
       console.error("Get active service processes error:", error);
-      throw error;
+      // Return empty array instead of throwing error to prevent UI crashes
+      return [];
     }
   }
 
@@ -147,15 +164,12 @@ export class ServiceProcessService {
     processData: CreateServiceProcessRequest
   ): Promise<ServiceProcessInfoDto> {
     try {
-      console.log("Creating service process with data:", processData);
-
       const response = await apiClient.post("/service-processes", processData);
-      console.log("Create service process API response:", response);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to create service process");
+        throw new Error("Failed to create service process");
       }
     } catch (error) {
       console.error("Create service process error:", error);
@@ -171,10 +185,7 @@ export class ServiceProcessService {
     processData: UpdateServiceProcessRequest
   ): Promise<ServiceProcessInfoDto> {
     try {
-      console.log("Updating service process with data:", processData);
-
       const response = await apiClient.post(`/service-processes/${processId}/update`, processData);
-      console.log("Update service process API response:", response);
 
       if (response.data.success && response.data.data) {
         return response.data.data;

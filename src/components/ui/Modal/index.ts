@@ -10,7 +10,7 @@ export { default as PricingModal } from "./PriceModal/PricingModal";
 
 // Service Modals
 export { default as ServiceDetailModal } from "./ServiceModals/ServiceDetailModal";
-export { default as ServiceEditModal } from "./ServiceModals/ServiceEditModal";
+export { default as ServiceModal } from "./ServiceModals/ServiceModal";
 export { default as ServiceTypeDetailModal } from "./ServiceModals/ServiceTypeDetailModal";
 export { default as ServiceTypeEditModal } from "./ServiceModals/ServiceTypeEditModal";
 

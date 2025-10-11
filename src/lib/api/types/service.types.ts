@@ -1,24 +1,7 @@
-// Service API Types
-export interface ServiceProduct {
-  serviceProductId?: string;
-  serviceId?: string | null;
-  productId?: string | null;
-  productName?: string | null;
-  productUrl?: string | null;
-  productSku?: string | null;
-  productBrand?: string | null;
-  productModel?: string | null;
-  unitOfMeasure?: string | null;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  notes?: string;
-  isRequired: boolean;
-  isActive: boolean;
-  audit?: any;
-}
+import { BaseAuditEntity } from "./common.types";
 
-export interface Service {
+// Service API Types - Updated to match backend ServiceInfoDto
+export interface Service extends BaseAuditEntity {
   serviceId: string;
   serviceUrl: string;
   serviceName: string;
@@ -26,104 +9,104 @@ export interface Service {
   categoryName: string;
   description: string;
   standardDuration: number;
-  requiredSkillLevel: "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "EXPERT";
+  requiredSkillLevel: SkillLevel;
   isPackage: boolean;
-  basePrice: number;
-  laborCost: number;
-  productCost: number;
-  serviceType: "MAINTENANCE" | "REPAIR" | "INSPECTION" | "CLEANING" | "CUSTOM";
-  photoRequired: boolean;
-  imageUrls: string;
+  basePrice: number; // Base price for the service
+  laborCost: number; // Tiền công lao động
+  serviceTypeId: string;
+  serviceTypeName: string;
   isFeatured: boolean;
   isActive: boolean;
-  is_deleted?: boolean;
-  serviceProducts: ServiceProduct[];
-  audit?: any;
+  serviceProcessId: string;
+  serviceProcessName: string;
+  serviceProcessCode: string;
+  isDefaultProcess: boolean;
+  estimatedDuration: number;
+  branchId: string;
+  branchName: string;
 }
 
+// Enums
+export enum SkillLevel {
+  BEGINNER = "BEGINNER",
+  INTERMEDIATE = "INTERMEDIATE", 
+  ADVANCED = "ADVANCED",
+  EXPERT = "EXPERT"
+}
+
+// API Request/Response Types - Updated to match backend response structure
 export interface ServiceResponse {
   success: boolean;
   message: string;
   timestamp: string;
-  data: {
-    content: Service[];
-    pageable: {
-      pageNumber: number;
-      pageSize: number;
-      sort: {
-        empty: boolean;
-        sorted: boolean;
-        unsorted: boolean;
-      };
-      offset: number;
-      paged: boolean;
-      unpaged: boolean;
-    };
-    last: boolean;
-    totalElements: number;
-    totalPages: number;
-    size: number;
-    number: number;
-    first: boolean;
-    numberOfElements: number;
+  data: Service[] | ServicePageResponse;
+}
+
+// For paginated responses
+export interface ServicePageResponse {
+  content: Service[];
+  pageable: {
+    pageNumber: number;
+    pageSize: number;
     sort: {
       empty: boolean;
       sorted: boolean;
       unsorted: boolean;
     };
-    empty: boolean;
+    offset: number;
+    paged: boolean;
+    unpaged: boolean;
   };
+  last: boolean;
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  numberOfElements: number;
+  sort: {
+    empty: boolean;
+    sorted: boolean;
+    unsorted: boolean;
+  };
+  empty: boolean;
 }
 
 // Create Service Request
 export interface CreateServiceRequest {
   service_name: string;
   service_url: string;
-  category_id: string;
-  description: string;
-  standard_duration: number;
-  required_skill_level: "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "EXPERT";
-  is_package: boolean;
-  base_price: number;
-  labor_cost: number;
-  service_type: "MAINTENANCE" | "REPAIR" | "INSPECTION" | "CLEANING" | "CUSTOM";
-  photo_required: boolean;
-  image_urls: string;
-  is_featured: boolean;
-  service_products: {
-    product_id: string;
-    quantity: number;
-    unit_price: number;
-    notes?: string;
-    is_required: boolean;
-  }[];
+  category_id?: string;
+  description?: string;
+  standard_duration?: number;
+  required_skill_level?: SkillLevel;
+  is_package?: boolean;
+  base_price?: number;
+  labor_cost?: number;
+  service_type_id?: string;
+  is_featured?: boolean;
+  service_process_id?: string;
+  is_default_process?: boolean;
+  branch_id?: string;
 }
 
 // Update Service Request
 export interface UpdateServiceRequest {
-  service_name: string;
-  service_url: string;
-  category_id: string;
-  description: string;
-  standard_duration: number;
-  required_skill_level: "BEGINNER" | "INTERMEDIATE" | "ADVANCED" | "EXPERT";
-  is_package: boolean;
-  base_price: number;
-  labor_cost: number;
-  service_type: "MAINTENANCE" | "REPAIR" | "INSPECTION" | "CLEANING" | "CUSTOM";
-  photo_required: boolean;
-  image_urls: string;
-  is_featured: boolean;
-  is_active: boolean;
-  service_products: {
-    service_product_id?: string;
-    product_id: string;
-    quantity: number;
-    unit_price: number;
-    notes?: string;
-    is_required: boolean;
-    is_active: boolean;
-  }[];
+  service_name?: string;
+  service_url?: string;
+  category_id?: string;
+  description?: string;
+  standard_duration?: number;
+  required_skill_level?: SkillLevel;
+  is_package?: boolean;
+  base_price?: number;
+  labor_cost?: number;
+  service_type_id?: string;
+  is_featured?: boolean;
+  is_active?: boolean;
+  service_process_id?: string;
+  is_default_process?: boolean;
+  branch_id?: string;
 }
 
 // Update Service Status Request
@@ -131,14 +114,30 @@ export interface UpdateServiceStatusRequest {
   is_active: boolean;
 }
 
+// Service Filter Parameters
+export interface ServiceFilterParam {
+  page?: number;
+  size?: number;
+  sort?: string;
+  direction?: "ASC" | "DESC";
+  category_id?: string;
+  service_type_id?: string;
+  skill_level?: SkillLevel;
+  is_package?: boolean;
+  is_featured?: boolean;
+  is_active?: boolean;
+  search?: string;
+}
+
 // Service Status Options
 export const SERVICE_STATUS_OPTIONS = [
-  { value: "BEGINNER", label: "Mới bắt đầu", color: "green" },
-  { value: "INTERMEDIATE", label: "Trung bình", color: "blue" },
-  { value: "ADVANCED", label: "Nâng cao", color: "orange" },
-  { value: "EXPERT", label: "Chuyên gia", color: "red" },
+  { value: SkillLevel.BEGINNER, label: "Mới bắt đầu", color: "green" },
+  { value: SkillLevel.INTERMEDIATE, label: "Trung bình", color: "blue" },
+  { value: SkillLevel.ADVANCED, label: "Nâng cao", color: "orange" },
+  { value: SkillLevel.EXPERT, label: "Chuyên gia", color: "red" },
 ];
 
+// Service Type Options (for backward compatibility)
 export const SERVICE_TYPE_OPTIONS = [
   { value: "MAINTENANCE", label: "Bảo dưỡng", color: "blue" },
   { value: "REPAIR", label: "Sửa chữa", color: "red" },
@@ -146,3 +145,54 @@ export const SERVICE_TYPE_OPTIONS = [
   { value: "CLEANING", label: "Vệ sinh", color: "cyan" },
   { value: "CUSTOM", label: "Tùy chỉnh", color: "purple" },
 ];
+
+// Service Pricing Types - Updated to match backend DTOs
+export interface ProcessStepPricingDto {
+  stepId: string;
+  stepName: string;
+  stepOrder: number;
+  estimatedTime: number;
+  productCost: number;
+  products: ProductPricingDto[];
+}
+
+export interface ProductPricingDto {
+  productId: string;
+  productName: string;
+  productCode: string;
+  productSku: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface ServicePricingDto {
+  serviceId: string;
+  serviceName: string;
+  basePrice: number;
+  laborCost: number;
+  productCost: number;
+  totalCost: number;
+  markup: number;
+  finalPrice: number;
+  priceBookId?: string;
+  priceBookName?: string;
+  processSteps: ProcessStepPricingDto[];
+}
+
+export interface ServicePricingInfoDto {
+  serviceId: string;
+  serviceName: string;
+  basePrice: number;
+  laborCost: number;
+  productCost: number;
+  totalCost: number;
+  markup: number;
+  finalPrice: number;
+  lastUpdated: string;
+}
+
+export interface UpdateLaborCostRequest {
+  labor_cost: number;
+}

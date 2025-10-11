@@ -39,6 +39,9 @@ export * from './useSalesOrder';
 export * from './useWarehouseByBranch';
 export * from './usePurchaseOrder';
 export * from './useServiceBays';
+export * from './useServices';
+export * from './useServiceTypes';
+export * from './useServiceProcesses';
 export * from './usePromotions';
 
 // React Query specific exports

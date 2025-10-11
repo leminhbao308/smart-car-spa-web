@@ -1,54 +1,49 @@
 /**
  * Service Process Management Types
  * Type definitions for service process-related API requests and responses
+ * Updated to match backend DTOs
  */
 
-export interface ServiceProcessInfoDto {
+import { BaseAuditEntity } from "./common.types";
+
+export interface ServiceProcessInfoDto extends BaseAuditEntity {
   id: string;
-  name: string;
   code: string;
-  description?: string;
-  isActive: boolean;
+  name: string;
+  description: string;
+  estimatedDuration: number;
   isDefault: boolean;
-  estimatedDuration?: number;
-  steps?: ServiceProcessStepInfoDto[];
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: string;
-  updatedBy?: string;
+  isActive: boolean;
+  stepCount: number;
+  processSteps: ServiceProcessStepInfoDto[];
 }
 
-export interface ServiceProcessStepInfoDto {
+export interface ServiceProcessStepInfoDto extends BaseAuditEntity {
   id: string;
   processId: string;
-  stepName: string;
-  stepCode: string;
-  description?: string;
+  processName: string;
   stepOrder: number;
-  estimatedDuration?: number;
+  name: string;
+  description: string;
+  estimatedTime: number;
   isRequired: boolean;
-  isActive: boolean;
-  products?: ServiceProcessStepProductInfoDto[];
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: string;
-  updatedBy?: string;
+  isFirstStep: boolean;
+  isLastStep: boolean;
+  totalProductCount: number;
+  stepProducts: ServiceProcessStepProductInfoDto[];
 }
 
-export interface ServiceProcessStepProductInfoDto {
+export interface ServiceProcessStepProductInfoDto extends BaseAuditEntity {
   id: string;
   stepId: string;
+  stepName: string;
   productId: string;
-  productName?: string;
-  productCode?: string;
+  productName: string;
+  productCode: string;
+  productSku: string;
   quantity: number;
-  unit?: string;
-  isRequired: boolean;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: string;
-  updatedBy?: string;
+  unit: string;
+  productCost: number;
 }
 
 export interface ServiceProcessFilterParam {
@@ -62,57 +57,55 @@ export interface ServiceProcessFilterParam {
 }
 
 export interface CreateServiceProcessRequest {
-  name: string;
   code: string;
+  name: string;
   description?: string;
-  isActive?: boolean;
   estimatedDuration?: number;
-  steps?: CreateServiceProcessStepRequest[];
+  isDefault?: boolean;
+  isActive?: boolean;
+  processSteps?: CreateServiceProcessStepRequest[];
 }
 
 export interface UpdateServiceProcessRequest {
-  name?: string;
   code?: string;
+  name?: string;
   description?: string;
-  isActive?: boolean;
   estimatedDuration?: number;
+  isDefault?: boolean;
+  isActive?: boolean;
 }
 
 export interface CreateServiceProcessStepRequest {
-  stepName: string;
-  stepCode: string;
+  name: string;
   description?: string;
   stepOrder: number;
-  estimatedDuration?: number;
+  estimatedTime?: number;
   isRequired?: boolean;
-  isActive?: boolean;
-  products?: CreateServiceProcessStepProductRequest[];
+  isFirstStep?: boolean;
+  isLastStep?: boolean;
+  stepProducts?: CreateServiceProcessStepProductRequest[];
 }
 
 export interface UpdateServiceProcessStepRequest {
-  stepName?: string;
-  stepCode?: string;
+  name?: string;
   description?: string;
   stepOrder?: number;
-  estimatedDuration?: number;
+  estimatedTime?: number;
   isRequired?: boolean;
-  isActive?: boolean;
+  isFirstStep?: boolean;
+  isLastStep?: boolean;
 }
 
 export interface CreateServiceProcessStepProductRequest {
   productId: string;
   quantity: number;
   unit?: string;
-  isRequired?: boolean;
-  notes?: string;
 }
 
 export interface UpdateServiceProcessStepProductRequest {
   productId?: string;
   quantity?: number;
   unit?: string;
-  isRequired?: boolean;
-  notes?: string;
 }
 
 export interface ServiceProcessResponse {

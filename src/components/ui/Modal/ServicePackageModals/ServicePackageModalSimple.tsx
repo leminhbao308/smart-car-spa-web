@@ -33,7 +33,7 @@ import {
   ClockCircleOutlined,
   InfoCircleOutlined} from "@ant-design/icons";
 import { categoryService } from "@/lib/api/services/category.service";
-import { serviceService } from "@/lib/api/services/service.service";
+import { ServiceService } from "@/lib/api/services/service.service";
 import { productService } from "@/lib/api/services/product.service";
 import {
   ServicePackage,
@@ -166,7 +166,7 @@ const ServicePackageModalSimple: React.FC<ServicePackageModalProps> = ({
   const loadServices = useCallback(async () => {
     try {
       console.log("Loading services...");
-      const response = await serviceService.getAllServices(0, 1000);
+      const response = await ServiceService.getAllServices(0, 1000);
       console.log("Services response:", response);
 
       if (response && response.success && response.data) {

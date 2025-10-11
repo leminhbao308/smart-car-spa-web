@@ -35,7 +35,7 @@ import AdminTable from "@/components/ui/Table/AdminTable";
 import {useConfirmationModalContext} from "@/components/ui/Modal";
 import {PricingService} from "@/lib/api/services/pricing.service";
 import {productService} from "@/lib/api/services/product.service";
-import {serviceService} from "@/lib/api/services/service.service";
+import {ServiceService} from "@/lib/api/services/service.service";
 import {servicePackageService} from "@/lib/api/services/service-package.service";
 import {PriceBook, PriceBookItem} from "@/lib/api/types/price-book.types";
 import {useBranches} from "@/lib/api/hooks/useBranches";
@@ -117,7 +117,7 @@ const PriceBookPage = () => {
       });
 
       // Fetch all services
-      const servicesResponse = await serviceService.getAllServices(0, 1000);
+      const servicesResponse = await ServiceService.getAllServices(0, 1000);
 
       // Fetch all service packages
       const servicePackagesResponse = await servicePackageService.getAllServicePackages(0, 1000);

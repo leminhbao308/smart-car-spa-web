@@ -73,6 +73,7 @@ const AdminHeader = () => {
       "service-categories": "Danh mục dịch vụ",
       "service-types": "Loại dịch vụ",
       "services": "Dịch vụ",
+      "service-management": "Quản lý dịch vụ",
       "service-packages": "Gói dịch vụ",
       "car-profiles": "Hồ sơ xe",
       "care-processes": "Quy trình chăm sóc",

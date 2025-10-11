@@ -48,7 +48,7 @@ import {
   SettingOutlined} from "@ant-design/icons";
 import { servicePackageService } from "@/lib/api/services/service-package.service";
 import { categoryService } from "@/lib/api/services/category.service";
-import { serviceService } from "@/lib/api/services/service.service";
+import { ServiceService } from "@/lib/api/services/service.service";
 import { productService } from "@/lib/api/services/product.service";
 import { 
   ServicePackage, 
@@ -138,7 +138,7 @@ const ServicePackageModalNew: React.FC<ServicePackageModalProps> = ({
   const loadServices = async () => {
     try {
       setServicesLoading(true);
-      const response = await serviceService.getAllServices(0, 1000);
+      const response = await ServiceService.getAllServices(0, 1000);
       if (response.success && response.data) {
         setServices(response.data.content || []);
       }
