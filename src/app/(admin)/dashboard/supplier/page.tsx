@@ -86,7 +86,7 @@ const SupplierPage = () => {
       dataIndex: "supplier_name",
       key: "supplier_name",
       width: 300,
-      render: (text: string, record: Supplier) => (
+      render: (text: string) => (
         <div>
           <div
             style={{ display: "flex", alignItems: "center", marginBottom: 4 }}
@@ -96,14 +96,6 @@ const SupplierPage = () => {
             />
             <Text strong style={{ fontSize: 14 }}>
               {text}
-            </Text>
-          </div>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            ID: {record.supplier_id}
-          </Text>
-          <div style={{ marginTop: 4 }}>
-            <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
-              {record.address}
             </Text>
           </div>
         </div>
