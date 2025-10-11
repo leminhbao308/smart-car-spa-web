@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import {
   Modal,
   Card,
@@ -11,8 +11,6 @@ import {
   Space,
   Button,
   Table,
-  Select,
-  message,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -24,12 +22,8 @@ import {
   ShoppingCartOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
-import { PricingService } from "@/lib/api/services/pricing.service";
-import { PriceBook } from "@/lib/api/types/price-book.types";
-import { ServicePricingDto } from "@/lib/api/types/service.types";
 
 const { Text, Title } = Typography;
-const { Option } = Select;
 
 interface CareProcessDetailModalProps {
   open: boolean;
@@ -45,96 +39,14 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [selectedStepProducts, setSelectedStepProducts] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [selectedStepName, setSelectedStepName] = useState("");
-  const [priceBooks, setPriceBooks] = useState<PriceBook[]>([]);
-  const [selectedPriceBookId, setSelectedPriceBookId] = useState<string>("");
-  const [pricingData, setPricingData] = useState<ServicePricingDto | null>(
-    null
-  );
-  const [loadingPricing, setLoadingPricing] = useState(false);
-
-  // Load price books
-  const loadPriceBooks = useCallback(async () => {
-    try {
-      const books = await PricingService.getAllPriceBooks();
-      setPriceBooks(books);
-      if (books.length > 0) {
-        setSelectedPriceBookId(books[0].id);
-      }
-    } catch (error) {
-      console.error("Error loading price books:", error);
-      message.error("Không thể tải danh sách bảng giá");
-    }
-  }, []);
-
-  // Load pricing data
-  const loadPricingData = useCallback(async () => {
-    if (!process?.serviceId || !selectedPriceBookId) return;
-
-    setLoadingPricing(true);
-    try {
-      const pricing = await PricingService.getServicePricing(
-        process.serviceId,
-        selectedPriceBookId
-      );
-      setPricingData(pricing);
-    } catch (error) {
-      console.error("Error loading pricing data:", error);
-      message.error("Không thể tải thông tin giá");
-    } finally {
-      setLoadingPricing(false);
-    }
-  }, [process?.serviceId, selectedPriceBookId]);
-
-  // Load data when modal opens
-  useEffect(() => {
-    if (open) {
-      loadPriceBooks();
-    }
-  }, [open, loadPriceBooks]);
-
-  // Load pricing data when price book changes
-  useEffect(() => {
-    if (selectedPriceBookId && process?.serviceId) {
-      loadPricingData();
-    }
-  }, [selectedPriceBookId, process?.serviceId, loadPricingData]);
 
   const handleViewProducts = (
     stepProducts: unknown[],
-    stepName: string,
-    stepId?: string
+    stepName: string
   ) => {
-    // Thêm stepId vào mỗi product để dễ dàng tìm pricing data
-    const productsWithStepId = (stepProducts as any[]).map((product) => ({
-      // eslint-disable-line @typescript-eslint/no-explicit-any
-      ...product,
-      stepId: stepId || product.stepId,
-    }));
-    setSelectedStepProducts(productsWithStepId);
+    setSelectedStepProducts(stepProducts as any[]); // eslint-disable-line @typescript-eslint/no-explicit-any
     setSelectedStepName(stepName);
     setProductModalOpen(true);
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(amount);
-  };
-
-  // Helper function to get pricing data for a specific step
-  const getStepPricingData = (stepId: string) => {
-    if (!pricingData?.processSteps) return null;
-    return pricingData.processSteps.find((step) => step.stepId === stepId);
-  };
-
-  // Helper function to get pricing data for a specific product
-  const getProductPricingData = (stepId: string, productId: string) => {
-    const stepPricing = getStepPricingData(stepId);
-    if (!stepPricing?.products) return null;
-    return stepPricing.products.find(
-      (product) => product.productId === productId
-    );
   };
 
   if (!process) return null;
@@ -869,13 +781,12 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
                                   type="primary"
                                   size="small"
                                   icon={<EyeOutlined />}
-                                  onClick={() =>
-                                    handleViewProducts(
-                                      step.stepProducts || [],
-                                      step.name,
-                                      step.id
-                                    )
-                                  }
+                                 onClick={() =>
+                                   handleViewProducts(
+                                     step.stepProducts || [],
+                                     step.name
+                                   )
+                                 }
                                   style={{
                                     backgroundColor: "#0ea5e9",
                                     borderColor: "#0ea5e9",
@@ -952,40 +863,15 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
       {/* Modal chi tiết sản phẩm */}
       <Modal
         title={
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              width: "100%",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <ShoppingCartOutlined style={{ color: "#0ea5e9" }} />
-              <span>Sản phẩm sử dụng - {selectedStepName}</span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 12, color: "#666" }}>Bảng giá:</span>
-              <Select
-                value={selectedPriceBookId}
-                onChange={setSelectedPriceBookId}
-                style={{ width: 200 }}
-                size="small"
-                loading={loadingPricing}
-              >
-                {priceBooks.map((book) => (
-                  <Option key={book.id} value={book.id}>
-                    {book.name}
-                  </Option>
-                ))}
-              </Select>
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ShoppingCartOutlined style={{ color: "#0ea5e9" }} />
+            <span>Sản phẩm sử dụng - {selectedStepName}</span>
           </div>
         }
         open={productModalOpen}
         onCancel={() => setProductModalOpen(false)}
         footer={null}
-        width={900}
+        width={600}
         style={{ top: 50 }}
       >
         <Table
@@ -1024,17 +910,6 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
               ),
             },
             {
-              title: "SKU",
-              dataIndex: "productSku",
-              key: "productSku",
-              width: 120,
-              render: (text: string) => (
-                <Tag color="blue" style={{ fontSize: 11 }}>
-                  {text || "N/A"}
-                </Tag>
-              ),
-            },
-            {
               title: "Số lượng",
               dataIndex: "quantity",
               key: "quantity",
@@ -1050,7 +925,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
               title: "Đơn vị",
               dataIndex: "unit",
               key: "unit",
-              width: 80,
+              width: 100,
               align: "center" as const,
               render: (unit: string) => (
                 <Tag color="blue" style={{ fontSize: 11 }}>
@@ -1058,137 +933,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
                 </Tag>
               ),
             },
-            {
-              title: "Đơn giá",
-              key: "unitPrice",
-              width: 120,
-              align: "right" as const,
-              render: (_: any, record: any) => {
-                // eslint-disable-line @typescript-eslint/no-explicit-any
-                // Tìm step ID từ selectedStepProducts (cần thêm stepId vào data)
-                const stepId =
-                  record.stepId ||
-                  process?.processSteps?.find(
-                    (
-                      step: any // eslint-disable-line @typescript-eslint/no-explicit-any
-                    ) =>
-                      step.stepProducts?.some(
-                        (p: any) => p.productId === record.productId
-                      ) // eslint-disable-line @typescript-eslint/no-explicit-any
-                  )?.id;
-
-                const productPricing = getProductPricingData(
-                  stepId,
-                  record.productId
-                );
-                const unitPrice =
-                  productPricing?.unitPrice || record.productCost || 0;
-                const priceSource = productPricing?.priceSource || "DEFAULT";
-
-                return (
-                  <div>
-                    <Text strong style={{ color: "#52c41a" }}>
-                      {formatCurrency(unitPrice)}
-                    </Text>
-                    <div style={{ fontSize: 10, color: "#999" }}>
-                      {priceSource === "PRICE_BOOK"
-                        ? "Bảng giá"
-                        : priceSource === "DEFAULT"
-                        ? "Mặc định"
-                        : "Tùy chỉnh"}
-                    </div>
-                  </div>
-                );
-              },
-            },
-            {
-              title: "Thành tiền",
-              key: "total",
-              width: 120,
-              align: "right" as const,
-              render: (_: any, record: any) => {
-                // eslint-disable-line @typescript-eslint/no-explicit-any
-                const stepId =
-                  record.stepId ||
-                  process?.processSteps?.find(
-                    (
-                      step: any // eslint-disable-line @typescript-eslint/no-explicit-any
-                    ) =>
-                      step.stepProducts?.some(
-                        (p: any) => p.productId === record.productId
-                      ) // eslint-disable-line @typescript-eslint/no-explicit-any
-                  )?.id;
-
-                const productPricing = getProductPricingData(
-                  stepId,
-                  record.productId
-                );
-                const unitPrice =
-                  productPricing?.unitPrice || record.productCost || 0;
-                const quantity = record.quantity || 0;
-                const total = unitPrice * quantity;
-
-                return (
-                  <Text strong style={{ color: "#1890ff" }}>
-                    {formatCurrency(total)}
-                  </Text>
-                );
-              },
-            },
           ]}
-          summary={() => {
-            const totalAmount = selectedStepProducts.reduce(
-              (sum, product: any) => {
-                // eslint-disable-line @typescript-eslint/no-explicit-any
-                const stepId =
-                  product.stepId ||
-                  process?.processSteps?.find(
-                    (
-                      step: any // eslint-disable-line @typescript-eslint/no-explicit-any
-                    ) =>
-                      step.stepProducts?.some(
-                        (p: any) => p.productId === product.productId
-                      ) // eslint-disable-line @typescript-eslint/no-explicit-any
-                  )?.id;
-
-                const productPricing = getProductPricingData(
-                  stepId,
-                  product.productId
-                );
-                const unitPrice =
-                  productPricing?.unitPrice || product.productCost || 0;
-                const quantity = product.quantity || 0;
-                const total = unitPrice * quantity;
-                return sum + total;
-              },
-              0
-            );
-            const totalQuantity = selectedStepProducts.reduce(
-              (sum, product: any) => sum + (product.quantity || 0), // eslint-disable-line @typescript-eslint/no-explicit-any
-              0
-            );
-
-            return (
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={4}>
-                  <Text strong>Tổng cộng:</Text>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={4}>
-                  <Tag
-                    color="green"
-                    style={{ fontSize: 12, fontWeight: "bold" }}
-                  >
-                    {totalQuantity} sản phẩm
-                  </Tag>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={5}>
-                  <Text strong style={{ color: "#1890ff", fontSize: 14 }}>
-                    {formatCurrency(totalAmount)}
-                  </Text>
-                </Table.Summary.Cell>
-              </Table.Summary.Row>
-            );
-          }}
         />
       </Modal>
     </Modal>
