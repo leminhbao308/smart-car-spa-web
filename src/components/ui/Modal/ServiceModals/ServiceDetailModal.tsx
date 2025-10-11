@@ -446,7 +446,7 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <Text strong style={{ color: '#666' }}>Thời gian tạo</Text>
                   <Text style={{ fontSize: 16, color: '#333' }}>
-                    {data.created_date ? new Date(data.created_date).toLocaleString("vi-VN") : "N/A"}
+                    {data.audit?.created_date ? new Date(data.audit.created_date).toLocaleString("vi-VN") : "N/A"}
                   </Text>
                 </Space>
               </div>
@@ -461,7 +461,7 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <Text strong style={{ color: '#666' }}>Thời gian cập nhật</Text>
                   <Text style={{ fontSize: 16, color: '#333' }}>
-                    {data.modified_date ? new Date(data.modified_date).toLocaleString("vi-VN") : "N/A"}
+                    {data.audit?.modified_date ? new Date(data.audit.modified_date).toLocaleString("vi-VN") : "N/A"}
                   </Text>
                 </Space>
               </div>

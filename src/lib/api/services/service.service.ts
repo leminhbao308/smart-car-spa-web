@@ -454,7 +454,7 @@ export class ServiceService {
   static async recalculateBasePrice(serviceId: string, priceBookId?: string): Promise<ServicePricingDto> {
     try {
       const params = priceBookId ? `?priceBookId=${priceBookId}` : "";
-      const response = await apiClient.post(`/services/${serviceId}/recalculate-base-price${params}`);
+      const response = await apiClient.post(`/${serviceId}/recalculate-base-price${params}`);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Recalculate base price error:", error);

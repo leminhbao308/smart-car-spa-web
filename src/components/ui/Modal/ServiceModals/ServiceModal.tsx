@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Modal,
   Form,
@@ -21,7 +21,9 @@ import {
 } from "@ant-design/icons";
 import { MemoizedInput, MemoizedInputNumber, MemoizedTextArea } from "@/components/ui/MemoizedComponents";
 import { CreateServiceRequest, UpdateServiceRequest } from "@/lib/api/types/service.types";
-import { useServiceTypes, useActiveServiceProcesses, useBranches, useCreateService, useUpdateService } from "@/lib/api/hooks";
+import { Category } from "@/lib/api/types/category.types";
+import { useServiceTypes, useServiceProcesses, useBranches, useCreateService, useUpdateService, useCategories } from "@/lib/api/hooks";
+import { ServiceService } from "@/lib/api/services/service.service";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
 
 const { Option } = Select;
@@ -65,7 +67,8 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
 
   // API hooks
   const { data: serviceTypesData, isLoading: serviceTypesLoading } = useServiceTypes({});
-  const { data: serviceProcessesData, isLoading: serviceProcessesLoading } = useActiveServiceProcesses();
+  const { data: serviceProcessesData, isLoading: serviceProcessesLoading } = useServiceProcesses({});
+  const { data: categoriesData, isLoading: categoriesLoading } = useCategories(0, 1000);
   const { branches, loading: branchesLoading } = useBranches();
   const createServiceMutation = useCreateService();
   const updateServiceMutation = useUpdateService();
@@ -88,7 +91,6 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           serviceTypeId: editData.serviceTypeId,
           isFeatured: editData.isFeatured,
           serviceProcessId: editData.serviceProcessId,
-          isDefaultProcess: editData.isDefaultProcess,
           branchId: editData.branchId,
         });
         setImageUrls(editData.imageUrls || []);
@@ -100,13 +102,38 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
     }
   }, [visible, editData, form]);
 
+  // Watch for form field changes
+  const serviceProcessId = Form.useWatch('serviceProcessId', form);
+  const laborCost = Form.useWatch('laborCost', form) || 0;
+  const basePrice = Form.useWatch('basePrice', form) || 0;
+  
+  const formRef = useRef(form);
+  formRef.current = form;
+
+  const updateFormFields = useCallback(() => {
+    if (serviceProcessId && serviceProcessesData) {
+      const selectedProcess = serviceProcessesData.find(p => p.id === serviceProcessId);
+      if (selectedProcess) {
+        // Update estimated duration if not set
+        const currentDuration = formRef.current.getFieldValue('standardDuration');
+        if (!currentDuration && selectedProcess.estimatedDuration) {
+          formRef.current.setFieldValue('standardDuration', selectedProcess.estimatedDuration);
+        }
+      }
+    }
+  }, [serviceProcessId, serviceProcessesData]);
+
+  useEffect(() => {
+    updateFormFields();
+  }, [updateFormFields]);
+
   const handleSubmit = async () => {
     try {
       setLoading(true);
       const values = await form.validateFields();
 
       if (editData) {
-        // Update existing service
+        // Update existing service - KHÔNG gửi basePrice và laborCost
         const updateData: UpdateServiceRequest = {
           service_name: values.serviceName,
           service_url: values.serviceUrl,
@@ -115,13 +142,12 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           standard_duration: values.standardDuration,
           required_skill_level: values.requiredSkillLevel,
           is_package: values.isPackage || false,
-          base_price: values.basePrice,
-          labor_cost: values.laborCost,
+          // base_price: values.basePrice, // KHÔNG được cập nhật trực tiếp
+          // labor_cost: values.laborCost, // Sử dụng API riêng
           service_type_id: values.serviceTypeId,
           is_featured: values.isFeatured || false,
           is_active: true,
           service_process_id: values.serviceProcessId,
-          is_default_process: values.isDefaultProcess || false,
           branch_id: values.branchId,
         };
 
@@ -129,6 +155,18 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           serviceId: editData.serviceId,
           data: updateData,
         });
+
+        // Cập nhật labor cost riêng nếu có thay đổi
+        if (values.laborCost !== editData.laborCost) {
+          await ServiceService.updateLaborCost(editData.serviceId, {
+            labor_cost: values.laborCost
+          });
+        }
+
+        // Tính lại base price nếu có thay đổi quy trình
+        if (values.serviceProcessId !== editData.serviceProcessId) {
+          await ServiceService.recalculateBasePrice(editData.serviceId);
+        }
 
         message.success("Cập nhật dịch vụ thành công!");
       } else {
@@ -141,16 +179,20 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           standard_duration: values.standardDuration,
           required_skill_level: values.requiredSkillLevel,
           is_package: values.isPackage || false,
-          base_price: values.basePrice,
+          base_price: 0, // Backend sẽ tự tính từ quy trình
           labor_cost: values.laborCost,
           service_type_id: values.serviceTypeId,
           is_featured: values.isFeatured || false,
           service_process_id: values.serviceProcessId,
-          is_default_process: values.isDefaultProcess || false,
           branch_id: values.branchId,
         };
 
-        await createServiceMutation.mutateAsync(createData);
+        const newService = await createServiceMutation.mutateAsync(createData);
+
+        // Tính lại base price sau khi tạo (chỉ khi có serviceProcessId)
+        if (newService && newService.serviceId && values.serviceProcessId) {
+          await ServiceService.recalculateBasePrice(newService.serviceId);
+        }
 
         message.success("Tạo dịch vụ thành công!");
       }
@@ -186,7 +228,6 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         initialValues={{
           isPackage: false,
           isFeatured: false,
-          isDefaultProcess: false,
           basePrice: 0,
           laborCost: 0,
         }}
@@ -194,7 +235,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         {/* Thông tin cơ bản */}
         <Card title="Thông tin cơ bản" size="small">
           <Row gutter={16}>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 label="Tên dịch vụ"
                 name="serviceName"
@@ -206,7 +247,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                 <MemoizedInput placeholder="Nhập tên dịch vụ" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 label="URL dịch vụ"
                 name="serviceUrl"
@@ -216,6 +257,32 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                 ]}
               >
                 <MemoizedInput placeholder="Nhập URL dịch vụ" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label="Danh mục"
+                name="categoryId"
+                rules={[{ required: true, message: "Vui lòng chọn danh mục!" }]}
+              >
+                <Select
+                  placeholder="Chọn danh mục"
+                  allowClear
+                  loading={categoriesLoading}
+                  showSearch
+                  optionFilterProp="label"
+                  filterOption={(input, option) => {
+                    const label = String(option?.label ?? "");
+                    return label.toLowerCase().includes(input.toLowerCase());
+                  }}
+                >
+                  {categoriesData?.data?.content && categoriesData.data.content.length > 0 &&
+                    categoriesData.data.content.map((category: Category) => (
+                      <Option key={category.category_id} value={category.category_id} label={category.category_name}>
+                        {category.category_name}
+                      </Option>
+                    ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -322,29 +389,35 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={6}>
-              <Form.Item
-                label="Giá cơ bản (VNĐ)"
-                name="basePrice"
-                extra="Giá cơ bản được tính tự động từ quy trình dịch vụ"
-              >
-                <MemoizedInputNumber
-                  min={0}
-                  style={{ 
-                    width: "100%",
-                    backgroundColor: "#f5f5f5",
-                    color: "#666",
-                    cursor: "not-allowed"
-                  }}
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
-                  placeholder="Tự động tính từ quy trình"
-                  readOnly
-                />
-              </Form.Item>
-            </Col>
+             <Col xs={24} sm={6}>
+               <Form.Item
+                 label="Giá cơ bản (VNĐ)"
+                 name="basePrice"
+                 extra={
+                   <div style={{ fontSize: 12, color: '#666' }}>
+                     <div>Giá cơ bản được tính tự động từ quy trình dịch vụ</div>
+                   </div>
+                 }
+               >
+                 <MemoizedInputNumber
+                   min={0}
+                   style={{ 
+                     width: "100%",
+                     backgroundColor: "#f8f9fa",
+                     color: "#666",
+                     cursor: "not-allowed",
+                     border: "1px solid #e9ecef"
+                   }}
+                   formatter={(value) =>
+                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                   }
+                   parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
+                   placeholder="Tự động tính từ quy trình"
+                   readOnly
+                   disabled
+                 />
+               </Form.Item>
+             </Col>
           </Row>
 
           <Form.Item
@@ -359,7 +432,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           </Form.Item>
 
           <Row gutter={16}>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12}>
               <Form.Item
                 label="Gói dịch vụ"
                 name="isPackage"
@@ -368,19 +441,10 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                 <Switch />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12}>
               <Form.Item
                 label="Dịch vụ nổi bật"
                 name="isFeatured"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label="Sử dụng quy trình mặc định"
-                name="isDefaultProcess"
                 valuePropName="checked"
               >
                 <Switch />
@@ -396,60 +460,97 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
               <Form.Item
                 label="Quy trình dịch vụ"
                 name="serviceProcessId"
-                rules={[{ required: true, message: "Vui lòng chọn quy trình!" }]}
+                extra="Chọn quy trình dịch vụ để áp dụng cho dịch vụ này (tùy chọn)"
               >
                 <Select
                   placeholder="Chọn quy trình dịch vụ"
                   allowClear
                   loading={serviceProcessesLoading}
                   showSearch
-                  optionFilterProp="children"
-                   filterOption={(input, option) =>
-                     String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                   }
+                  optionFilterProp="label"
+                  filterOption={(input, option) => {
+                    const label = String(option?.label ?? "");
+                    return label.toLowerCase().includes(input.toLowerCase());
+                  }}
+                  size="large"
                 >
                   {serviceProcessesData && serviceProcessesData.length > 0 &&
                     serviceProcessesData.map((process) => (
-                      <Option key={process.id} value={process.id}>
+                      <Option key={process.id} value={process.id} label={process.name}>
                         {process.name}
                       </Option>
                     ))}
                 </Select>
               </Form.Item>
             </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Thông tin quy trình được chọn"
+                extra="Thông tin chi tiết về quy trình đã chọn"
+              >
+                <div style={{ 
+                  padding: 12, 
+                  backgroundColor: '#f8f9fa', 
+                  borderRadius: 6, 
+                  border: '1px solid #e9ecef',
+                  minHeight: 40,
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  {(() => {
+                    const selectedProcess = serviceProcessesData?.find(p => p.id === serviceProcessId);
+                    
+                    if (selectedProcess) {
+                      return (
+                        <div style={{ width: '100%' }}>
+                          <div style={{ fontWeight: 500, color: '#333', marginBottom: 4 }}>
+                            {selectedProcess.name}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#666' }}>
+                            {selectedProcess.description || 'Không có mô tả'} • 
+                            {selectedProcess.estimatedDuration} phút • 
+                            {selectedProcess.stepCount} bước
+                            {selectedProcess.isDefault && ' • Mặc định'}
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div style={{ color: '#999', fontSize: 14 }}>
+                        Chưa chọn quy trình
+                      </div>
+                    );
+                  })()}
+                </div>
+              </Form.Item>
+            </Col>
           </Row>
           
-          <div style={{ marginTop: 16, padding: 16, backgroundColor: "#f5f5f5", borderRadius: 6 }}>
+          <div style={{ marginTop: 16, padding: 16, backgroundColor: "#f8f9fa", borderRadius: 6, border: "1px solid #e9ecef" }}>
             <Row gutter={16}>
               <Col span={8}>
-                <div style={{ fontSize: 12, color: "#666" }}>
+                <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
                   Chi phí lao động:
                 </div>
-                <div style={{ fontWeight: 500, color: "#fa8c16" }}>
-                  {formatCurrency(form.getFieldValue("laborCost") || 0)}
+                <div style={{ fontWeight: 500, color: "#fa8c16", fontSize: 16 }}>
+                  {formatCurrency(laborCost)}
                 </div>
               </Col>
               <Col span={8}>
-                <div style={{ fontSize: 12, color: "#666" }}>
+                <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
                   Giá cơ bản:
                 </div>
-                <div
-                  style={{ fontWeight: 500, color: "#52c41a", fontSize: 16 }}
-                >
-                  {formatCurrency(form.getFieldValue("basePrice") || 0)}
+                <div style={{ fontWeight: 500, color: "#52c41a", fontSize: 16 }}>
+                  {formatCurrency(basePrice)}
                 </div>
               </Col>
               <Col span={8}>
-                <div style={{ fontSize: 12, color: "#666" }}>
+                <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
                   Tổng dự kiến:
                 </div>
-                <div
-                  style={{ fontWeight: 500, color: "#1890ff", fontSize: 16 }}
-                >
-                  {formatCurrency(
-                    (form.getFieldValue("basePrice") || 0) + 
-                    (form.getFieldValue("laborCost") || 0)
-                  )}
+                <div style={{ fontWeight: 500, color: "#1890ff", fontSize: 18 }}>
+                  {formatCurrency(basePrice + laborCost)}
                 </div>
               </Col>
             </Row>

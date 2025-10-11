@@ -1,7 +1,15 @@
-import { BaseAuditEntity } from "./common.types";
+// Audit DTO interface to match backend AuditDto
+export interface AuditDto {
+  created_date: string;
+  modified_date: string;
+  created_by: string;
+  modified_by: string;
+  is_active: boolean;
+  is_deleted: boolean;
+}
 
-// Service API Types - Updated to match backend ServiceInfoDto
-export interface Service extends BaseAuditEntity {
+// Service API Types - Updated to match backend ServiceInfoDto with audit object
+export interface Service {
   serviceId: string;
   serviceUrl: string;
   serviceName: string;
@@ -24,6 +32,7 @@ export interface Service extends BaseAuditEntity {
   estimatedDuration: number;
   branchId: string;
   branchName: string;
+  audit: AuditDto; // Audit fields are now in a separate object
 }
 
 // Enums

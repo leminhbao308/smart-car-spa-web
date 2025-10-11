@@ -579,10 +579,12 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
             boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
             background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
           }}
-          headStyle={{
-            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-            borderRadius: '12px 12px 0 0',
-            borderBottom: '1px solid #e5e7eb'
+          styles={{
+            header: {
+              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+              borderRadius: '12px 12px 0 0',
+              borderBottom: '1px solid #e5e7eb'
+            }
           }}
         >
           <div style={{

@@ -23,10 +23,7 @@ import {
   ReloadOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
-import {
-  Service,
-  SERVICE_TYPE_OPTIONS,
-} from "@/lib/api/types/service.types";
+import { Service, SERVICE_TYPE_OPTIONS } from "@/lib/api/types/service.types";
 import { ServiceService } from "@/lib/api/services/service.service";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
 
@@ -67,13 +64,27 @@ const ServicesPage = () => {
       setLoading(true);
       console.log("Loading services...", { page, size });
       const response = await ServiceService.getAllServices({ page, size });
-      console.log("Services loaded:", response.data.content?.length, "items");
-      setServiceData(response.data.content);
-      setPagination({
-        current: response.data.number + 1,
-        pageSize: response.data.size,
-        total: response.data.totalElements,
-      });
+      
+      // Handle both Service[] and ServicePageResponse
+      if (Array.isArray(response.data)) {
+        // Direct array response
+        console.log("Services loaded:", response.data.length, "items");
+        setServiceData(response.data);
+        setPagination({
+          current: 1,
+          pageSize: response.data.length,
+          total: response.data.length,
+        });
+      } else {
+        // Paginated response
+        console.log("Services loaded:", response.data.content?.length, "items");
+        setServiceData(response.data.content || []);
+        setPagination({
+          current: response.data.number + 1,
+          pageSize: response.data.size,
+          total: response.data.totalElements,
+        });
+      }
     } catch (error) {
       message.error("Không thể tải danh sách dịch vụ");
       console.error("Error loading services:", error);
@@ -208,7 +219,7 @@ const ServicesPage = () => {
       key: "status",
       width: 120,
       render: (_, record) => {
-        if (record.is_deleted) {
+        if (record.audit?.is_deleted) {
           return <Tag color="default">Đã xóa</Tag>;
         }
         return (
@@ -216,7 +227,6 @@ const ServicesPage = () => {
             <Tag color={record.isActive ? "green" : "red"}>
               {record.isActive ? "Hoạt động" : "Không hoạt động"}
             </Tag>
-   
           </div>
         );
       },
@@ -226,9 +236,9 @@ const ServicesPage = () => {
         { text: "Đã xóa", value: "deleted" },
       ],
       onFilter: (value, record) => {
-        if (value === "active") return record.isActive && !record.is_deleted;
-        if (value === "inactive") return !record.isActive && !record.is_deleted;
-        if (value === "deleted") return record.is_deleted || false;
+        if (value === "active") return record.isActive && !record.audit?.is_deleted;
+        if (value === "inactive") return !record.isActive && !record.audit?.is_deleted;
+        if (value === "deleted") return record.audit?.is_deleted || false;
         return true;
       },
     },
@@ -281,12 +291,9 @@ const ServicesPage = () => {
             serviceId: record.serviceId,
             newStatus: !record.isActive,
           });
-          await ServiceService.updateServiceStatus(
-            record.serviceId,
-            {
-              is_active: !record.isActive,
-            }
-          );
+          await ServiceService.updateServiceStatus(record.serviceId, {
+            is_active: !record.isActive,
+          });
           message.success(`${action} dịch vụ thành công!`);
           console.log("Service status updated successfully");
         } catch (error) {
@@ -305,37 +312,37 @@ const ServicesPage = () => {
     });
   };
 
-  const handleDelete = (record: Service) => {
-    showModal({
-      title: "Xóa dịch vụ",
-      content: `Bạn có chắc chắn muốn xóa dịch vụ ${record.serviceName}? Hành động này không thể hoàn tác.`,
-      type: "error",
-      onConfirm: async () => {
-        try {
-          await ServiceService.deleteService(record.serviceId);
-          message.success("Xóa dịch vụ thành công!");
+  // const handleDelete = (record: Service) => {
+  //   showModal({
+  //     title: "Xóa dịch vụ",
+  //     content: `Bạn có chắc chắn muốn xóa dịch vụ ${record.serviceName}? Hành động này không thể hoàn tác.`,
+  //     type: "error",
+  //     onConfirm: async () => {
+  //       try {
+  //         await ServiceService.deleteService(record.serviceId);
+  //         message.success("Xóa dịch vụ thành công!");
 
-          // Update the service as deleted in local state immediately
-          setServiceData((prevData) =>
-            prevData.map((service) =>
-              service.serviceId === record.serviceId
-                ? { ...service, is_deleted: true }
-                : service
-            )
-          );
+  //         // Update the service as deleted in local state immediately
+  //         setServiceData((prevData) =>
+  //           prevData.map((service) =>
+  //             service.serviceId === record.serviceId
+  //               ? { ...service, is_deleted: true }
+  //               : service
+  //           )
+  //         );
 
-          console.log("Service marked as deleted in local state:", {
-            serviceId: record.serviceId,
-            serviceName: record.serviceName,
-            is_deleted: true,
-          });
-        } catch (error) {
-          message.error("Có lỗi xảy ra khi xóa dịch vụ");
-          console.error("Error deleting service:", error);
-        }
-      },
-    });
-  };
+  //         console.log("Service marked as deleted in local state:", {
+  //           serviceId: record.serviceId,
+  //           serviceName: record.serviceName,
+  //           is_deleted: true,
+  //         });
+  //       } catch (error) {
+  //         message.error("Có lỗi xảy ra khi xóa dịch vụ");
+  //         console.error("Error deleting service:", error);
+  //       }
+  //     },
+  //   });
+  // };
 
   return (
     <div>
@@ -455,7 +462,7 @@ const ServicesPage = () => {
         loading={loading}
         onAdd={handleAdd}
         onEdit={handleEdit}
-        onEditCondition={(record: Service) => !record.is_deleted}
+        onEditCondition={(record: Service) => !record.audit?.is_deleted}
         actions={[
           {
             key: "toggle-status",
@@ -464,17 +471,17 @@ const ServicesPage = () => {
             type: "default",
             danger: (record: Service) => record.isActive,
             onClick: handleToggleStatus,
-            condition: (record: Service) => !record.is_deleted,
+            condition: (record: Service) => !record.audit?.is_deleted,
           },
-          {
-            key: "delete",
-            label: "Xóa",
-            type: "default",
-            danger: true,
-            icon: <DeleteOutlined />,
-            onClick: handleDelete,
-            condition: (record: Service) => !record.is_deleted,
-          },
+          // {
+          //   key: "delete",
+          //   label: "Xóa",
+          //   type: "default",
+          //   danger: true,
+          //   icon: <DeleteOutlined />,
+          //   onClick: handleDelete,
+          //   condition: (record: Service) => !record.is_deleted,
+          // },
         ]}
         onView={handleView}
         addButtonText="Thêm dịch vụ"
