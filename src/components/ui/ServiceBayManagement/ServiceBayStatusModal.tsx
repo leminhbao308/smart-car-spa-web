@@ -5,7 +5,6 @@ import {
   Modal,
   Form,
   Select,
-  Input,
   Button,
   Space,
   message,
@@ -16,18 +15,16 @@ import {
   SettingOutlined,
   CloseOutlined,
   SaveOutlined,
-  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import {
   ServiceBay,
   BayStatus,
   BAY_STATUS_OPTIONS,
 } from "@/lib/api/types/service-bay.types";
-import { useServiceBayManagement } from "@/lib/api/hooks/useServiceBays";
+import { useUpdateServiceBayStatus } from "@/lib/api/hooks/useServiceBays";
 import MemoizedTextArea from "../Modal/ServiceBayModals/MemoizedTextArea";
 
 const { Option } = Select;
-const { TextArea } = Input;
 
 interface ServiceBayStatusModalProps {
   visible: boolean;
@@ -43,9 +40,9 @@ const ServiceBayStatusModal: React.FC<ServiceBayStatusModalProps> = ({
   bay,
 }) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<BayStatus | null>(null);
-  const { updateServiceBayStatus } = useServiceBayManagement();
+  const updateServiceBayStatusMutation = useUpdateServiceBayStatus();
+  const loading = updateServiceBayStatusMutation.isPending;
 
   React.useEffect(() => {
     if (visible && bay) {
@@ -57,24 +54,21 @@ const ServiceBayStatusModal: React.FC<ServiceBayStatusModalProps> = ({
     }
   }, [visible, bay, form]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: { status: BayStatus; reason?: string }) => {
     if (!bay) return;
 
-    setLoading(true);
     try {
-      const result = await updateServiceBayStatus(
-        bay.bay_id,
-        values.status,
-        values.reason
-      );
+      const result = await updateServiceBayStatusMutation.mutateAsync({
+        bayId: bay.bay_id,
+        status: values.status,
+        reason: values.reason
+      });
       
-      message.success("Cập nhật trạng thái bệ dịch vụ thành công!");
+      message.success("Cập nhật trạng thái khu vực dịch vụ thành công!");
       onSuccess(result);
       form.resetFields();
-    } catch (error: any) {
-      message.error(error.message || "Có lỗi xảy ra khi cập nhật trạng thái");
-    } finally {
-      setLoading(false);
+    } catch (error: unknown) {
+      message.error((error as Error).message || "Có lỗi xảy ra khi cập nhật trạng thái");
     }
   };
 
@@ -111,14 +105,14 @@ const ServiceBayStatusModal: React.FC<ServiceBayStatusModalProps> = ({
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <SettingOutlined style={{ color: "#722ed1" }} />
-          Quản lý trạng thái bệ dịch vụ
+          Quản lý trạng thái khu vực dịch vụ
         </div>
       }
       open={visible}
       onCancel={handleCancel}
       width={600}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginBottom: "16px" }}>
         <Alert
@@ -185,12 +179,11 @@ const ServiceBayStatusModal: React.FC<ServiceBayStatusModalProps> = ({
             { max: 500, message: "Lý do không được quá 500 ký tự" },
           ]}
         >
-          <MemoizedTextArea
-            rows={3}
-            placeholder="Nhập lý do thay đổi trạng thái (tùy chọn)"
-            showCount
-            maxLength={500}
-          />
+                <MemoizedTextArea
+                  placeholder="Nhập lý do thay đổi trạng thái (tùy chọn)"
+                  showCount
+                  maxLength={500}
+                />
         </Form.Item>
 
         <Divider />

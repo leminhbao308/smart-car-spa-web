@@ -93,7 +93,7 @@ const ImportDetailModal: React.FC<ImportDetailModalProps> = ({
       onCancel={onClose}
       footer={null}
       width={1000}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{maxHeight: "70vh", overflowY: "auto"}}>
         {/* Thông tin cơ bản */}

@@ -22,7 +22,11 @@ import {
   UpdateServiceBayRequest,
   BayType,
   BAY_TYPE_OPTIONS} from "@/lib/api/types/service-bay.types";
-import { useServiceBayManagement } from "@/lib/api/hooks/useServiceBays";
+import { 
+  useCreateServiceBay, 
+  useUpdateServiceBay, 
+  useValidateBayName 
+} from "@/lib/api/hooks/useServiceBays";
 import { useBranches } from "@/lib/api/hooks/useBranches";
 import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 
@@ -43,10 +47,13 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
   editData,
   branchId}) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   const [nameValidating, setNameValidating] = useState(false);
   
-  const { createServiceBay, updateServiceBay, validateBayName } = useServiceBayManagement();
+  const createServiceBayMutation = useCreateServiceBay();
+  const updateServiceBayMutation = useUpdateServiceBay();
+  const validateBayNameMutation = useValidateBayName();
+  
+  const loading = createServiceBayMutation.isPending || updateServiceBayMutation.isPending;
   const { branches } = useBranches({});
 
   const isEdit = !!editData;
@@ -95,42 +102,42 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
     }
   }, [visible, isEdit, editData, branches, form]);
 
-  const handleSubmit = async (values: any) => {
-    setLoading(true);
+  const handleSubmit = async (values: Record<string, unknown>) => {
     try {
       let result: ServiceBay;
       
       if (isEdit && editData) {
         const updateData: UpdateServiceBayRequest = {
-          bay_name: values.bay_name,
-          bay_code: values.bay_code,
-          bay_type: values.bay_type,
-          description: values.description,
-          capacity: values.capacity,
-          display_order: values.display_order,
-          notes: values.notes};
-        result = await updateServiceBay(editData.bay_id, updateData);
-        message.success("Cập nhật bệ dịch vụ thành công!");
+          bay_name: values.bay_name as string,
+          bay_code: values.bay_code as string | undefined,
+          bay_type: values.bay_type as BayType,
+          description: values.description as string | undefined,
+          capacity: values.capacity as number,
+          display_order: values.display_order as number | undefined,
+          notes: values.notes as string | undefined};
+        result = await updateServiceBayMutation.mutateAsync({
+          bayId: editData.bay_id,
+          data: updateData
+        });
+        message.success("Cập nhật khu vực dịch vụ thành công!");
       } else {
         const createData: CreateServiceBayRequest = {
-          branch_id: values.branch_id,
-          bay_name: values.bay_name,
-          bay_code: values.bay_code,
-          bay_type: values.bay_type,
-          description: values.description,
-          capacity: values.capacity || 1,
-          display_order: values.display_order || 1,
-          notes: values.notes};
-        result = await createServiceBay(createData);
-        message.success("Tạo bệ dịch vụ thành công!");
+          branch_id: values.branch_id as string,
+          bay_name: values.bay_name as string,
+          bay_code: values.bay_code as string | undefined,
+          bay_type: values.bay_type as BayType,
+          description: values.description as string | undefined,
+          capacity: (values.capacity as number) || 1,
+          display_order: (values.display_order as number) || 1,
+          notes: values.notes as string | undefined};
+        result = await createServiceBayMutation.mutateAsync(createData);
+        message.success("Tạo khu vực dịch vụ thành công!");
       }
       
       onSuccess(result);
       form.resetFields();
-    } catch (error: any) {
-      message.error(error.message || "Có lỗi xảy ra khi lưu bệ dịch vụ");
-    } finally {
-      setLoading(false);
+    } catch (error: unknown) {
+      message.error((error as Error).message || "Có lỗi xảy ra khi lưu khu vực dịch vụ");
     }
   };
 
@@ -147,17 +154,17 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
 
     setNameValidating(true);
     try {
-      const isValid = await validateBayName(
+      const isValid = await validateBayNameMutation.mutateAsync({
         branchId,
-        value,
-        isEdit ? editData?.bay_id : undefined
-      );
+        bayName: value,
+        bayId: isEdit ? editData?.bay_id : undefined
+      });
       
       if (!isValid) {
         form.setFields([
           {
             name: "bay_name",
-            errors: ["Tên bệ dịch vụ đã tồn tại trong chi nhánh này"]},
+            errors: ["Tên khu vực dịch vụ đã tồn tại trong chi nhánh này"]},
         ]);
       } else {
         form.setFields([
@@ -171,19 +178,15 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
     } finally {
       setNameValidating(false);
     }
-  }, [form, isEdit, editData?.bay_id, validateBayName]);
+  }, [form, isEdit, editData?.bay_id, validateBayNameMutation]);
 
-  const getBayTypeIcon = (type: BayType) => {
-    const option = BAY_TYPE_OPTIONS.find(opt => opt.value === type);
-    return option?.icon || "🔧";
-  };
 
   return (
     <Modal
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <ToolOutlined style={{ color: "#1890ff" }} />
-          {isEdit ? "Chỉnh sửa bệ dịch vụ" : "Thêm bệ dịch vụ mới"}
+          {isEdit ? "Chỉnh sửa khu vực dịch vụ" : "Thêm khu vực dịch vụ mới"}
         </div>
       }
       open={visible}
@@ -209,7 +212,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
             fontSize: "13px",
             color: "#52c41a"
           }}>
-            📍 Đang chỉnh sửa bệ dịch vụ - Chi nhánh đã được gán sẵn và không thể thay đổi
+            📍 Đang chỉnh sửa khu vực dịch vụ - Chi nhánh đã được gán sẵn và không thể thay đổi
             {editData?.branch_id && (
               <div style={{ marginTop: "4px", fontSize: "12px", opacity: 0.8 }}>
                 Branch ID: {editData.branch_id}
@@ -226,7 +229,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
               rules={isEdit ? [] : [{ required: true, message: "Vui lòng chọn chi nhánh" }]}
             >
               <Select
-                placeholder={isEdit ? "Chi nhánh của bệ dịch vụ" : "Chọn chi nhánh"}
+                placeholder={isEdit ? "Chi nhánh của khu vực dịch vụ" : "Chọn chi nhánh"}
                 disabled={!!branchId || isEdit}
                 showSearch
                 optionFilterProp="children"
@@ -247,10 +250,10 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           <Col span={12}>
             <Form.Item
               name="bay_type"
-              label="Loại bệ dịch vụ"
-              rules={[{ required: true, message: "Vui lòng chọn loại bệ dịch vụ" }]}
+              label="Loại khu vực dịch vụ"
+              rules={[{ required: true, message: "Vui lòng chọn loại khu vực dịch vụ" }]}
             >
-              <Select placeholder="Chọn loại bệ dịch vụ">
+              <Select placeholder="Chọn loại khu vực dịch vụ">
                 {BAY_TYPE_OPTIONS.map((option) => (
                   <Option key={option.value} value={option.value}>
                     <Space>
@@ -268,16 +271,16 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           <Col span={12}>
             <Form.Item
               name="bay_name"
-              label="Tên bệ dịch vụ"
+              label="Tên khu vực dịch vụ"
               rules={[
-                { required: true, message: "Vui lòng nhập tên bệ dịch vụ" },
-                { min: 2, message: "Tên bệ dịch vụ phải có ít nhất 2 ký tự" },
-                { max: 255, message: "Tên bệ dịch vụ không được quá 255 ký tự" },
+                { required: true, message: "Vui lòng nhập tên khu vực dịch vụ" },
+                { min: 2, message: "Tên khu vực dịch vụ phải có ít nhất 2 ký tự" },
+                { max: 255, message: "Tên khu vực dịch vụ không được quá 255 ký tự" },
               ]}
               validateStatus={nameValidating ? "validating" : ""}
             >
               <MemoizedInput
-                placeholder="Nhập tên bệ dịch vụ"
+                placeholder="Nhập tên khu vực dịch vụ"
                 onBlur={(e) => handleNameChange(e.target.value)}
                 suffix={nameValidating ? <CarOutlined spin /> : null}
               />
@@ -286,12 +289,12 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           <Col span={12}>
             <Form.Item
               name="bay_code"
-              label="Mã bệ dịch vụ"
+              label="Mã khu vực dịch vụ"
               rules={[
-                { max: 50, message: "Mã bệ dịch vụ không được quá 50 ký tự" },
+                { max: 50, message: "Mã khu vực dịch vụ không được quá 50 ký tự" },
               ]}
             >
-              <MemoizedInput placeholder="Nhập mã bệ dịch vụ (tùy chọn)" />
+              <MemoizedInput placeholder="Nhập mã khu vực dịch vụ (tùy chọn)" />
             </Form.Item>
           </Col>
         </Row>
@@ -305,7 +308,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
         >
           <MemoizedTextArea
             rows={3}
-            placeholder="Nhập mô tả về bệ dịch vụ"
+            placeholder="Nhập mô tả về khu vực dịch vụ"
             showCount
             maxLength={1000}
           />

@@ -20,7 +20,7 @@ const ServiceBayGrid: React.FC<ServiceBayGridProps> = ({
   onEdit,
   onView,
   onStatusChange,
-  emptyMessage = "Không có bệ dịch vụ nào",
+  emptyMessage = "Không có khu vực dịch vụ nào",
 }) => {
   if (loading) {
     return (
@@ -46,9 +46,10 @@ const ServiceBayGrid: React.FC<ServiceBayGridProps> = ({
           key={bay.bay_id}
           xs={24}
           sm={12}
-          lg={8}
+          md={8}
+          lg={6}
           xl={6}
-          xxl={4}
+          xxl={6}
         >
           <ServiceBayCard
             bay={bay}

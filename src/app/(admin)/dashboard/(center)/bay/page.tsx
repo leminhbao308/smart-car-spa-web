@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Card,
   Row,
@@ -10,12 +10,9 @@ import {
   Space,
   Select,
   Input,
-  Tag,
   Statistic,
   message,
-  Tabs,
   Divider,
-  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -23,11 +20,8 @@ import {
   FilterOutlined,
   SearchOutlined,
   ToolOutlined,
-  CarOutlined,
-  ClockCircleOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  SettingOutlined,
 } from "@ant-design/icons";
 import {
   ServiceBay,
@@ -37,7 +31,7 @@ import {
   BAY_TYPE_OPTIONS,
   BAY_STATUS_OPTIONS,
 } from "@/lib/api/types/service-bay.types";
-import { useServiceBays, useServiceBayManagement } from "@/lib/api/hooks/useServiceBays";
+import { useServiceBays } from "@/lib/api/hooks/useServiceBays";
 import { useBranches } from "@/lib/api/hooks/useBranches";
 import {
   ServiceBayModal,
@@ -47,7 +41,6 @@ import {
   ServiceBayGrid,
   ServiceBayStatusModal,
 } from "@/components/ui/ServiceBayManagement";
-import { useConfirmationModalContext } from "@/components/ui/Modal";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -69,20 +62,33 @@ const ServiceBayManagementPage = () => {
 
   // Hooks
   const { branches } = useBranches({});
-  const { showModal } = useConfirmationModalContext();
-  const { deleteServiceBay } = useServiceBayManagement();
 
   // Filter params
-  const filterParams: ServiceBayFilterParam = useMemo(() => ({
-    page: 0,
-    size: 50,
-    branch_id: selectedBranch || undefined,
-    bay_type: selectedBayType,
-    status: selectedStatus,
-    search: searchText || undefined,
-  }), [selectedBranch, selectedBayType, selectedStatus, searchText]);
+  const filterParams: ServiceBayFilterParam = useMemo(() => {
+    const params: ServiceBayFilterParam = {
+      page: 0,
+      size: 50,
+    };
 
-  const { bays, loading, error, refreshBays } = useServiceBays(filterParams);
+    // Only add filter params if they have values
+    if (selectedBranch) {
+      params.branch_id = selectedBranch;
+    }
+    if (selectedBayType) {
+      params.bay_type = selectedBayType;
+    }
+    if (selectedStatus) {
+      params.status = selectedStatus;
+    }
+    if (searchText && searchText.trim()) {
+      params.search = searchText.trim();
+    }
+
+    return params;
+  }, [selectedBranch, selectedBayType, selectedStatus, searchText]);
+
+  const { data: baysResponse, isLoading: loading, refetch: refreshBays } = useServiceBays(filterParams);
+  const bays = useMemo(() => baysResponse?.data?.content || [], [baysResponse]);
 
   // Statistics
   const statistics = useMemo(() => {
@@ -121,34 +127,18 @@ const ServiceBayManagementPage = () => {
     setDetailModalVisible(true);
   };
 
-  const handleStatusChange = (bay: ServiceBay, currentStatus: BayStatus) => {
+  const handleStatusChange = (bay: ServiceBay) => {
     setSelectedBay(bay);
     setStatusModalVisible(true);
   };
 
-  const handleDelete = (bay: ServiceBay) => {
-    showModal({
-      title: "Xác nhận xóa bệ dịch vụ",
-      content: `Bạn có chắc chắn muốn xóa bệ dịch vụ "${bay.bay_name}"?`,
-      onOk: async () => {
-        try {
-          await deleteServiceBay(bay.bay_id);
-          message.success("Xóa bệ dịch vụ thành công!");
-          refreshBays();
-        } catch (error: any) {
-          message.error(error.message || "Có lỗi xảy ra khi xóa bệ dịch vụ");
-        }
-      },
-    });
-  };
-
-  const handleModalSuccess = (bay: ServiceBay) => {
+  const handleModalSuccess = () => {
     setModalVisible(false);
     setEditData(null);
     refreshBays();
   };
 
-  const handleStatusModalSuccess = (bay: ServiceBay) => {
+  const handleStatusModalSuccess = () => {
     setStatusModalVisible(false);
     setSelectedBay(null);
     refreshBays();
@@ -190,10 +180,10 @@ const ServiceBayManagementPage = () => {
           <Col>
             <Title level={2} style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
               <ToolOutlined style={{ color: "#1890ff" }} />
-              Quản lý bệ dịch vụ
+              Quản lý khu vực dịch vụ
             </Title>
             <Text type="secondary">
-              Quản lý các bệ dịch vụ tại chi nhánh
+              Quản lý các khu vực dịch vụ tại chi nhánh
             </Text>
           </Col>
           <Col>
@@ -210,7 +200,7 @@ const ServiceBayManagementPage = () => {
                 icon={<PlusOutlined />}
                 onClick={handleAdd}
               >
-                Thêm bệ dịch vụ
+                Thêm khu vực dịch vụ
               </Button>
             </Space>
           </Col>
@@ -222,7 +212,7 @@ const ServiceBayManagementPage = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Tổng số bệ"
+              title="Tổng số khu vực"
               value={statistics.total}
               prefix={<ToolOutlined />}
               valueStyle={{ color: "#1890ff" }}
@@ -244,7 +234,7 @@ const ServiceBayManagementPage = () => {
             <Statistic
               title="Có sẵn"
               value={statistics.available}
-              prefix={<CarOutlined />}
+              prefix={<ToolOutlined />}
               valueStyle={{ color: "#13c2c2" }}
             />
           </Card>
@@ -271,6 +261,11 @@ const ServiceBayManagementPage = () => {
               onChange={setSelectedBranch}
               style={{ width: "100%" }}
               allowClear
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+              }
             >
               {branchOptions.map(option => (
                 <Option key={option.value} value={option.value}>
@@ -281,7 +276,7 @@ const ServiceBayManagementPage = () => {
           </Col>
           <Col xs={24} sm={12} lg={6}>
             <Select
-              placeholder="Chọn loại bệ"
+              placeholder="Chọn loại khu vực"
               value={selectedBayType}
               onChange={setSelectedBayType}
               style={{ width: "100%" }}
@@ -312,7 +307,7 @@ const ServiceBayManagementPage = () => {
           <Col xs={24} sm={12} lg={6}>
             <Space.Compact style={{ width: "100%" }}>
               <Search
-                placeholder="Tìm kiếm bệ dịch vụ..."
+                placeholder="Tìm kiếm khu vực dịch vụ..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 onSearch={setSearchText}
@@ -328,7 +323,27 @@ const ServiceBayManagementPage = () => {
           <Col>
             <Space>
               <Text type="secondary">
-                Hiển thị {bays.length} bệ dịch vụ
+                Hiển thị {bays.length} khu vực dịch vụ
+                {selectedBranch && (
+                  <span style={{ marginLeft: "8px", color: "#1890ff" }}>
+                    • Chi nhánh: {branches.find(b => b.branch_id === selectedBranch)?.branch_name || selectedBranch}
+                  </span>
+                )}
+                {selectedBayType && (
+                  <span style={{ marginLeft: "8px", color: "#52c41a" }}>
+                    • Loại: {BAY_TYPE_OPTIONS.find(bt => bt.value === selectedBayType)?.label || selectedBayType}
+                  </span>
+                )}
+                {selectedStatus && (
+                  <span style={{ marginLeft: "8px", color: "#faad14" }}>
+                    • Trạng thái: {BAY_STATUS_OPTIONS.find(bs => bs.value === selectedStatus)?.label || selectedStatus}
+                  </span>
+                )}
+                {searchText && (
+                  <span style={{ marginLeft: "8px", color: "#722ed1" }}>
+                    • Tìm kiếm: &quot;{searchText}&quot;
+                  </span>
+                )}
               </Text>
               {(selectedBranch || selectedBayType || selectedStatus || searchText) && (
                 <Button
@@ -340,7 +355,7 @@ const ServiceBayManagementPage = () => {
                 </Button>
               )}
             </Space>
-          </Col>
+              </Col>
         </Row>
       </Card>
 
@@ -352,7 +367,7 @@ const ServiceBayManagementPage = () => {
           onEdit={handleEdit}
           onView={handleView}
           onStatusChange={handleStatusChange}
-          emptyMessage="Không có bệ dịch vụ nào phù hợp với bộ lọc"
+          emptyMessage="Không có khu vực dịch vụ nào phù hợp với bộ lọc"
         />
       </Card>
 

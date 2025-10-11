@@ -92,6 +92,7 @@ const AdminHeader = () => {
       "draft-details": "Chi tiết hóa đơn tạm",
       returns: "Hoàn trả hàng",
       refunds: "Xử lý hoàn tiền",
+      bay: "Khu vực dịch vụ",
     };
 
     pathSegments.forEach((segment, index) => {

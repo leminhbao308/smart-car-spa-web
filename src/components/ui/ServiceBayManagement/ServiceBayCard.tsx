@@ -7,7 +7,6 @@ import {
   Space,
   Button,
   Tooltip,
-  Badge,
   Typography,
   Row,
   Col,
@@ -16,11 +15,6 @@ import {
 import {
   EditOutlined,
   EyeOutlined,
-  ToolOutlined,
-  CarOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
 import {
@@ -96,6 +90,7 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
 
   const availability = getAvailabilityStatus();
 
+
   return (
     <Card
       hoverable
@@ -105,8 +100,18 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
         borderRadius: "12px",
         border: `2px solid ${getStatusColor(bay.status)}20`,
         transition: "all 0.3s ease",
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "280px",
       }}
-      styles={{ body: { padding: "16px" } }}
+      styles={{ 
+        body: { 
+          padding: "16px", 
+          flex: 1, 
+          display: "flex", 
+          flexDirection: "column" 
+        } 
+      }}
       actions={[
         <Tooltip title="Xem chi tiết" key="view">
           <Button
@@ -135,52 +140,46 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
       ]}
     >
       {/* Header */}
-      <div style={{ marginBottom: "12px" }}>
-        <Row justify="space-between" align="top">
-          <Col flex="auto">
-            <Space direction="vertical" size="small" style={{ width: "100%" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ fontSize: "20px" }}>{typeInfo.icon}</span>
-                <Title level={5} style={{ margin: 0, flex: 1 }}>
-                  {bay.bay_name}
-                </Title>
-                <Badge
-                  status={availability.color as any}
-                  text={availability.text}
-                  style={{ fontSize: "12px" }}
-                />
-              </div>
-              {bay.bay_code && (
-                <Text type="secondary" style={{ fontSize: "12px" }}>
-                  Mã: {bay.bay_code}
-                </Text>
-              )}
-            </Space>
-          </Col>
-        </Row>
+      <div style={{ marginBottom: "16px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+          <span style={{ fontSize: "24px", marginTop: "2px" }}>{typeInfo.icon}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <Title 
+              level={4} 
+              style={{ 
+                margin: 0, 
+                marginBottom: "4px",
+                fontSize: "16px",
+                fontWeight: 600,
+                lineHeight: "1.2",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }}
+            >
+              {bay.bay_name}
+            </Title>
+            {bay.bay_code && (
+              <Text type="secondary" style={{ fontSize: "12px" }}>
+                Mã: {bay.bay_code}
+              </Text>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Type and Status */}
-      <div style={{ marginBottom: "12px" }}>
-        <Space wrap>
-          <Tag color={typeInfo.color} icon={<ToolOutlined />}>
-            {typeInfo.label}
+      {/* Status and Branch */}
+      <div style={{ marginBottom: "16px" }}>
+        <Space direction="vertical" size="small" style={{ width: "100%" }}>
+          <Tag color="green" style={{ fontSize: "12px", padding: "4px 8px" }}>
+            Hoạt động
           </Tag>
-          <Tag color={statusInfo.color}>
-            {statusInfo.label}
-          </Tag>
-        </Space>
-      </div>
-
-      {/* Branch Info */}
-      <div style={{ marginBottom: "12px" }}>
-        <Space>
-          <CarOutlined style={{ color: "#8c8c8c" }} />
           <Text type="secondary" style={{ fontSize: "12px" }}>
             {bay.branch_name}
           </Text>
         </Space>
       </div>
+
 
       {/* Statistics */}
       <Row gutter={8} style={{ marginBottom: "12px" }}>
@@ -208,54 +207,8 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
         </Col>
       </Row>
 
-      {/* Description */}
-      {bay.description && (
-        <div style={{ marginBottom: "12px" }}>
-          <Text
-            type="secondary"
-            style={{
-              fontSize: "12px",
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
-          >
-            {bay.description}
-          </Text>
-        </div>
-      )}
 
-      {/* Special Indicators */}
-      <div style={{ marginTop: "8px" }}>
-        <Space size="small">
-          {bay.is_wash_bay && (
-            <Tag color="blue" size="small">
-              🚿 Rửa xe
-            </Tag>
-          )}
-          {bay.is_repair_bay && (
-            <Tag color="green" size="small">
-              🔧 Sửa chữa
-            </Tag>
-          )}
-          {bay.is_lift_bay && (
-            <Tag color="purple" size="small">
-              ⬆️ Nâng xe
-            </Tag>
-          )}
-        </Space>
-      </div>
 
-      {/* Notes */}
-      {bay.notes && (
-        <div style={{ marginTop: "8px", padding: "8px", backgroundColor: "#f5f5f5", borderRadius: "4px" }}>
-          <Text type="secondary" style={{ fontSize: "11px" }}>
-            <ExclamationCircleOutlined style={{ marginRight: "4px" }} />
-            {bay.notes}
-          </Text>
-        </div>
-      )}
     </Card>
   );
 };

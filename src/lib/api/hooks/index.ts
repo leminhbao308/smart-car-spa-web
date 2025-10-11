@@ -38,10 +38,7 @@ export * from './usePricing';
 export * from './useSalesOrder';
 export * from './useWarehouseByBranch';
 export * from './usePurchaseOrder';
-export { 
-  useServiceBays,
-  convertToSelectOptions as convertServiceBaysToSelectOptions
-} from './useServiceBays';
+export * from './useServiceBays';
 export * from './usePromotions';
 
 // React Query specific exports

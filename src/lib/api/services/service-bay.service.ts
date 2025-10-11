@@ -1,4 +1,4 @@
-import api from "../axios";
+import apiClient from "../axios";
 import {
   ServiceBay,
   ServiceBayResponse,
@@ -12,13 +12,13 @@ import {
   BayStatus
 } from "../types/service-bay.types";
 
-export const serviceBayService = {
+export class ServiceBayService {
   /**
    * Get all service bays with pagination and filtering
    */
-  getAllServiceBays: async (
+  static async getAllServiceBays(
     params: ServiceBayFilterParam = {}
-  ): Promise<ServiceBayResponse> => {
+  ): Promise<ServiceBayResponse> {
     try {
       const queryParams = new URLSearchParams();
       
@@ -28,15 +28,25 @@ export const serviceBayService = {
       if (params.sort) queryParams.append("sort", params.sort);
       if (params.direction) queryParams.append("direction", params.direction);
       
-      // Add filter params
-      if (params.branch_id) queryParams.append("branch_id", params.branch_id);
-      if (params.bay_type) queryParams.append("bay_type", params.bay_type);
-      if (params.status) queryParams.append("status", params.status);
-      if (params.search) queryParams.append("search", params.search);
+      // Add filter params - using correct parameter names from backend
+      if (params.branch_id && params.branch_id.trim()) {
+        queryParams.append("branchId", params.branch_id.trim());
+      }
+      if (params.bay_type && params.bay_type.trim()) {
+        queryParams.append("bayType", params.bay_type.trim());
+      }
+      if (params.status && params.status.trim()) {
+        queryParams.append("status", params.status.trim());
+      }
+      if (params.search && params.search.trim()) {
+        queryParams.append("keyword", params.search.trim());
+      }
 
-      const response = await api.get(
-        `/service-bays/get-all?${queryParams.toString()}`
-      );
+      const url = `/service-bays/get-all?${queryParams.toString()}`;
+      console.log("ServiceBay API URL:", url);
+      console.log("Filter params:", params);
+      
+      const response = await apiClient.get(url);
 
       if (response.data.success && response.data.data) {
         return response.data;
@@ -58,82 +68,82 @@ export const serviceBayService = {
       }
       throw error;
     }
-  },
+  }
 
   /**
    * Get service bay by ID
    */
-  getServiceBayById: async (bayId: string): Promise<ServiceBay> => {
+  static async getServiceBayById(bayId: string): Promise<ServiceBay> {
     try {
-      const response = await api.get(`/service-bays/${bayId}`);
+      const response = await apiClient.get(`/service-bays/${bayId}`);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get service bay by ID error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Get service bays by branch
    */
-  getServiceBaysByBranch: async (branchId: string): Promise<ServiceBay[]> => {
+  static async getServiceBaysByBranch(branchId: string): Promise<ServiceBay[]> {
     try {
-      const response = await api.get(`/service-bays/branch/${branchId}`);
+      const response = await apiClient.get(`/service-bays/branch/${branchId}`);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get service bays by branch error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Get service bays by type
    */
-  getServiceBaysByType: async (bayType: BayType): Promise<ServiceBay[]> => {
+  static async getServiceBaysByType(bayType: BayType): Promise<ServiceBay[]> {
     try {
-      const response = await api.get(`/service-bays/type/${bayType}`);
+      const response = await apiClient.get(`/service-bays/type/${bayType}`);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get service bays by type error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Get active service bays
    */
-  getActiveServiceBays: async (branchId?: string): Promise<ServiceBay[]> => {
+  static async getActiveServiceBays(branchId?: string): Promise<ServiceBay[]> {
     try {
-      const params = branchId ? `?branch_id=${branchId}` : "";
-      const response = await api.get(`/service-bays/active${params}`);
+      const params = branchId ? `?branchId=${branchId}` : "";
+      const response = await apiClient.get(`/service-bays/active${params}`);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get active service bays error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Get available service bays in time range
    */
-  getAvailableServiceBays: async (
+  static async getAvailableServiceBays(
     branchId: string,
     startTime: string,
     endTime: string,
     bayType?: BayType
-  ): Promise<ServiceBay[]> => {
+  ): Promise<ServiceBay[]> {
     try {
       const queryParams = new URLSearchParams({
-        branch_id: branchId,
-        start_time: startTime,
-        end_time: endTime
+        branchId: branchId,
+        startTime: startTime,
+        endTime: endTime
       });
       
       if (bayType) {
-        queryParams.append("bay_type", bayType);
+        queryParams.append("bayType", bayType);
       }
 
-      const response = await api.get(
+      const response = await apiClient.get(
         `/service-bays/available?${queryParams.toString()}`
       );
       return response.data.data;
@@ -141,21 +151,21 @@ export const serviceBayService = {
       console.log("Get available service bays error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Get service bays dropdown
    */
-  getServiceBaysDropdown: async (
+  static async getServiceBaysDropdown(
     branchId?: string,
     bayType?: BayType
-  ): Promise<ServiceBayDropdownItem[]> => {
+  ): Promise<ServiceBayDropdownItem[]> {
     try {
       const queryParams = new URLSearchParams();
-      if (branchId) queryParams.append("branch_id", branchId);
-      if (bayType) queryParams.append("bay_type", bayType);
+      if (branchId) queryParams.append("branchId", branchId);
+      if (bayType) queryParams.append("bayType", bayType);
 
-      const response = await api.get(
+      const response = await apiClient.get(
         `/service-bays/dropdown?${queryParams.toString()}`
       );
       return response.data.data;
@@ -163,20 +173,20 @@ export const serviceBayService = {
       console.log("Get service bays dropdown error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Search service bays
    */
-  searchServiceBays: async (
+  static async searchServiceBays(
     keyword: string,
     branchId?: string
-  ): Promise<ServiceBay[]> => {
+  ): Promise<ServiceBay[]> {
     try {
       const queryParams = new URLSearchParams({ keyword });
-      if (branchId) queryParams.append("branch_id", branchId);
+      if (branchId) queryParams.append("branchId", branchId);
 
-      const response = await api.get(
+      const response = await apiClient.get(
         `/service-bays/search?${queryParams.toString()}`
       );
       return response.data.data;
@@ -184,62 +194,62 @@ export const serviceBayService = {
       console.log("Search service bays error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Create new service bay
    */
-  createServiceBay: async (data: CreateServiceBayRequest): Promise<ServiceBay> => {
+  static async createServiceBay(data: CreateServiceBayRequest): Promise<ServiceBay> {
     try {
-      const response = await api.post("/service-bays/create", data);
+      const response = await apiClient.post("/service-bays/create", data);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Create service bay error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Update service bay
    */
-  updateServiceBay: async (
+  static async updateServiceBay(
     bayId: string,
     data: UpdateServiceBayRequest
-  ): Promise<ServiceBay> => {
+  ): Promise<ServiceBay> {
     try {
-      const response = await api.post(`/service-bays/${bayId}/update`, data);
+      const response = await apiClient.post(`/service-bays/${bayId}/update`, data);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Update service bay error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Delete service bay
    */
-  deleteServiceBay: async (bayId: string): Promise<void> => {
+  static async deleteServiceBay(bayId: string): Promise<void> {
     try {
-      await api.post(`/service-bays/${bayId}/delete`);
+      await apiClient.post(`/service-bays/${bayId}/delete`);
     } catch (error: unknown) {
       console.log("Delete service bay error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Update service bay status
    */
-  updateServiceBayStatus: async (
+  static async updateServiceBayStatus(
     bayId: string,
     status: BayStatus,
     reason?: string
-  ): Promise<ServiceBay> => {
+  ): Promise<ServiceBay> {
     try {
       const queryParams = new URLSearchParams({ status });
       if (reason) queryParams.append("reason", reason);
 
-      const response = await api.post(
+      const response = await apiClient.post(
         `/service-bays/${bayId}/status?${queryParams.toString()}`
       );
       return response.data.data;
@@ -247,30 +257,30 @@ export const serviceBayService = {
       console.log("Update service bay status error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Activate service bay
    */
-  activateServiceBay: async (bayId: string): Promise<ServiceBay> => {
+  static async activateServiceBay(bayId: string): Promise<ServiceBay> {
     try {
-      const response = await api.post(`/service-bays/${bayId}/activate`);
+      const response = await apiClient.post(`/service-bays/${bayId}/activate`);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Activate service bay error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Deactivate service bay
    */
-  deactivateServiceBay: async (
+  static async deactivateServiceBay(
     bayId: string,
     reason: string
-  ): Promise<ServiceBay> => {
+  ): Promise<ServiceBay> {
     try {
-      const response = await api.post(
+      const response = await apiClient.post(
         `/service-bays/${bayId}/deactivate?reason=${encodeURIComponent(reason)}`
       );
       return response.data.data;
@@ -278,53 +288,53 @@ export const serviceBayService = {
       console.log("Deactivate service bay error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Check bay availability
    */
-  checkBayAvailability: async (
+  static async checkBayAvailability(
     bayId: string,
     data: BayAvailabilityRequest
-  ): Promise<boolean> => {
+  ): Promise<boolean> {
     try {
-      const response = await api.post(`/service-bays/${bayId}/availability`, data);
+      const response = await apiClient.post(`/service-bays/${bayId}/availability`, data);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Check bay availability error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Get bay statistics
    */
-  getBayStatistics: async (bayId: string): Promise<ServiceBayStatistics> => {
+  static async getBayStatistics(bayId: string): Promise<ServiceBayStatistics> {
     try {
-      const response = await api.get(`/service-bays/${bayId}/statistics`);
+      const response = await apiClient.get(`/service-bays/${bayId}/statistics`);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get bay statistics error:", error);
       throw error;
     }
-  },
+  }
 
   /**
    * Validate bay name
    */
-  validateBayName: async (
+  static async validateBayName(
     branchId: string,
     bayName: string,
     bayId?: string
-  ): Promise<boolean> => {
+  ): Promise<boolean> {
     try {
       const queryParams = new URLSearchParams({
-        branch_id: branchId,
-        bay_name: bayName
+        branchId: branchId,
+        bayName: bayName
       });
-      if (bayId) queryParams.append("bay_id", bayId);
+      if (bayId) queryParams.append("bayId", bayId);
 
-      const response = await api.get(
+      const response = await apiClient.get(
         `/service-bays/validate-name?${queryParams.toString()}`
       );
       return response.data.data;
@@ -333,4 +343,17 @@ export const serviceBayService = {
       throw error;
     }
   }
-};
+
+  /**
+   * Get bay bookings
+   */
+  static async getBayBookings(bayId: string): Promise<unknown[]> {
+    try {
+      const response = await apiClient.get(`/service-bays/${bayId}/bookings`);
+      return response.data.data;
+    } catch (error: unknown) {
+      console.log("Get bay bookings error:", error);
+      throw error;
+    }
+  }
+}

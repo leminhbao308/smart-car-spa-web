@@ -28,6 +28,7 @@ export * from './pricing.service';
 export * from './sales-order.service';
 export * from './purchase-order.service';
 export * from './service-bay.service';
+export { ServiceBayService } from './service-bay.service';
 export * from './purchase-order.service';
 export * from './promotion.service';
 export * from './booking.service';

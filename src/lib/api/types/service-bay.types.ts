@@ -94,11 +94,11 @@ export interface CreateServiceBayRequest {
 }
 
 export interface UpdateServiceBayRequest {
-  bay_name?: string;
+  bay_name: string;
   bay_code?: string;
-  bay_type?: BayType;
+  bay_type: BayType;
   description?: string;
-  capacity?: number;
+  capacity: number;
   display_order?: number;
   notes?: string;
 }
@@ -112,6 +112,7 @@ export interface ServiceBayFilterParam {
   bay_type?: BayType;
   status?: BayStatus;
   search?: string;
+  isActive?: boolean;
 }
 
 export interface BayAvailabilityRequest {
@@ -132,14 +133,14 @@ export interface ServiceBayDropdownItem {
 
 // Constants for UI
 export const BAY_TYPE_OPTIONS = [
-  { value: BayType.WASH_BAY, label: "Bệ rửa xe", color: "#1890ff", icon: "🚿" },
-  { value: BayType.REPAIR_BAY, label: "Bệ sửa chữa", color: "#52c41a", icon: "🔧" },
-  { value: BayType.LIFT_BAY, label: "Bệ nâng xe", color: "#722ed1", icon: "⬆️" },
-  { value: BayType.INSPECTION_BAY, label: "Bệ kiểm tra", color: "#fa8c16", icon: "🔍" },
-  { value: BayType.PAINT_BAY, label: "Bệ sơn xe", color: "#eb2f96", icon: "🎨" },
-  { value: BayType.DETAILING_BAY, label: "Bệ chăm sóc chi tiết", color: "#13c2c2", icon: "✨" },
-  { value: BayType.TIRE_BAY, label: "Bệ thay lốp", color: "#faad14", icon: "🛞" },
-  { value: BayType.GENERAL_BAY, label: "Bệ tổng hợp", color: "#8c8c8c", icon: "🔧" }
+  { value: BayType.WASH_BAY, label: "Khu vực rửa xe", color: "#1890ff", icon: "🚿" },
+  { value: BayType.REPAIR_BAY, label: "Khu vực sửa chữa", color: "#52c41a", icon: "🔧" },
+  { value: BayType.LIFT_BAY, label: "Khu vực nâng xe", color: "#722ed1", icon: "⬆️" },
+  { value: BayType.INSPECTION_BAY, label: "Khu vực kiểm tra", color: "#fa8c16", icon: "🔍" },
+  { value: BayType.PAINT_BAY, label: "Khu vực sơn xe", color: "#eb2f96", icon: "🎨" },
+  { value: BayType.DETAILING_BAY, label: "Khu vực chăm sóc chi tiết", color: "#13c2c2", icon: "✨" },
+  { value: BayType.TIRE_BAY, label: "Khu vực thay lốp", color: "#faad14", icon: "🛞" },
+  { value: BayType.GENERAL_BAY, label: "Khu vực tổng hợp", color: "#8c8c8c", icon: "🔧" }
 ];
 
 export const BAY_STATUS_OPTIONS = [

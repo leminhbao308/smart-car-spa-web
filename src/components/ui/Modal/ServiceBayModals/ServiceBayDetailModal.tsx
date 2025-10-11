@@ -86,7 +86,7 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <EyeOutlined style={{ color: "#1890ff" }} />
-          Chi tiết bệ dịch vụ
+          Chi tiết khu vực dịch vụ
         </div>
       }
       open={visible}
@@ -98,7 +98,7 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
           Đóng
         </Button>
       ]}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
         {/* Basic Information */}
@@ -113,7 +113,7 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
           style={{ marginBottom: 16 }}
         >
           <Descriptions column={2} size="small">
-            <Descriptions.Item label="Mã bệ dịch vụ">
+            <Descriptions.Item label="Mã khu vực dịch vụ">
               <Text code>{data.bay_code || "Chưa có mã"}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="Chi nhánh">
@@ -219,7 +219,7 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
           ) : (
             <Alert
               message="Không có dữ liệu thống kê"
-              description="Chưa có dữ liệu thống kê cho bệ dịch vụ này."
+              description="Chưa có dữ liệu thống kê cho khu vực dịch vụ này."
               type="info"
               showIcon
             />

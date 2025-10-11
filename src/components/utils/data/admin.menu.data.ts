@@ -221,7 +221,7 @@ export const adminMenuItems: MenuItem[] = [
       },
       {
         key: "service-bays",
-        label: "Bệ dịch vụ",
+        label: "Khu vực dịch vụ",
         icon: React.createElement(ToolOutlined),
       },
     ],
