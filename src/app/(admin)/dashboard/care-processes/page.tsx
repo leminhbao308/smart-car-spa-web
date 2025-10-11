@@ -1,38 +1,57 @@
 "use client";
 import React, { useState } from "react";
-import { Tag, Typography, Card, Row, Col, Statistic, Progress, message } from "antd";
 import {
-  EditOutlined,
+  Tag,
+  Typography,
+  Card,
+  Row,
+  Col,
+  Statistic,
+  Progress,
+  message,
+} from "antd";
+import {
   DeleteOutlined,
-  EyeOutlined,
   ClockCircleOutlined,
   CarOutlined,
   SettingOutlined,
   CheckCircleOutlined,
-  PlayCircleOutlined,
   PauseCircleOutlined,
 } from "@ant-design/icons";
-import AdminTable from "@/components/ui/Table/AdminTable";
+import AdminTable, { AdminTableAction } from "@/components/ui/Table/AdminTable";
 import CareProcessModal from "@/components/ui/Modal/CarProcessModal/CareProcessModal";
 import CareProcessDetailModal from "@/components/ui/Modal/CarProcessModal/CareProcessDetailModal";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
-import { useServiceProcesses, useCreateServiceProcess, useUpdateServiceProcess, useDeleteServiceProcess } from "@/lib/api/hooks";
-import { ServiceProcessInfoDto, CreateServiceProcessRequest, UpdateServiceProcessRequest } from "@/lib/api/types";
+import {
+  useServiceProcesses,
+  useCreateServiceProcess,
+  useUpdateServiceProcess,
+} from "@/lib/api/hooks";
+import {
+  ServiceProcessInfoDto,
+  CreateServiceProcessRequest,
+  UpdateServiceProcessRequest,
+} from "@/lib/api/types";
 
 const { Text } = Typography;
 
 const CareProcessesPage = () => {
   // API hooks
-  const { data: serviceProcessesData, isLoading, refetch } = useServiceProcesses();
+  const {
+    data: serviceProcessesData,
+    isLoading,
+    refetch,
+  } = useServiceProcesses();
   const createServiceProcessMutation = useCreateServiceProcess();
   const updateServiceProcessMutation = useUpdateServiceProcess();
-  const deleteServiceProcessMutation = useDeleteServiceProcess();
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [editingProcess, setEditingProcess] = useState<ServiceProcessInfoDto | null>(null);
-  const [viewingProcess, setViewingProcess] = useState<ServiceProcessInfoDto | null>(null);
+  const [editingProcess, setEditingProcess] =
+    useState<ServiceProcessInfoDto | null>(null);
+  const [viewingProcess, setViewingProcess] =
+    useState<ServiceProcessInfoDto | null>(null);
   const { showModal } = useConfirmationModalContext();
 
   const columns = [
@@ -59,9 +78,7 @@ const CareProcessesPage = () => {
       dataIndex: "code",
       key: "code",
       width: 120,
-      render: (code: string) => (
-        <Tag color="blue">{code}</Tag>
-      ),
+      render: (code: string) => <Tag color="blue">{code}</Tag>,
     },
     {
       title: "Thời gian",
@@ -114,7 +131,7 @@ const CareProcessesPage = () => {
       width: 150,
       render: (isActive: boolean, record: ServiceProcessInfoDto) => (
         <div style={{ textAlign: "center" }}>
-          {record.is_deleted ? (
+          {record.audit?.is_deleted ? (
             <Tag color="red" icon={<DeleteOutlined />}>
               Đã xóa
             </Tag>
@@ -132,96 +149,33 @@ const CareProcessesPage = () => {
     },
   ];
 
-  const actions = [
+  // Actions cho AdminTable
+  const actions: AdminTableAction[] = [
     {
-      key: "view",
-      label: "Xem chi tiết",
-      icon: <EyeOutlined />,
+      key: "toggle-status",
+      label: (record: ServiceProcessInfoDto) =>
+        record.isActive ? "Tạm dừng" : "Kích hoạt",
+      type: "default" as const,
+      danger: (record: ServiceProcessInfoDto) => record.isActive,
+      condition: (record: ServiceProcessInfoDto) => !record.audit?.is_deleted,
       onClick: (record: ServiceProcessInfoDto) => {
-        setViewingProcess(record);
-        setDetailModalOpen(true);
-      },
-    },
-    {
-      key: "edit",
-      label: "Chỉnh sửa",
-      icon: <EditOutlined />,
-      condition: (record: ServiceProcessInfoDto) => !record.is_deleted,
-      onClick: (record: ServiceProcessInfoDto) => {
-        setEditingProcess(record);
-        setModalOpen(true);
-      },
-    },
-    {
-      key: "activate",
-      label: "Kích hoạt",
-      icon: <PlayCircleOutlined />,
-      condition: (record: ServiceProcessInfoDto) =>
-        !record.isActive && !record.is_deleted,
-      onClick: (record: ServiceProcessInfoDto) => {
+        const isActivating = !record.isActive;
         showModal({
-          title: "Xác nhận kích hoạt",
-          content: `Bạn có chắc chắn muốn kích hoạt quy trình "${record.name}"?`,
-          type: "success",
+          title: isActivating ? "Xác nhận kích hoạt" : "Xác nhận tạm dừng",
+          content: isActivating 
+            ? `Bạn có chắc chắn muốn kích hoạt quy trình "${record.name}"?`
+            : `Bạn có chắc chắn muốn tạm dừng quy trình "${record.name}"? Quy trình sẽ được chuyển sang trạng thái tạm dừng.`,
+          type: isActivating ? "success" : "warning",
           onConfirm: async () => {
             try {
               await updateServiceProcessMutation.mutateAsync({
                 serviceProcessId: record.id,
-                data: { isActive: true }
+                data: { isActive: isActivating },
               });
-              message.success("Kích hoạt quy trình thành công!");
+              message.success(isActivating ? "Kích hoạt quy trình thành công!" : "Tạm dừng quy trình thành công!");
               refetch();
             } catch {
-              message.error("Có lỗi xảy ra khi kích hoạt quy trình");
-            }
-          },
-        });
-      },
-    },
-    {
-      key: "pause",
-      label: "Tạm dừng",
-      icon: <PauseCircleOutlined />,
-      danger: true,
-      condition: (record: ServiceProcessInfoDto) => record.isActive && !record.is_deleted,
-      onClick: (record: ServiceProcessInfoDto) => {
-        showModal({
-          title: "Xác nhận tạm dừng",
-          content: `Bạn có chắc chắn muốn tạm dừng quy trình "${record.name}"? Quy trình sẽ được chuyển sang trạng thái tạm dừng.`,
-          type: "warning",
-          onConfirm: async () => {
-            try {
-              await updateServiceProcessMutation.mutateAsync({
-                serviceProcessId: record.id,
-                data: { isActive: false }
-              });
-              message.success("Tạm dừng quy trình thành công!");
-              refetch();
-            } catch {
-              message.error("Có lỗi xảy ra khi tạm dừng quy trình");
-            }
-          },
-        });
-      },
-    },
-    {
-      key: "delete",
-      label: "Xóa",
-      icon: <DeleteOutlined />,
-      danger: true,
-      condition: (record: ServiceProcessInfoDto) => !record.is_deleted,
-      onClick: (record: ServiceProcessInfoDto) => {
-        showModal({
-          title: "Xác nhận xóa quy trình",
-          content: `Bạn có chắc chắn muốn xóa quy trình "${record.name}"? Hành động này không thể hoàn tác.`,
-          type: "error",
-          onConfirm: async () => {
-            try {
-              await deleteServiceProcessMutation.mutateAsync(record.id);
-              message.success("Xóa quy trình thành công!");
-              refetch();
-            } catch {
-              message.error("Có lỗi xảy ra khi xóa quy trình");
+              message.error(isActivating ? "Có lỗi xảy ra khi kích hoạt quy trình" : "Có lỗi xảy ra khi tạm dừng quy trình");
             }
           },
         });
@@ -241,12 +195,14 @@ const CareProcessesPage = () => {
         // Cập nhật quy trình
         await updateServiceProcessMutation.mutateAsync({
           serviceProcessId: editingProcess.id,
-          data: processData as UpdateServiceProcessRequest
+          data: processData as UpdateServiceProcessRequest,
         });
         message.success("Cập nhật quy trình thành công!");
       } else {
         // Thêm quy trình mới
-        await createServiceProcessMutation.mutateAsync(processData as CreateServiceProcessRequest);
+        await createServiceProcessMutation.mutateAsync(
+          processData as CreateServiceProcessRequest
+        );
         message.success("Tạo quy trình mới thành công!");
       }
       setModalOpen(false);
@@ -262,18 +218,26 @@ const CareProcessesPage = () => {
     setEditingProcess(null);
   };
 
+  const handleEdit = (record: ServiceProcessInfoDto) => {
+    setEditingProcess(record);
+    setModalOpen(true);
+  };
+
+  const handleView = (record: ServiceProcessInfoDto) => {
+    setViewingProcess(record);
+    setDetailModalOpen(true);
+  };
+
   // Thống kê tổng quan
   const data = serviceProcessesData || [];
   const totalProcesses = data.length;
   const activeProcesses = data.filter(
-    (item) => item.isActive && !item.is_deleted
+    (item) => item.isActive && !item.audit?.is_deleted
   ).length;
   const inactiveProcesses = data.filter(
-    (item) => !item.isActive && !item.is_deleted
+    (item) => !item.isActive && !item.audit?.is_deleted
   ).length;
-  const deletedProcesses = data.filter(
-    (item) => item.is_deleted
-  ).length;
+  const deletedProcesses = data.filter((item) => item.audit?.is_deleted).length;
   const totalSteps = data.reduce((sum, item) => sum + (item.stepCount || 0), 0);
   const averageDuration =
     data.length > 0
@@ -375,12 +339,14 @@ const CareProcessesPage = () => {
         dataSource={data}
         columns={columns}
         loading={isLoading}
-        actions={actions}
         onAdd={handleAddNew}
+        onEdit={handleEdit}
+        onView={handleView}
         addButtonText="Thêm quy trình mới"
         searchable={true}
         searchPlaceholder="Tìm kiếm quy trình theo tên, mã..."
         searchFields={["name", "code", "description"]}
+        actions={actions}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,

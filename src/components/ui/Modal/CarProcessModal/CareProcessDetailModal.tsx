@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Modal,
   Card,
@@ -11,6 +11,8 @@ import {
   Space,
   Button,
   Table,
+  Select,
+  message,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -22,8 +24,12 @@ import {
   ShoppingCartOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
+import { PricingService } from "@/lib/api/services/pricing.service";
+import { PriceBook } from "@/lib/api/types/price-book.types";
+import { ServicePricingDto } from "@/lib/api/types/service.types";
 
 const { Text, Title } = Typography;
+const { Option } = Select;
 
 interface CareProcessDetailModalProps {
   open: boolean;
@@ -39,9 +45,72 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [selectedStepProducts, setSelectedStepProducts] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [selectedStepName, setSelectedStepName] = useState("");
+  const [priceBooks, setPriceBooks] = useState<PriceBook[]>([]);
+  const [selectedPriceBookId, setSelectedPriceBookId] = useState<string>("");
+  const [pricingData, setPricingData] = useState<ServicePricingDto | null>(
+    null
+  );
+  const [loadingPricing, setLoadingPricing] = useState(false);
 
-  const handleViewProducts = (stepProducts: unknown[], stepName: string) => {
-    setSelectedStepProducts(stepProducts);
+  // Load price books
+  const loadPriceBooks = useCallback(async () => {
+    try {
+      const books = await PricingService.getAllPriceBooks();
+      setPriceBooks(books);
+      if (books.length > 0) {
+        setSelectedPriceBookId(books[0].id);
+      }
+    } catch (error) {
+      console.error("Error loading price books:", error);
+      message.error("Không thể tải danh sách bảng giá");
+    }
+  }, []);
+
+  // Load pricing data
+  const loadPricingData = useCallback(async () => {
+    if (!process?.serviceId || !selectedPriceBookId) return;
+
+    setLoadingPricing(true);
+    try {
+      const pricing = await PricingService.getServicePricing(
+        process.serviceId,
+        selectedPriceBookId
+      );
+      setPricingData(pricing);
+    } catch (error) {
+      console.error("Error loading pricing data:", error);
+      message.error("Không thể tải thông tin giá");
+    } finally {
+      setLoadingPricing(false);
+    }
+  }, [process?.serviceId, selectedPriceBookId]);
+
+  // Load data when modal opens
+  useEffect(() => {
+    if (open) {
+      loadPriceBooks();
+    }
+  }, [open, loadPriceBooks]);
+
+  // Load pricing data when price book changes
+  useEffect(() => {
+    if (selectedPriceBookId && process?.serviceId) {
+      loadPricingData();
+    }
+  }, [selectedPriceBookId, process?.serviceId, loadPricingData]);
+
+  const handleViewProducts = (
+    stepProducts: unknown[],
+    stepName: string,
+    stepId?: string
+  ) => {
+    // Thêm stepId vào mỗi product để dễ dàng tìm pricing data
+    const productsWithStepId = (stepProducts as any[]).map((product) => ({
+      // eslint-disable-line @typescript-eslint/no-explicit-any
+      ...product,
+      stepId: stepId || product.stepId,
+    }));
+    setSelectedStepProducts(productsWithStepId);
     setSelectedStepName(stepName);
     setProductModalOpen(true);
   };
@@ -53,7 +122,26 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
     }).format(amount);
   };
 
+  // Helper function to get pricing data for a specific step
+  const getStepPricingData = (stepId: string) => {
+    if (!pricingData?.processSteps) return null;
+    return pricingData.processSteps.find((step) => step.stepId === stepId);
+  };
+
+  // Helper function to get pricing data for a specific product
+  const getProductPricingData = (stepId: string, productId: string) => {
+    const stepPricing = getStepPricingData(stepId);
+    if (!stepPricing?.products) return null;
+    return stepPricing.products.find(
+      (product) => product.productId === productId
+    );
+  };
+
   if (!process) return null;
+
+  // Debug: Log process data to check estimatedDuration
+  console.log("Process data:", process);
+  console.log("Estimated duration:", process.estimatedDuration);
 
   return (
     <Modal
@@ -116,7 +204,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
             <Card size="small" style={{ textAlign: "center" }}>
               <Statistic
                 title="Thời gian ước tính"
-                value={process.estimatedDuration || 0}
+                value={process.estimatedDuration ?? 0}
                 suffix="phút"
                 prefix={<ClockCircleOutlined />}
                 valueStyle={{ color: "#52c41a", fontSize: 20 }}
@@ -188,612 +276,671 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
           </Descriptions>
         </Card>
 
-        {/* Process Timeline */}
+        {/* Process Timeline - Vertical with Split Cards */}
         <Card title="Quy trình thực hiện" style={{ marginBottom: 16 }}>
-          <div style={{ position: "relative" }}>
+          <div style={{ position: "relative", paddingLeft: 40 }}>
             {(process.processSteps || process.steps || []).map(
               (
                 step: any, // eslint-disable-line @typescript-eslint/no-explicit-any
                 index: number,
                 array: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
               ) => (
-                <div key={step.id} style={{ position: "relative" }}>
+                <div
+                  key={step.id}
+                  style={{ position: "relative", marginBottom: 24 }}
+                >
                   {/* Timeline Line */}
                   {index < array.length - 1 && (
                     <div
                       style={{
                         position: "absolute",
-                        left: 24,
-                        top: 60,
-                        width: 2,
-                        height: "calc(100% - 40px)",
+                        left: -20,
+                        top: 50,
+                        width: 3,
+                        height: "calc(100% + 24px)",
                         backgroundColor: "#d9d9d9",
                         zIndex: 1,
                       }}
                     />
                   )}
 
-                  {/* Step Card */}
+                  {/* Timeline Node */}
                   <div
                     style={{
+                      position: "absolute",
+                      left: -40,
+                      top: -5,
+                      width: 50,
+                      height: 50,
+                      borderRadius: "50%",
+                      backgroundColor: index % 2 === 0 ? "#1890ff" : "#52c41a",
+                      color: "white",
                       display: "flex",
-                      marginBottom: index < array.length - 1 ? 32 : 0,
-                      position: "relative",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 18,
+                      fontWeight: "bold",
+                      border: "4px solid white",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
                       zIndex: 2,
                     }}
                   >
-                    {/* Timeline Node */}
-                    <div
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: "50%",
-                        backgroundColor: "#1890ff",
-                        color: "white",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 16,
-                        fontWeight: "bold",
-                        marginRight: 20,
-                        border: "4px solid white",
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {step.stepOrder || step.order || index + 1}
-                    </div>
+                    {step.stepOrder || step.order || index + 1}
+                  </div>
 
-                    {/* Step Content */}
-                    <div
-                      style={{
-                        flex: 1,
-                        backgroundColor: "white",
-                        border: "1px solid #e8e8e8",
-                        borderRadius: 12,
-                        padding: 20,
-                        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                        transition: "all 0.3s ease",
-                      }}
-                    >
-                      {/* Step Header */}
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          marginBottom: 16,
-                          paddingBottom: 12,
-                          borderBottom: "2px solid #f0f0f0",
-                        }}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <Text
-                            strong
-                            style={{
-                              fontSize: 18,
-                              color: "#1890ff",
-                              display: "block",
-                              marginBottom: 4,
-                            }}
-                          >
-                            {step.name}
-                          </Text>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 16,
-                            }}
-                          >
+                  {/* Frame bên ngoài - Bao bọc cả 2 card */}
+                  <div
+                    style={{
+                      backgroundColor: "#fafafa",
+                      border: "1px solid #e8e8e8",
+                      borderRadius: 12,
+                      padding: 16,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                      marginLeft: 0,
+                    }}
+                  >
+                    {/* Two Separate Cards Layout */}
+                    <Row gutter={[16, 16]}>
+                      {/* Card 1 - Thông tin step */}
+                      <Col span={16}>
+                        <div
+                          style={{
+                            backgroundColor: "white",
+                            border: "1px solid #e8e8e8",
+                            borderRadius: 8,
+                            padding: 20,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                            minHeight: 200,
+                          }}
+                        >
+                          {/* Tên step */}
+                          <div style={{ marginBottom: 12 }}>
+                            <Text
+                              strong
+                              style={{
+                                fontSize: 18,
+                                color: index % 2 === 0 ? "#1890ff" : "#52c41a",
+                                display: "block",
+                              }}
+                            >
+                              {step.name}
+                            </Text>
+                          </div>
+
+                          {/* Thời gian và trạng thái */}
+                          <div style={{ marginBottom: 16 }}>
                             <div
                               style={{
                                 display: "flex",
                                 alignItems: "center",
-                                fontSize: 13,
-                                color: "#8c8c8c",
+                                gap: 16,
+                                marginBottom: 8,
                               }}
                             >
-                              <ClockCircleOutlined style={{ marginRight: 4 }} />
-                              {step.estimatedTime || 0}{" "}
-                              phút
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  fontSize: 14,
+                                  color: "#8c8c8c",
+                                }}
+                              >
+                                <ClockCircleOutlined
+                                  style={{ marginRight: 4 }}
+                                />
+                                {step.estimatedTime || 0} phút
+                              </div>
+                              {step.isRequired !== false && (
+                                <Tag color="red">Bắt buộc</Tag>
+                              )}
                             </div>
-                            {step.isRequired !== false && (
-                              <Tag color="red">Bắt buộc</Tag>
-                            )}
                           </div>
-                        </div>
-                        <Tag
-                          color="blue"
-                          style={{ fontSize: 12, padding: "4px 8px" }}
-                        >
-                          Bước {step.stepOrder || index + 1}
-                        </Tag>
-                      </div>
 
-                      {/* Step Description */}
-                      <div style={{ marginBottom: 16 }}>
-                        <Text
+                          {/* Mô tả chi tiết */}
+                          {step.description && (
+                            <div>
+                              <Text
+                                style={{
+                                  fontSize: 16,
+                                  lineHeight: 1.6,
+                                  color: "#262626",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {step.description}
+                              </Text>
+                            </div>
+                          )}
+
+                          {/* Step Details - Compact Layout */}
+                          <Row gutter={[8, 8]}>
+                            {/* Dụng cụ cần thiết */}
+                            {(step.requiredTools || []).length > 0 && (
+                              <Col span={12}>
+                                <div
+                                  style={{
+                                    backgroundColor: "#f6ffed",
+                                    border: "1px solid #b7eb8f",
+                                    borderRadius: 6,
+                                    padding: 8,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: "bold",
+                                      color: "#52c41a",
+                                      marginBottom: 4,
+                                    }}
+                                  >
+                                    🔧 Dụng cụ
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      gap: 2,
+                                    }}
+                                  >
+                                    {(step.requiredTools || [])
+                                      .slice(0, 3)
+                                      .map((tool: string, idx: number) => (
+                                        <Tag
+                                          key={idx}
+                                          style={{
+                                            backgroundColor: "#f6ffed",
+                                            border: "1px solid #b7eb8f",
+                                            color: "#52c41a",
+                                            fontSize: 10,
+                                            margin: 0,
+                                            padding: "1px 4px",
+                                          }}
+                                        >
+                                          {tool}
+                                        </Tag>
+                                      ))}
+                                    {(step.requiredTools || []).length > 3 && (
+                                      <Tag
+                                        style={{
+                                          fontSize: 10,
+                                          padding: "1px 4px",
+                                        }}
+                                      >
+                                        +{(step.requiredTools || []).length - 3}
+                                      </Tag>
+                                    )}
+                                  </div>
+                                </div>
+                              </Col>
+                            )}
+
+                            {/* Vật liệu cần thiết */}
+                            {(step.requiredMaterials || []).length > 0 && (
+                              <Col span={12}>
+                                <div
+                                  style={{
+                                    backgroundColor: "#e6f7ff",
+                                    border: "1px solid #91d5ff",
+                                    borderRadius: 6,
+                                    padding: 8,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: "bold",
+                                      color: "#1890ff",
+                                      marginBottom: 4,
+                                    }}
+                                  >
+                                    🧱 Vật liệu
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      gap: 2,
+                                    }}
+                                  >
+                                    {(step.requiredMaterials || [])
+                                      .slice(0, 3)
+                                      .map((material: string, idx: number) => (
+                                        <Tag
+                                          key={idx}
+                                          style={{
+                                            backgroundColor: "#e6f7ff",
+                                            border: "1px solid #91d5ff",
+                                            color: "#1890ff",
+                                            fontSize: 10,
+                                            margin: 0,
+                                            padding: "1px 4px",
+                                          }}
+                                        >
+                                          {material}
+                                        </Tag>
+                                      ))}
+                                    {(step.requiredMaterials || []).length >
+                                      3 && (
+                                      <Tag
+                                        style={{
+                                          fontSize: 10,
+                                          padding: "1px 4px",
+                                        }}
+                                      >
+                                        +
+                                        {(step.requiredMaterials || []).length -
+                                          3}
+                                      </Tag>
+                                    )}
+                                  </div>
+                                </div>
+                              </Col>
+                            )}
+
+                            {/* Hướng dẫn thực hiện */}
+                            {(step.instructions || []).length > 0 && (
+                              <Col span={24}>
+                                <div
+                                  style={{
+                                    backgroundColor: "#f9f0ff",
+                                    border: "1px solid #d3adf7",
+                                    borderRadius: 6,
+                                    padding: 8,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: "bold",
+                                      color: "#722ed1",
+                                      marginBottom: 4,
+                                    }}
+                                  >
+                                    📋 Hướng dẫn
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: 2,
+                                    }}
+                                  >
+                                    {(step.instructions || [])
+                                      .slice(0, 2)
+                                      .map(
+                                        (instruction: string, idx: number) => (
+                                          <div
+                                            key={idx}
+                                            style={{
+                                              display: "flex",
+                                              alignItems: "flex-start",
+                                              fontSize: 10,
+                                              padding: 4,
+                                              backgroundColor: "white",
+                                              borderRadius: 4,
+                                              border: "1px solid #d3adf7",
+                                            }}
+                                          >
+                                            <div
+                                              style={{
+                                                width: 16,
+                                                height: 16,
+                                                borderRadius: "50%",
+                                                backgroundColor: "#722ed1",
+                                                color: "white",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                fontSize: 8,
+                                                fontWeight: "bold",
+                                                marginRight: 6,
+                                                flexShrink: 0,
+                                              }}
+                                            >
+                                              {idx + 1}
+                                            </div>
+                                            <Text
+                                              style={{
+                                                fontSize: 10,
+                                                lineHeight: 1.3,
+                                              }}
+                                            >
+                                              {instruction}
+                                            </Text>
+                                          </div>
+                                        )
+                                      )}
+                                    {(step.instructions || []).length > 2 && (
+                                      <div
+                                        style={{
+                                          fontSize: 10,
+                                          color: "#666",
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        +{(step.instructions || []).length - 2}{" "}
+                                        hướng dẫn khác
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </Col>
+                            )}
+
+                            {/* Kiểm tra chất lượng */}
+                            {(step.qualityChecklist || []).length > 0 && (
+                              <Col span={12}>
+                                <div
+                                  style={{
+                                    backgroundColor: "#fff7e6",
+                                    border: "1px solid #ffd591",
+                                    borderRadius: 6,
+                                    padding: 8,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: "bold",
+                                      color: "#fa8c16",
+                                      marginBottom: 4,
+                                    }}
+                                  >
+                                    ✅ Kiểm tra
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: 2,
+                                    }}
+                                  >
+                                    {(step.qualityChecklist || [])
+                                      .slice(0, 2)
+                                      .map((item: string, idx: number) => (
+                                        <div
+                                          key={idx}
+                                          style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            fontSize: 10,
+                                            padding: 3,
+                                            backgroundColor: "white",
+                                            borderRadius: 3,
+                                            border: "1px solid #ffd591",
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              width: 12,
+                                              height: 12,
+                                              borderRadius: "50%",
+                                              backgroundColor: "#fa8c16",
+                                              color: "white",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              fontSize: 8,
+                                              marginRight: 6,
+                                              flexShrink: 0,
+                                            }}
+                                          >
+                                            ✓
+                                          </div>
+                                          <Text style={{ fontSize: 10 }}>
+                                            {item}
+                                          </Text>
+                                        </div>
+                                      ))}
+                                    {(step.qualityChecklist || []).length >
+                                      2 && (
+                                      <div
+                                        style={{
+                                          fontSize: 9,
+                                          color: "#666",
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        +
+                                        {(step.qualityChecklist || []).length -
+                                          2}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </Col>
+                            )}
+
+                            {/* Lưu ý an toàn */}
+                            {(step.safetyNotes || []).length > 0 && (
+                              <Col span={12}>
+                                <div
+                                  style={{
+                                    backgroundColor: "#fff2f0",
+                                    border: "1px solid #ffccc7",
+                                    borderRadius: 6,
+                                    padding: 8,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      fontWeight: "bold",
+                                      color: "#f5222d",
+                                      marginBottom: 4,
+                                    }}
+                                  >
+                                    ⚠️ An toàn
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: 2,
+                                    }}
+                                  >
+                                    {(step.safetyNotes || [])
+                                      .slice(0, 2)
+                                      .map((note: string, idx: number) => (
+                                        <div
+                                          key={idx}
+                                          style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            fontSize: 10,
+                                            padding: 3,
+                                            backgroundColor: "white",
+                                            borderRadius: 3,
+                                            border: "1px solid #ffccc7",
+                                          }}
+                                        >
+                                          <div
+                                            style={{
+                                              width: 12,
+                                              height: 12,
+                                              borderRadius: "50%",
+                                              backgroundColor: "#f5222d",
+                                              color: "white",
+                                              display: "flex",
+                                              alignItems: "center",
+                                              justifyContent: "center",
+                                              fontSize: 8,
+                                              marginRight: 6,
+                                              flexShrink: 0,
+                                            }}
+                                          >
+                                            ⚠
+                                          </div>
+                                          <Text style={{ fontSize: 10 }}>
+                                            {note}
+                                          </Text>
+                                        </div>
+                                      ))}
+                                    {(step.safetyNotes || []).length > 2 && (
+                                      <div
+                                        style={{
+                                          fontSize: 9,
+                                          color: "#666",
+                                          textAlign: "center",
+                                        }}
+                                      >
+                                        +{(step.safetyNotes || []).length - 2}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </Col>
+                            )}
+                          </Row>
+                        </div>
+                      </Col>
+
+                      {/* Card 2 - Sản phẩm */}
+                      <Col span={8}>
+                        <div
                           style={{
-                            fontSize: 14,
-                            lineHeight: 1.6,
-                            color: "#595959",
+                            backgroundColor: "white",
+                            border: "1px solid #e8e8e8",
+                            borderRadius: 8,
+                            padding: 20,
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                            minHeight: 200,
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "center",
                           }}
                         >
-                          {step.description}
-                        </Text>
-                      </div>
-
-                      {/* Step Details Grid */}
-                      <Row gutter={[16, 16]}>
-                        {/* Dụng cụ cần thiết */}
-                        {(step.requiredTools || []).length > 0 && (
-                          <Col span={12}>
-                            <div
-                              style={{
-                                backgroundColor: "#f6ffed",
-                                border: "1px solid #b7eb8f",
-                                borderRadius: 8,
-                                padding: 12,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  marginBottom: 8,
-                                  fontSize: 13,
-                                  fontWeight: "bold",
-                                  color: "#52c41a",
-                                }}
-                              >
-                                Dụng cụ cần thiết
-                              </div>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 4,
-                                }}
-                              >
-                                {(step.requiredTools || []).map(
-                                  (tool: string, idx: number) => (
-                                    <Tag
-                                      key={idx}
-                                      style={{
-                                        backgroundColor: "#f6ffed",
-                                        border: "1px solid #b7eb8f",
-                                        color: "#52c41a",
-                                        fontSize: 11,
-                                      }}
-                                    >
-                                      {tool}
-                                    </Tag>
-                                  )
-                                )}
-                              </div>
-                            </div>
-                          </Col>
-                        )}
-
-                        {/* Vật liệu cần thiết */}
-                        {(step.requiredMaterials || []).length > 0 && (
-                          <Col span={12}>
-                            <div
-                              style={{
-                                backgroundColor: "#e6f7ff",
-                                border: "1px solid #91d5ff",
-                                borderRadius: 8,
-                                padding: 12,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  marginBottom: 8,
-                                  fontSize: 13,
-                                  fontWeight: "bold",
-                                  color: "#1890ff",
-                                }}
-                              >
-                                Vật liệu cần thiết
-                              </div>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 4,
-                                }}
-                              >
-                                {(step.requiredMaterials || []).map(
-                                  (material: string, idx: number) => (
-                                    <Tag
-                                      key={idx}
-                                      style={{
-                                        backgroundColor: "#e6f7ff",
-                                        border: "1px solid #91d5ff",
-                                        color: "#1890ff",
-                                        fontSize: 11,
-                                      }}
-                                    >
-                                      {material}
-                                    </Tag>
-                                  )
-                                )}
-                              </div>
-                            </div>
-                          </Col>
-                        )}
-
-                        {/* Hướng dẫn thực hiện */}
-                        {(step.instructions || []).length > 0 && (
-                          <Col span={24}>
-                            <div
-                              style={{
-                                backgroundColor: "#f9f0ff",
-                                border: "1px solid #d3adf7",
-                                borderRadius: 8,
-                                padding: 12,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  marginBottom: 8,
-                                  fontSize: 13,
-                                  fontWeight: "bold",
-                                  color: "#722ed1",
-                                }}
-                              >
-                                Hướng dẫn thực hiện
-                              </div>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: 6,
-                                }}
-                              >
-                                {(step.instructions || []).map(
-                                  (instruction: string, idx: number) => (
-                                    <div
-                                      key={idx}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "flex-start",
-                                        fontSize: 12,
-                                        padding: 8,
-                                        backgroundColor: "white",
-                                        borderRadius: 6,
-                                        border: "1px solid #d3adf7",
-                                      }}
-                                    >
-                                      <div
-                                        style={{
-                                          width: 20,
-                                          height: 20,
-                                          borderRadius: "50%",
-                                          backgroundColor: "#722ed1",
-                                          color: "white",
-                                          display: "flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          fontSize: 10,
-                                          fontWeight: "bold",
-                                          marginRight: 8,
-                                          flexShrink: 0,
-                                        }}
-                                      >
-                                        {idx + 1}
-                                      </div>
-                                      <Text
-                                        style={{
-                                          fontSize: 12,
-                                          lineHeight: 1.4,
-                                        }}
-                                      >
-                                        {instruction}
-                                      </Text>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            </div>
-                          </Col>
-                        )}
-
-                        {/* Kiểm tra chất lượng */}
-                        {(step.qualityChecklist || []).length > 0 && (
-                          <Col span={12}>
-                            <div
-                              style={{
-                                backgroundColor: "#fff7e6",
-                                border: "1px solid #ffd591",
-                                borderRadius: 8,
-                                padding: 12,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  marginBottom: 8,
-                                  fontSize: 13,
-                                  fontWeight: "bold",
-                                  color: "#fa8c16",
-                                }}
-                              >
-                                Kiểm tra chất lượng
-                              </div>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: 4,
-                                }}
-                              >
-                                {(step.qualityChecklist || []).map(
-                                  (item: string, idx: number) => (
-                                    <div
-                                      key={idx}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        fontSize: 12,
-                                        padding: 6,
-                                        backgroundColor: "white",
-                                        borderRadius: 4,
-                                        border: "1px solid #ffd591",
-                                      }}
-                                    >
-                                      <div
-                                        style={{
-                                          width: 16,
-                                          height: 16,
-                                          borderRadius: "50%",
-                                          backgroundColor: "#fa8c16",
-                                          color: "white",
-                                          display: "flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          fontSize: 10,
-                                          marginRight: 8,
-                                          flexShrink: 0,
-                                        }}
-                                      >
-                                        ✓
-                                      </div>
-                                      <Text style={{ fontSize: 12 }}>
-                                        {item}
-                                      </Text>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            </div>
-                          </Col>
-                        )}
-
-                        {/* Lưu ý an toàn */}
-                        {(step.safetyNotes || []).length > 0 && (
-                          <Col span={12}>
-                            <div
-                              style={{
-                                backgroundColor: "#fff2f0",
-                                border: "1px solid #ffccc7",
-                                borderRadius: 8,
-                                padding: 12,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  marginBottom: 8,
-                                  fontSize: 13,
-                                  fontWeight: "bold",
-                                  color: "#f5222d",
-                                }}
-                              >
-                                Lưu ý an toàn
-                              </div>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: 4,
-                                }}
-                              >
-                                {(step.safetyNotes || []).map(
-                                  (note: string, idx: number) => (
-                                    <div
-                                      key={idx}
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        fontSize: 12,
-                                        padding: 6,
-                                        backgroundColor: "white",
-                                        borderRadius: 4,
-                                        border: "1px solid #ffccc7",
-                                      }}
-                                    >
-                                      <div
-                                        style={{
-                                          width: 16,
-                                          height: 16,
-                                          borderRadius: "50%",
-                                          backgroundColor: "#f5222d",
-                                          color: "white",
-                                          display: "flex",
-                                          alignItems: "center",
-                                          justifyContent: "center",
-                                          fontSize: 10,
-                                          marginRight: 8,
-                                          flexShrink: 0,
-                                        }}
-                                      >
-                                        ⚠
-                                      </div>
-                                      <Text style={{ fontSize: 12 }}>
-                                        {note}
-                                      </Text>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            </div>
-                          </Col>
-                        )}
-
-                        {/* Sản phẩm sử dụng */}
-                        {(step.stepProducts || []).length > 0 && (
-                          <Col span={24}>
+                          {(step.stepProducts || []).length > 0 ? (
                             <div
                               style={{
                                 backgroundColor: "#f0f9ff",
                                 border: "1px solid #0ea5e9",
                                 borderRadius: 8,
-                                padding: 12,
+                                padding: 16,
+                                textAlign: "center",
+                                height: "fit-content",
                               }}
                             >
                               <div
                                 style={{
                                   display: "flex",
+                                  flexDirection: "column",
                                   alignItems: "center",
-                                  justifyContent: "space-between",
-                                  marginBottom: 8,
+                                  gap: 8,
                                 }}
                               >
                                 <div
                                   style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: "50%",
+                                    backgroundColor: "#0ea5e9",
+                                    color: "white",
                                     display: "flex",
                                     alignItems: "center",
-                                    fontSize: 13,
-                                    fontWeight: "bold",
-                                    color: "#0ea5e9",
+                                    justifyContent: "center",
+                                    fontSize: 16,
                                   }}
                                 >
-                                  Sản phẩm sử dụng
+                                  <ShoppingCartOutlined />
+                                </div>
+                                <div>
+                                  <Text
+                                    strong
+                                    style={{
+                                      fontSize: 12,
+                                      color: "#0ea5e9",
+                                      display: "block",
+                                      marginBottom: 2,
+                                    }}
+                                  >
+                                    Sản phẩm
+                                  </Text>
+                                  <Text
+                                    style={{
+                                      fontSize: 11,
+                                      color: "#666",
+                                    }}
+                                  >
+                                    {step.stepProducts?.length || 0} sản phẩm
+                                  </Text>
                                 </div>
                                 <Button
-                                  type="link"
+                                  type="primary"
                                   size="small"
                                   icon={<EyeOutlined />}
                                   onClick={() =>
                                     handleViewProducts(
                                       step.stepProducts || [],
-                                      step.name
+                                      step.name,
+                                      step.id
                                     )
                                   }
                                   style={{
-                                    padding: 0,
-                                    height: "auto",
-                                    color: "#0ea5e9",
-                                    fontSize: 12,
+                                    backgroundColor: "#0ea5e9",
+                                    borderColor: "#0ea5e9",
+                                    width: "100%",
+                                    height: 28,
+                                    fontSize: 11,
+                                    fontWeight: "bold",
                                   }}
                                 >
                                   Xem chi tiết
                                 </Button>
                               </div>
+                            </div>
+                          ) : (
+                            <div
+                              style={{
+                                backgroundColor: "#f5f5f5",
+                                border: "1px dashed #d9d9d9",
+                                borderRadius: 8,
+                                padding: 16,
+                                textAlign: "center",
+                                height: "fit-content",
+                              }}
+                            >
                               <div
                                 style={{
                                   display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: 4,
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  gap: 12,
                                 }}
                               >
-                                {(step.stepProducts || [])
-                                  .slice(0, 3)
-                                  .map((product: any, idx: number) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-                                    // Lấy giá từ dữ liệu sản phẩm có sẵn
-                                    const unitPrice = product.productCost || 0;
-                                    const quantity = product.quantity || 1;
-                                    const totalPrice = unitPrice * quantity;
-
-                                    return (
-                                      <Tag
-                                        key={idx}
-                                        style={{
-                                          backgroundColor: "#f0f9ff",
-                                          border: "1px solid #0ea5e9",
-                                          color: "#0ea5e9",
-                                          fontSize: 11,
-                                          display: "flex",
-                                          alignItems: "center",
-                                          gap: 4,
-                                          flexDirection: "column",
-                                          padding: "4px 8px",
-                                          minWidth: "120px",
-                                        }}
-                                      >
-                                        <div
-                                          style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 4,
-                                          }}
-                                        >
-                                          <ShoppingCartOutlined />
-                                        <span style={{ fontWeight: "bold" }}>
-                                          {product.productName || `Sản phẩm ${idx + 1}`}
-                                        </span>
-                                        </div>
-                                        <div
-                                          style={{
-                                            fontSize: 10,
-                                            color: "#1890ff",
-                                          }}
-                                        >
-                                          {quantity > 1 && (
-                                            <span
-                                              style={{ fontWeight: "bold" }}
-                                            >
-                                              x{quantity}
-                                            </span>
-                                          )}
-                                          {unitPrice > 0 && (
-                                            <span style={{ marginLeft: 4 }}>
-                                              • {formatCurrency(unitPrice)}
-                                            </span>
-                                          )}
-                                        </div>
-                                        {totalPrice > 0 && (
-                                          <div
-                                            style={{
-                                              fontSize: 10,
-                                              fontWeight: "bold",
-                                              color: "#52c41a",
-                                            }}
-                                          >
-                                            = {formatCurrency(totalPrice)}
-                                          </div>
-                                        )}
-                                      </Tag>
-                                    );
-                                  })}
-                                {(step.stepProducts || []).length > 3 && (
-                                  <Tag
+                                <div
+                                  style={{
+                                    width: 48,
+                                    height: 48,
+                                    borderRadius: "50%",
+                                    backgroundColor: "#d9d9d9",
+                                    color: "#999",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 20,
+                                  }}
+                                >
+                                  <ShoppingCartOutlined />
+                                </div>
+                                <div>
+                                  <Text
                                     style={{
-                                      backgroundColor: "#f0f9ff",
-                                      border: "1px solid #0ea5e9",
-                                      color: "#0ea5e9",
-                                      fontSize: 11,
+                                      fontSize: 14,
+                                      color: "#999",
+                                      display: "block",
+                                      fontWeight: 500,
                                     }}
                                   >
-                                    +
-                                    {(step.stepProducts || []).length - 3}{" "}
-                                    sản phẩm khác
-                                  </Tag>
-                                )}
+                                    Không có sản phẩm
+                                  </Text>
+                                </div>
                               </div>
                             </div>
-                          </Col>
-                        )}
-                      </Row>
-                    </div>
+                          )}
+                        </div>
+                      </Col>
+                    </Row>
                   </div>
                 </div>
               )
@@ -805,22 +952,49 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
       {/* Modal chi tiết sản phẩm */}
       <Modal
         title={
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <ShoppingCartOutlined style={{ color: "#0ea5e9" }} />
-            <span>Sản phẩm sử dụng - {selectedStepName}</span>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <ShoppingCartOutlined style={{ color: "#0ea5e9" }} />
+              <span>Sản phẩm sử dụng - {selectedStepName}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 12, color: "#666" }}>Bảng giá:</span>
+              <Select
+                value={selectedPriceBookId}
+                onChange={setSelectedPriceBookId}
+                style={{ width: 200 }}
+                size="small"
+                loading={loadingPricing}
+              >
+                {priceBooks.map((book) => (
+                  <Option key={book.id} value={book.id}>
+                    {book.name}
+                  </Option>
+                ))}
+              </Select>
+            </div>
           </div>
         }
         open={productModalOpen}
         onCancel={() => setProductModalOpen(false)}
         footer={null}
-        width={800}
+        width={900}
         style={{ top: 50 }}
       >
         <Table
           dataSource={selectedStepProducts}
           pagination={false}
           size="small"
-          rowKey={(record) => record.id || record.productId || Math.random().toString()}
+          rowKey={(record) =>
+            record.id || record.productId || Math.random().toString()
+          }
           columns={[
             {
               title: "STT",
@@ -873,18 +1047,57 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
               ),
             },
             {
+              title: "Đơn vị",
+              dataIndex: "unit",
+              key: "unit",
+              width: 80,
+              align: "center" as const,
+              render: (unit: string) => (
+                <Tag color="blue" style={{ fontSize: 11 }}>
+                  {unit || "cái"}
+                </Tag>
+              ),
+            },
+            {
               title: "Đơn giá",
-              dataIndex: "productCost",
-              key: "productCost",
+              key: "unitPrice",
               width: 120,
               align: "right" as const,
-              render: (cost: number, record: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-                const unitPrice = record.productCost || cost || 0;
+              render: (_: any, record: any) => {
+                // eslint-disable-line @typescript-eslint/no-explicit-any
+                // Tìm step ID từ selectedStepProducts (cần thêm stepId vào data)
+                const stepId =
+                  record.stepId ||
+                  process?.processSteps?.find(
+                    (
+                      step: any // eslint-disable-line @typescript-eslint/no-explicit-any
+                    ) =>
+                      step.stepProducts?.some(
+                        (p: any) => p.productId === record.productId
+                      ) // eslint-disable-line @typescript-eslint/no-explicit-any
+                  )?.id;
+
+                const productPricing = getProductPricingData(
+                  stepId,
+                  record.productId
+                );
+                const unitPrice =
+                  productPricing?.unitPrice || record.productCost || 0;
+                const priceSource = productPricing?.priceSource || "DEFAULT";
 
                 return (
-                  <Text strong style={{ color: "#52c41a" }}>
-                    {formatCurrency(unitPrice)}
-                  </Text>
+                  <div>
+                    <Text strong style={{ color: "#52c41a" }}>
+                      {formatCurrency(unitPrice)}
+                    </Text>
+                    <div style={{ fontSize: 10, color: "#999" }}>
+                      {priceSource === "PRICE_BOOK"
+                        ? "Bảng giá"
+                        : priceSource === "DEFAULT"
+                        ? "Mặc định"
+                        : "Tùy chỉnh"}
+                    </div>
+                  </div>
                 );
               },
             },
@@ -893,10 +1106,28 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
               key: "total",
               width: 120,
               align: "right" as const,
-              render: (_: any, record: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-                const unitPrice = record.productCost || 0;
+              render: (_: any, record: any) => {
+                // eslint-disable-line @typescript-eslint/no-explicit-any
+                const stepId =
+                  record.stepId ||
+                  process?.processSteps?.find(
+                    (
+                      step: any // eslint-disable-line @typescript-eslint/no-explicit-any
+                    ) =>
+                      step.stepProducts?.some(
+                        (p: any) => p.productId === record.productId
+                      ) // eslint-disable-line @typescript-eslint/no-explicit-any
+                  )?.id;
+
+                const productPricing = getProductPricingData(
+                  stepId,
+                  record.productId
+                );
+                const unitPrice =
+                  productPricing?.unitPrice || record.productCost || 0;
                 const quantity = record.quantity || 0;
                 const total = unitPrice * quantity;
+
                 return (
                   <Text strong style={{ color: "#1890ff" }}>
                     {formatCurrency(total)}
@@ -906,23 +1137,43 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
             },
           ]}
           summary={() => {
-            const totalAmount = selectedStepProducts.reduce((sum, product) => {
-              const unitPrice = product.productCost || 0;
-              const quantity = product.quantity || 0;
-              const total = unitPrice * quantity;
-              return sum + total;
-            }, 0);
+            const totalAmount = selectedStepProducts.reduce(
+              (sum, product: any) => {
+                // eslint-disable-line @typescript-eslint/no-explicit-any
+                const stepId =
+                  product.stepId ||
+                  process?.processSteps?.find(
+                    (
+                      step: any // eslint-disable-line @typescript-eslint/no-explicit-any
+                    ) =>
+                      step.stepProducts?.some(
+                        (p: any) => p.productId === product.productId
+                      ) // eslint-disable-line @typescript-eslint/no-explicit-any
+                  )?.id;
+
+                const productPricing = getProductPricingData(
+                  stepId,
+                  product.productId
+                );
+                const unitPrice =
+                  productPricing?.unitPrice || product.productCost || 0;
+                const quantity = product.quantity || 0;
+                const total = unitPrice * quantity;
+                return sum + total;
+              },
+              0
+            );
             const totalQuantity = selectedStepProducts.reduce(
-              (sum, product) => sum + (product.quantity || 0),
+              (sum, product: any) => sum + (product.quantity || 0), // eslint-disable-line @typescript-eslint/no-explicit-any
               0
             );
 
             return (
               <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={3}>
+                <Table.Summary.Cell index={0} colSpan={4}>
                   <Text strong>Tổng cộng:</Text>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={3}>
+                <Table.Summary.Cell index={4}>
                   <Tag
                     color="green"
                     style={{ fontSize: 12, fontWeight: "bold" }}
@@ -930,7 +1181,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
                     {totalQuantity} sản phẩm
                   </Tag>
                 </Table.Summary.Cell>
-                <Table.Summary.Cell index={4} colSpan={2}>
+                <Table.Summary.Cell index={5}>
                   <Text strong style={{ color: "#1890ff", fontSize: 14 }}>
                     {formatCurrency(totalAmount)}
                   </Text>
