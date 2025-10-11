@@ -170,11 +170,20 @@ const CareProcessesPage = () => {
             try {
               await updateServiceProcessMutation.mutateAsync({
                 serviceProcessId: record.id,
-                data: { isActive: isActivating },
+                data: { 
+                  is_active: isActivating,
+                  // Giữ nguyên các field khác để tránh mất dữ liệu
+                  code: record.code,
+                  name: record.name,
+                  description: record.description,
+                  estimated_duration: record.estimatedDuration,
+                  is_default: record.isDefault
+                },
               });
               message.success(isActivating ? "Kích hoạt quy trình thành công!" : "Tạm dừng quy trình thành công!");
               refetch();
-            } catch {
+            } catch (error) {
+              console.error("Error updating service process status:", error);
               message.error(isActivating ? "Có lỗi xảy ra khi kích hoạt quy trình" : "Có lỗi xảy ra khi tạm dừng quy trình");
             }
           },
@@ -358,7 +367,11 @@ const CareProcessesPage = () => {
 
       <CareProcessModal
         open={modalOpen}
-        onOk={handleModalOk}
+        onSuccess={() => {
+          setModalOpen(false);
+          setEditingProcess(null);
+          refetch();
+        }}
         onCancel={handleModalCancel}
         initialData={editingProcess as any} // eslint-disable-line @typescript-eslint/no-explicit-any
         title={

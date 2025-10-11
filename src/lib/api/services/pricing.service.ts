@@ -25,10 +25,6 @@ export const PricingService = {
     return response.data.data;
   },
 
-  createPriceBookItem: async (priceBookId: string, data: CreatePriceBookItemRequest): Promise<PriceBookItem> => {
-    const response = await api.post(`/pricing/books/${priceBookId}/items/create`, data);
-    return response.data.data;
-  },
 
   getPriceBookById: async (priceBookId: string): Promise<PriceBook> => {
     const response = await api.get(`/pricing/books/${priceBookId}`);

@@ -73,12 +73,32 @@ export interface UpdateServiceProcessRequest {
   code?: string;
   name?: string;
   description?: string;
-  estimatedDuration?: number;
-  isDefault?: boolean;
-  isActive?: boolean;
+  estimated_duration?: number;
+  is_default?: boolean;
+  is_active?: boolean;
+  process_steps?: UpdateServiceProcessStepRequest[];
+}
+
+export interface UpdateServiceProcessStepRequest {
+  id?: string; // For existing steps
+  step_order?: number;
+  name?: string;
+  description?: string;
+  estimated_time?: number;
+  is_required?: boolean;
+  is_active?: boolean; // Add is_active field for AuditEntity
+  step_products?: UpdateServiceProcessStepProductRequest[];
+}
+
+export interface UpdateServiceProcessStepProductRequest {
+  id?: string; // For existing products
+  product_id?: string; // Backend expects product_id field name
+  quantity?: number;
+  unit?: string;
 }
 
 export interface CreateServiceProcessStepRequest {
+  id?: string; // For existing steps
   name: string;
   description?: string;
   stepOrder: number;
@@ -100,7 +120,9 @@ export interface UpdateServiceProcessStepRequest {
 }
 
 export interface CreateServiceProcessStepProductRequest {
+  id?: string; // For existing products
   productId: string;
+  productName?: string; // For display purposes
   quantity: number;
   unit?: string;
 }
