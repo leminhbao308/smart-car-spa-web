@@ -1,55 +1,45 @@
 "use client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SupplierService } from "../services/supplier.service";
 import {
+  SupplierRequest,
   CreateSupplierRequest,
   UpdateSupplierRequest,
 } from "../types/supplier.types";
-import { message } from "antd";
 
-export interface UseSuppliersParams {
-  // No pagination params needed as API doesn't support them
-  [key: string]: unknown;
-}
+// Query keys
+export const supplierKeys = {
+  all: ["suppliers"] as const,
+  lists: () => [...supplierKeys.all, "list"] as const,
+  list: (params: SupplierRequest) => [...supplierKeys.lists(), params] as const,
+  details: () => [...supplierKeys.all, "detail"] as const,
+  detail: (id: string) => [...supplierKeys.details(), id] as const,
+};
 
 /**
- * Hook for managing suppliers data
- * Migrated to TanStack React Query for better performance and caching
+ * Hook for fetching all suppliers with pagination and filtering
  */
-export const useSuppliers = (params?: UseSuppliersParams) => {
-  const {
-    data: suppliersResponse,
-    isLoading: loading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ["suppliers", "list", params],
-    queryFn: async () => {
-      console.log("Fetching suppliers from API...");
-      const response = await SupplierService.getAllSuppliers();
-      console.log("Suppliers API response:", response);
-      return response;
-    },
+export const useSuppliers = (params: SupplierRequest = {}) => {
+  return useQuery({
+    queryKey: supplierKeys.list(params),
+    queryFn: () => SupplierService.getAllSuppliers(params),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
+};
 
-  return {
-    suppliers: suppliersResponse?.suppliers || [],
-    pagination: suppliersResponse?.pagination || {
-      page: 0,
-      size: 10,
-      total_elements: 0,
-      total_pages: 0,
-      first: true,
-      last: true,
-      has_next: false,
-      has_previous: false,
-    },
-    loading,
-    error,
-    refreshSuppliers: refetch,
-  };
+/**
+ * Hook for fetching a single supplier by ID
+ */
+export const useSupplier = (supplierId: string | null) => {
+  return useQuery({
+    queryKey: supplierKeys.detail(supplierId || ""),
+    queryFn: () => SupplierService.getSupplierById(supplierId!),
+    enabled: !!supplierId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 };
 
 /**
@@ -59,17 +49,16 @@ export const useCreateSupplier = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: CreateSupplierRequest) => {
-      return await SupplierService.createSupplier(data);
-    },
+    mutationFn: (data: CreateSupplierRequest) =>
+      SupplierService.createSupplier(data),
     onSuccess: () => {
       // Invalidate and refetch suppliers list
-      queryClient.invalidateQueries({ queryKey: ["suppliers", "list"] });
-      message.success("Tạo nhà cung cấp thành công!");
+      queryClient.invalidateQueries({
+        queryKey: supplierKeys.lists(),
+      });
     },
-    onError: (error: Error) => {
-      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      message.error(errorMessage || "Có lỗi xảy ra khi tạo nhà cung cấp");
+    onError: (error) => {
+      console.error("Failed to create supplier:", error);
     },
   });
 };
@@ -81,19 +70,27 @@ export const useUpdateSupplier = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ supplierId, data }: { supplierId: string; data: UpdateSupplierRequest }) => {
-      return await SupplierService.updateSupplier(supplierId, data);
+    mutationFn: ({
+      supplierId,
+      data,
+    }: {
+      supplierId: string;
+      data: UpdateSupplierRequest;
+    }) => SupplierService.updateSupplier(supplierId, data),
+    onSuccess: (updatedSupplier, { supplierId }) => {
+      // Update the specific supplier in cache
+      queryClient.setQueryData(
+        supplierKeys.detail(supplierId),
+        updatedSupplier
+      );
+      
+      // Invalidate suppliers list to refetch
+      queryClient.invalidateQueries({
+        queryKey: supplierKeys.lists(),
+      });
     },
-    onSuccess: (_, variables) => {
-      // Invalidate and refetch suppliers list
-      queryClient.invalidateQueries({ queryKey: ["suppliers", "list"] });
-      // Invalidate specific supplier detail
-      queryClient.invalidateQueries({ queryKey: ["suppliers", "detail", variables.supplierId] });
-      message.success("Cập nhật nhà cung cấp thành công!");
-    },
-    onError: (error: Error) => {
-      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      message.error(errorMessage || "Có lỗi xảy ra khi cập nhật nhà cung cấp");
+    onError: (error) => {
+      console.error("Failed to update supplier:", error);
     },
   });
 };
@@ -105,46 +102,61 @@ export const useDeleteSupplier = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (supplierId: string) => {
-      return await SupplierService.deleteSupplier(supplierId);
+    mutationFn: (supplierId: string) =>
+      SupplierService.deleteSupplier(supplierId),
+    onSuccess: (_, supplierId) => {
+      // Remove the supplier from cache
+      queryClient.removeQueries({
+        queryKey: supplierKeys.detail(supplierId),
+      });
+      
+      // Invalidate suppliers list to refetch
+      queryClient.invalidateQueries({
+        queryKey: supplierKeys.lists(),
+      });
     },
-    onSuccess: () => {
-      // Invalidate and refetch suppliers list
-      queryClient.invalidateQueries({ queryKey: ["suppliers", "list"] });
-      message.success("Xóa nhà cung cấp thành công!");
-    },
-    onError: (error: Error) => {
-      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      message.error(errorMessage || "Có lỗi xảy ra khi xóa nhà cung cấp");
+    onError: (error) => {
+      console.error("Failed to delete supplier:", error);
     },
   });
 };
 
 /**
- * Hook for a single supplier by ID
- * Migrated to TanStack React Query for better performance and caching
+ * Hook for toggling supplier status (active/inactive)
  */
-export const useSupplier = (supplierId: string | null) => {
-  const {
-    data: supplier,
-    isLoading: loading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ["suppliers", "detail", supplierId],
-    queryFn: async () => {
-      if (!supplierId) return null;
-      return await SupplierService.getSupplierById(supplierId);
-    },
-    enabled: !!supplierId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-  });
+export const useToggleSupplierStatus = () => {
+  const queryClient = useQueryClient();
 
-  return {
-    supplier,
-    loading,
-    error,
-    refetch,
+  return useMutation({
+    mutationFn: async ({ 
+      supplierId, 
+      isActive 
+    }: { 
+      supplierId: string; 
+      isActive: boolean; 
+    }) => {
+      return await SupplierService.updateSupplier(supplierId, {
+        is_active: isActive,
+      });
+    },
+    onSuccess: () => {
+      // Invalidate and refetch suppliers list
+      queryClient.invalidateQueries({
+        queryKey: supplierKeys.lists(),
+      });
+    },
+  });
+};
+
+/**
+ * Hook for refreshing suppliers data
+ */
+export const useRefreshSuppliers = () => {
+  const queryClient = useQueryClient();
+
+  return () => {
+    queryClient.invalidateQueries({
+      queryKey: supplierKeys.lists(),
+    });
   };
 };

@@ -1,3 +1,21 @@
+export interface SupplierRequest {
+  page?: number;
+  size?: number;
+  sort?: string;
+  direction?: string;
+  supplier_name?: string;
+  contact_person?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  bank_name?: string;
+  has_contact_person?: boolean;
+  has_phone?: boolean;
+  has_email?: boolean;
+  has_address?: boolean;
+  has_bank_info?: boolean;
+}
+
 export interface Supplier {
   created_date: string;
   modified_date: string;
@@ -41,27 +59,22 @@ export interface SupplierListResponse {
 
 export interface CreateSupplierRequest {
   supplier_name: string;
-  contact_person: string;
-  email: string;
-  phone: string;
-  address: string;
-  bank_name: string;
-  bank_account: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  bank_name?: string;
+  bank_account?: string;
 }
 
 export interface UpdateSupplierRequest {
-  supplier_name: string;
-  contact_person: string;
-  email: string;
-  phone: string;
-  address: string;
-  bank_name: string;
-  bank_account: string;
+  supplier_name?: string;
+  contact_person?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  bank_name?: string;
+  bank_account?: string;
+  is_active?: boolean;
 }
 
-export interface DeleteSupplierResponse {
-  success: boolean;
-  message: string;
-  timestamp: string;
-  data: null;
-}

@@ -11,6 +11,7 @@ import {
   Typography,
   message,
   Spin,
+  Switch,
 } from "antd";
 import {
   BankOutlined,
@@ -19,9 +20,10 @@ import {
   EnvironmentOutlined,
   UserOutlined,
   SaveOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { Supplier, UpdateSupplierRequest } from "@/lib/api/types/supplier.types";
-import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
+import { useUpdateSupplier } from "@/lib/api/hooks/useSuppliers";
 
 const { Title } = Typography;
 
@@ -41,7 +43,7 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
   loading = false,
 }) => {
   const [form] = Form.useForm();
-  const { updateSupplier } = useSuppliers({});
+  const updateSupplierMutation = useUpdateSupplier();
 
   useEffect(() => {
     if (supplier && visible) {
@@ -53,6 +55,7 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
         address: supplier.address,
         bank_name: supplier.bank_name,
         bank_account: supplier.bank_account,
+        is_active: supplier.is_active,
       });
     }
   }, [supplier, visible, form]);
@@ -61,7 +64,10 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
     if (!supplier) return;
 
     try {
-      await updateSupplier(supplier.supplier_id, values);
+      await updateSupplierMutation.mutateAsync({
+        supplierId: supplier.supplier_id,
+        data: values,
+      });
       message.success("Cập nhật nhà cung cấp thành công");
       onSuccess();
     } catch (error: unknown) {
@@ -120,8 +126,8 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
                   name="supplier_name"
                   label="Tên nhà cung cấp"
                   rules={[
-                    { required: true, message: "Vui lòng nhập tên nhà cung cấp" },
                     { min: 2, message: "Tên nhà cung cấp phải có ít nhất 2 ký tự" },
+                    { max: 255, message: "Tên nhà cung cấp không được vượt quá 255 ký tự" },
                   ]}
                 >
                   <Input
@@ -136,8 +142,7 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
                   name="contact_person"
                   label="Người liên hệ"
                   rules={[
-                    { required: true, message: "Vui lòng nhập tên người liên hệ" },
-                    { min: 2, message: "Tên người liên hệ phải có ít nhất 2 ký tự" },
+                    { max: 255, message: "Tên người liên hệ không được vượt quá 255 ký tự" },
                   ]}
                 >
                   <Input
@@ -166,8 +171,8 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
                   name="phone"
                   label="Số điện thoại"
                   rules={[
-                    { required: true, message: "Vui lòng nhập số điện thoại" },
-                    { pattern: /^[0-9+\-\s()]+$/, message: "Số điện thoại không hợp lệ" },
+                    { max: 20, message: "Số điện thoại không được vượt quá 20 ký tự" },
+                    { pattern: /^[0-9+\-\s()]*$/, message: "Số điện thoại không hợp lệ" },
                   ]}
                 >
                   <Input
@@ -182,8 +187,8 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
                   name="email"
                   label="Email"
                   rules={[
-                    { required: true, message: "Vui lòng nhập email" },
                     { type: "email", message: "Email không hợp lệ" },
+                    { max: 255, message: "Email không được vượt quá 255 ký tự" },
                   ]}
                 >
                   <Input
@@ -198,8 +203,7 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
                   name="address"
                   label="Địa chỉ"
                   rules={[
-                    { required: true, message: "Vui lòng nhập địa chỉ" },
-                    { min: 5, message: "Địa chỉ phải có ít nhất 5 ký tự" },
+                    { max: 1000, message: "Địa chỉ không được vượt quá 1000 ký tự" },
                   ]}
                 >
                   <Input.TextArea
@@ -229,8 +233,7 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
                   name="bank_name"
                   label="Tên ngân hàng"
                   rules={[
-                    { required: true, message: "Vui lòng nhập tên ngân hàng" },
-                    { min: 2, message: "Tên ngân hàng phải có ít nhất 2 ký tự" },
+                    { max: 255, message: "Tên ngân hàng không được vượt quá 255 ký tự" },
                   ]}
                 >
                   <Input
@@ -245,9 +248,7 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
                   name="bank_account"
                   label="Số tài khoản"
                   rules={[
-                    { required: true, message: "Vui lòng nhập số tài khoản" },
-                    { pattern: /^[0-9]+$/, message: "Số tài khoản chỉ được chứa số" },
-                    { min: 8, message: "Số tài khoản phải có ít nhất 8 chữ số" },
+                    { max: 255, message: "Số tài khoản không được vượt quá 255 ký tự" },
                   ]}
                 >
                   <Input
@@ -255,6 +256,33 @@ const SupplierEditModal: React.FC<SupplierEditModalProps> = ({
                     placeholder="Nhập số tài khoản"
                     size="large"
                     style={{ fontFamily: "monospace" }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Status Information */}
+          <Card
+            title={
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <CheckCircleOutlined style={{ color: "#52c41a" }} />
+                <span>Trạng thái</span>
+              </div>
+            }
+            style={{ marginBottom: 24 }}
+          >
+            <Row gutter={[16, 16]}>
+              <Col xs={24}>
+                <Form.Item
+                  name="is_active"
+                  label="Trạng thái hoạt động"
+                  valuePropName="checked"
+                >
+                  <Switch
+                    checkedChildren="Hoạt động"
+                    unCheckedChildren="Tạm dừng"
+                    size="large"
                   />
                 </Form.Item>
               </Col>

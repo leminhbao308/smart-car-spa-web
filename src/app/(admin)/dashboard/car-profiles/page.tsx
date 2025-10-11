@@ -9,9 +9,7 @@ import {
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import { Tag, message } from "antd";
-import {
-  PhoneOutlined,
-} from "@ant-design/icons";
+import { PhoneOutlined } from "@ant-design/icons";
 import {
   vehicleTypes,
   vehicleStatuses,
@@ -38,8 +36,15 @@ const CarProfilesPage = () => {
   );
 
   // Use custom hook for API data management
-  const { profiles, loading, pagination, refreshProfiles, createProfile, updateProfile, deleteProfile } =
-    useVehicleProfiles(initialParams);
+  const {
+    profiles,
+    loading,
+    pagination,
+    refreshProfiles,
+    createProfile,
+    updateProfile,
+    deleteProfile,
+  } = useVehicleProfiles(initialParams);
 
   // Modal states
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -49,46 +54,6 @@ const CarProfilesPage = () => {
     useState<VehicleProfileDisplay | null>(null);
   const [editData, setEditData] = useState<VehicleProfileDisplay | null>(null);
 
-  // Filter states for API calls (for future use)
-  // const [filters, setFilters] = useState<{
-  //   is_active?: boolean;
-  //   vehicle_type_id?: string;
-  //   vehicle_brand_id?: string;
-  //   vehicle_model_id?: string;
-  //   owner_id?: string;
-  //   sort?: string;
-  //   direction?: string;
-  // }>({
-  //   is_active: undefined,
-  //   vehicle_type_id: undefined,
-  //   vehicle_brand_id: undefined,
-  //   vehicle_model_id: undefined,
-  //   owner_id: undefined,
-  //   sort: "created_date",
-  //   direction: "desc",
-  // });
-
-  // Apply filters to API call (for future use)
-  // const applyFilters = () => {
-  //   // Note: This would need to be handled by updating the hook params
-  //   // For now, we'll just refresh the data
-  //   refreshProfiles();
-  // };
-
-  // Reset filters (for future use)
-  // const handleResetFilters = () => {
-  //   setFilters({
-  //     is_active: undefined,
-  //     vehicle_type_id: undefined,
-  //     vehicle_brand_id: undefined,
-  //     vehicle_model_id: undefined,
-  //     owner_id: undefined,
-  //     sort: "created_date",
-  //     direction: "desc",
-  //   });
-  //   refreshProfiles();
-  // };
-
   // Định nghĩa columns
   const columns: ColumnsType<VehicleProfileDisplay> = [
     {
@@ -97,11 +62,13 @@ const CarProfilesPage = () => {
       width: 60,
       align: "center",
       render: (_, record: VehicleProfileDisplay, index: number) => (
-        <span style={{ 
-          fontSize: "14px", 
-          fontWeight: 500,
-          color: "#666"
-        }}>
+        <span
+          style={{
+            fontSize: "14px",
+            fontWeight: 500,
+            color: "#666",
+          }}
+        >
           {index + 1}
         </span>
       ),
@@ -243,52 +210,6 @@ const CarProfilesPage = () => {
     setDetailModalVisible(true);
   };
 
-  // Unused handlers (for future use)
-  // const handleViewServiceHistory = (record: VehicleProfileDisplay) => {
-  //   setSelectedData(record);
-  //   setServiceHistoryModalVisible(true);
-  // };
-
-  // const handleViewOwner = (record: VehicleProfileDisplay) => {
-  //   // Create customer data from vehicle record
-  //   const customerData = {
-  //     id: record.owner_id,
-  //     customerCode: `KH${record.owner_id.slice(-3)}`,
-  //     fullName: record.owner_name || "Chưa cập nhật",
-  //     email: record.owner_email || "Chưa cập nhật",
-  //     phone: record.owner_phone || "Chưa cập nhật",
-  //     address: "Chưa cập nhật",
-  //     dateOfBirth: "1990-01-01",
-  //     gender: "male",
-  //     customerType: "regular",
-  //     totalOrders: 5,
-  //     totalSpent: 15000000,
-  //     lastVisit: new Date().toISOString(),
-  //     joinDate: "2023-01-01",
-  //     status: "active",
-  //     notes: "Khách hàng thường xuyên",
-  //     vehicles: [
-  //       {
-  //         id: record.vehicle_id,
-  //         brand: record.brand_name,
-  //         model: record.model_name,
-  //         year: record.model_year,
-  //         licensePlate: record.license_plate,
-  //         status: record.status,
-  //       },
-  //     ],
-  //     preferredServices: ["Bảo dưỡng định kỳ", "Rửa xe"],
-  //   };
-  //   setSelectedData(customerData as unknown as VehicleProfileDisplay);
-  //   setOwnerDetailModalVisible(true);
-  // };
-
-  // const handleScheduleService = (record: VehicleProfileDisplay) => {
-  //   setSelectedData(record);
-  //   setScheduleServiceModalVisible(true);
-  // };
-
-
   // Modal success handlers
   const handleCreateModalSuccess = async (
     data: CreateVehicleProfileRequest
@@ -345,123 +266,8 @@ const CarProfilesPage = () => {
     });
   };
 
-
   return (
     <div>
-      {/* Advanced Filters */}
-      {/* <Card
-        title={
-          <Space>
-            <FilterOutlined />
-            Bộ lọc nâng cao
-          </Space>
-        }
-        style={{ marginBottom: 16 }}
-        extra={
-          <Space>
-            <Button type="primary" onClick={applyFilters} size="small">
-              Áp dụng
-            </Button>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={handleResetFilters}
-              size="small"
-            >
-              Đặt lại
-            </Button>
-          </Space>
-        }
-      >
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  color: "#666",
-                  marginBottom: 4,
-                  display: "block",
-                }}
-              >
-                Trạng thái
-              </label>
-              <Select
-                placeholder="Chọn trạng thái"
-                value={filters.is_active}
-                onChange={(value) =>
-                  setFilters((prev) => ({ ...prev, is_active: value }))
-                }
-                allowClear
-                style={{ width: "100%" }}
-              >
-                <Select.Option value={true}>
-                  <Tag color="green">Hoạt động</Tag>
-                </Select.Option>
-                <Select.Option value={false}>
-                  <Tag color="red">Không hoạt động</Tag>
-                </Select.Option>
-              </Select>
-            </div>
-          </Col>
-
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  color: "#666",
-                  marginBottom: 4,
-                  display: "block",
-                }}
-              >
-                Sắp xếp theo
-              </label>
-              <Select
-                placeholder="Chọn trường sắp xếp"
-                value={filters.sort}
-                onChange={(value) =>
-                  setFilters((prev) => ({ ...prev, sort: value }))
-                }
-                style={{ width: "100%" }}
-              >
-                <Select.Option value="created_date">Ngày tạo</Select.Option>
-                <Select.Option value="modified_date">
-                  Ngày cập nhật
-                </Select.Option>
-                <Select.Option value="license_plate">Biển số</Select.Option>
-                <Select.Option value="distance_traveled">Số km</Select.Option>
-              </Select>
-            </div>
-          </Col>
-
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  color: "#666",
-                  marginBottom: 4,
-                  display: "block",
-                }}
-              >
-                Thứ tự
-              </label>
-              <Select
-                placeholder="Chọn thứ tự"
-                value={filters.direction}
-                onChange={(value) =>
-                  setFilters((prev) => ({ ...prev, direction: value }))
-                }
-                style={{ width: "100%" }}
-              >
-                <Select.Option value="asc">Tăng dần</Select.Option>
-                <Select.Option value="desc">Giảm dần</Select.Option>
-              </Select>
-            </div>
-          </Col>
-        </Row>
-      </Card> */}
-
       <AdminTable
         title="Quản lý hồ sơ xe"
         dataSource={profiles}
@@ -480,13 +286,9 @@ const CarProfilesPage = () => {
           showTotal: (total: number, range: [number, number]) =>
             `${range[0]}-${range[1]} của ${total} hồ sơ xe`,
           onChange: () => {
-            // Note: This would need to be handled by updating the hook params
-            // For now, we'll just refresh the data
             refreshProfiles();
           },
           onShowSizeChange: () => {
-            // Note: This would need to be handled by updating the hook params
-            // For now, we'll just refresh the data
             refreshProfiles();
           },
         }}
@@ -512,9 +314,6 @@ const CarProfilesPage = () => {
         onSuccess={handleCreateModalSuccess}
         loading={loading}
       />
-
-
-
 
       {/* New Vehicle Profile Modals */}
       <VehicleProfileDetailModal

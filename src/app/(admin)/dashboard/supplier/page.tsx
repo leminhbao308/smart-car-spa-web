@@ -1,47 +1,45 @@
 "use client";
 import React, { useState, useMemo } from "react";
 import {
-  Tag, 
+  Tag,
   Typography,
   Card,
   Row,
   Col,
   Statistic,
   Progress,
-  message,
+  App,
 } from "antd";
 import {
   EditOutlined,
-  DeleteOutlined,
-  EyeOutlined, 
+  EyeOutlined,
   PhoneOutlined,
   MailOutlined,
-  GlobalOutlined,
   EnvironmentOutlined,
   BankOutlined,
-  FileTextOutlined,
   StarOutlined,
   ClockCircleOutlined,
-  DollarOutlined,
-  TrophyOutlined,
+  PoweroffOutlined,
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
-import { 
+import {
   useConfirmationModalContext,
   SupplierDetailModal,
   SupplierEditModal,
-  SupplierCreateModal
+  SupplierCreateModal,
 } from "@/components/ui/Modal";
-import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
+import { useSuppliers, useToggleSupplierStatus } from "@/lib/api/hooks/useSuppliers";
 import { Supplier } from "@/lib/api/types/supplier.types";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 
 const { Text } = Typography;
 
 const SupplierPage = () => {
-  // Use custom hook for API data management
-  const { suppliers, loading, pagination, refreshSuppliers, createSupplier, updateSupplier, deleteSupplier } =
-    useSuppliers({});
+  const { message } = App.useApp();
+  
+  // React Query hooks
+  const { data: suppliersData, isLoading } = useSuppliers({});
+  const toggleSupplierStatusMutation = useToggleSupplierStatus();
 
   // Modal states
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -50,6 +48,37 @@ const SupplierPage = () => {
   const [selectedData, setSelectedData] = useState<Supplier | null>(null);
   const [editData, setEditData] = useState<Supplier | null>(null);
   const { showModal } = useConfirmationModalContext();
+
+  // Extract data from query result
+  const suppliers = useMemo(
+    () => suppliersData?.data?.content || [],
+    [suppliersData?.data?.content]
+  );
+  const pagination = useMemo(
+    () =>
+      suppliersData?.data
+        ? {
+            page: suppliersData.data.page,
+            size: suppliersData.data.size,
+            total_elements: suppliersData.data.total_elements,
+            total_pages: suppliersData.data.total_pages,
+            first: suppliersData.data.first,
+            last: suppliersData.data.last,
+            has_next: suppliersData.data.has_next,
+            has_previous: suppliersData.data.has_previous,
+          }
+        : {
+            page: 0,
+            size: 10,
+            total_elements: 0,
+            total_pages: 0,
+            first: true,
+            last: true,
+            has_next: false,
+            has_previous: false,
+          },
+    [suppliersData?.data]
+  );
 
   const columns = [
     {
@@ -62,7 +91,9 @@ const SupplierPage = () => {
           <div
             style={{ display: "flex", alignItems: "center", marginBottom: 4 }}
           >
-            <BankOutlined style={{ fontSize: 16, marginRight: 8, color: "#1890ff" }} />
+            <BankOutlined
+              style={{ fontSize: 16, marginRight: 8, color: "#1890ff" }}
+            />
             <Text strong style={{ fontSize: 14 }}>
               {text}
             </Text>
@@ -100,24 +131,6 @@ const SupplierPage = () => {
       ),
     },
     {
-      title: "Thông tin ngân hàng",
-      key: "bank",
-      width: 200,
-      render: (record: Supplier) => (
-        <div>
-          <div style={{ marginBottom: 4 }}>
-            <BankOutlined style={{ marginRight: 4, color: "#722ed1" }} />
-            <Text style={{ fontSize: 12 }}>{record.bank_name}</Text>
-          </div>
-          <div style={{ marginBottom: 4 }}>
-            <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
-              STK: {record.bank_account}
-            </Text>
-          </div>
-        </div>
-      ),
-    },
-    {
       title: "Trạng thái",
       dataIndex: "is_active",
       key: "is_active",
@@ -134,9 +147,7 @@ const SupplierPage = () => {
       key: "created_date",
       width: 150,
       render: (date: string) => (
-        <Text style={{ fontSize: 12 }}>
-          {formatDate(date)}
-        </Text>
+        <Text style={{ fontSize: 12 }}>{formatDate(date)}</Text>
       ),
     },
   ];
@@ -152,55 +163,41 @@ const SupplierPage = () => {
     setEditModalVisible(true);
   };
 
-  const handleDelete = async (record: Supplier) => {
+  const handleToggleStatus = async (record: Supplier) => {
+    const newStatus = !record.is_active;
+    const actionText = newStatus ? "kích hoạt" : "tạm dừng";
+    
     showModal({
-      title: "Xác nhận xóa nhà cung cấp",
-      content: `Bạn có chắc chắn muốn xóa nhà cung cấp "${record.supplier_name}"? Hành động này không thể hoàn tác.`,
+      title: `Xác nhận ${actionText} nhà cung cấp`,
+      content: `Bạn có chắc chắn muốn ${actionText} nhà cung cấp "${record.supplier_name}"?`,
       type: "confirm",
-      confirmText: "Xóa",
+      confirmText: newStatus ? "Kích hoạt" : "Tạm dừng",
       cancelText: "Hủy",
       onConfirm: async () => {
         try {
-          await deleteSupplier(record.supplier_id);
-          message.success("Xóa nhà cung cấp thành công");
+          await toggleSupplierStatusMutation.mutateAsync({
+            supplierId: record.supplier_id,
+            isActive: newStatus,
+          });
+          message.success(`${newStatus ? "Kích hoạt" : "Tạm dừng"} nhà cung cấp thành công`);
         } catch (error: unknown) {
           const errorMessage =
             error instanceof Error
               ? error.message
-              : "Có lỗi xảy ra khi xóa nhà cung cấp";
+              : `Có lỗi xảy ra khi ${actionText} nhà cung cấp`;
           message.error(errorMessage);
         }
       },
     });
   };
 
-  const handleCreateModalSuccess = async () => {
-    try {
-      await refreshSuppliers();
-      message.success("Thêm nhà cung cấp thành công");
-      setCreateModalVisible(false);
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Có lỗi xảy ra khi thêm nhà cung cấp";
-      message.error(errorMessage);
-    }
+  const handleCreateModalSuccess = () => {
+    setCreateModalVisible(false);
   };
 
-  const handleEditModalSuccess = async () => {
-    try {
-      await refreshSuppliers();
-      message.success("Cập nhật nhà cung cấp thành công");
-      setEditModalVisible(false);
-      setEditData(null);
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Có lỗi xảy ra khi cập nhật nhà cung cấp";
-      message.error(errorMessage);
-    }
+  const handleEditModalSuccess = () => {
+    setEditModalVisible(false);
+    setEditData(null);
   };
 
   const actions = [
@@ -217,11 +214,11 @@ const SupplierPage = () => {
       onClick: handleEdit,
     },
     {
-      key: "delete",
-      label: "Xóa",
-      icon: <DeleteOutlined />,
-      danger: true,
-      onClick: handleDelete,
+      key: "toggle-status",
+      label: (record: Supplier) => record.is_active ? "Tạm dừng" : "Kích hoạt",
+      icon: <PoweroffOutlined />,
+      danger: (record: Supplier) => record.is_active,
+      onClick: handleToggleStatus,
     },
   ];
 
@@ -229,8 +226,10 @@ const SupplierPage = () => {
   const statistics = useMemo(() => {
     const totalSuppliers = suppliers.length;
     const activeSuppliers = suppliers.filter((item) => item.is_active).length;
-    const inactiveSuppliers = suppliers.filter((item) => !item.is_active).length;
-    
+    const inactiveSuppliers = suppliers.filter(
+      (item) => !item.is_active
+    ).length;
+
     return {
       totalSuppliers,
       activeSuppliers,
@@ -261,7 +260,14 @@ const SupplierPage = () => {
               prefix={<StarOutlined />}
             />
             <Progress
-              percent={statistics.totalSuppliers > 0 ? Math.round((statistics.activeSuppliers / statistics.totalSuppliers) * 100) : 0}
+              percent={
+                statistics.totalSuppliers > 0
+                  ? Math.round(
+                      (statistics.activeSuppliers / statistics.totalSuppliers) *
+                        100
+                    )
+                  : 0
+              }
               strokeColor="#52c41a"
             />
           </Card>
@@ -285,7 +291,7 @@ const SupplierPage = () => {
         actions={actions}
         onAdd={() => setCreateModalVisible(true)}
         addButtonText="Thêm nhà cung cấp mới"
-        loading={loading}
+        loading={isLoading}
         searchable={true}
         searchPlaceholder="Tìm kiếm nhà cung cấp theo tên, liên hệ..."
         searchFields={["supplier_name", "contact_person", "phone", "email"]}
@@ -305,7 +311,7 @@ const SupplierPage = () => {
         visible={createModalVisible}
         onCancel={() => setCreateModalVisible(false)}
         onSuccess={handleCreateModalSuccess}
-        loading={loading}
+        loading={isLoading}
       />
 
       <SupplierDetailModal
@@ -313,7 +319,7 @@ const SupplierPage = () => {
         onCancel={() => setDetailModalVisible(false)}
         onEdit={handleEdit}
         supplier={selectedData}
-        loading={loading}
+        loading={isLoading}
       />
 
       <SupplierEditModal
@@ -321,7 +327,7 @@ const SupplierPage = () => {
         onCancel={() => setEditModalVisible(false)}
         onSuccess={handleEditModalSuccess}
         supplier={editData}
-        loading={loading}
+        loading={isLoading}
       />
     </div>
   );

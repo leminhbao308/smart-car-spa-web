@@ -5,48 +5,73 @@ import {
   SupplierResponse,
   CreateSupplierRequest,
   UpdateSupplierRequest,
-  DeleteSupplierResponse,
+  SupplierRequest,
 } from "../types/supplier.types";
 
 export class SupplierService {
   /**
-   * Get all suppliers with pagination
+   * Get all suppliers with pagination and filtering
    */
-  static async getAllSuppliers(): Promise<{
-    suppliers: Supplier[];
-    pagination: {
-      page: number;
-      size: number;
-      total_elements: number;
-      total_pages: number;
-      first: boolean;
-      last: boolean;
-      has_next: boolean;
-      has_previous: boolean;
-    };
-  }> {
+  static async getAllSuppliers(
+    params: SupplierRequest = {}
+  ): Promise<SupplierListResponse> {
     try {
-      console.log("Fetching all suppliers...");
+      // Build query parameters
+      const queryParams = new URLSearchParams();
 
-      const response = await apiClient.get<SupplierListResponse>(
-        "/suppliers/get-all"
-      );
+      if (params.page !== undefined) {
+        queryParams.append("page", params.page.toString());
+      }
+      if (params.size !== undefined) {
+        queryParams.append("size", params.size.toString());
+      }
+      if (params.direction) {
+        queryParams.append("direction", params.direction);
+      }
+      if (params.sort) {
+        queryParams.append("sort", params.sort);
+      }
+      if (params.supplier_name) {
+        queryParams.append("supplier_name", params.supplier_name);
+      }
+      if (params.contact_person) {
+        queryParams.append("contact_person", params.contact_person);
+      }
+      if (params.phone) {
+        queryParams.append("phone", params.phone);
+      }
+      if (params.email) {
+        queryParams.append("email", params.email);
+      }
+      if (params.address) {
+        queryParams.append("address", params.address);
+      }
+      if (params.bank_name) {
+        queryParams.append("bank_name", params.bank_name);
+      }
+      if (params.has_contact_person !== undefined) {
+        queryParams.append("has_contact_person", params.has_contact_person.toString());
+      }
+      if (params.has_phone !== undefined) {
+        queryParams.append("has_phone", params.has_phone.toString());
+      }
+      if (params.has_email !== undefined) {
+        queryParams.append("has_email", params.has_email.toString());
+      }
+      if (params.has_address !== undefined) {
+        queryParams.append("has_address", params.has_address.toString());
+      }
+      if (params.has_bank_info !== undefined) {
+        queryParams.append("has_bank_info", params.has_bank_info.toString());
+      }
+
+      const url = `/suppliers/get-all?${queryParams.toString()}`;
+
+      const response = await apiClient.get<SupplierListResponse>(url);
       console.log("Get all suppliers API response:", response);
 
       if (response.data.success && response.data.data) {
-        return {
-          suppliers: response.data.data.content,
-          pagination: {
-            page: response.data.data.page,
-            size: response.data.data.size,
-            total_elements: response.data.data.total_elements,
-            total_pages: response.data.data.total_pages,
-            first: response.data.data.first,
-            last: response.data.data.last,
-            has_next: response.data.data.has_next,
-            has_previous: response.data.data.has_previous,
-          },
-        };
+        return response.data;
       } else {
         throw new Error(response.data.message || "Failed to fetch suppliers");
       }
@@ -137,7 +162,7 @@ export class SupplierService {
     try {
       console.log("Deleting supplier with ID:", supplierId);
 
-      const response = await apiClient.post<DeleteSupplierResponse>(
+      const response = await apiClient.post(
         `/suppliers/${supplierId}/delete`
       );
       console.log("Delete supplier API response:", response);
