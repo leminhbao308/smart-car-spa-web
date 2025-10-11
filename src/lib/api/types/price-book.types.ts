@@ -1,4 +1,4 @@
-import {BaseAuditEntity, ProductRef} from "@/lib/api";
+import {BaseAuditEntity, Product, ProductRef} from "@/lib/api";
 
 export interface PriceBook extends BaseAuditEntity{
   id: string;
@@ -28,7 +28,7 @@ export interface PricingPreviewBatchRequest {
 }
 
 export interface PricingPreviewItemResponse {
-  product: ProductRef;
+  product_id: string;
   qty: number;
   total_price: number;
 }

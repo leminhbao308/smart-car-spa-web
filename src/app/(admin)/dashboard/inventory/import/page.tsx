@@ -183,9 +183,9 @@ const ImportInventoryPage = () => {
         searchFields={["branch.branch_name", "created_by"]}
         actions={[
           {
-            key: "view",
+            key: "viewDetail",
             label: "Xem chi tiết",
-            type: "default",
+            type: "link",
             icon: <EyeOutlined/>,
             onClick: handleView,
           },

@@ -1,27 +1,25 @@
 "use client";
-import React, {useState, useEffect, useMemo} from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import {AdminTable} from "@/components/ui/Table";
 import {useConfirmationModalContext} from "@/components/ui/Modal";
 import {ColumnsType} from "antd/es/table";
-import {Tag, message, Select, Space, Tooltip} from "antd";
-import {
-  EyeOutlined,
-  DollarOutlined,
-} from "@ant-design/icons";
+import {message, Select, Space, Tag, Tooltip} from "antd";
+import {DollarOutlined, HistoryOutlined,} from "@ant-design/icons";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import {InventoryService, PurchaseOrderService} from "@/lib/api";
+import {InventoryLevel, Product, PurchaseOrder, PurchaseOrderService} from "@/lib/api";
 import {useInventoryLevels} from "@/lib/api/hooks";
 import {useProducts} from "@/lib/api/hooks/useProducts";
 import {useBranches} from "@/lib/api/hooks/useBranches";
 import {usePricing} from "@/lib/api/hooks/usePricing";
 import {useWarehouseByBranch} from "@/lib/api/hooks/useWarehouseByBranch";
-import {InventoryLevel, Warehouse, Product, PurchaseOrder} from "@/lib/api";
+import PriceHistoryModal from "@/components/ui/Modal/StockModal/PriceHistoryModal";
 
 interface StockTableItem extends InventoryLevel {
   key: string;
   stockStatus: "low" | "normal" | "high" | "out";
   branchName?: string;
   lastPurchasePrice?: number;
+  peakPurchasePrice?: number;
   sellingPrice?: number;
   profitMargin?: number;
 }
@@ -31,6 +29,8 @@ const StockInventoryPage = () => {
   const [loading, setLoading] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [priceHistoryVisible, setPriceHistoryVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const {showModal} = useConfirmationModalContext();
   const inventoryHook = useInventoryLevels();
   const {products} = useProducts({});
@@ -113,8 +113,8 @@ const StockInventoryPage = () => {
           })),
         });
         pricingResult.items.forEach((item) => {
-          if (item.product && item.product.id) {
-            sellingPrices[item.product.id] = item.total_price;
+          if (item && item.product_id) {
+            sellingPrices[item.product_id] = item.total_price;
           }
         });
       } catch (error) {
@@ -181,8 +181,8 @@ const StockInventoryPage = () => {
       title: "Mã SP",
       dataIndex: ["product", "sku"],
       key: "sku",
-      width: 100,
-      fixed: "left",
+      width: 190,
+      // fixed: "left",
       render: (sku: string) => <div style={{fontWeight: 500}}>{sku}</div>,
     },
     {
@@ -191,7 +191,6 @@ const StockInventoryPage = () => {
       key: "productName",
       width: 250,
       fixed: "left",
-      ellipsis: true,
     },
     {
       title: "Thương hiệu",
@@ -237,74 +236,35 @@ const StockInventoryPage = () => {
     {
       title: (
         <Tooltip title="Giá nhập gần nhất">
-          <span>Giá nhập <DollarOutlined style={{fontSize: 12}}/></span>
+          <span>Giá nhập gần nhất <DollarOutlined style={{fontSize: 12}}/></span>
         </Tooltip>
       ),
       dataIndex: "lastPurchasePrice",
       key: "lastPurchasePrice",
       width: 130,
       render: (price?: number) => (
-        <div style={{color: "#1890ff"}}>
-          {price !== undefined ? formatCurrency(price) : <span style={{color: "#999"}}>Sản phẩm này chưa được nhập vào lần nào</span>}
+        <div>
+          {price !== undefined ? formatCurrency(price) : <span style={{color: "#999"}}>Chưa nhập</span>}
         </div>
       ),
     },
     {
       title: (
         <Tooltip title="Giá bán hiện tại">
-          <span>Giá bán <DollarOutlined style={{fontSize: 12}}/></span>
+          <span>Giá bán hiện tại<DollarOutlined style={{fontSize: 12}}/></span>
         </Tooltip>
       ),
       dataIndex: "sellingPrice",
       key: "sellingPrice",
       width: 130,
       render: (price?: number) => (
-        <div style={{color: "#52c41a", fontWeight: 500}}>
-          {price !== undefined ? formatCurrency(price) : <span style={{color: "#999"}}>Hãy tạo bảng giá cho sản phẩm này</span>}
+        <div style={{fontWeight: 500}}>
+          {price !== undefined ? formatCurrency(price) : <span style={{color: "#999"}}>Chưa có giá</span>}
         </div>
       ),
     },
     {
-      title: (
-        <Tooltip title="Tỷ suất lợi nhuận">
-          <span>% lợi nhuận</span>
-        </Tooltip>
-      ),
-      dataIndex: "profitMargin",
-      key: "profitMargin",
-      width: 100,
-      sorter: (a, b) => (a.profitMargin || 0) - (b.profitMargin || 0),
-      render: (margin?: number) => {
-        if (margin === undefined) return <span style={{color: "#999"}}>N/A</span>;
-        const color = margin > 30 ? "#52c41a" : margin > 15 ? "#faad14" : "#ff4d4f";
-        return (
-          <div style={{color, fontWeight: 600}}>
-            {margin.toFixed(1)}%
-          </div>
-        );
-      },
-    },
-    {
-      title: "Giá trị tồn",
-      key: "totalValue",
-      width: 150,
-      sorter: (a, b) => {
-        const valueA = a.on_hand * (a.lastPurchasePrice || a.product.costPrice);
-        const valueB = b.on_hand * (b.lastPurchasePrice || b.product.costPrice);
-        return valueA - valueB;
-      },
-      render: (_, record) => {
-        const price = record.lastPurchasePrice || record.product.costPrice;
-        const totalValue = record.on_hand * price;
-        return (
-          <div style={{fontWeight: 600, color: "#52c41a"}}>
-            {formatCurrency(totalValue)}
-          </div>
-        );
-      },
-    },
-    {
-      title: "Cập nhật",
+      title: "Cập nhật lần cuối",
       dataIndex: "modified_date",
       key: "modified_date",
       width: 150,
@@ -315,52 +275,24 @@ const StockInventoryPage = () => {
     },
   ];
 
-  const handleView = (record: StockTableItem) => {
-    const profit = record.lastPurchasePrice && record.sellingPrice
-      ? record.sellingPrice - record.lastPurchasePrice
-      : undefined;
+  const handlePriceHistory = (record: StockTableItem) => {
+    setSelectedProduct(record.product);
+    setPriceHistoryVisible(true);
+  };
 
-    showModal({
-      title: "Chi tiết tồn kho",
-      content: (
-        <div style={{lineHeight: 2}}>
-          <p><strong>Sản phẩm:</strong> {record.product.productName}</p>
-          <p><strong>SKU:</strong> {record.product.sku}</p>
-          <p><strong>Chi nhánh:</strong> {record.branchName}</p>
-          <hr style={{margin: "12px 0", borderColor: "#f0f0f0"}}/>
-          <p><strong>Tồn kho:</strong> {record.on_hand}</p>
-          <p><strong>Đã đặt:</strong> {record.reserved}</p>
-          <p><strong>Khả dụng:</strong> {record.available}</p>
-          <hr style={{margin: "12px 0", borderColor: "#f0f0f0"}}/>
-          <p><strong>Giá nhập:</strong> {record.lastPurchasePrice !== undefined ? formatCurrency(record.lastPurchasePrice) : "N/A"}</p>
-          <p><strong>Giá bán:</strong> {record.sellingPrice !== undefined ? formatCurrency(record.sellingPrice) : "N/A"}</p>
-          {profit !== undefined && (
-            <>
-              <p><strong>Lợi nhuận/sp:</strong> <span style={{color: "#52c41a"}}>{formatCurrency(profit)}</span></p>
-              <p><strong>Tỷ suất lãi:</strong> <span style={{color: "#52c41a"}}>{record.profitMargin?.toFixed(1)}%</span></p>
-            </>
-          )}
-          <hr style={{margin: "12px 0", borderColor: "#f0f0f0"}}/>
-          <p><strong>Giá trị tồn:</strong> <span
-            style={{color: "#52c41a", fontWeight: 600}}>{formatCurrency(record.on_hand * (record.lastPurchasePrice || record.product.costPrice))}</span></p>
-        </div>
-      ),
-      type: "info",
-    });
+  const fetchPriceHistory = async (productId: string) => {
+    try {
+      return await PurchaseOrderService.getProductPOHistory(productId);
+    } catch (error) {
+      console.error("Failed to fetch price history:", error);
+      return null;
+    }
   };
 
   // Calculate summary
   const totalProducts = data.length;
   const outOfStock = data.filter((item) => item.stockStatus === "out").length;
   const lowStock = data.filter((item) => item.stockStatus === "low").length;
-  const totalValue = data.reduce(
-    (sum, item) => sum + item.on_hand * (item.lastPurchasePrice || item.product.costPrice),
-    0
-  );
-  const avgProfitMargin = data.filter(item => item.profitMargin !== undefined).length > 0
-    ? data.reduce((sum, item) => sum + (item.profitMargin || 0), 0) /
-    data.filter(item => item.profitMargin !== undefined).length
-    : 0;
 
   const isLoading = loading || inventoryHook.loading || branchesLoading || pricingHook.loading || warehouseLoading;
 
@@ -385,18 +317,6 @@ const StockInventoryPage = () => {
               {lowStock}
             </div>
           </div>
-          <div style={{padding: "12px 20px", background: "#f6ffed", borderRadius: 8}}>
-            <div style={{fontSize: 12, color: "#666"}}>Tổng giá trị</div>
-            <div style={{fontSize: 24, fontWeight: 600, color: "#52c41a"}}>
-              {formatCurrency(totalValue)}
-            </div>
-          </div>
-          <div style={{padding: "12px 20px", background: "#e6f7ff", borderRadius: 8}}>
-            <div style={{fontSize: 12, color: "#666"}}>Lãi suất TB</div>
-            <div style={{fontSize: 24, fontWeight: 600, color: "#1890ff"}}>
-              {avgProfitMargin.toFixed(1)}%
-            </div>
-          </div>
         </Space>
       </div>
 
@@ -405,7 +325,7 @@ const StockInventoryPage = () => {
         <Space>
           <span style={{fontWeight: 500}}>Chọn chi nhánh:</span>
           <Select
-            style={{width: 300}}
+            style={{width: 500}}
             value={selectedBranch}
             onChange={setSelectedBranch}
             placeholder="Chọn chi nhánh"
@@ -413,7 +333,7 @@ const StockInventoryPage = () => {
           >
             {branches.map((branch) => (
               <Select.Option key={branch.branch_id} value={branch.branch_id}>
-                {branch.branch_name}
+                {branch.branch_name} - {branch.address || ""}
               </Select.Option>
             ))}
           </Select>
@@ -430,14 +350,27 @@ const StockInventoryPage = () => {
         searchFields={["product.productName", "product.sku", "product.barcode"]}
         actions={[
           {
-            key: "view",
-            label: "Xem chi tiết",
+            key: "priceHistory",
+            label: "Lịch sử giá",
             type: "default",
-            icon: <EyeOutlined/>,
-            onClick: handleView,
+            icon: <HistoryOutlined/>,
+            onClick: handlePriceHistory,
+            fixed: true
           },
         ]}
         scroll={{x: 2000}}
+      />
+
+      {/* Price History Modal */}
+      <PriceHistoryModal
+        visible={priceHistoryVisible}
+        onClose={() => {
+          setPriceHistoryVisible(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+        warehouseId={warehouse?.id || ""}
+        onFetchHistory={fetchPriceHistory}
       />
     </div>
   );
