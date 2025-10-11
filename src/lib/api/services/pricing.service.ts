@@ -7,6 +7,7 @@ import {
   PricingPreviewItemRequest,
   PricingPreviewItemResponse
 } from "@/lib/api/types/price-book.types";
+import { ServicePricingDto } from "@/lib/api/types/service.types";
 
 export const PricingService = {
   getPreviewPrice: async (data: PricingPreviewItemRequest): Promise<PricingPreviewItemResponse> => {
@@ -46,6 +47,35 @@ export const PricingService = {
 
   getAllPriceBooks: async (): Promise<PriceBook[]> => {
     const response = await api.get(`/pricing/books/get-all`);
+    return response.data.data;
+  },
+
+  // Service Pricing APIs
+  getServicePricing: async (serviceId: string, priceBookId?: string): Promise<ServicePricingDto> => {
+    const params = priceBookId ? `?priceBookId=${priceBookId}` : "";
+    const response = await api.get(`/pricing/services/${serviceId}${params}`);
+    return response.data.data;
+  },
+
+  recalculateServicePricing: async (serviceId: string, priceBookId?: string): Promise<ServicePricingDto> => {
+    const params = priceBookId ? `?priceBookId=${priceBookId}` : "";
+    const response = await api.post(`/pricing/services/${serviceId}/recalculate${params}`);
+    return response.data.data;
+  },
+
+  // Price Book Item Management APIs
+  createPriceBookItem: async (priceBookId: string, data: CreatePriceBookItemRequest): Promise<PriceBookItem> => {
+    const response = await api.post(`/pricing/books/${priceBookId}/create-item`, data);
+    return response.data.data;
+  },
+
+  createServicePriceBookItem: async (priceBookId: string, data: any): Promise<PriceBookItem> => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const response = await api.post(`/pricing/books/${priceBookId}/create-service-item`, data);
+    return response.data.data;
+  },
+
+  createServicePackagePriceBookItem: async (priceBookId: string, data: any): Promise<PriceBookItem> => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const response = await api.post(`/pricing/books/${priceBookId}/create-service-package-item`, data);
     return response.data.data;
   }
 }

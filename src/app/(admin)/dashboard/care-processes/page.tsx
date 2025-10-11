@@ -1,12 +1,11 @@
 "use client";
 import React, { useState } from "react";
-import { Tag, Typography, Card, Row, Col, Statistic, Progress } from "antd";
+import { Tag, Typography, Card, Row, Col, Statistic, Progress, message } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
   ClockCircleOutlined,
-  DollarOutlined,
   CarOutlined,
   SettingOutlined,
   CheckCircleOutlined,
@@ -17,28 +16,33 @@ import AdminTable from "@/components/ui/Table/AdminTable";
 import CareProcessModal from "@/components/ui/Modal/CarProcessModal/CareProcessModal";
 import CareProcessDetailModal from "@/components/ui/Modal/CarProcessModal/CareProcessDetailModal";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
-import {
-  careProcessesData,
-  CareProcess,
-} from "@/components/utils/data/care-processes.data";
-import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import { formatTime } from "@/components/utils/helper/duration.format.helper";
+import { useServiceProcesses, useCreateServiceProcess, useUpdateServiceProcess, useDeleteServiceProcess } from "@/lib/api/hooks";
+import { ServiceProcessInfoDto, CreateServiceProcessRequest, UpdateServiceProcessRequest } from "@/lib/api/types";
 
 const { Text } = Typography;
 
 const CareProcessesPage = () => {
-  const [data, setData] = useState<CareProcess[]>(careProcessesData);
+  // API hooks
+  const { data: serviceProcessesData, isLoading, refetch } = useServiceProcesses();
+  const createServiceProcessMutation = useCreateServiceProcess();
+  const updateServiceProcessMutation = useUpdateServiceProcess();
+  const deleteServiceProcessMutation = useDeleteServiceProcess();
+
+  // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [editingProcess, setEditingProcess] = useState<CareProcess | null>(
-    null
-  );
-  const [viewingProcess, setViewingProcess] = useState<CareProcess | null>(
-    null
-  );
+  const [editingProcess, setEditingProcess] = useState<ServiceProcessInfoDto | null>(null);
+  const [viewingProcess, setViewingProcess] = useState<ServiceProcessInfoDto | null>(null);
   const { showModal } = useConfirmationModalContext();
 
   const columns = [
+    {
+      title: "STT",
+      key: "index",
+      width: 60,
+      align: "center" as const,
+      render: (_: unknown, __: unknown, index: number) => index + 1,
+    },
     {
       title: "Quy trình",
       dataIndex: "name",
@@ -51,19 +55,12 @@ const CareProcessesPage = () => {
       ),
     },
     {
-      title: "Loại xe",
-      dataIndex: "targetVehicleTypes",
-      key: "targetVehicleTypes",
-      width: 150,
-      render: (types: string[]) => (
-        <div>
-          {types.slice(0, 2).map((type, index) => (
-            <Tag key={index} style={{ marginBottom: 2 }}>
-              {type}
-            </Tag>
-          ))}
-          {types.length > 2 && <Tag color="blue">+{types.length - 2} loại</Tag>}
-        </div>
+      title: "Mã quy trình",
+      dataIndex: "code",
+      key: "code",
+      width: 120,
+      render: (code: string) => (
+        <Tag color="blue">{code}</Tag>
       ),
     },
     {
@@ -82,18 +79,18 @@ const CareProcessesPage = () => {
             }}
           >
             <ClockCircleOutlined style={{ marginRight: 4, color: "#1890ff" }} />
-            <Text strong>{formatTime(duration)}</Text>
+            <Text strong>{duration} phút</Text>
           </div>
           <Text style={{ fontSize: 11, color: "#8c8c8c" }}>Ước tính</Text>
         </div>
       ),
     },
     {
-      title: "Giá dịch vụ",
-      dataIndex: "price",
-      key: "price",
-      width: 120,
-      render: (price: number) => (
+      title: "Số bước",
+      dataIndex: "stepCount",
+      key: "stepCount",
+      width: 100,
+      render: (stepCount: number) => (
         <div style={{ textAlign: "center" }}>
           <div
             style={{
@@ -103,11 +100,10 @@ const CareProcessesPage = () => {
               marginBottom: 4,
             }}
           >
-            <DollarOutlined style={{ marginRight: 4, color: "#52c41a" }} />
-            <Text strong style={{ color: "#52c41a" }}>
-              {formatCurrency(price)}
-            </Text>
+            <CarOutlined style={{ marginRight: 4, color: "#722ed1" }} />
+            <Text strong>{stepCount}</Text>
           </div>
+          <Text style={{ fontSize: 11, color: "#8c8c8c" }}>bước</Text>
         </div>
       ),
     },
@@ -116,11 +112,11 @@ const CareProcessesPage = () => {
       dataIndex: "isActive",
       key: "isActive",
       width: 150,
-      render: (isActive: boolean, record: CareProcess) => (
+      render: (isActive: boolean, record: ServiceProcessInfoDto) => (
         <div style={{ textAlign: "center" }}>
-          {record.status === "discontinued" ? (
+          {record.is_deleted ? (
             <Tag color="red" icon={<DeleteOutlined />}>
-              Ngừng cung cấp
+              Đã xóa
             </Tag>
           ) : isActive ? (
             <Tag color="green" icon={<CheckCircleOutlined />}>
@@ -141,7 +137,7 @@ const CareProcessesPage = () => {
       key: "view",
       label: "Xem chi tiết",
       icon: <EyeOutlined />,
-      onClick: (record: CareProcess) => {
+      onClick: (record: ServiceProcessInfoDto) => {
         setViewingProcess(record);
         setDetailModalOpen(true);
       },
@@ -150,7 +146,8 @@ const CareProcessesPage = () => {
       key: "edit",
       label: "Chỉnh sửa",
       icon: <EditOutlined />,
-      onClick: (record: CareProcess) => {
+      condition: (record: ServiceProcessInfoDto) => !record.is_deleted,
+      onClick: (record: ServiceProcessInfoDto) => {
         setEditingProcess(record);
         setModalOpen(true);
       },
@@ -159,19 +156,24 @@ const CareProcessesPage = () => {
       key: "activate",
       label: "Kích hoạt",
       icon: <PlayCircleOutlined />,
-      condition: (record: CareProcess) =>
-        !record.isActive && record.status !== "discontinued",
-      onClick: (record: CareProcess) => {
+      condition: (record: ServiceProcessInfoDto) =>
+        !record.isActive && !record.is_deleted,
+      onClick: (record: ServiceProcessInfoDto) => {
         showModal({
           title: "Xác nhận kích hoạt",
           content: `Bạn có chắc chắn muốn kích hoạt quy trình "${record.name}"?`,
           type: "success",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id ? { ...item, isActive: true } : item
-              )
-            );
+          onConfirm: async () => {
+            try {
+              await updateServiceProcessMutation.mutateAsync({
+                serviceProcessId: record.id,
+                data: { isActive: true }
+              });
+              message.success("Kích hoạt quy trình thành công!");
+              refetch();
+            } catch {
+              message.error("Có lỗi xảy ra khi kích hoạt quy trình");
+            }
           },
         });
       },
@@ -181,42 +183,46 @@ const CareProcessesPage = () => {
       label: "Tạm dừng",
       icon: <PauseCircleOutlined />,
       danger: true,
-      condition: (record: CareProcess) => record.isActive,
-      onClick: (record: CareProcess) => {
+      condition: (record: ServiceProcessInfoDto) => record.isActive && !record.is_deleted,
+      onClick: (record: ServiceProcessInfoDto) => {
         showModal({
           title: "Xác nhận tạm dừng",
           content: `Bạn có chắc chắn muốn tạm dừng quy trình "${record.name}"? Quy trình sẽ được chuyển sang trạng thái tạm dừng.`,
           type: "warning",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id ? { ...item, isActive: false } : item
-              )
-            );
+          onConfirm: async () => {
+            try {
+              await updateServiceProcessMutation.mutateAsync({
+                serviceProcessId: record.id,
+                data: { isActive: false }
+              });
+              message.success("Tạm dừng quy trình thành công!");
+              refetch();
+            } catch {
+              message.error("Có lỗi xảy ra khi tạm dừng quy trình");
+            }
           },
         });
       },
     },
     {
-      key: "deactivate",
-      label: "Ngừng cung cấp dịch vụ",
+      key: "delete",
+      label: "Xóa",
       icon: <DeleteOutlined />,
       danger: true,
-      condition: (record: CareProcess) =>
-        !record.isActive && record.status !== "discontinued",
-      onClick: (record: CareProcess) => {
+      condition: (record: ServiceProcessInfoDto) => !record.is_deleted,
+      onClick: (record: ServiceProcessInfoDto) => {
         showModal({
-          title: "Xác nhận ngừng cung cấp dịch vụ",
-          content: `Bạn có chắc chắn muốn ngừng cung cấp dịch vụ "${record.name}"? Quy trình sẽ được đánh dấu là ngừng cung cấp dịch vụ.`,
+          title: "Xác nhận xóa quy trình",
+          content: `Bạn có chắc chắn muốn xóa quy trình "${record.name}"? Hành động này không thể hoàn tác.`,
           type: "error",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "discontinued" }
-                  : item
-              )
-            );
+          onConfirm: async () => {
+            try {
+              await deleteServiceProcessMutation.mutateAsync(record.id);
+              message.success("Xóa quy trình thành công!");
+              refetch();
+            } catch {
+              message.error("Có lỗi xảy ra khi xóa quy trình");
+            }
           },
         });
       },
@@ -228,22 +234,27 @@ const CareProcessesPage = () => {
     setModalOpen(true);
   };
 
-  const handleModalOk = (processData: CareProcess) => {
-    if (editingProcess) {
-      // Cập nhật quy trình
-      setData(
-        data.map((item) =>
-          item.id === editingProcess.id
-            ? { ...processData, id: editingProcess.id }
-            : item
-        )
-      );
-    } else {
-      // Thêm quy trình mới
-      setData([...data, processData]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleModalOk = async (processData: any) => {
+    try {
+      if (editingProcess) {
+        // Cập nhật quy trình
+        await updateServiceProcessMutation.mutateAsync({
+          serviceProcessId: editingProcess.id,
+          data: processData as UpdateServiceProcessRequest
+        });
+        message.success("Cập nhật quy trình thành công!");
+      } else {
+        // Thêm quy trình mới
+        await createServiceProcessMutation.mutateAsync(processData as CreateServiceProcessRequest);
+        message.success("Tạo quy trình mới thành công!");
+      }
+      setModalOpen(false);
+      setEditingProcess(null);
+      refetch();
+    } catch {
+      message.error("Có lỗi xảy ra khi lưu quy trình");
     }
-    setModalOpen(false);
-    setEditingProcess(null);
   };
 
   const handleModalCancel = () => {
@@ -252,24 +263,23 @@ const CareProcessesPage = () => {
   };
 
   // Thống kê tổng quan
+  const data = serviceProcessesData || [];
   const totalProcesses = data.length;
   const activeProcesses = data.filter(
-    (item) => item.isActive && item.status !== "discontinued"
+    (item) => item.isActive && !item.is_deleted
   ).length;
   const inactiveProcesses = data.filter(
-    (item) => !item.isActive && item.status !== "discontinued"
+    (item) => !item.isActive && !item.is_deleted
   ).length;
-  const discontinuedProcesses = data.filter(
-    (item) => item.status === "discontinued"
+  const deletedProcesses = data.filter(
+    (item) => item.is_deleted
   ).length;
-  const totalSteps = data.reduce((sum, item) => sum + item.steps.length, 0);
+  const totalSteps = data.reduce((sum, item) => sum + (item.stepCount || 0), 0);
   const averageDuration =
     data.length > 0
-      ? data.reduce((sum, item) => sum + item.estimatedDuration, 0) /
+      ? data.reduce((sum, item) => sum + (item.estimatedDuration || 0), 0) /
         data.length
       : 0;
-  const totalValue = data.reduce((sum, item) => sum + item.price, 0);
-  const averagePrice = data.length > 0 ? totalValue / data.length : 0;
 
   return (
     <div>
@@ -313,8 +323,8 @@ const CareProcessesPage = () => {
         <Col xs={24} sm={12} lg={4}>
           <Card>
             <Statistic
-              title="Ngừng cung cấp"
-              value={discontinuedProcesses}
+              title="Đã xóa"
+              value={deletedProcesses}
               valueStyle={{ color: "#f5222d" }}
               prefix={<DeleteOutlined />}
             />
@@ -349,28 +359,6 @@ const CareProcessesPage = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Giá TB"
-              value={averagePrice}
-              valueStyle={{ color: "#eb2f96" }}
-              prefix={<DollarOutlined />}
-              formatter={(value) => formatCurrency(Number(value))}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng giá trị"
-              value={totalValue}
-              valueStyle={{ color: "#52c41a" }}
-              prefix={<DollarOutlined />}
-              formatter={(value) => formatCurrency(Number(value))}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
               title="Bước TB/quy trình"
               value={
                 totalProcesses > 0 ? Math.round(totalSteps / totalProcesses) : 0
@@ -386,12 +374,13 @@ const CareProcessesPage = () => {
         title="Quản lý quy trình chăm sóc xe"
         dataSource={data}
         columns={columns}
+        loading={isLoading}
         actions={actions}
         onAdd={handleAddNew}
         addButtonText="Thêm quy trình mới"
         searchable={true}
-        searchPlaceholder="Tìm kiếm quy trình theo tên, mô tả..."
-        searchFields={["name", "description"]}
+        searchPlaceholder="Tìm kiếm quy trình theo tên, mã..."
+        searchFields={["name", "code", "description"]}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
@@ -405,7 +394,7 @@ const CareProcessesPage = () => {
         open={modalOpen}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        initialData={editingProcess}
+        initialData={editingProcess as any} // eslint-disable-line @typescript-eslint/no-explicit-any
         title={
           editingProcess
             ? "Chỉnh sửa quy trình chăm sóc"
@@ -419,7 +408,7 @@ const CareProcessesPage = () => {
           setDetailModalOpen(false);
           setViewingProcess(null);
         }}
-        process={viewingProcess}
+        process={viewingProcess as any} // eslint-disable-line @typescript-eslint/no-explicit-any
       />
     </div>
   );

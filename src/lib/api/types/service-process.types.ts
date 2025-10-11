@@ -4,36 +4,38 @@
  * Updated to match backend DTOs
  */
 
-import { BaseAuditEntity } from "./common.types";
+import { AuditDto } from "./common.types";
 
-export interface ServiceProcessInfoDto extends BaseAuditEntity {
+export interface ServiceProcessInfoDto {
   id: string;
   code: string;
   name: string;
-  description: string;
-  estimatedDuration: number;
+  description?: string;
+  estimatedDuration?: number;
   isDefault: boolean;
   isActive: boolean;
   stepCount: number;
   processSteps: ServiceProcessStepInfoDto[];
+  audit: AuditDto;
 }
 
-export interface ServiceProcessStepInfoDto extends BaseAuditEntity {
+export interface ServiceProcessStepInfoDto {
   id: string;
   processId: string;
   processName: string;
   stepOrder: number;
   name: string;
-  description: string;
-  estimatedTime: number;
+  description?: string;
+  estimatedTime?: number;
   isRequired: boolean;
   isFirstStep: boolean;
   isLastStep: boolean;
   totalProductCount: number;
   stepProducts: ServiceProcessStepProductInfoDto[];
+  audit: AuditDto;
 }
 
-export interface ServiceProcessStepProductInfoDto extends BaseAuditEntity {
+export interface ServiceProcessStepProductInfoDto {
   id: string;
   stepId: string;
   stepName: string;
@@ -42,8 +44,9 @@ export interface ServiceProcessStepProductInfoDto extends BaseAuditEntity {
   productCode: string;
   productSku: string;
   quantity: number;
-  unit: string;
+  unit?: string;
   productCost: number;
+  audit: AuditDto;
 }
 
 export interface ServiceProcessFilterParam {

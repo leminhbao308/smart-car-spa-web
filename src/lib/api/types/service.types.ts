@@ -168,12 +168,20 @@ export interface ProcessStepPricingDto {
 export interface ProductPricingDto {
   productId: string;
   productName: string;
-  productCode: string;
-  productSku: string;
+  sku: string;
+  productType: string;
+  brand: string;
+  model: string;
   quantity: number;
   unit: string;
-  unitPrice: number;
-  totalPrice: number;
+  unitPrice: number; // Giá đơn vị từ PriceBook
+  totalPrice: number; // unitPrice * quantity
+  policyType: "FIXED" | "MARKUP_ON_PEAK";
+  priceSource: "PRICE_BOOK" | "DEFAULT" | "OVERRIDE";
+  priceBookId?: string;
+  priceBookItemId?: string;
+  priceBookName?: string;
+  priceCalculatedAt: string;
 }
 
 export interface ServicePricingDto {

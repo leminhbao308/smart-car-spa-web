@@ -137,14 +137,14 @@ export class ServiceProcessService {
       // Use the main endpoint and filter for active processes
       const response = await apiClient.get("/service-processes");
 
-      // Check if response has the expected structure
-      if (response.data && response.data.success && response.data.data && Array.isArray(response.data.data)) {
+      // Backend returns Page<ServiceProcessInfoDto> directly
+      if (response.data && Array.isArray(response.data)) {
         // Filter for active processes
-        const activeProcesses = response.data.data.filter((process: ServiceProcessInfoDto) => process.isActive);
-        return activeProcesses;
-      } else if (response.data && Array.isArray(response.data)) {
-        // If response is directly an array, filter for active processes
         const activeProcesses = response.data.filter((process: ServiceProcessInfoDto) => process.isActive);
+        return activeProcesses;
+      } else if (response.data && response.data.content) {
+        // If response is paginated, filter for active processes
+        const activeProcesses = response.data.content.filter((process: ServiceProcessInfoDto) => process.isActive);
         return activeProcesses;
       } else {
         console.warn("Unexpected response format for service processes:", response.data);
@@ -187,10 +187,11 @@ export class ServiceProcessService {
     try {
       const response = await apiClient.post(`/service-processes/${processId}/update`, processData);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to update service process");
+        throw new Error("Failed to update service process");
       }
     } catch (error) {
       console.error("Update service process error:", error);
@@ -227,10 +228,11 @@ export class ServiceProcessService {
       const response = await apiClient.post(`/service-processes/${processId}/set-default`);
       console.log("Set default service process API response:", response);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to set default service process");
+        throw new Error("Failed to set default service process");
       }
     } catch (error) {
       console.error("Set default service process error:", error);
@@ -247,10 +249,11 @@ export class ServiceProcessService {
     try {
       const response = await apiClient.get(`/service-processes/${processId}/steps`);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns List<ServiceProcessStepInfoDto> directly
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch service process steps");
+        throw new Error("Failed to fetch service process steps");
       }
     } catch (error) {
       console.error("Get service process steps error:", error);
@@ -265,10 +268,11 @@ export class ServiceProcessService {
     try {
       const response = await apiClient.get(`/service-processes/steps/${stepId}`);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessStepInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch service process step");
+        throw new Error("Failed to fetch service process step");
       }
     } catch (error) {
       console.error("Get service process step by ID error:", error);
@@ -289,10 +293,11 @@ export class ServiceProcessService {
       const response = await apiClient.post(`/service-processes/${processId}/steps`, stepData);
       console.log("Add step to service process API response:", response);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessStepInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to add step to service process");
+        throw new Error("Failed to add step to service process");
       }
     } catch (error) {
       console.error("Add step to service process error:", error);
@@ -313,10 +318,11 @@ export class ServiceProcessService {
       const response = await apiClient.post(`/service-processes/steps/${stepId}/update`, stepData);
       console.log("Update service process step API response:", response);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessStepInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to update service process step");
+        throw new Error("Failed to update service process step");
       }
     } catch (error) {
       console.error("Update service process step error:", error);
@@ -352,10 +358,11 @@ export class ServiceProcessService {
     try {
       const response = await apiClient.get(`/service-processes/steps/${stepId}/products`);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns List<ServiceProcessStepProductInfoDto> directly
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch service process step products");
+        throw new Error("Failed to fetch service process step products");
       }
     } catch (error) {
       console.error("Get service process step products error:", error);
@@ -370,10 +377,11 @@ export class ServiceProcessService {
     try {
       const response = await apiClient.get(`/service-processes/step-products/${productId}`);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessStepProductInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch service process step product");
+        throw new Error("Failed to fetch service process step product");
       }
     } catch (error) {
       console.error("Get service process step product by ID error:", error);
@@ -394,10 +402,11 @@ export class ServiceProcessService {
       const response = await apiClient.post(`/service-processes/steps/${stepId}/products`, productData);
       console.log("Add product to step API response:", response);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessStepProductInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to add product to step");
+        throw new Error("Failed to add product to step");
       }
     } catch (error) {
       console.error("Add product to step error:", error);
@@ -418,10 +427,11 @@ export class ServiceProcessService {
       const response = await apiClient.post(`/service-processes/step-products/${productId}/update`, productData);
       console.log("Update service process step product API response:", response);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
+      // Backend returns ServiceProcessStepProductInfoDto directly
+      if (response.data) {
+        return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to update service process step product");
+        throw new Error("Failed to update service process step product");
       }
     } catch (error) {
       console.error("Update service process step product error:", error);

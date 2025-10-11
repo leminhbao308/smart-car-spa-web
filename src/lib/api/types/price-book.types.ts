@@ -1,4 +1,4 @@
-import {BaseAuditEntity, Product, ProductRef} from "@/lib/api";
+import {BaseAuditEntity, Product, ProductRef, ServiceInfoDto, ServicePackageInfoDto} from "@/lib/api";
 
 export interface PriceBook extends BaseAuditEntity{
   id: string;
@@ -7,14 +7,20 @@ export interface PriceBook extends BaseAuditEntity{
   currency: "VND" | string;
   active: boolean;
   valid_from: string;
-  valid_fo: string | null;
+  valid_to: string | null;
   items: PriceBookItem[];
 }
 
 export interface PriceBookItem extends BaseAuditEntity {
-  product: ProductRef;
+  id: string;
+  product?: ProductRef;
+  service?: ServiceInfoDto;
+  servicePackage?: ServicePackageInfoDto;
+  item_type: "PRODUCT" | "SERVICE" | "SERVICE_PACKAGE";
+  item_id: string;
+  item_name: string;
   policy_type: "FIXED" | "MARKUP_ON_PEAK";
-  price: number | null;
+  fixed_price: number | null;
   markup_percent: number | null;
 }
 

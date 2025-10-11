@@ -59,6 +59,16 @@ export interface BaseAuditEntity {
   is_deleted: boolean;
 }
 
+// Audit DTO for backend response
+export interface AuditDto {
+  created_date: string;
+  modified_date: string;
+  created_by: string;
+  modified_by: string;
+  is_active: boolean;
+  is_deleted: boolean;
+}
+
 // Base pagination response
 export interface BasePaginationResponse {
   pageable: {

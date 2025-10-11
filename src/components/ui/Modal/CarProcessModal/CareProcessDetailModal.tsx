@@ -1,44 +1,34 @@
-"use client";
-import React from "react";
+import React, { useState } from "react";
 import {
   Modal,
   Card,
   Row,
   Col,
-  Typography,
   Tag,
-  Divider,
-  Space,
+  Typography,
   Descriptions,
-  Progress,
+  Statistic,
+  Space,
+  Button,
+  Table,
 } from "antd";
 import {
   ClockCircleOutlined,
-  DollarOutlined,
-  CarOutlined,
-  SettingOutlined,
   CheckCircleOutlined,
-  InfoCircleOutlined,
   DeleteOutlined,
+  CarOutlined,
+  FileTextOutlined,
+  StarOutlined,
+  ShoppingCartOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
-import { CareProcess } from "@/components/utils/data/care-processes.data";
-import {
-  getCategoryColor,
-  getCategoryIcon,
-  getCategoryLabel,
-  getStepCategoryColor,
-  getStepCategoryIcon,
-  getStepCategoryLabel,
-} from "@/components/utils/helper/care.process.helper";
-import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import { formatTime } from "@/components/utils/helper/duration.format.helper";
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Title } = Typography;
 
 interface CareProcessDetailModalProps {
   open: boolean;
   onCancel: () => void;
-  process: CareProcess | null;
+  process: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
@@ -46,35 +36,53 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
   onCancel,
   process,
 }) => {
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [selectedStepProducts, setSelectedStepProducts] = useState<any[]>([]); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const [selectedStepName, setSelectedStepName] = useState("");
+
+  const handleViewProducts = (stepProducts: unknown[], stepName: string) => {
+    setSelectedStepProducts(stepProducts);
+    setSelectedStepName(stepName);
+    setProductModalOpen(true);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
   if (!process) return null;
-
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    }
-    return `${mins}m`;
-  };
-
-  const getStepStatusColor = (index: number, totalSteps: number) => {
-    // Giả sử hiển thị tất cả các bước như đã hoàn thành để demo
-    return "green";
-  };
-
-  const getStepStatusIcon = (index: number, totalSteps: number) => {
-    // Giả sử hiển thị tất cả các bước như đã hoàn thành để demo
-    return <CheckCircleOutlined />;
-  };
 
   return (
     <Modal
       title={
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <span style={{ fontSize: 24, marginRight: 12 }}>
-            {getCategoryIcon(process.category)}
-          </span>
-          <span>Chi tiết quy trình: {process.name}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              backgroundColor: "#1890ff",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 18,
+              fontWeight: "bold",
+            }}
+          >
+            <CarOutlined />
+          </div>
+          <div>
+            <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
+              {process.name}
+            </Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {process.code || "N/A"}
+            </Text>
+          </div>
         </div>
       }
       open={open}
@@ -82,384 +90,856 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
       footer={null}
       width={1000}
       style={{ top: 20 }}
+      styles={{
+        body: {
+          maxHeight: "80vh",
+          overflowY: "auto",
+          overflowX: "hidden",
+          padding: "16px 24px",
+        },
+      }}
     >
-      <div>
-        {/* Thông tin cơ bản */}
-        <Card title="Thông tin cơ bản" style={{ marginBottom: 16 }}>
-          <Row gutter={[16, 16]}>
-            <Col span={12}>
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Tên quy trình">
-                  <Text strong>{process.name}</Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Loại quy trình">
-                  <Tag
-                    color={getCategoryColor(process.category)}
-                    icon={getCategoryIcon(process.category)}
-                  >
-                    {getCategoryLabel(process.category)}
+      <div style={{ padding: "0 4px" }}>
+        {/* Overview Cards */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col span={6}>
+            <Card size="small" style={{ textAlign: "center" }}>
+              <Statistic
+                title="Tổng số bước"
+                value={process.stepCount || process.processSteps?.length || 0}
+                prefix={<FileTextOutlined />}
+                valueStyle={{ color: "#1890ff", fontSize: 20 }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small" style={{ textAlign: "center" }}>
+              <Statistic
+                title="Thời gian ước tính"
+                value={process.estimatedDuration || 0}
+                suffix="phút"
+                prefix={<ClockCircleOutlined />}
+                valueStyle={{ color: "#52c41a", fontSize: 20 }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small" style={{ textAlign: "center" }}>
+              <Statistic
+                title="Loại quy trình"
+                value={process.isDefault ? "Mặc định" : "Tùy chỉnh"}
+                prefix={<StarOutlined />}
+                valueStyle={{
+                  color: process.isDefault ? "#fa8c16" : "#722ed1",
+                  fontSize: 16,
+                }}
+              />
+            </Card>
+          </Col>
+          <Col span={6}>
+            <Card size="small" style={{ textAlign: "center" }}>
+              <div style={{ textAlign: "center" }}>
+                <div
+                  style={{ fontSize: 12, color: "#8c8c8c", marginBottom: 4 }}
+                >
+                  Trạng thái
+                </div>
+                {process.isActive ? (
+                  <Tag color="green" icon={<CheckCircleOutlined />}>
+                    Đang hoạt động
                   </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Mô tả">
-                  <Paragraph style={{ margin: 0 }}>
-                    {process.description}
-                  </Paragraph>
-                </Descriptions.Item>
-              </Descriptions>
-            </Col>
-            <Col span={12}>
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Thời gian ước tính">
-                  <Space>
-                    <ClockCircleOutlined style={{ color: "#1890ff" }} />
-                    <Text strong>{formatTime(process.estimatedDuration)}</Text>
-                  </Space>
-                </Descriptions.Item>
-                <Descriptions.Item label="Giá dịch vụ">
-                  <Space>
-                    <DollarOutlined style={{ color: "#52c41a" }} />
-                    <Text strong style={{ color: "#52c41a" }}>
-                      {formatCurrency(process.price)}
-                    </Text>
-                  </Space>
-                </Descriptions.Item>
-                <Descriptions.Item label="Số bước">
-                  <Space>
-                    <SettingOutlined style={{ color: "#722ed1" }} />
-                    <Text strong>{process.steps.length} bước</Text>
-                  </Space>
-                </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">
-                  {process.status === "discontinued" ? (
-                    <Tag color="red" icon={<DeleteOutlined />}>
-                      Ngừng cung cấp
-                    </Tag>
-                  ) : process.isActive ? (
-                    <Tag color="green" icon={<CheckCircleOutlined />}>
-                      Đang hoạt động
-                    </Tag>
-                  ) : (
-                    <Tag color="orange" icon={<InfoCircleOutlined />}>
-                      Tạm dừng
-                    </Tag>
-                  )}
-                </Descriptions.Item>
-              </Descriptions>
-            </Col>
-          </Row>
-
-          <Divider />
-
-          <Row gutter={[16, 16]}>
-            <Col span={24}>
-              <Text strong>Loại xe áp dụng:</Text>
-              <div style={{ marginTop: 8 }}>
-                {process.targetVehicleTypes.map((type, index) => (
-                  <Tag key={index} style={{ marginBottom: 4 }}>
-                    <CarOutlined style={{ marginRight: 4 }} />
-                    {type}
+                ) : (
+                  <Tag color="red" icon={<DeleteOutlined />}>
+                    Tạm dừng
                   </Tag>
-                ))}
+                )}
               </div>
-            </Col>
-          </Row>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Basic Information */}
+        <Card title="Thông tin cơ bản" style={{ marginBottom: 16 }}>
+          <Descriptions column={1} size="small">
+            <Descriptions.Item label="Tên quy trình">
+              <Text strong>{process.name}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Mô tả">
+              <Text>{process.description || "Không có mô tả"}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Space wrap>
+                {process.isDefault && (
+                  <Tag color="gold" icon={<StarOutlined />}>
+                    Mặc định
+                  </Tag>
+                )}
+                {process.isActive ? (
+                  <Tag color="green" icon={<CheckCircleOutlined />}>
+                    Đang hoạt động
+                  </Tag>
+                ) : (
+                  <Tag color="red" icon={<DeleteOutlined />}>
+                    Tạm dừng
+                  </Tag>
+                )}
+              </Space>
+            </Descriptions.Item>
+          </Descriptions>
         </Card>
 
-        {/* Quy trình step-by-step */}
+        {/* Process Timeline */}
         <Card title="Quy trình thực hiện" style={{ marginBottom: 16 }}>
-          <div>
-            {process.steps.map((step, index) => (
-              <Card
-                key={step.id}
-                size="small"
-                style={{ 
-                  marginBottom: 16, 
-                  border: "1px solid #f0f0f0",
-                  borderRadius: 8
-                }}
-                bodyStyle={{ padding: 16 }}
-              >
-                {/* Header của bước */}
-                <div style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  marginBottom: 12,
-                  paddingBottom: 8,
-                  borderBottom: "1px solid #f0f0f0"
-                }}>
-                  <div style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    backgroundColor: "#1890ff",
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: 12,
-                    fontSize: 14,
-                    fontWeight: "bold"
-                  }}>
-                    {step.order}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
-                      <span style={{ fontSize: 20, marginRight: 8 }}>
-                        {getStepCategoryIcon(step.category)}
-                      </span>
-                      <Text strong style={{ fontSize: 16 }}>
-                        {step.name}
-                      </Text>
-                      <Tag 
-                        color={getStepCategoryColor(step.category)}
-                        style={{ marginLeft: 8 }}
+          <div style={{ position: "relative" }}>
+            {(process.processSteps || process.steps || []).map(
+              (
+                step: any, // eslint-disable-line @typescript-eslint/no-explicit-any
+                index: number,
+                array: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
+              ) => (
+                <div key={step.id} style={{ position: "relative" }}>
+                  {/* Timeline Line */}
+                  {index < array.length - 1 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: 24,
+                        top: 60,
+                        width: 2,
+                        height: "calc(100% - 40px)",
+                        backgroundColor: "#d9d9d9",
+                        zIndex: 1,
+                      }}
+                    />
+                  )}
+
+                  {/* Step Card */}
+                  <div
+                    style={{
+                      display: "flex",
+                      marginBottom: index < array.length - 1 ? 32 : 0,
+                      position: "relative",
+                      zIndex: 2,
+                    }}
+                  >
+                    {/* Timeline Node */}
+                    <div
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: "50%",
+                        backgroundColor: "#1890ff",
+                        color: "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 16,
+                        fontWeight: "bold",
+                        marginRight: 20,
+                        border: "4px solid white",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {step.stepOrder || step.order || index + 1}
+                    </div>
+
+                    {/* Step Content */}
+                    <div
+                      style={{
+                        flex: 1,
+                        backgroundColor: "white",
+                        border: "1px solid #e8e8e8",
+                        borderRadius: 12,
+                        padding: 20,
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                        transition: "all 0.3s ease",
+                      }}
+                    >
+                      {/* Step Header */}
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: 16,
+                          paddingBottom: 12,
+                          borderBottom: "2px solid #f0f0f0",
+                        }}
                       >
-                        {getStepCategoryLabel(step.category)}
-                      </Tag>
-                      {step.isRequired && (
-                        <Tag color="red" style={{ marginLeft: 4 }}>
-                          Bắt buộc
+                        <div style={{ flex: 1 }}>
+                          <Text
+                            strong
+                            style={{
+                              fontSize: 18,
+                              color: "#1890ff",
+                              display: "block",
+                              marginBottom: 4,
+                            }}
+                          >
+                            {step.name}
+                          </Text>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 16,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                fontSize: 13,
+                                color: "#8c8c8c",
+                              }}
+                            >
+                              <ClockCircleOutlined style={{ marginRight: 4 }} />
+                              {step.estimatedTime || 0}{" "}
+                              phút
+                            </div>
+                            {step.isRequired !== false && (
+                              <Tag color="red">Bắt buộc</Tag>
+                            )}
+                          </div>
+                        </div>
+                        <Tag
+                          color="blue"
+                          style={{ fontSize: 12, padding: "4px 8px" }}
+                        >
+                          Bước {step.stepOrder || index + 1}
                         </Tag>
-                      )}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <ClockCircleOutlined style={{ marginRight: 4, color: "#1890ff" }} />
-                      <Text style={{ color: "#666" }}>
-                        Thời gian: {formatTime(step.estimatedTime)}
-                      </Text>
+                      </div>
+
+                      {/* Step Description */}
+                      <div style={{ marginBottom: 16 }}>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            lineHeight: 1.6,
+                            color: "#595959",
+                          }}
+                        >
+                          {step.description}
+                        </Text>
+                      </div>
+
+                      {/* Step Details Grid */}
+                      <Row gutter={[16, 16]}>
+                        {/* Dụng cụ cần thiết */}
+                        {(step.requiredTools || []).length > 0 && (
+                          <Col span={12}>
+                            <div
+                              style={{
+                                backgroundColor: "#f6ffed",
+                                border: "1px solid #b7eb8f",
+                                borderRadius: 8,
+                                padding: 12,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  marginBottom: 8,
+                                  fontSize: 13,
+                                  fontWeight: "bold",
+                                  color: "#52c41a",
+                                }}
+                              >
+                                Dụng cụ cần thiết
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 4,
+                                }}
+                              >
+                                {(step.requiredTools || []).map(
+                                  (tool: string, idx: number) => (
+                                    <Tag
+                                      key={idx}
+                                      style={{
+                                        backgroundColor: "#f6ffed",
+                                        border: "1px solid #b7eb8f",
+                                        color: "#52c41a",
+                                        fontSize: 11,
+                                      }}
+                                    >
+                                      {tool}
+                                    </Tag>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          </Col>
+                        )}
+
+                        {/* Vật liệu cần thiết */}
+                        {(step.requiredMaterials || []).length > 0 && (
+                          <Col span={12}>
+                            <div
+                              style={{
+                                backgroundColor: "#e6f7ff",
+                                border: "1px solid #91d5ff",
+                                borderRadius: 8,
+                                padding: 12,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  marginBottom: 8,
+                                  fontSize: 13,
+                                  fontWeight: "bold",
+                                  color: "#1890ff",
+                                }}
+                              >
+                                Vật liệu cần thiết
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 4,
+                                }}
+                              >
+                                {(step.requiredMaterials || []).map(
+                                  (material: string, idx: number) => (
+                                    <Tag
+                                      key={idx}
+                                      style={{
+                                        backgroundColor: "#e6f7ff",
+                                        border: "1px solid #91d5ff",
+                                        color: "#1890ff",
+                                        fontSize: 11,
+                                      }}
+                                    >
+                                      {material}
+                                    </Tag>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          </Col>
+                        )}
+
+                        {/* Hướng dẫn thực hiện */}
+                        {(step.instructions || []).length > 0 && (
+                          <Col span={24}>
+                            <div
+                              style={{
+                                backgroundColor: "#f9f0ff",
+                                border: "1px solid #d3adf7",
+                                borderRadius: 8,
+                                padding: 12,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  marginBottom: 8,
+                                  fontSize: 13,
+                                  fontWeight: "bold",
+                                  color: "#722ed1",
+                                }}
+                              >
+                                Hướng dẫn thực hiện
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 6,
+                                }}
+                              >
+                                {(step.instructions || []).map(
+                                  (instruction: string, idx: number) => (
+                                    <div
+                                      key={idx}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "flex-start",
+                                        fontSize: 12,
+                                        padding: 8,
+                                        backgroundColor: "white",
+                                        borderRadius: 6,
+                                        border: "1px solid #d3adf7",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: 20,
+                                          height: 20,
+                                          borderRadius: "50%",
+                                          backgroundColor: "#722ed1",
+                                          color: "white",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          fontSize: 10,
+                                          fontWeight: "bold",
+                                          marginRight: 8,
+                                          flexShrink: 0,
+                                        }}
+                                      >
+                                        {idx + 1}
+                                      </div>
+                                      <Text
+                                        style={{
+                                          fontSize: 12,
+                                          lineHeight: 1.4,
+                                        }}
+                                      >
+                                        {instruction}
+                                      </Text>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          </Col>
+                        )}
+
+                        {/* Kiểm tra chất lượng */}
+                        {(step.qualityChecklist || []).length > 0 && (
+                          <Col span={12}>
+                            <div
+                              style={{
+                                backgroundColor: "#fff7e6",
+                                border: "1px solid #ffd591",
+                                borderRadius: 8,
+                                padding: 12,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  marginBottom: 8,
+                                  fontSize: 13,
+                                  fontWeight: "bold",
+                                  color: "#fa8c16",
+                                }}
+                              >
+                                Kiểm tra chất lượng
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 4,
+                                }}
+                              >
+                                {(step.qualityChecklist || []).map(
+                                  (item: string, idx: number) => (
+                                    <div
+                                      key={idx}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        fontSize: 12,
+                                        padding: 6,
+                                        backgroundColor: "white",
+                                        borderRadius: 4,
+                                        border: "1px solid #ffd591",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: 16,
+                                          height: 16,
+                                          borderRadius: "50%",
+                                          backgroundColor: "#fa8c16",
+                                          color: "white",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          fontSize: 10,
+                                          marginRight: 8,
+                                          flexShrink: 0,
+                                        }}
+                                      >
+                                        ✓
+                                      </div>
+                                      <Text style={{ fontSize: 12 }}>
+                                        {item}
+                                      </Text>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          </Col>
+                        )}
+
+                        {/* Lưu ý an toàn */}
+                        {(step.safetyNotes || []).length > 0 && (
+                          <Col span={12}>
+                            <div
+                              style={{
+                                backgroundColor: "#fff2f0",
+                                border: "1px solid #ffccc7",
+                                borderRadius: 8,
+                                padding: 12,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  marginBottom: 8,
+                                  fontSize: 13,
+                                  fontWeight: "bold",
+                                  color: "#f5222d",
+                                }}
+                              >
+                                Lưu ý an toàn
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 4,
+                                }}
+                              >
+                                {(step.safetyNotes || []).map(
+                                  (note: string, idx: number) => (
+                                    <div
+                                      key={idx}
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        fontSize: 12,
+                                        padding: 6,
+                                        backgroundColor: "white",
+                                        borderRadius: 4,
+                                        border: "1px solid #ffccc7",
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          width: 16,
+                                          height: 16,
+                                          borderRadius: "50%",
+                                          backgroundColor: "#f5222d",
+                                          color: "white",
+                                          display: "flex",
+                                          alignItems: "center",
+                                          justifyContent: "center",
+                                          fontSize: 10,
+                                          marginRight: 8,
+                                          flexShrink: 0,
+                                        }}
+                                      >
+                                        ⚠
+                                      </div>
+                                      <Text style={{ fontSize: 12 }}>
+                                        {note}
+                                      </Text>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          </Col>
+                        )}
+
+                        {/* Sản phẩm sử dụng */}
+                        {(step.stepProducts || []).length > 0 && (
+                          <Col span={24}>
+                            <div
+                              style={{
+                                backgroundColor: "#f0f9ff",
+                                border: "1px solid #0ea5e9",
+                                borderRadius: 8,
+                                padding: 12,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                  marginBottom: 8,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    fontSize: 13,
+                                    fontWeight: "bold",
+                                    color: "#0ea5e9",
+                                  }}
+                                >
+                                  Sản phẩm sử dụng
+                                </div>
+                                <Button
+                                  type="link"
+                                  size="small"
+                                  icon={<EyeOutlined />}
+                                  onClick={() =>
+                                    handleViewProducts(
+                                      step.stepProducts || [],
+                                      step.name
+                                    )
+                                  }
+                                  style={{
+                                    padding: 0,
+                                    height: "auto",
+                                    color: "#0ea5e9",
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  Xem chi tiết
+                                </Button>
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: 4,
+                                }}
+                              >
+                                {(step.stepProducts || [])
+                                  .slice(0, 3)
+                                  .map((product: any, idx: number) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+                                    // Lấy giá từ dữ liệu sản phẩm có sẵn
+                                    const unitPrice = product.productCost || 0;
+                                    const quantity = product.quantity || 1;
+                                    const totalPrice = unitPrice * quantity;
+
+                                    return (
+                                      <Tag
+                                        key={idx}
+                                        style={{
+                                          backgroundColor: "#f0f9ff",
+                                          border: "1px solid #0ea5e9",
+                                          color: "#0ea5e9",
+                                          fontSize: 11,
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 4,
+                                          flexDirection: "column",
+                                          padding: "4px 8px",
+                                          minWidth: "120px",
+                                        }}
+                                      >
+                                        <div
+                                          style={{
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 4,
+                                          }}
+                                        >
+                                          <ShoppingCartOutlined />
+                                        <span style={{ fontWeight: "bold" }}>
+                                          {product.productName || `Sản phẩm ${idx + 1}`}
+                                        </span>
+                                        </div>
+                                        <div
+                                          style={{
+                                            fontSize: 10,
+                                            color: "#1890ff",
+                                          }}
+                                        >
+                                          {quantity > 1 && (
+                                            <span
+                                              style={{ fontWeight: "bold" }}
+                                            >
+                                              x{quantity}
+                                            </span>
+                                          )}
+                                          {unitPrice > 0 && (
+                                            <span style={{ marginLeft: 4 }}>
+                                              • {formatCurrency(unitPrice)}
+                                            </span>
+                                          )}
+                                        </div>
+                                        {totalPrice > 0 && (
+                                          <div
+                                            style={{
+                                              fontSize: 10,
+                                              fontWeight: "bold",
+                                              color: "#52c41a",
+                                            }}
+                                          >
+                                            = {formatCurrency(totalPrice)}
+                                          </div>
+                                        )}
+                                      </Tag>
+                                    );
+                                  })}
+                                {(step.stepProducts || []).length > 3 && (
+                                  <Tag
+                                    style={{
+                                      backgroundColor: "#f0f9ff",
+                                      border: "1px solid #0ea5e9",
+                                      color: "#0ea5e9",
+                                      fontSize: 11,
+                                    }}
+                                  >
+                                    +
+                                    {(step.stepProducts || []).length - 3}{" "}
+                                    sản phẩm khác
+                                  </Tag>
+                                )}
+                              </div>
+                            </div>
+                          </Col>
+                        )}
+                      </Row>
                     </div>
                   </div>
                 </div>
-
-                {/* Mô tả bước */}
-                <div style={{ marginBottom: 16 }}>
-                  <Text style={{ color: "#666", fontSize: 14 }}>
-                    {step.description}
-                  </Text>
-                </div>
-
-                {/* Chi tiết bước - Layout 2 cột */}
-                <Row gutter={[16, 12]}>
-                  {/* Cột trái - Dụng cụ và Vật liệu */}
-                  <Col span={12}>
-                    {step.requiredTools.length > 0 && (
-                      <div style={{ marginBottom: 12 }}>
-                        <div style={{ 
-                          display: "flex", 
-                          alignItems: "center", 
-                          marginBottom: 6,
-                          color: "#1890ff"
-                        }}>
-                          <span style={{ marginRight: 6 }}>🔧</span>
-                          <Text strong style={{ fontSize: 13 }}>
-                            Dụng cụ cần thiết
-                          </Text>
-                        </div>
-                        <div style={{ 
-                          backgroundColor: "#f6ffed", 
-                          padding: 8, 
-                          borderRadius: 4,
-                          border: "1px solid #b7eb8f"
-                        }}>
-                          {step.requiredTools.map((tool, idx) => (
-                            <Tag 
-                              key={idx} 
-                              size="small" 
-                              style={{ 
-                                marginBottom: 4,
-                                backgroundColor: "#f6ffed",
-                                border: "1px solid #b7eb8f",
-                                color: "#52c41a"
-                              }}
-                            >
-                              {tool}
-                            </Tag>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {step.requiredMaterials.length > 0 && (
-                      <div>
-                        <div style={{ 
-                          display: "flex", 
-                          alignItems: "center", 
-                          marginBottom: 6,
-                          color: "#52c41a"
-                        }}>
-                          <span style={{ marginRight: 6 }}>📦</span>
-                          <Text strong style={{ fontSize: 13 }}>
-                            Vật liệu cần thiết
-                          </Text>
-                        </div>
-                        <div style={{ 
-                          backgroundColor: "#f6ffed", 
-                          padding: 8, 
-                          borderRadius: 4,
-                          border: "1px solid #b7eb8f"
-                        }}>
-                          {step.requiredMaterials.map((material, idx) => (
-                            <Tag 
-                              key={idx} 
-                              size="small" 
-                              style={{ 
-                                marginBottom: 4,
-                                backgroundColor: "#f6ffed",
-                                border: "1px solid #b7eb8f",
-                                color: "#52c41a"
-                              }}
-                            >
-                              {material}
-                            </Tag>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </Col>
-
-                  {/* Cột phải - Hướng dẫn */}
-                  <Col span={12}>
-                    {step.instructions.length > 0 && (
-                      <div>
-                        <div style={{ 
-                          display: "flex", 
-                          alignItems: "center", 
-                          marginBottom: 6,
-                          color: "#722ed1"
-                        }}>
-                          <span style={{ marginRight: 6 }}>📋</span>
-                          <Text strong style={{ fontSize: 13 }}>
-                            Hướng dẫn thực hiện
-                          </Text>
-                        </div>
-                        <div style={{ 
-                          backgroundColor: "#f9f0ff", 
-                          padding: 8, 
-                          borderRadius: 4,
-                          border: "1px solid #d3adf7"
-                        }}>
-                          {step.instructions.map((instruction, idx) => (
-                            <div 
-                              key={idx} 
-                              style={{ 
-                                fontSize: 12, 
-                                marginBottom: 4,
-                                color: "#722ed1",
-                                paddingLeft: 8,
-                                position: "relative"
-                              }}
-                            >
-                              <span style={{
-                                position: "absolute",
-                                left: 0,
-                                top: 0,
-                                color: "#722ed1"
-                              }}>•</span>
-                              {instruction}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </Col>
-                </Row>
-
-                {/* Kiểm tra chất lượng và Lưu ý an toàn */}
-                {(step.qualityChecklist.length > 0 || step.safetyNotes.length > 0) && (
-                  <Row gutter={[16, 12]} style={{ marginTop: 12 }}>
-                    {step.qualityChecklist.length > 0 && (
-                      <Col span={12}>
-                        <div style={{ 
-                          display: "flex", 
-                          alignItems: "center", 
-                          marginBottom: 6,
-                          color: "#fa8c16"
-                        }}>
-                          <span style={{ marginRight: 6 }}>✅</span>
-                          <Text strong style={{ fontSize: 13 }}>
-                            Kiểm tra chất lượng
-                          </Text>
-                        </div>
-                        <div style={{ 
-                          backgroundColor: "#fff7e6", 
-                          padding: 8, 
-                          borderRadius: 4,
-                          border: "1px solid #ffd591"
-                        }}>
-                          {step.qualityChecklist.map((item, idx) => (
-                            <div 
-                              key={idx} 
-                              style={{ 
-                                fontSize: 12, 
-                                marginBottom: 4,
-                                color: "#fa8c16",
-                                paddingLeft: 8,
-                                position: "relative"
-                              }}
-                            >
-                              <span style={{
-                                position: "absolute",
-                                left: 0,
-                                top: 0,
-                                color: "#fa8c16"
-                              }}>•</span>
-                              {item}
-                            </div>
-                          ))}
-                        </div>
-                      </Col>
-                    )}
-
-                    {step.safetyNotes.length > 0 && (
-                      <Col span={12}>
-                        <div style={{ 
-                          display: "flex", 
-                          alignItems: "center", 
-                          marginBottom: 6,
-                          color: "#f5222d"
-                        }}>
-                          <span style={{ marginRight: 6 }}>⚠️</span>
-                          <Text strong style={{ fontSize: 13 }}>
-                            Lưu ý an toàn
-                          </Text>
-                        </div>
-                        <div style={{ 
-                          backgroundColor: "#fff2f0", 
-                          padding: 8, 
-                          borderRadius: 4,
-                          border: "1px solid #ffccc7"
-                        }}>
-                          {step.safetyNotes.map((note, idx) => (
-                            <div 
-                              key={idx} 
-                              style={{ 
-                                fontSize: 12, 
-                                marginBottom: 4,
-                                color: "#f5222d",
-                                paddingLeft: 8,
-                                position: "relative"
-                              }}
-                            >
-                              <span style={{
-                                position: "absolute",
-                                left: 0,
-                                top: 0,
-                                color: "#f5222d"
-                              }}>•</span>
-                              {note}
-                            </div>
-                          ))}
-                        </div>
-                      </Col>
-                    )}
-                  </Row>
-                )}
-              </Card>
-            ))}
+              )
+            )}
           </div>
         </Card>
-
       </div>
+
+      {/* Modal chi tiết sản phẩm */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <ShoppingCartOutlined style={{ color: "#0ea5e9" }} />
+            <span>Sản phẩm sử dụng - {selectedStepName}</span>
+          </div>
+        }
+        open={productModalOpen}
+        onCancel={() => setProductModalOpen(false)}
+        footer={null}
+        width={800}
+        style={{ top: 50 }}
+      >
+        <Table
+          dataSource={selectedStepProducts}
+          pagination={false}
+          size="small"
+          rowKey={(record) => record.id || record.productId || Math.random().toString()}
+          columns={[
+            {
+              title: "STT",
+              key: "index",
+              width: 60,
+              align: "center" as const,
+              render: (_: any, __: any, index: number) => index + 1, // eslint-disable-line @typescript-eslint/no-explicit-any
+            },
+            {
+              title: "Tên sản phẩm",
+              dataIndex: "productName",
+              key: "productName",
+              render: (
+                text: string,
+                record: any // eslint-disable-line @typescript-eslint/no-explicit-any
+              ) => (
+                <div>
+                  <Text strong>{text || record.name || "N/A"}</Text>
+                  {record.productCode && (
+                    <div>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        Mã: {record.productCode}
+                      </Text>
+                    </div>
+                  )}
+                </div>
+              ),
+            },
+            {
+              title: "SKU",
+              dataIndex: "productSku",
+              key: "productSku",
+              width: 120,
+              render: (text: string) => (
+                <Tag color="blue" style={{ fontSize: 11 }}>
+                  {text || "N/A"}
+                </Tag>
+              ),
+            },
+            {
+              title: "Số lượng",
+              dataIndex: "quantity",
+              key: "quantity",
+              width: 100,
+              align: "center" as const,
+              render: (quantity: number) => (
+                <Tag color="green" style={{ fontSize: 12, fontWeight: "bold" }}>
+                  {quantity || 0}
+                </Tag>
+              ),
+            },
+            {
+              title: "Đơn giá",
+              dataIndex: "productCost",
+              key: "productCost",
+              width: 120,
+              align: "right" as const,
+              render: (cost: number, record: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+                const unitPrice = record.productCost || cost || 0;
+
+                return (
+                  <Text strong style={{ color: "#52c41a" }}>
+                    {formatCurrency(unitPrice)}
+                  </Text>
+                );
+              },
+            },
+            {
+              title: "Thành tiền",
+              key: "total",
+              width: 120,
+              align: "right" as const,
+              render: (_: any, record: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+                const unitPrice = record.productCost || 0;
+                const quantity = record.quantity || 0;
+                const total = unitPrice * quantity;
+                return (
+                  <Text strong style={{ color: "#1890ff" }}>
+                    {formatCurrency(total)}
+                  </Text>
+                );
+              },
+            },
+          ]}
+          summary={() => {
+            const totalAmount = selectedStepProducts.reduce((sum, product) => {
+              const unitPrice = product.productCost || 0;
+              const quantity = product.quantity || 0;
+              const total = unitPrice * quantity;
+              return sum + total;
+            }, 0);
+            const totalQuantity = selectedStepProducts.reduce(
+              (sum, product) => sum + (product.quantity || 0),
+              0
+            );
+
+            return (
+              <Table.Summary.Row>
+                <Table.Summary.Cell index={0} colSpan={3}>
+                  <Text strong>Tổng cộng:</Text>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={3}>
+                  <Tag
+                    color="green"
+                    style={{ fontSize: 12, fontWeight: "bold" }}
+                  >
+                    {totalQuantity} sản phẩm
+                  </Tag>
+                </Table.Summary.Cell>
+                <Table.Summary.Cell index={4} colSpan={2}>
+                  <Text strong style={{ color: "#1890ff", fontSize: 14 }}>
+                    {formatCurrency(totalAmount)}
+                  </Text>
+                </Table.Summary.Cell>
+              </Table.Summary.Row>
+            );
+          }}
+        />
+      </Modal>
     </Modal>
   );
 };

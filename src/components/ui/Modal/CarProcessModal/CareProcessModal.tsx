@@ -15,21 +15,26 @@ import {
   List,
   Tag,
   Switch,
-  TimePicker} from "antd";
+} from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
   EditOutlined,
   UpOutlined,
-  DownOutlined} from "@ant-design/icons";
-import { 
-  CareProcess, 
+  DownOutlined,
+} from "@ant-design/icons";
+import {
+  CareProcess,
   CareStep,
   processCategories,
   stepCategories,
-  vehicleTypes
+  vehicleTypes,
 } from "@/components/utils/data/care-processes.data";
-import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
+import {
+  MemoizedInput,
+  MemoizedTextArea,
+  MemoizedInputNumber,
+} from "@/components/ui/MemoizedComponents";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -47,7 +52,8 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm quy trình chăm sóc mới"}) => {
+  title = "Thêm quy trình chăm sóc mới",
+}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [steps, setSteps] = useState<CareStep[]>([]);
@@ -58,7 +64,8 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
     if (initialData) {
       form.setFieldsValue({
         ...initialData,
-        targetVehicleTypes: initialData.targetVehicleTypes || []});
+        targetVehicleTypes: initialData.targetVehicleTypes || [],
+      });
       setSteps(initialData.steps || []);
     } else {
       form.resetFields();
@@ -70,17 +77,26 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
     try {
       setLoading(true);
       const values = await form.validateFields();
-      
+
       const formattedData = {
         ...values,
         id: initialData?.id || Date.now(),
         steps: steps,
-        estimatedDuration: steps.reduce((total, step) => total + step.estimatedTime, 0),
-        createdAt: initialData?.createdAt || new Date().toISOString().split('T')[0],
-        updatedAt: new Date().toISOString().split('T')[0]};
+        estimatedDuration: steps.reduce(
+          (total, step) => total + step.estimatedTime,
+          0
+        ),
+        createdAt:
+          initialData?.createdAt || new Date().toISOString().split("T")[0],
+        updatedAt: new Date().toISOString().split("T")[0],
+      };
 
       onOk(formattedData);
-      message.success(initialData ? "Cập nhật quy trình thành công!" : "Thêm quy trình thành công!");
+      message.success(
+        initialData
+          ? "Cập nhật quy trình thành công!"
+          : "Thêm quy trình thành công!"
+      );
       form.resetFields();
       setSteps([]);
     } catch (error) {
@@ -109,7 +125,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
       safetyNotes: [],
       isRequired: true,
       order: steps.length + 1,
-      category: "inspection"
+      category: "inspection",
     };
     console.log("Adding new step:", newStep);
     setEditingStep(newStep);
@@ -125,22 +141,28 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
     console.log("Saving step:", stepData);
     console.log("Current editingStep:", editingStep);
     console.log("Current steps:", steps);
-    
-    if (editingStep && editingStep.id && steps.some(step => step.id === editingStep.id)) {
+
+    if (
+      editingStep &&
+      editingStep.id &&
+      steps.some((step) => step.id === editingStep.id)
+    ) {
       // Cập nhật bước đã tồn tại
       console.log("Updating existing step");
-      setSteps(steps.map(step => 
-        step.id === editingStep.id 
-          ? { ...stepData, id: editingStep.id }
-          : step
-      ));
+      setSteps(
+        steps.map((step) =>
+          step.id === editingStep.id
+            ? { ...stepData, id: editingStep.id }
+            : step
+        )
+      );
     } else {
       // Thêm bước mới
       console.log("Adding new step");
-      const newStep = { 
-        ...stepData, 
+      const newStep = {
+        ...stepData,
         id: Date.now(),
-        order: steps.length + 1
+        order: steps.length + 1,
       };
       console.log("New step to add:", newStep);
       setSteps([...steps, newStep]);
@@ -150,39 +172,42 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
   };
 
   const deleteStep = (stepId: number) => {
-    setSteps(steps.filter(step => step.id !== stepId));
+    setSteps(steps.filter((step) => step.id !== stepId));
   };
 
   const moveStep = (stepId: number, direction: "up" | "down") => {
-    const currentIndex = steps.findIndex(step => step.id === stepId);
+    const currentIndex = steps.findIndex((step) => step.id === stepId);
     if (currentIndex === -1) return;
 
     const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
     if (newIndex < 0 || newIndex >= steps.length) return;
 
     const newSteps = [...steps];
-    [newSteps[currentIndex], newSteps[newIndex]] = [newSteps[newIndex], newSteps[currentIndex]];
-    
+    [newSteps[currentIndex], newSteps[newIndex]] = [
+      newSteps[newIndex],
+      newSteps[currentIndex],
+    ];
+
     // Cập nhật thứ tự
     newSteps.forEach((step, index) => {
       step.order = index + 1;
     });
-    
+
     setSteps(newSteps);
   };
 
   const getCategoryIcon = (category: string) => {
-    const categoryConfig = stepCategories.find(c => c.value === category);
+    const categoryConfig = stepCategories.find((c) => c.value === category);
     return categoryConfig?.icon || "📋";
   };
 
   const getCategoryLabel = (category: string) => {
-    const categoryConfig = stepCategories.find(c => c.value === category);
+    const categoryConfig = stepCategories.find((c) => c.value === category);
     return categoryConfig?.label || category;
   };
 
   const getCategoryColor = (category: string) => {
-    const categoryConfig = stepCategories.find(c => c.value === category);
+    const categoryConfig = stepCategories.find((c) => c.value === category);
     return categoryConfig?.color || "default";
   };
 
@@ -198,13 +223,17 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
   // Component thông tin cơ bản
   const BasicInfoSection = () => (
     <div>
-      <Title level={5} style={{ marginBottom: 16 }}>Thông tin cơ bản</Title>
+      <Title level={5} style={{ marginBottom: 16 }}>
+        Thông tin cơ bản
+      </Title>
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
             name="name"
             label="Tên quy trình"
-            rules={[{ required: true, message: "Vui lòng nhập tên quy trình!" }]}
+            rules={[
+              { required: true, message: "Vui lòng nhập tên quy trình!" },
+            ]}
           >
             <MemoizedInput placeholder="Nhập tên quy trình chăm sóc" />
           </Form.Item>
@@ -213,7 +242,9 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
           <Form.Item
             name="category"
             label="Loại quy trình"
-            rules={[{ required: true, message: "Vui lòng chọn loại quy trình!" }]}
+            rules={[
+              { required: true, message: "Vui lòng chọn loại quy trình!" },
+            ]}
           >
             <Select placeholder="Chọn loại quy trình">
               {processCategories.map((category) => (
@@ -249,8 +280,10 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
               min={0}
               placeholder="Nhập giá dịch vụ"
               style={{ width: "100%" }}
-              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value) => value!.replace(/\$\s?|(,*)/g, '')}
+              formatter={(value) =>
+                `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+              }
+              parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
             />
           </Form.Item>
         </Col>
@@ -289,7 +322,14 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
   // Component các bước thực hiện
   const StepsSection = () => (
     <div>
-      <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Title level={5} style={{ margin: 0 }}>
           Các bước thực hiện ({steps.length} bước)
         </Title>
@@ -297,14 +337,20 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
           Thêm bước
         </Button>
       </div>
-      
+
       <List
         dataSource={steps}
         renderItem={(step, index) => (
           <List.Item key={step.id}>
             <Card
               title={
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <div style={{ display: "flex", alignItems: "center" }}>
                     <span style={{ fontSize: 20, marginRight: 8 }}>
                       {getCategoryIcon(step.category)}
@@ -312,7 +358,10 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
                     <Text strong>
                       Bước {step.order}: {step.name}
                     </Text>
-                    <Tag color={getCategoryColor(step.category)} style={{ marginLeft: 8 }}>
+                    <Tag
+                      color={getCategoryColor(step.category)}
+                      style={{ marginLeft: 8 }}
+                    >
                       {getCategoryLabel(step.category)}
                     </Tag>
                     <Tag color="blue" style={{ marginLeft: 8 }}>
@@ -362,7 +411,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
                   <Text strong>Dụng cụ:</Text>
                   <div>
                     {step.requiredTools.map((tool, idx) => (
-                      <Tag key={idx} size="small" style={{ marginBottom: 2 }}>
+                      <Tag key={idx}   style={{ marginBottom: 2 }}>
                         {tool}
                       </Tag>
                     ))}
@@ -372,7 +421,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
                   <Text strong>Vật liệu:</Text>
                   <div>
                     {step.requiredMaterials.map((material, idx) => (
-                      <Tag key={idx} size="small" style={{ marginBottom: 2 }}>
+                      <Tag key={idx}   style={{ marginBottom: 2 }}>
                         {material}
                       </Tag>
                     ))}
@@ -398,10 +447,10 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
           </List.Item>
         )}
       />
-      
+
       {steps.length === 0 && (
         <div style={{ textAlign: "center", padding: 40, color: "#8c8c8c" }}>
-          <Text>Chưa có bước nào. Click "Thêm bước" để bắt đầu.</Text>
+          <Text>Chưa có bước nào. Click &quot;Thêm bước&quot; để bắt đầu.</Text>
         </div>
       )}
     </div>
@@ -423,13 +472,14 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
           form={form}
           layout="vertical"
           initialValues={{
-            isActive: true}}
+            isActive: true,
+          }}
         >
           {/* Thông tin cơ bản */}
           <BasicInfoSection />
-          
+
           <Divider />
-          
+
           {/* Các bước thực hiện */}
           <StepsSection />
         </Form>
@@ -464,7 +514,8 @@ const StepModal: React.FC<StepModalProps> = ({
   onCancel,
   onOk,
   initialData,
-  title = "Thêm bước mới"}) => {
+  title = "Thêm bước mới",
+}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [requiredTools, setRequiredTools] = useState<string[]>([]);
@@ -487,7 +538,7 @@ const StepModal: React.FC<StepModalProps> = ({
       form.setFieldsValue({
         estimatedTime: 15,
         isRequired: true,
-        category: "inspection"
+        category: "inspection",
       });
       setRequiredTools([]);
       setRequiredMaterials([]);
@@ -501,7 +552,7 @@ const StepModal: React.FC<StepModalProps> = ({
     try {
       setLoading(true);
       const values = await form.validateFields();
-      
+
       const stepData: CareStep = {
         ...values,
         id: initialData?.id || Date.now(),
@@ -510,10 +561,13 @@ const StepModal: React.FC<StepModalProps> = ({
         instructions: instructions,
         qualityChecklist: qualityChecklist,
         safetyNotes: safetyNotes,
-        order: initialData?.order || 1};
+        order: initialData?.order || 1,
+      };
 
       onOk(stepData);
-      message.success(initialData ? "Cập nhật bước thành công!" : "Thêm bước thành công!");
+      message.success(
+        initialData ? "Cập nhật bước thành công!" : "Thêm bước thành công!"
+      );
       form.resetFields();
       setRequiredTools([]);
       setRequiredMaterials([]);
@@ -541,13 +595,22 @@ const StepModal: React.FC<StepModalProps> = ({
     setList([...list, ""]);
   };
 
-  const updateItem = (index: number, value: string, list: string[], setList: (list: string[]) => void) => {
+  const updateItem = (
+    index: number,
+    value: string,
+    list: string[],
+    setList: (list: string[]) => void
+  ) => {
     const updatedList = [...list];
     updatedList[index] = value;
     setList(updatedList);
   };
 
-  const removeItem = (index: number, list: string[], setList: (list: string[]) => void) => {
+  const removeItem = (
+    index: number,
+    list: string[],
+    setList: (list: string[]) => void
+  ) => {
     setList(list.filter((_, i) => i !== index));
   };
 
@@ -568,7 +631,8 @@ const StepModal: React.FC<StepModalProps> = ({
         initialValues={{
           estimatedTime: 15,
           isRequired: true,
-          category: "inspection"}}
+          category: "inspection",
+        }}
       >
         <Row gutter={16}>
           <Col span={12}>
@@ -604,10 +668,7 @@ const StepModal: React.FC<StepModalProps> = ({
               label="Mô tả"
               rules={[{ required: true, message: "Vui lòng nhập mô tả!" }]}
             >
-              <MemoizedTextArea
-                rows={2}
-                placeholder="Nhập mô tả bước"
-              />
+              <MemoizedTextArea rows={2} placeholder="Nhập mô tả bước" />
             </Form.Item>
           </Col>
           <Col span={8}>
@@ -638,9 +699,21 @@ const StepModal: React.FC<StepModalProps> = ({
 
         {/* Dụng cụ cần thiết */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div
+            style={{
+              marginBottom: 8,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Text strong>Dụng cụ cần thiết</Text>
-            <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => addItem(requiredTools, setRequiredTools)}>
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => addItem(requiredTools, setRequiredTools)}
+            >
               Thêm
             </Button>
           </div>
@@ -653,7 +726,14 @@ const StepModal: React.FC<StepModalProps> = ({
                     <Col span={22}>
                       <MemoizedInput
                         value={tool}
-                        onChange={(e) => updateItem(index, e.target.value, requiredTools, setRequiredTools)}
+                        onChange={(e) =>
+                          updateItem(
+                            index,
+                            e.target.value,
+                            requiredTools,
+                            setRequiredTools
+                          )
+                        }
                         placeholder="Nhập dụng cụ"
                       />
                     </Col>
@@ -662,7 +742,9 @@ const StepModal: React.FC<StepModalProps> = ({
                         type="text"
                         danger
                         icon={<DeleteOutlined />}
-                        onClick={() => removeItem(index, requiredTools, setRequiredTools)}
+                        onClick={() =>
+                          removeItem(index, requiredTools, setRequiredTools)
+                        }
                       />
                     </Col>
                   </Row>
@@ -674,9 +756,21 @@ const StepModal: React.FC<StepModalProps> = ({
 
         {/* Vật liệu cần thiết */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div
+            style={{
+              marginBottom: 8,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Text strong>Vật liệu cần thiết</Text>
-            <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => addItem(requiredMaterials, setRequiredMaterials)}>
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => addItem(requiredMaterials, setRequiredMaterials)}
+            >
               Thêm
             </Button>
           </div>
@@ -689,7 +783,14 @@ const StepModal: React.FC<StepModalProps> = ({
                     <Col span={22}>
                       <MemoizedInput
                         value={material}
-                        onChange={(e) => updateItem(index, e.target.value, requiredMaterials, setRequiredMaterials)}
+                        onChange={(e) =>
+                          updateItem(
+                            index,
+                            e.target.value,
+                            requiredMaterials,
+                            setRequiredMaterials
+                          )
+                        }
                         placeholder="Nhập vật liệu"
                       />
                     </Col>
@@ -698,7 +799,13 @@ const StepModal: React.FC<StepModalProps> = ({
                         type="text"
                         danger
                         icon={<DeleteOutlined />}
-                        onClick={() => removeItem(index, requiredMaterials, setRequiredMaterials)}
+                        onClick={() =>
+                          removeItem(
+                            index,
+                            requiredMaterials,
+                            setRequiredMaterials
+                          )
+                        }
                       />
                     </Col>
                   </Row>
@@ -710,9 +817,21 @@ const StepModal: React.FC<StepModalProps> = ({
 
         {/* Hướng dẫn thực hiện */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div
+            style={{
+              marginBottom: 8,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Text strong>Hướng dẫn thực hiện</Text>
-            <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => addItem(instructions, setInstructions)}>
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => addItem(instructions, setInstructions)}
+            >
               Thêm
             </Button>
           </div>
@@ -725,7 +844,14 @@ const StepModal: React.FC<StepModalProps> = ({
                     <Col span={22}>
                       <MemoizedInput
                         value={instruction}
-                        onChange={(e) => updateItem(index, e.target.value, instructions, setInstructions)}
+                        onChange={(e) =>
+                          updateItem(
+                            index,
+                            e.target.value,
+                            instructions,
+                            setInstructions
+                          )
+                        }
                         placeholder="Nhập hướng dẫn"
                       />
                     </Col>
@@ -734,7 +860,9 @@ const StepModal: React.FC<StepModalProps> = ({
                         type="text"
                         danger
                         icon={<DeleteOutlined />}
-                        onClick={() => removeItem(index, instructions, setInstructions)}
+                        onClick={() =>
+                          removeItem(index, instructions, setInstructions)
+                        }
                       />
                     </Col>
                   </Row>
@@ -746,9 +874,21 @@ const StepModal: React.FC<StepModalProps> = ({
 
         {/* Danh sách kiểm tra chất lượng */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div
+            style={{
+              marginBottom: 8,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Text strong>Danh sách kiểm tra chất lượng</Text>
-            <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => addItem(qualityChecklist, setQualityChecklist)}>
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => addItem(qualityChecklist, setQualityChecklist)}
+            >
               Thêm
             </Button>
           </div>
@@ -761,7 +901,14 @@ const StepModal: React.FC<StepModalProps> = ({
                     <Col span={22}>
                       <MemoizedInput
                         value={item}
-                        onChange={(e) => updateItem(index, e.target.value, qualityChecklist, setQualityChecklist)}
+                        onChange={(e) =>
+                          updateItem(
+                            index,
+                            e.target.value,
+                            qualityChecklist,
+                            setQualityChecklist
+                          )
+                        }
                         placeholder="Nhập tiêu chí kiểm tra"
                       />
                     </Col>
@@ -770,7 +917,13 @@ const StepModal: React.FC<StepModalProps> = ({
                         type="text"
                         danger
                         icon={<DeleteOutlined />}
-                        onClick={() => removeItem(index, qualityChecklist, setQualityChecklist)}
+                        onClick={() =>
+                          removeItem(
+                            index,
+                            qualityChecklist,
+                            setQualityChecklist
+                          )
+                        }
                       />
                     </Col>
                   </Row>
@@ -782,9 +935,21 @@ const StepModal: React.FC<StepModalProps> = ({
 
         {/* Lưu ý an toàn */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div
+            style={{
+              marginBottom: 8,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Text strong>Lưu ý an toàn</Text>
-            <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => addItem(safetyNotes, setSafetyNotes)}>
+            <Button
+              type="primary"
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => addItem(safetyNotes, setSafetyNotes)}
+            >
               Thêm
             </Button>
           </div>
@@ -797,7 +962,14 @@ const StepModal: React.FC<StepModalProps> = ({
                     <Col span={22}>
                       <MemoizedInput
                         value={note}
-                        onChange={(e) => updateItem(index, e.target.value, safetyNotes, setSafetyNotes)}
+                        onChange={(e) =>
+                          updateItem(
+                            index,
+                            e.target.value,
+                            safetyNotes,
+                            setSafetyNotes
+                          )
+                        }
                         placeholder="Nhập lưu ý an toàn"
                       />
                     </Col>
@@ -806,7 +978,9 @@ const StepModal: React.FC<StepModalProps> = ({
                         type="text"
                         danger
                         icon={<DeleteOutlined />}
-                        onClick={() => removeItem(index, safetyNotes, setSafetyNotes)}
+                        onClick={() =>
+                          removeItem(index, safetyNotes, setSafetyNotes)
+                        }
                       />
                     </Col>
                   </Row>
@@ -821,4 +995,3 @@ const StepModal: React.FC<StepModalProps> = ({
 };
 
 export default CareProcessModal;
-
