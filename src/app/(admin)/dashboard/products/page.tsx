@@ -40,7 +40,6 @@ const { Option } = Select;
 const ProductsPage = () => {
   const { showModal } = useConfirmationModalContext();
 
-
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -59,7 +58,11 @@ const ProductsPage = () => {
   });
 
   // API hooks
-  const { data: productsData, isLoading, refetch } = useProducts({
+  const {
+    data: productsData,
+    isLoading,
+    refetch,
+  } = useProducts({
     page: currentPage - 1,
     size: pageSize,
     filters,
@@ -99,19 +102,20 @@ const ProductsPage = () => {
               style={{
                 width: 60,
                 height: 60,
-                backgroundColor: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                backgroundColor:
+                  "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                 borderRadius: 8,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 color: "#fff",
                 border: "2px solid #f0f0f0",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               }}
             >
               <ShoppingCartOutlined style={{ fontSize: 20 }} />
             </div>
-            {record.isFeatured && (
+            {record.is_featured && (
               <div
                 style={{
                   position: "absolute",
@@ -124,7 +128,7 @@ const ProductsPage = () => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)"
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
                 }}
               >
                 <Tooltip title="Sản phẩm nổi bật">
@@ -143,7 +147,7 @@ const ProductsPage = () => {
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
-            {record.productName}
+            {record.product_name}
           </div>
           <div style={{ fontSize: 12, color: "#666", marginBottom: 2 }}>
             <BarcodeOutlined style={{ marginRight: 4 }} />
@@ -157,24 +161,26 @@ const ProductsPage = () => {
     },
     {
       title: "Loại sản phẩm",
-      dataIndex: "productTypeName",
-      key: "productTypeName",
+      dataIndex: "product_type_name",
+      key: "product_type_name",
       width: 150,
-      render: (productTypeName: string) => <Tag color="blue">{productTypeName}</Tag>,
+      render: (productTypeName: string) => (
+        <Tag color="blue">{productTypeName}</Tag>
+      ),
     },
     {
       title: "Đơn vị",
-      dataIndex: "unitOfMeasure",
-      key: "unitOfMeasure",
+      dataIndex: "unit_of_measure",
+      key: "unit_of_measure",
       width: 80,
       render: (unit: string) => <Tag color="green">{unit}</Tag>,
     },
     {
-      title: "Giá cao nhất",
-      dataIndex: "peakPrice",
-      key: "peakPrice",
+      title: "Giá dự kiến",
+      dataIndex: "peak_price",
+      key: "peak_price",
       width: 120,
-      sorter: (a, b) => (a.peakPrice || 0) - (b.peakPrice || 0),
+      sorter: (a, b) => (a.peak_price || 0) - (b.peak_price || 0),
       render: (price: number) => (
         <div style={{ fontWeight: 500, color: "#52c41a" }}>
           {price ? price.toLocaleString() + "đ" : "N/A"}
@@ -187,15 +193,15 @@ const ProductsPage = () => {
       key: "is_active",
       width: 120,
       render: (isActive: boolean, record: Product) => {
-        if (record.is_deleted) {
-          return (
-            <Badge
-              status="default"
-              text="Đã xóa"
-              style={{ color: "#999" }}
-            />
-          );
-        }
+        // if (record.is_deleted) {
+        //   return (
+        //     <Badge
+        //       status="default"
+        //       text="Đã xóa"
+        //       style={{ color: "#999" }}
+        //     />
+        //   );
+        // }
         return (
           <Badge
             status={isActive ? "success" : "error"}
@@ -218,16 +224,16 @@ const ProductsPage = () => {
   };
 
   const handleToggleStatus = (record: Product) => {
-    const action = record.isActive ? "tạm dừng" : "kích hoạt";
+    const action = record.is_active ? "tạm dừng" : "kích hoạt";
     showModal({
-      title: record.isActive ? "Tạm dừng sản phẩm" : "Kích hoạt sản phẩm",
-      content: `Bạn có chắc chắn muốn ${action} sản phẩm ${record.productName}?`,
-      type: record.isActive ? "warning" : "success",
+      title: record.is_active ? "Tạm dừng sản phẩm" : "Kích hoạt sản phẩm",
+      content: `Bạn có chắc chắn muốn ${action} sản phẩm ${record.product_name}?`,
+      type: record.is_active ? "warning" : "success",
       onConfirm: async () => {
         try {
           await updateStatusMutation.mutateAsync({
-            productId: record.productId,
-            isActive: !record.isActive
+            productId: record.product_id,
+            isActive: !record.is_active,
           });
         } catch (error: unknown) {
           console.error("Failed to update status:", error);
@@ -236,20 +242,20 @@ const ProductsPage = () => {
     });
   };
 
-  const handleDelete = (record: Product) => {
-    showModal({
-      title: "Xóa sản phẩm",
-      content: `Bạn có chắc chắn muốn xóa sản phẩm ${record.productName}?`,
-      type: "error",
-      onConfirm: async () => {
-        try {
-          await deleteMutation.mutateAsync(record.productId);
-        } catch (error: unknown) {
-          console.error("Failed to delete:", error);
-        }
-      },
-    });
-  };
+  // const handleDelete = (record: Product) => {
+  //   showModal({
+  //     title: "Xóa sản phẩm",
+  //     content: `Bạn có chắc chắn muốn xóa sản phẩm ${record.product_name}?`,
+  //     type: "error",
+  //     onConfirm: async () => {
+  //       try {
+  //           await deleteMutation.mutateAsync(record.product_id);
+  //       } catch (error: unknown) {
+  //         console.error("Failed to delete:", error);
+  //       }
+  //     },
+  //   });
+  // };
 
   const handleView = (record: Product) => {
     setSelectedData(record);
@@ -412,14 +418,14 @@ const ProductsPage = () => {
             onClick: handleToggleStatus,
             condition: (record: Product) => !record.is_deleted,
           },
-          {
-            key: "delete",
-            label: "Xóa",
-            type: "default",
-            danger: true,
-            onClick: handleDelete,
-            condition: (record: Product) => !record.is_deleted,
-          },
+          // {
+          //   key: "delete",
+          //   label: "Xóa",
+          //   type: "default",
+          //   danger: true,
+          //   onClick: handleDelete,
+          //   condition: (record: Product) => !record.is_deleted,
+          // },
         ]}
         onView={handleView}
         addButtonText="Thêm sản phẩm"

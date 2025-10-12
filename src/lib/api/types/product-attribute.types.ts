@@ -4,22 +4,19 @@
  */
 
 export interface ProductAttributeInfoDto {
-  id: string;
-  attributeName: string;
-  attributeCode: string;
-  description?: string;
-  dataType: AttributeDataType;
-  unit?: string;
-  isRequired: boolean;
-  isActive: boolean;
-  defaultValue?: string;
-  validationRules?: Record<string, any>;
-  options?: string[];
-  sortOrder?: number;
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: string;
-  updatedBy?: string;
+  attribute_id: string;
+  attribute_name: string;
+  attribute_code: string;
+  unit?: string | null;
+  is_required: boolean;
+  data_type: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+  is_active: boolean;
+  created_date: string;
+  modified_date: string;
+  created_by: string;
+  modified_by: string;
+  is_deleted?: boolean;
+  version?: number;
 }
 
 export enum AttributeDataType {
@@ -101,16 +98,21 @@ export interface ProductAttributeStatsDto {
   recentAttributes: number;
 }
 
+export interface ProductAttributePaginationData {
+  content: ProductAttributeInfoDto[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  numberOfElements: number;
+}
+
 export interface ProductAttributeResponse {
   success: boolean;
   message: string;
-  data: ProductAttributeInfoDto;
-}
-
-export interface ProductAttributeListResponse {
-  success: boolean;
-  message: string;
-  data: ProductAttributeInfoDto[];
+  data: ProductAttributePaginationData;
 }
 
 export interface ProductAttributeStatsResponse {

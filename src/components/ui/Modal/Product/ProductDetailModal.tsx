@@ -26,11 +26,11 @@ import {
   ClockCircleOutlined,
   EyeOutlined,
 } from "@ant-design/icons";
-import {Product} from "@/lib/api/types/product.types";
-import {SupplierDetailModal} from "../SupplierModal";
-import {useSupplier} from "@/lib/api/hooks/useSuppliers";
+import { Product } from "@/lib/api/types/product.types";
+import { SupplierDetailModal } from "../SupplierModal";
+import { useSupplier } from "@/lib/api/hooks/useSuppliers";
 
-const {Title, Text, Paragraph} = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 interface ProductDetailModalProps {
   visible: boolean;
@@ -39,40 +39,40 @@ interface ProductDetailModalProps {
 }
 
 const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
-                                                                 visible,
-                                                                 onCancel,
-                                                                 data,
-                                                               }) => {
+  visible,
+  onCancel,
+  data,
+}) => {
   const [supplierModalVisible, setSupplierModalVisible] = React.useState(false);
 
-  const {data: supplier} = useSupplier(
-    supplierModalVisible && data ? data.supplierId : null
+  const { data: supplier } = useSupplier(
+    supplierModalVisible && data ? data.supplier_id : null
   );
 
   if (!data) return null;
 
-  console.log(data)
+  console.log(data);
 
   return (
     <Modal
       title={
-        <div style={{display: "flex", alignItems: "center", gap: 12}}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <Avatar
             size={40}
-            icon={<ShoppingOutlined/>}
-            style={{backgroundColor: "#1890ff"}}
+            icon={<ShoppingOutlined />}
+            style={{ backgroundColor: "#1890ff" }}
           />
           <div>
-            <Title level={4} style={{margin: 0, color: "#262626"}}>
-              {data.productName}
+            <Title level={4} style={{ margin: 0, color: "#262626" }}>
+              {data.product_name}
             </Title>
-            <Text type="secondary" style={{fontSize: 12}}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
               {data.sku} • {data.brand}
             </Text>
           </div>
-          {data.isFeatured && (
+          {data.is_featured && (
             <Tooltip title="Sản phẩm nổi bật">
-              <StarOutlined style={{color: "#faad14", fontSize: 20}}/>
+              <StarOutlined style={{ color: "#faad14", fontSize: 20 }} />
             </Tooltip>
           )}
         </div>
@@ -101,13 +101,12 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           }}
         >
           <Row gutter={24} align="middle">
- 
             <Col span={6}>
               <Statistic
                 title={
                   <span style={{ color: "rgba(255,255,255,0.8)" }}>Đơn vị</span>
                 }
-                value={data.unitOfMeasure}
+                value={data.unit_of_measure}
                 valueStyle={{ color: "#fff", fontSize: 20 }}
                 prefix={<TagOutlined />}
               />
@@ -118,24 +117,23 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   status={
                     data.is_deleted
                       ? "default"
-                      : data.isActive
-                        ? "success"
-                        : "error"
+                      : data.is_active
+                      ? "success"
+                      : "error"
                   }
                   text={
                     <span
                       style={{
                         color: data.is_deleted ? "#999" : "white",
                         fontSize: 16,
-                        fontWeight: 500
+                        fontWeight: 500,
                       }}
                     >
                       {data.is_deleted
                         ? "Đã xóa"
-                        : data.isActive
-                          ? "Hoạt động"
-                          : "Tạm dừng"
-                      }
+                        : data.is_active
+                        ? "Hoạt động"
+                        : "Tạm dừng"}
                     </span>
                   }
                 />
@@ -151,19 +149,19 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <Card
               title={
                 <Space>
-                  <EyeOutlined/>
+                  <EyeOutlined />
                   Hình ảnh sản phẩm
                 </Space>
               }
               size="small"
-              style={{marginBottom: 16}}
+              style={{ marginBottom: 16 }}
             >
               {false ? (
                 <Image
                   preview={true}
                   src=""
-                  alt={data?.productName || ""}
-                  style={{width: "100%", borderRadius: 8, maxHeight: 300}}
+                  alt={data?.product_name || ""}
+                  style={{ width: "100%", borderRadius: 8, maxHeight: 300 }}
                   fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
                 />
               ) : (
@@ -180,7 +178,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     gap: 8,
                   }}
                 >
-                  <ShoppingOutlined style={{fontSize: 48}}/>
+                  <ShoppingOutlined style={{ fontSize: 48 }} />
                   <Text type="secondary">Chưa có hình ảnh</Text>
                 </div>
               )}
@@ -198,7 +196,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             >
               <Descriptions column={1} size="small">
                 <Descriptions.Item label="Product ID">
-                  <Text code>{data.productId}</Text>
+                  <Text code>{data.product_id}</Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="SKU">
                   <Text code>{data.sku}</Text>
@@ -210,13 +208,13 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   </Space>
                 </Descriptions.Item>
                 <Descriptions.Item label="URL">
-                  <Text code>{data.productUrl}</Text>
+                  <Text code>{data.product_url}</Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Loại sản phẩm">
-                  <Tag color="blue">{data.productTypeName}</Tag>
+                  <Tag color="blue">{data.product_type_name}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Đơn vị">
-                  <Tag color="green">{data.unitOfMeasure}</Tag>
+                  <Tag color="green">{data.unit_of_measure}</Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Thương hiệu">
                   <Text strong>{data.brand}</Text>
@@ -226,7 +224,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </Descriptions.Item>
                 <Descriptions.Item label="Giá cao nhất">
                   <Text strong style={{ color: "#52c41a" }}>
-                    {data.peakPrice?.toLocaleString()}đ
+                    {data.peak_price?.toLocaleString()}đ
                   </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Nhà cung cấp">
@@ -295,64 +293,41 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </Row>
             </Card> */}
 
-
-
             {/* Thuộc tính sản phẩm */}
-            {data.attributeValues && data.attributeValues.length > 0 && (
+            {data.attribute_values && data.attribute_values.length > 0 && (
               <Card
                 title={
                   <Space>
-                    <TagOutlined/>
+                    <TagOutlined />
                     Thuộc tính sản phẩm
                   </Space>
                 }
                 size="small"
-                style={{marginBottom: 16}}
+                style={{ marginBottom: 16 }}
               >
-                <Row gutter={[8, 8]}>
-                  {data.attributeValues.map((attr) => (
-                    <Col xs={24} sm={12} key={attr.attributeId}>
-                      <div
-                        style={{
-                          padding: "8px 12px",
-                          backgroundColor: "#f6f8fa",
-                          borderRadius: 6,
-                          border: "1px solid #e1e4e8",
-                        }}
-                      >
-                        <div style={{ marginBottom: 4 }}>
-                          <Text
-                            strong
-                            style={{
-                              textTransform: "capitalize",
-                              color: "#24292e",
-                            }}
-                          >
-                            {attr.attributeName}
-                          </Text>
+                <Descriptions column={1} size="small">
+                  {data.attribute_values.map((attr) => (
+                    <Descriptions.Item 
+                      key={attr.attribute_id}
+                      label={
+                        <span>
+                          {attr.attribute_name}
                           {attr.unit && (
-                            <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                            <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
                               ({attr.unit})
                             </Text>
                           )}
-                        </div>
-                        <div>
-                          <Text style={{color: "#586069"}}>
-                            {attr.displayValue || attr.valueText || attr.valueNumber}
-                          </Text>
-                        </div>
-                        <div style={{ marginTop: 2 }}>
-                          <Tag color="blue">
-                            {attr.dataType}
-                          </Tag>
-                          <Text type="secondary" style={{ fontSize: 10, marginLeft: 4 }}>
-                            {attr.attributeCode}
-                          </Text>
-                        </div>
-                      </div>
-                    </Col>
+                        </span>
+                      }
+                    >
+                      <Text strong>
+                        {attr.display_value ||
+                          attr.value_text ||
+                          attr.value_number}
+                      </Text>
+                    </Descriptions.Item>
                   ))}
-                </Row>
+                </Descriptions>
               </Card>
             )}
 
@@ -360,7 +335,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <Card
               title={
                 <Space>
-                  <CalendarOutlined/>
+                  <CalendarOutlined />
                   Thông tin thời gian
                 </Space>
               }
@@ -371,7 +346,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <Descriptions column={1} size="small">
                     <Descriptions.Item label="Ngày tạo">
                       <Space>
-                        <ClockCircleOutlined/>
+                        <ClockCircleOutlined />
                         {new Date(data.created_date).toLocaleString("vi-VN")}
                       </Space>
                     </Descriptions.Item>
@@ -384,7 +359,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <Descriptions column={1} size="small">
                     <Descriptions.Item label="Ngày cập nhật">
                       <Space>
-                        <ClockCircleOutlined/>
+                        <ClockCircleOutlined />
                         {new Date(data.modified_date).toLocaleString("vi-VN")}
                       </Space>
                     </Descriptions.Item>
@@ -403,8 +378,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       <SupplierDetailModal
         visible={supplierModalVisible}
         onCancel={() => setSupplierModalVisible(false)}
-        onEdit={() => {
-        }} // Empty function since we don't need edit functionality
+        onEdit={() => {}} // Empty function since we don't need edit functionality
         supplier={supplier || null}
         loading={false}
         showEditButton={false}

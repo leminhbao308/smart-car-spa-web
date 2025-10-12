@@ -35,34 +35,34 @@ export interface ProductTags {
 }
 
 export interface ProductAttributeValue {
-  productId: string;
-  attributeId: string;
-  attributeName: string;
-  attributeCode: string;
-  unit?: string;
-  dataType: string;
-  valueText?: string;
-  valueNumber?: number;
-  displayValue?: string;
+  product_id: string;
+  attribute_id: string;
+  attribute_name: string;
+  attribute_code: string;
+  unit?: string | null;
+  data_type: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+  value_text?: string | null;
+  value_number?: number | null;
+  display_value?: string;
 }
 
 export interface Product extends BaseAuditEntity {
-  productId: string;
-  productUrl: string;
-  productName: string;
-  productTypeId: string;
-  productTypeName: string;
+  product_id: string;
+  product_url: string;
+  product_name: string;
+  product_type_id: string;
+  product_type_name: string;
   description: string;
-  unitOfMeasure: string;
+  unit_of_measure: string;
   brand: string;
   model: string;
   sku: string;
   barcode: string;
-  peakPrice: number;
-  supplierId: string;
-  isFeatured: boolean;
-  isActive: boolean;
-  attributeValues?: ProductAttributeValue[];
+  peak_price: number;
+  supplier_id: string;
+  is_featured: boolean;
+  is_active: boolean;
+  attribute_values?: ProductAttributeValue[];
 }
 
 export interface ProductPaginationData extends BasePaginationResponse {
@@ -89,8 +89,8 @@ export interface BaseProductData {
 
 export interface ProductAttributeValueRequest {
   attribute_id: string;
-  value_text?: string;
-  value_number?: number;
+  value_text?: string | null;
+  value_number?: number | null;
 }
 
 export interface CreateProductRequest extends BaseProductData {

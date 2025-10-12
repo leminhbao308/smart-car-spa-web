@@ -74,12 +74,6 @@ const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
           Chỉnh sửa
         </button>,
       ] : null}
-      styles={{
-        header: {
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "white",
-        },
-      }}
     >
       <div style={{ padding: "16px 0" }}>
         {/* Header Section */}
