@@ -2,8 +2,9 @@
 import React, { useState, useMemo } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import ProductAttributeModal from "@/components/ui/Modal/ProductAttributeModals/ProductAttributeModal";
+import { ProductAttributeDetailModal } from "@/components/ui/Modal/ProductAttributeModals/ProductAttributeDetailModal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Card, Row, Col, Select, Input, Button, Space, message } from "antd";
+import { Tag, Card, Row, Col, Select, Input, Button, Space, App } from "antd";
 import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   useProductAttributes,
@@ -21,8 +22,12 @@ const PRODUCT_ATTRIBUTE_STATUS_OPTIONS = [
 ];
 
 const ProductAttributesPage: React.FC = () => {
+  const { message } = App.useApp();
+  
   const [modalVisible, setModalVisible] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [editingAttribute, setEditingAttribute] = useState<ProductAttribute | null>(null);
+  const [viewingAttribute, setViewingAttribute] = useState<ProductAttribute | null>(null);
   // Filter states
   const [filters, setFilters] = useState<{
     status?: string;
@@ -68,8 +73,7 @@ const ProductAttributesPage: React.FC = () => {
       filtered = filtered.filter(
         (item) =>
           item.attribute_name.toLowerCase().includes(searchLower) ||
-          item.attribute_code.toLowerCase().includes(searchLower) ||
-          (item.display_name && item.display_name.toLowerCase().includes(searchLower))
+          item.attribute_code.toLowerCase().includes(searchLower)
       );
     }
 
@@ -100,8 +104,8 @@ const ProductAttributesPage: React.FC = () => {
   };
 
   const handleView = (record: ProductAttribute) => {
-    setEditingAttribute(record);
-    setModalVisible(true);
+    setViewingAttribute(record);
+    setDetailModalOpen(true);
   };
 
   const handleToggleStatus = (record: ProductAttribute) => {
@@ -338,6 +342,15 @@ const ProductAttributesPage: React.FC = () => {
           setModalVisible(false);
           setEditingAttribute(null);
         }}
+      />
+
+      <ProductAttributeDetailModal
+        open={detailModalOpen}
+        onCancel={() => {
+          setDetailModalOpen(false);
+          setViewingAttribute(null);
+        }}
+        productAttribute={viewingAttribute}
       />
     </div>
   );

@@ -4,7 +4,6 @@ import {
   Modal,
   Form,
   Input,
-  InputNumber,
   Select,
   Switch,
   Row,
@@ -14,8 +13,6 @@ import {
   Space,
   Divider,
   Button,
-  message,
-  App,
 } from "antd";
 import {
   InfoCircleOutlined,
@@ -30,7 +27,6 @@ import {
 import { ProductAttribute } from "@/lib/api/types/product.types";
 
 const { Title, Text } = Typography;
-const { TextArea } = Input;
 const { Option } = Select;
 
 interface ProductAttributeModalProps {
@@ -47,7 +43,6 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
   onSuccess,
 }) => {
   const [form] = Form.useForm();
-  const { message } = App.useApp();
   const isEditing = !!editingAttribute;
 
   const createMutation = useCreateProductAttribute();
@@ -108,13 +103,13 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
   };
 
   const dataTypeOptions = [
-    { value: "STRING", label: "Chuỗi (STRING)", description: "Dữ liệu văn bản ngắn" },
-    { value: "TEXT", label: "Văn bản (TEXT)", description: "Dữ liệu văn bản dài" },
-    { value: "NUMBER", label: "Số (NUMBER)", description: "Số thực" },
-    { value: "INTEGER", label: "Số nguyên (INTEGER)", description: "Số nguyên" },
-    { value: "DECIMAL", label: "Thập phân (DECIMAL)", description: "Số thập phân" },
-    { value: "BOOLEAN", label: "Boolean (BOOLEAN)", description: "True/False" },
-    { value: "DATE", label: "Ngày (DATE)", description: "Ngày tháng" },
+    { value: "STRING", label: "Chuỗi", displayLabel: "Chuỗi (STRING)", description: "Dữ liệu văn bản ngắn" },
+    { value: "TEXT", label: "Văn bản", displayLabel: "Văn bản (TEXT)", description: "Dữ liệu văn bản dài" },
+    { value: "NUMBER", label: "Số", displayLabel: "Số (NUMBER)", description: "Số thực" },
+    { value: "INTEGER", label: "Số nguyên", displayLabel: "Số nguyên (INTEGER)", description: "Số nguyên" },
+    { value: "DECIMAL", label: "Thập phân", displayLabel: "Thập phân (DECIMAL)", description: "Số thập phân" },
+    { value: "BOOLEAN", label: "Boolean", displayLabel: "Boolean (BOOLEAN)", description: "True/False" },
+    { value: "DATE", label: "Ngày", displayLabel: "Ngày (DATE)", description: "Ngày tháng" },
   ];
 
   return (
@@ -216,11 +211,14 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
                 rules={[{ required: true, message: "Vui lòng chọn loại dữ liệu" }]}
                 initialValue="STRING"
               >
-                <Select placeholder="Chọn loại dữ liệu">
+                <Select 
+                  placeholder="Chọn loại dữ liệu"
+                  optionLabelProp="label"
+                >
                   {dataTypeOptions.map((option) => (
-                    <Option key={option.value} value={option.value}>
+                    <Option key={option.value} value={option.value} label={option.label}>
                       <div>
-                        <div>{option.label}</div>
+                        <div>{option.displayLabel}</div>
                         <Text type="secondary" style={{ fontSize: 11 }}>
                           {option.description}
                         </Text>
@@ -257,21 +255,6 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
 
         <Divider style={{ margin: "24px 0" }} />
 
-        {/* Version Field (chỉ hiển thị khi edit) */}
-        {isEditing && (
-          <Form.Item
-            name="version"
-            label="Phiên bản"
-            style={{ marginBottom: 16 }}
-          >
-            <InputNumber
-              min={0}
-              disabled
-              style={{ width: "100%" }}
-              addonBefore="v"
-            />
-          </Form.Item>
-        )}
 
         {/* Footer */}
         <Row justify="end" gutter={12}>

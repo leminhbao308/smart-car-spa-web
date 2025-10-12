@@ -29,22 +29,22 @@ export const productAttributeService = {
   },
 
   createProductAttribute: async (data: any) => {
-    const response = await apiClient.post('/product-attributes', data);
+    const response = await apiClient.post('/product-attributes/create', data);
     return response.data;
   },
 
   updateProductAttribute: async (attributeId: string, data: any) => {
-    const response = await apiClient.put(`/product-attributes/${attributeId}`, data);
+    const response = await apiClient.post(`/product-attributes/${attributeId}/update`, data);
     return response.data;
   },
 
   deleteProductAttribute: async (attributeId: string) => {
-    const response = await apiClient.delete(`/product-attributes/${attributeId}`);
+    const response = await apiClient.post(`/product-attributes/${attributeId}/delete`);
     return response.data;
   },
 
   updateProductAttributeStatus: async (attributeId: string, isActive: boolean) => {
-    const response = await apiClient.patch(`/product-attributes/${attributeId}/status`, {
+    const response = await apiClient.post(`/product-attributes/${attributeId}/status`, {
       is_active: isActive
     });
     return response.data;
