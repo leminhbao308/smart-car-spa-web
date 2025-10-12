@@ -40,8 +40,14 @@ export const categoryService = {
     return response.data;
   },
 
-  getActiveCategories: async (): Promise<ApiResponse<Category[]>> => {
-    const response = await apiClient.get('/categories/active');
+  getActiveCategories: async (): Promise<ApiResponse<CategoryResponse>> => {
+    const response = await apiClient.get('/categories/get-all', {
+      params: {
+        filters: {
+          is_active: true
+        }
+      }
+    });
     return response.data;
   },
 

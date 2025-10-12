@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect } from "react";
-import { Modal, Form, Input, InputNumber, Select, Button, Space, App } from "antd";
+import { Modal, Form, Input, Select } from "antd";
 import { useCreateProductType, useUpdateProductType } from "@/lib/api/hooks/useProductTypes";
 import { useActiveCategories } from "@/lib/api/hooks/useCategories";
 import { ProductType, CreateProductTypeRequest, UpdateProductTypeRequest } from "@/lib/api/types/product.types";
@@ -22,7 +22,6 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
   initialData,
 }) => {
   const [form] = Form.useForm();
-  const { message } = App.useApp();
   const createMutation = useCreateProductType();
   const updateMutation = useUpdateProductType();
   const { data: categoriesData, isLoading: categoriesLoading } = useActiveCategories();
@@ -133,7 +132,7 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
               String(option?.children || '').toLowerCase().includes(input.toLowerCase())
             }
           >
-            {categoriesData?.data?.map((category) => (
+            {categoriesData?.data?.content?.map((category) => (
               <Option key={category.category_id} value={category.category_id}>
                 {category.category_name}
               </Option>
@@ -154,19 +153,6 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
           />
         </Form.Item>
 
-        {initialData && (
-          <Form.Item
-            name="version"
-            label="Phiên bản"
-          >
-            <InputNumber
-              min={0}
-              disabled
-              style={{ width: "100%" }}
-              addonBefore="v"
-            />
-          </Form.Item>
-        )}
       </Form>
     </Modal>
   );

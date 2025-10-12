@@ -2,10 +2,24 @@
 import React, { useState, useMemo } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import { ProductTypeModal } from "@/components/ui/Modal/ProductTypeModals/ProductTypeModal";
+import { ProductTypeDetailModal } from "@/components/ui/Modal/ProductTypeModals/ProductTypeDetailModal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Card, Row, Col, Select, Input, Button, Space, message } from "antd";
+import {
+  Tag,
+  Card,
+  Row,
+  Col,
+  Select,
+  Input,
+  Button,
+  Space,
+  App,
+} from "antd";
 import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
-import { useProductTypes, useUpdateProductTypeStatus } from "@/lib/api/hooks/useProductTypes";
+import {
+  useProductTypes,
+  useUpdateProductTypeStatus,
+} from "@/lib/api/hooks/useProductTypes";
 import { ProductType } from "@/lib/api/types/product.types";
 
 const { Search } = Input;
@@ -18,13 +32,19 @@ const PRODUCT_TYPE_STATUS_OPTIONS = [
 ];
 
 const ProductTypesPage: React.FC = () => {
+  const { message } = App.useApp();
+  
   // React Query hooks
   const { data: productTypesData, isLoading } = useProductTypes({});
   const updateStatusMutation = useUpdateProductTypeStatus();
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingProductType, setEditingProductType] = useState<ProductType | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [editingProductType, setEditingProductType] =
+    useState<ProductType | null>(null);
+  const [viewingProductType, setViewingProductType] =
+    useState<ProductType | null>(null);
 
   // Filter states
   const [filters, setFilters] = useState<{
@@ -50,7 +70,7 @@ const ProductTypesPage: React.FC = () => {
   // Update pagination when data changes
   React.useEffect(() => {
     if (productTypesData?.data) {
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
         total: productTypesData.data.totalElements || 0,
       }));
@@ -68,13 +88,16 @@ const ProductTypesPage: React.FC = () => {
         (item) =>
           item.product_type_name.toLowerCase().includes(searchLower) ||
           item.product_type_code.toLowerCase().includes(searchLower) ||
-          (item.description && item.description.toLowerCase().includes(searchLower))
+          (item.description &&
+            item.description.toLowerCase().includes(searchLower))
       );
     }
 
     // Status filter
     if (filters.status) {
-      filtered = filtered.filter((item) => item.is_active === (filters.status === "true"));
+      filtered = filtered.filter(
+        (item) => item.is_active === (filters.status === "true")
+      );
     }
 
     return filtered;
@@ -124,9 +147,7 @@ const ProductTypesPage: React.FC = () => {
       dataIndex: "category_name",
       key: "category_name",
       width: 150,
-      render: (categoryName: string) => (
-        <Tag color="blue">{categoryName}</Tag>
-      ),
+      render: (categoryName: string) => <Tag color="blue">{categoryName}</Tag>,
     },
     {
       title: "Trạng thái",
@@ -159,8 +180,8 @@ const ProductTypesPage: React.FC = () => {
   };
 
   const handleView = (record: ProductType) => {
-    setEditingProductType(record);
-    setModalOpen(true);
+    setViewingProductType(record);
+    setDetailModalOpen(true);
   };
 
   const handleToggleStatus = (record: ProductType) => {
@@ -237,7 +258,10 @@ const ProductTypesPage: React.FC = () => {
                 style={{ width: "100%" }}
               >
                 {PRODUCT_TYPE_STATUS_OPTIONS.map((status) => (
-                  <Option key={status.value.toString()} value={status.value.toString()}>
+                  <Option
+                    key={status.value.toString()}
+                    value={status.value.toString()}
+                  >
                     {status.label}
                   </Option>
                 ))}
@@ -277,7 +301,7 @@ const ProductTypesPage: React.FC = () => {
           showTotal: (total: number, range: [number, number]) =>
             `${range[0]}-${range[1]} của ${total} loại sản phẩm`,
           onChange: (page: number, pageSize?: number) => {
-            setPagination(prev => ({
+            setPagination((prev) => ({
               ...prev,
               current: page,
               pageSize: pageSize || 10,
@@ -297,6 +321,15 @@ const ProductTypesPage: React.FC = () => {
           setEditingProductType(null);
         }}
         initialData={editingProductType}
+      />
+
+      <ProductTypeDetailModal
+        open={detailModalOpen}
+        onCancel={() => {
+          setDetailModalOpen(false);
+          setViewingProductType(null);
+        }}
+        productType={viewingProductType}
       />
     </div>
   );

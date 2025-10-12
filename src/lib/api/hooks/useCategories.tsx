@@ -22,7 +22,7 @@ export const useCategories = (params?: {
 };
 
 export const useActiveCategories = () => {
-  return useQuery<ApiResponse<Category[]>>({
+  return useQuery<ApiResponse<CategoryResponse>>({
     queryKey: ['activeCategories'],
     queryFn: () => categoryService.getActiveCategories(),
     staleTime: 5 * 60 * 1000,
