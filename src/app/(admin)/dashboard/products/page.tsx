@@ -16,7 +16,6 @@ import {
   Input,
   Button,
   Space,
-  Image,
   Badge,
   Tooltip,
 } from "antd";
@@ -29,12 +28,11 @@ import {
 } from "@ant-design/icons";
 import {
   useProducts,
-} from "@/lib/api/hooks/useProducts";
-import { productService } from "@/lib/api/services/product.service";
-import { useCategories } from "@/lib/api/hooks/useCategory";
+  useUpdateProductStatus,
+  useDeleteProduct,
+} from "@/lib/api/hooks/useProductManagement";
+import { useActiveProductTypes } from "@/lib/api/hooks/useProductManagement";
 import { Product, ProductFilters } from "@/lib/api/types/product.types";
-import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import { message } from "antd";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -42,14 +40,6 @@ const { Option } = Select;
 const ProductsPage = () => {
   const { showModal } = useConfirmationModalContext();
 
-  // Helper function to extract error message
-  const getErrorMessage = (error: unknown, defaultMessage: string): string => {
-    if (error && typeof error === 'object' && 'response' in error) {
-      const response = (error as { response?: { data?: { message?: string } } }).response;
-      return response?.data?.message || defaultMessage;
-    }
-    return defaultMessage;
-  };
 
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -62,32 +52,36 @@ const ProductsPage = () => {
   const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState<ProductFilters>({
     searchText: undefined,
-    categoryId: undefined,
+    productTypeId: undefined,
     is_active: undefined,
     isFeatured: undefined,
-    isTrackable: undefined,
-    isConsumable: undefined,
+    brand: undefined,
   });
 
   // API hooks
-  const { products, totalElements, isLoading, refetch } = useProducts({
-    page: currentPage,
+  const { data: productsData, isLoading, refetch } = useProducts({
+    page: currentPage - 1,
     size: pageSize,
     filters,
   });
 
-  const { data: categoriesData } = useCategories();
-  const categories = categoriesData?.data?.content || [];
+  const products = productsData?.data?.content || [];
+  const totalElements = productsData?.data?.totalElements || 0;
+
+  const { data: productTypesData } = useActiveProductTypes();
+  const productTypes = productTypesData || [];
+
+  const updateStatusMutation = useUpdateProductStatus();
+  const deleteMutation = useDeleteProduct();
 
   // Reset filters
   const handleResetFilters = () => {
     setFilters({
       searchText: undefined,
-      categoryId: undefined,
+      productTypeId: undefined,
       is_active: undefined,
       isFeatured: undefined,
-      isTrackable: undefined,
-      isConsumable: undefined,
+      brand: undefined,
     });
     setCurrentPage(1);
   };
@@ -101,41 +95,22 @@ const ProductsPage = () => {
       render: (_, record) => (
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ position: "relative" }}>
-            {record.imageUrls?.main ? (
-              <Image
-                src={record.imageUrls.main}
-                alt={record.productName}
-                width={60}
-                height={60}
-                style={{
-                  borderRadius: 8,
-                  objectFit: "cover",
-                  border: "2px solid #f0f0f0",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-                }}
-                fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
-                preview={{
-                  mask: <div style={{ color: 'white', fontSize: 12 }}>Xem</div>
-                }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: 60,
-                  height: 60,
-                  backgroundColor: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  borderRadius: 8,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  border: "2px solid #f0f0f0",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-                }}
-              >
-                <ShoppingCartOutlined style={{ fontSize: 20 }} />
-              </div>
-            )}
+            <div
+              style={{
+                width: 60,
+                height: 60,
+                backgroundColor: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                borderRadius: 8,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                border: "2px solid #f0f0f0",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+              }}
+            >
+              <ShoppingCartOutlined style={{ fontSize: 20 }} />
+            </div>
             {record.isFeatured && (
               <div
                 style={{
@@ -180,13 +155,13 @@ const ProductsPage = () => {
         </div>
       ),
     },
-    // {
-    //   title: "Danh mục",
-    //   dataIndex: "categoryName",
-    //   key: "categoryName",
-    //   width: 120,
-    //   render: (categoryName: string) => <Tag color="blue">{categoryName}</Tag>,
-    // },
+    {
+      title: "Loại sản phẩm",
+      dataIndex: "productTypeName",
+      key: "productTypeName",
+      width: 150,
+      render: (productTypeName: string) => <Tag color="blue">{productTypeName}</Tag>,
+    },
     {
       title: "Đơn vị",
       dataIndex: "unitOfMeasure",
@@ -243,20 +218,19 @@ const ProductsPage = () => {
   };
 
   const handleToggleStatus = (record: Product) => {
-    const action = record.is_active ? "tạm dừng" : "kích hoạt";
+    const action = record.isActive ? "tạm dừng" : "kích hoạt";
     showModal({
-      title: record.is_active ? "Tạm dừng sản phẩm" : "Kích hoạt sản phẩm",
+      title: record.isActive ? "Tạm dừng sản phẩm" : "Kích hoạt sản phẩm",
       content: `Bạn có chắc chắn muốn ${action} sản phẩm ${record.productName}?`,
-      type: record.is_active ? "warning" : "success",
+      type: record.isActive ? "warning" : "success",
       onConfirm: async () => {
         try {
-          await productService.updateProductStatus(record.productId, {
-            is_active: !record.is_active
+          await updateStatusMutation.mutateAsync({
+            productId: record.productId,
+            isActive: !record.isActive
           });
-          message.success("Cập nhật trạng thái sản phẩm thành công!");
-          refetch(); // Refresh data
         } catch (error: unknown) {
-          message.error(getErrorMessage(error, "Có lỗi xảy ra khi cập nhật trạng thái"));
+          console.error("Failed to update status:", error);
         }
       },
     });
@@ -269,11 +243,9 @@ const ProductsPage = () => {
       type: "error",
       onConfirm: async () => {
         try {
-          await productService.deleteProduct(record.productId);
-          message.success("Xóa sản phẩm thành công!");
-          refetch(); // Refresh data
+          await deleteMutation.mutateAsync(record.productId);
         } catch (error: unknown) {
-          message.error(getErrorMessage(error, "Có lỗi xảy ra khi xóa sản phẩm"));
+          console.error("Failed to delete:", error);
         }
       },
     });
@@ -371,27 +343,27 @@ const ProductsPage = () => {
                   display: "block",
                 }}
               >
-                Danh mục
+                Loại sản phẩm
               </label>
               <Select
-                placeholder="Chọn danh mục"
-                value={filters.categoryId}
+                placeholder="Chọn loại sản phẩm"
+                value={filters.productTypeId}
                 onChange={(value) =>
-                  setFilters({ ...filters, categoryId: value })
+                  setFilters({ ...filters, productTypeId: value })
                 }
                 allowClear
                 style={{ width: "100%" }}
               >
-                {categories.map(
-                  (category: {
-                    category_id: string;
-                    category_name: string;
+                {productTypes.map(
+                  (productType: {
+                    productTypeId: string;
+                    productTypeName: string;
                   }) => (
                     <Option
-                      key={category.category_id}
-                      value={category.category_id}
+                      key={productType.productTypeId}
+                      value={productType.productTypeId}
                     >
-                      {category.category_name}
+                      {productType.productTypeName}
                     </Option>
                   )
                 )}

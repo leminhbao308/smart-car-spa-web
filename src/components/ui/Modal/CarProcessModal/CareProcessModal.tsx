@@ -1,5 +1,5 @@
 ﻿"use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Modal,
   Form,
@@ -42,6 +42,7 @@ import {
   MemoizedTextArea,
   MemoizedInputNumber,
 } from "@/components/ui/MemoizedComponents";
+import ProductSearchSelect from "@/components/ui/ProductSearchSelect";
 
 const { Title, Text } = Typography;
 
@@ -112,11 +113,18 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
     }
   }, [initialData]);
 
+  // Stable callback to update estimated duration
+  const updateEstimatedDuration = useCallback(() => {
+    const totalDuration = (steps || []).reduce((total, step) => total + (step.estimatedTime || 0), 0);
+    if (formRef.current) {
+      formRef.current.setFieldValue('estimatedDuration', totalDuration);
+    }
+  }, [steps]);
+
   // Auto-update estimated duration when steps change
   useEffect(() => {
-    const totalDuration = (steps || []).reduce((total, step) => total + (step.estimatedTime || 0), 0);
-    formRef.current.setFieldValue('estimatedDuration', totalDuration);
-  }, [steps]);
+    updateEstimatedDuration();
+  }, [updateEstimatedDuration]);
 
   const handleOk = async () => {
     try {
@@ -701,7 +709,7 @@ const StepModal: React.FC<StepModalProps> = ({
               dataSource={stepProducts}
               pagination={false}
               size="small"
-              rowKey={(_, index) => index || 0}
+              rowKey={(record) => record.productId || `product-${Math.random()}`}
               columns={[
                 {
                   title: "STT",
@@ -711,26 +719,22 @@ const StepModal: React.FC<StepModalProps> = ({
                   render: (_: CreateServiceProcessStepProductRequest, __: CreateServiceProcessStepProductRequest, index: number) => index + 1,
                 },
                 {
-                  title: "Mã sản phẩm",
+                  title: "Sản phẩm",
                   dataIndex: "productId",
                   key: "productId",
                   render: (value: string, record: CreateServiceProcessStepProductRequest, index: number) => (
-                    <MemoizedInput
+                    <ProductSearchSelect
                       value={value}
-                      onChange={(e) => updateProduct(index, "productId", e.target.value)}
-                      placeholder="Nhập mã sản phẩm"
-                    />
-                  ),
-                },
-                {
-                  title: "Tên sản phẩm",
-                  dataIndex: "productName",
-                  key: "productName",
-                  render: (value: string, record: CreateServiceProcessStepProductRequest, index: number) => (
-                    <MemoizedInput
-                      value={value}
-                      onChange={(e) => updateProduct(index, "productName", e.target.value)}
-                      placeholder="Nhập tên sản phẩm"
+                      onChange={(productId, product) => {
+                        updateProduct(index, "productId", productId);
+                        if (product) {
+                          updateProduct(index, "productName", product.productName);
+                          updateProduct(index, "unit", product.unitOfMeasure);
+                        }
+                      }}
+                      placeholder="Tìm kiếm sản phẩm..."
+                      size="small"
+                      style={{ width: "100%" }}
                     />
                   ),
                 },

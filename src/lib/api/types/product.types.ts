@@ -34,30 +34,30 @@ export interface ProductTags {
   [key: string]: string;
 }
 
+export interface ProductAttributeValue {
+  attributeId: string;
+  attributeName: string;
+  valueText?: string;
+  valueNumber?: number;
+}
+
 export interface Product extends BaseAuditEntity {
   productId: string;
   productUrl: string;
   productName: string;
-  categoryId: string;
-  categoryName: string;
+  productTypeId: string;
+  productTypeName: string;
   description: string;
   unitOfMeasure: string;
   brand: string;
   model: string;
-  specifications: ProductSpecifications;
   sku: string;
   barcode: string;
-  costPrice: number;
-  sellingPrice: number;
-  minStockLevel: number;
-  maxStockLevel: number;
-  weight: number;
-  dimensions: ProductDimensions;
-  warrantyPeriodMonths: number;
-  imageUrls: ProductImageUrls;
-  tags: ProductTags;
+  peakPrice: number;
   supplierId: string;
   isFeatured: boolean;
+  isActive: boolean;
+  attributeValues?: ProductAttributeValue[];
 }
 
 export interface ProductPaginationData extends BasePaginationResponse {
@@ -70,54 +70,30 @@ export type ProductResponse = ApiResponse<ProductPaginationData>;
 export interface BaseProductData {
   product_name: string;
   product_url: string;
-  category_id: string;
-  description: string;
+  product_type_id?: string;
+  description?: string;
   unit_of_measure: string;
-  brand: string;
-  model: string;
-  specifications: { [key: string]: string };
-  sku: string;
-  barcode: string;
-  cost_price: number;
-  selling_price: number;
-  min_stock_level: number;
-  max_stock_level: number;
-  weight: number;
-  dimensions: { [key: string]: string };
-  warranty_period_months: number;
-  image_urls: { [key: string]: string };
-  tags: { [key: string]: string };
-  supplier_id: string;
-  is_featured: boolean;
+  brand?: string;
+  model?: string;
+  sku?: string;
+  barcode?: string;
+  supplier_id?: string;
+  is_featured?: boolean;
+  attribute_values?: ProductAttributeValueRequest[];
+}
+
+export interface ProductAttributeValueRequest {
+  attribute_id: string;
+  value_text?: string;
+  value_number?: number;
 }
 
 export interface CreateProductRequest extends BaseProductData {
   is_active?: boolean;
 }
 
-export interface UpdateProductRequest {
-  product_name: string;
-  product_url: string;
-  category_id: string;
-  description: string;
-  unit_of_measure: string;
-  brand: string;
-  model: string;
-  specifications: { [key: string]: string };
-  sku: string;
-  barcode: string;
-  cost_price: number;
-  selling_price: number;
-  min_stock_level: number;
-  max_stock_level: number;
-  weight: number;
-  dimensions: { [key: string]: string };
-  warranty_period_months: number;
-  image_urls: { [key: string]: string };
-  tags: { [key: string]: string };
-  supplier_id: string;
-  is_featured: boolean;
-  is_active: boolean;
+export interface UpdateProductRequest extends BaseProductData {
+  is_active?: boolean;
 }
 
 
@@ -125,26 +101,17 @@ export interface UpdateProductRequest {
 export interface ProductFormData {
   productName: string;
   productUrl: string;
-  categoryId: string;
-  description: string;
+  productTypeId?: string;
+  description?: string;
   unitOfMeasure: string;
-  brand: string;
-  model: string;
-  specifications: { [key: string]: string };
-  sku: string;
-  barcode: string;
-  costPrice: number;
-  sellingPrice: number;
-  minStockLevel: number;
-  maxStockLevel: number;
-  weight: number;
-  dimensions: { [key: string]: string };
-  warrantyPeriodMonths: number;
-  imageUrls: { [key: string]: string };
-  tags: { [key: string]: string };
-  supplierId: string;
-  isFeatured: boolean;
-  is_active: boolean;
+  brand?: string;
+  model?: string;
+  sku?: string;
+  barcode?: string;
+  supplierId?: string;
+  isFeatured?: boolean;
+  isActive?: boolean;
+  attributeValues?: ProductAttributeValue[];
 }
 
 // For UI components
@@ -154,10 +121,8 @@ export interface ProductTableItem extends Product {
 
 // Filter and search types
 export interface ProductFilters {
-  categoryId?: string;
+  productTypeId?: string;
   brand?: string;
-  isTrackable?: boolean;
-  isConsumable?: boolean;
   isFeatured?: boolean;
   is_active?: boolean | "deleted";
   searchText?: string;
@@ -169,4 +134,106 @@ export interface ProductSearchParams {
   sort?: string;
   direction?: 'ASC' | 'DESC';
   filters?: ProductFilters;
+}
+
+// ProductType Types
+export interface ProductType extends BaseAuditEntity {
+  productTypeId: string;
+  productTypeName: string;
+  productTypeCode: string;
+  description?: string;
+  categoryId: string;
+  categoryName: string;
+  isActive: boolean;
+}
+
+export interface ProductTypePaginationData extends BasePaginationResponse {
+  content: ProductType[];
+}
+
+export type ProductTypeResponse = ApiResponse<ProductTypePaginationData>;
+
+export interface CreateProductTypeRequest {
+  product_type_name: string;
+  product_type_code: string;
+  description?: string;
+  category_id: string;
+}
+
+export interface UpdateProductTypeRequest {
+  product_type_name?: string;
+  product_type_code?: string;
+  description?: string;
+  category_id?: string;
+}
+
+export interface UpdateProductTypeStatusRequest {
+  is_active: boolean;
+}
+
+export interface ProductTypeFilters {
+  categoryId?: string;
+  is_active?: boolean | "deleted";
+  searchText?: string;
+}
+
+export interface ProductTypeSearchParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+  direction?: 'ASC' | 'DESC';
+  filters?: ProductTypeFilters;
+}
+
+// ProductAttribute Types
+export interface ProductAttribute extends BaseAuditEntity {
+  attributeId: string;
+  attributeName: string;
+  attributeCode: string;
+  unit?: string;
+  isRequired: boolean;
+  dataType: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+  displayName?: string;
+  isActive: boolean;
+}
+
+export interface ProductAttributePaginationData extends BasePaginationResponse {
+  content: ProductAttribute[];
+}
+
+export type ProductAttributeResponse = ApiResponse<ProductAttributePaginationData>;
+
+export interface CreateProductAttributeRequest {
+  attribute_name: string;
+  attribute_code: string;
+  unit?: string;
+  is_required?: boolean;
+  data_type?: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+}
+
+export interface UpdateProductAttributeRequest {
+  attribute_name?: string;
+  attribute_code?: string;
+  unit?: string;
+  is_required?: boolean;
+  data_type?: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+}
+
+export interface UpdateProductAttributeStatusRequest {
+  is_active: boolean;
+}
+
+export interface ProductAttributeFilters {
+  dataType?: string;
+  isRequired?: boolean;
+  is_active?: boolean | "deleted";
+  searchText?: string;
+}
+
+export interface ProductAttributeSearchParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+  direction?: 'ASC' | 'DESC';
+  filters?: ProductAttributeFilters;
 }

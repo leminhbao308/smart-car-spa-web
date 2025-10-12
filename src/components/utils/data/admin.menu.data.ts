@@ -18,6 +18,7 @@ import {
   DashboardOutlined,
   GiftOutlined,
   BarcodeOutlined,
+  SettingOutlined,
   UndoOutlined,
   ClockCircleOutlined,
   InboxOutlined,
@@ -113,9 +114,26 @@ export const adminMenuItems: MenuItem[] = [
     ],
   },
   {
-    key: "products",
-    label: "Sản phẩm",
+    key: "product-management",
+    label: "Quản lý sản phẩm",
     icon: React.createElement(BarcodeOutlined),
+    children: [
+      {
+        key: "product-types",
+        label: "Loại sản phẩm",
+        icon: React.createElement(AppstoreOutlined),
+      },
+      {
+        key: "products",
+        label: "Sản phẩm",
+        icon: React.createElement(BarcodeOutlined),
+      },
+      {
+        key: "product-attributes",
+        label: "Thuộc tính sản phẩm",
+        icon: React.createElement(SettingOutlined),
+      },
+    ],
   },
 
   {
@@ -255,7 +273,9 @@ export const menuKeyToPath: Record<string, string> = {
   brands: "/dashboard/vehicle-brands",
   types: "/dashboard/vehicle-types",
   models: "/dashboard/vehicle-models",
+  "product-types": "/dashboard/product-types",
   products: "/dashboard/products",
+  "product-attributes": "/dashboard/product-attributes",
   "import-inventory": "/dashboard/inventory/import",
   "export-inventory": "/dashboard/inventory/export",
   "stock-inventory": "/dashboard/inventory/stock",
