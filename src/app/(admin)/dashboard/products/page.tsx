@@ -4,7 +4,7 @@ import { AdminTable } from "@/components/ui/Table";
 import {
   useConfirmationModalContext,
   ProductDetailModal,
-  ProductEditModal,
+  ProductModal,
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import {
@@ -453,7 +453,7 @@ const ProductsPage = () => {
         data={selectedData}
       />
 
-      <ProductEditModal
+      <ProductModal
         visible={editModalVisible}
         onCancel={() => setEditModalVisible(false)}
         onSuccess={handleEditModalSuccess}

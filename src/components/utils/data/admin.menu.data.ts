@@ -21,8 +21,7 @@ import {
   SettingOutlined,
   UndoOutlined,
   ClockCircleOutlined,
-  InboxOutlined,
-  ExportOutlined,
+  InboxOutlined, 
   ImportOutlined,
 } from "@ant-design/icons";
 
@@ -70,11 +69,6 @@ export const adminMenuItems: MenuItem[] = [
     key: "category-management",
     label: "Quản lý danh mục",
     icon: React.createElement(AppstoreOutlined),
-  },
-  {
-    key: "customer-service",
-    label: "Dịch vụ khách hàng",
-    icon: React.createElement(CustomerServiceOutlined),
   },
   {
     key: "care-processes",
@@ -262,7 +256,6 @@ export const adminMenuItems: MenuItem[] = [
 export const menuKeyToPath: Record<string, string> = {
   dashboard: "/dashboard",
   bookings: "/dashboard/bookings",
-  "customer-service": "/dashboard/customer-service",
   "category-management": "/dashboard/category-management",
   "care-processes": "/dashboard/care-processes",
   "vehicles-in-care": "/dashboard/vehicles-in-care",

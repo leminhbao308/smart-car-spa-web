@@ -26,7 +26,7 @@ import {
 import {
   useCreateProductAttribute,
   useUpdateProductAttribute,
-} from "@/lib/api/hooks/useProductManagement";
+} from "@/lib/api/hooks/useProductAttributes";
 import { ProductAttribute } from "@/lib/api/types/product.types";
 
 const { Title, Text } = Typography;
@@ -59,11 +59,11 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
     if (visible) {
       if (editingAttribute) {
         form.setFieldsValue({
-          attributeName: editingAttribute.attributeName,
-          attributeCode: editingAttribute.attributeCode,
+          attributeName: editingAttribute.attribute_name,
+          attributeCode: editingAttribute.attribute_code,
           unit: editingAttribute.unit,
-          isRequired: editingAttribute.isRequired,
-          dataType: editingAttribute.dataType,
+          isRequired: editingAttribute.is_required,
+          dataType: editingAttribute.data_type,
         });
       } else {
         form.resetFields();
@@ -77,7 +77,7 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
       
       if (isEditing && editingAttribute) {
         await updateMutation.mutateAsync({
-          attributeId: editingAttribute.attributeId,
+          attributeId: editingAttribute.attribute_id,
           data: {
             attribute_name: values.attributeName,
             attribute_code: values.attributeCode,

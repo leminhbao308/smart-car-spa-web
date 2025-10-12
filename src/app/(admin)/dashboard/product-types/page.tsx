@@ -5,7 +5,7 @@ import { ProductTypeModal } from "@/components/ui/Modal/ProductTypeModals/Produc
 import { ColumnsType } from "antd/es/table";
 import { Tag, Card, Row, Col, Select, Input, Button, Space, message } from "antd";
 import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
-import { useProductTypes, useUpdateProductTypeStatus } from "@/lib/api/hooks/useProductManagement";
+import { useProductTypes, useUpdateProductTypeStatus } from "@/lib/api/hooks/useProductTypes";
 import { ProductType } from "@/lib/api/types/product.types";
 
 const { Search } = Input;

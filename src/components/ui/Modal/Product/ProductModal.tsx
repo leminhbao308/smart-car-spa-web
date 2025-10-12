@@ -13,6 +13,7 @@ import {
   Typography,
   Avatar} from "antd";
 import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
+import ProductAttributeManager from "@/components/ui/ProductAttributeManager/ProductAttributeManager";
 import {
   EditOutlined,
   SaveOutlined,
@@ -23,40 +24,50 @@ import {
 import {
   Product,
   CreateProductRequest,
-  UpdateProductRequest} from "@/lib/api/types/product.types";
+  UpdateProductRequest,
+  CreateProductAttributeValueRequest} from "@/lib/api/types/product.types";
 import {
   useCreateProduct,
   useUpdateProduct} from "@/lib/api/hooks/useProducts";
 import { useProductTypes } from "@/lib/api/hooks/useProductTypes";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
+import { useUpdateAllProductAttributeValues } from "@/lib/api/hooks/useProductAttributeValues";
 
 const { Option } = Select;
 const { Title, Text } = Typography;
 
-interface ProductEditModalProps {
+interface ProductModalProps {
   visible: boolean;
   onCancel: () => void;
   onSuccess: () => void;
   editData?: Product | null;
 }
 
-const ProductEditModal: React.FC<ProductEditModalProps> = ({
+const ProductModal: React.FC<ProductModalProps> = ({
   visible,
   onCancel,
   onSuccess,
   editData}) => {
   const [form] = Form.useForm();
+  const [attributeValues, setAttributeValues] = React.useState<CreateProductAttributeValueRequest[]>([]);
 
   const createProductMutation = useCreateProduct();
   const updateProductMutation = useUpdateProduct();
-  const { data: productTypesData } = useProductTypes();
+  const updateAllAttributesMutation = useUpdateAllProductAttributeValues();
+  const { data: productTypesData } = useProductTypes({
+    filters: {
+      is_active: true
+    }
+  });
   const { data: suppliersData } = useSuppliers({});
   const suppliers = suppliersData?.data?.content || [];
 
   const productTypes = productTypesData?.data?.content || [];
 
   const loading =
-    createProductMutation.isPending || updateProductMutation.isPending;
+    createProductMutation.isPending || 
+    updateProductMutation.isPending || 
+    updateAllAttributesMutation.isPending;
 
   useEffect(() => {
     if (visible && editData) {
@@ -74,8 +85,22 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
         description: editData.description,
         unitOfMeasure: editData.unit_of_measure,
         is_active: editData.is_active});
+      
+      // Initialize attribute values for editing
+      if (editData.attribute_values && editData.attribute_values.length > 0) {
+        const initialAttributes = editData.attribute_values.map(attr => ({
+          product_id: editData.product_id,
+          attribute_id: attr.attribute_id,
+          value_text: attr.value_text,
+          value_number: attr.value_number,
+        }));
+        setAttributeValues(initialAttributes);
+      } else {
+        setAttributeValues([]);
+      }
     } else if (visible) {
       form.resetFields();
+      setAttributeValues([]);
     }
   }, [visible, editData, form]);
 
@@ -99,9 +124,31 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
           is_featured: values.isFeatured,
           is_active: values.is_active};
 
+        // Update product first
         updateProductMutation.mutate({
           productId: editData.product_id,
-          data: updateData});
+          data: updateData
+        }, {
+          onSuccess: () => {
+            // Then update attributes if there are any
+            if (attributeValues.length > 0) {
+              updateAllAttributesMutation.mutate({
+                productId: editData.product_id,
+                attributeValues: attributeValues
+              }, {
+                onSuccess: () => {
+                  onSuccess();
+                },
+                onError: (error) => {
+                  console.error("Failed to update attributes:", error);
+                  onSuccess(); // Still call onSuccess for product update
+                }
+              });
+            } else {
+              onSuccess();
+            }
+          }
+        });
       } else {
         // Create new product - transform to API format
         const productData: CreateProductRequest = {
@@ -117,17 +164,46 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
           supplier_id: values.supplierId,
           is_featured: values.isFeatured,
           is_active: values.is_active};
-        createProductMutation.mutate(productData);
+        
+        createProductMutation.mutate(productData, {
+          onSuccess: (newProduct) => {
+            // After creating product, create attributes if there are any
+            if (attributeValues.length > 0 && newProduct?.product_id) {
+              const attributesWithProductId = attributeValues.map(attr => ({
+                ...attr,
+                product_id: newProduct.product_id
+              }));
+              
+              updateAllAttributesMutation.mutate({
+                productId: newProduct.product_id,
+                attributeValues: attributesWithProductId
+              }, {
+                onSuccess: () => {
+                  onSuccess();
+                },
+                onError: (error) => {
+                  console.error("Failed to create attributes:", error);
+                  onSuccess(); // Still call onSuccess for product creation
+                }
+              });
+            } else {
+              onSuccess();
+            }
+          }
+        });
       }
-
-      onSuccess();
     } catch (error) {
       console.log("Form validation failed:", error);
     }
   };
 
+  const handleAttributeChange = (newAttributeValues: CreateProductAttributeValueRequest[]) => {
+    setAttributeValues(newAttributeValues);
+  };
+
   const handleCancel = () => {
     form.resetFields();
+    setAttributeValues([]);
     onCancel();
   };
 
@@ -441,34 +517,17 @@ const ProductEditModal: React.FC<ProductEditModalProps> = ({
           </Row>
         </Card>
 
-        {/* Note about attributes */}
-        <Card
-          title={
-            <Space>
-              <InfoCircleOutlined style={{ color: "#722ed1" }} />
-              <span>Thuộc tính sản phẩm</span>
-            </Space>
-          }
-          size="small"
-          style={{ 
-            marginBottom: 16,
-            border: "1px solid #f0f0f0",
-            borderRadius: 8
-          }}
-        >
-          <div style={{ padding: "16px", textAlign: "center", color: "#666" }}>
-            <InfoCircleOutlined style={{ fontSize: 24, marginBottom: 8 }} />
-            <p style={{ margin: 0 }}>
-              Thuộc tính sản phẩm sẽ được quản lý thông qua hệ thống Product Attributes riêng biệt.
-              <br />
-              Sau khi tạo sản phẩm, bạn có thể thêm các thuộc tính tùy chỉnh cho sản phẩm này.
-            </p>
-          </div>
-        </Card>
+        {/* Product Attribute Manager */}
+        <ProductAttributeManager
+          productId={editData?.product_id}
+          initialAttributeValues={editData?.attribute_values || []}
+          onChange={handleAttributeChange}
+          disabled={loading}
+        />
       </Form>
     </Modal>
   );
 };
 
-export default ProductEditModal;
+export default ProductModal;
 

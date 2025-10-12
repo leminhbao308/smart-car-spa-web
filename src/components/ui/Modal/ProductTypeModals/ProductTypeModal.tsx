@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect } from "react";
 import { Modal, Form, Input, InputNumber, Select, Button, Space, App } from "antd";
-import { useCreateProductType, useUpdateProductType } from "@/lib/api/hooks/useProductManagement";
+import { useCreateProductType, useUpdateProductType } from "@/lib/api/hooks/useProductTypes";
+import { useActiveCategories } from "@/lib/api/hooks/useCategories";
 import { ProductType, CreateProductTypeRequest, UpdateProductTypeRequest } from "@/lib/api/types/product.types";
 
 const { TextArea } = Input;
@@ -24,14 +25,15 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
   const { message } = App.useApp();
   const createMutation = useCreateProductType();
   const updateMutation = useUpdateProductType();
+  const { data: categoriesData, isLoading: categoriesLoading } = useActiveCategories();
 
   useEffect(() => {
     if (initialData) {
       form.setFieldsValue({
-        productTypeName: initialData.productTypeName,
-        productTypeCode: initialData.productTypeCode,
+        productTypeName: initialData.product_type_name,
+        productTypeCode: initialData.product_type_code,
         description: initialData.description,
-        categoryId: initialData.categoryId,
+        categoryId: initialData.category_id,
       });
     } else {
       form.resetFields();
@@ -52,7 +54,7 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
         };
 
         await updateMutation.mutateAsync({
-          productTypeId: initialData.productTypeId,
+          productTypeId: initialData.product_type_id,
           data: updateData,
         });
       } else {
@@ -122,12 +124,20 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
           label="Danh mục"
           rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
         >
-          <Select placeholder="Chọn danh mục">
-            {/* TODO: Load categories from API */}
-            <Option value="category-1">Lốp xe</Option>
-            <Option value="category-2">Phụ tùng</Option>
-            <Option value="category-3">Dầu nhớt</Option>
-            <Option value="category-4">Phụ kiện</Option>
+          <Select 
+            placeholder="Chọn danh mục"
+            loading={categoriesLoading}
+            showSearch
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+            }
+          >
+            {categoriesData?.data?.map((category) => (
+              <Option key={category.category_id} value={category.category_id}>
+                {category.category_name}
+              </Option>
+            ))}
           </Select>
         </Form.Item>
 

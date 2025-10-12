@@ -8,7 +8,7 @@ import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   useProductAttributes,
   useUpdateProductAttributeStatus,
-} from "@/lib/api/hooks/useProductManagement";
+} from "@/lib/api/hooks/useProductAttributes";
 import { ProductAttribute } from "@/lib/api/types/product.types";
 
 const { Search } = Input;

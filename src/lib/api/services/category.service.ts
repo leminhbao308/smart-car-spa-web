@@ -1,76 +1,74 @@
-import api from "../axios";
-import {
-  CategoryResponse,
-  CreateCategoryRequest,
-  UpdateCategoryRequest,
-  Category,
-  UpdateCategoryStatusRequest,
-} from "../types/category.types";
+import apiClient from '../axios';
+import { ApiResponse } from '@/lib/api/types/common.types';
+
+export interface Category {
+  category_id: string;
+  category_name: string;
+  category_code: string;
+  description?: string;
+  is_active: boolean;
+  created_date: string;
+  modified_date: string;
+  created_by: string;
+  modified_by: string;
+}
+
+export interface CategoryResponse {
+  content: Category[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
 
 export const categoryService = {
-  // Get all categories with pagination
-  getAllCategories: async (
-    page: number = 0,
-    size: number = 50
-  ): Promise<CategoryResponse> => {
-    const response = await api.get(
-      `/categories/get-all?page=${page}&size=${size}`
-    );
+  getAllCategories: async (params?: {
+    page?: number;
+    size?: number;
+    sort?: string;
+    direction?: 'ASC' | 'DESC';
+    filters?: {
+      is_active?: boolean;
+      searchText?: string;
+    };
+  }): Promise<ApiResponse<CategoryResponse>> => {
+    const response = await apiClient.get('/categories', { params });
     return response.data;
   },
 
-  // Get category by ID
-  getCategoryById: async (categoryId: string): Promise<Category> => {
-    const response = await api.get(`/categories/${categoryId}`);
-    return response.data.data;
+  getActiveCategories: async (): Promise<ApiResponse<Category[]>> => {
+    const response = await apiClient.get('/categories/active');
+    return response.data;
   },
 
-  // Create new category
-  createCategory: async (data: CreateCategoryRequest): Promise<Category> => {
-    const response = await api.post("/categories/create", data);
-    return response.data.data;
+  getCategoryById: async (categoryId: string): Promise<ApiResponse<Category>> => {
+    const response = await apiClient.get(`/categories/${categoryId}`);
+    return response.data;
   },
 
-  // Update category
-  updateCategory: async (data: UpdateCategoryRequest): Promise<Category> => {
-    const { category_id, ...updateData } = data;
-    const response = await api.post(
-      `/categories/${category_id}/update`,
-      updateData
-    );
-    return response.data.data;
+  createCategory: async (data: any): Promise<ApiResponse<Category>> => {
+    const response = await apiClient.post('/categories', data);
+    return response.data;
   },
 
-  updateCategoryStatusRequest: async (
-    data: UpdateCategoryStatusRequest
-  ): Promise<Category> => {
-    const { category_id, ...updateData } = data;
-    const response = await api.post(
-      `/categories/${category_id}/status`,
-      updateData
-    );
-    return response.data.data;
+  updateCategory: async (categoryId: string, data: any): Promise<ApiResponse<Category>> => {
+    const response = await apiClient.put(`/categories/${categoryId}`, data);
+    return response.data;
   },
 
-  // Delete category (soft delete)
-  deleteCategory: async (categoryId: string): Promise<void> => {
-    await api.post(`/categories/${categoryId}/delete`);
+  deleteCategory: async (categoryId: string): Promise<ApiResponse<void>> => {
+    const response = await apiClient.delete(`/categories/${categoryId}`);
+    return response.data;
   },
 
-  // Toggle category status
-  toggleCategoryStatus: async (
-    categoryId: string,
-    isActive: boolean
-  ): Promise<Category> => {
-    const response = await api.post(`/categories/${categoryId}/status`, {
-      is_active: isActive,
+  updateCategoryStatus: async (categoryId: string, isActive: boolean): Promise<ApiResponse<Category>> => {
+    const response = await apiClient.patch(`/categories/${categoryId}/status`, {
+      is_active: isActive
     });
-    return response.data.data;
-  },
-
-  // Get categories tree (flattened for tree view)
-  getCategoriesTree: async (): Promise<Category[]> => {
-    const response = await api.get("/categories/tree");
-    return response.data.data;
-  },
+    return response.data;
+  }
 };

@@ -14,7 +14,12 @@ export const productAttributeService = {
       searchText?: string;
     };
   }): Promise<ProductAttributeResponse> => {
-    const response = await apiClient.get('/product-attributes', { params });
+    const response = await apiClient.get('/product-attributes/get-all', { params });
+    return response.data;
+  },
+
+  getActiveProductAttributes: async (): Promise<any> => {
+    const response = await apiClient.get('/product-attributes/active');
     return response.data;
   },
 

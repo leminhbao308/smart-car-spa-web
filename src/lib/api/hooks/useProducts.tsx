@@ -10,7 +10,7 @@ import {
   ProductSearchParams,
   ProductResponse,
 } from "../types/product.types";
-import { message } from "antd";
+import { useAppMessage } from './useAppMessage';
 
 export const useProducts = (params: ProductSearchParams = {}) => {
   const queryClient = useQueryClient();
@@ -60,6 +60,7 @@ export const useProduct = (productId: string) => {
 
 export const useCreateProduct = () => {
   const queryClient = useQueryClient();
+  const message = useAppMessage();
 
   return useMutation({
     mutationFn: (data: CreateProductRequest) => productService.createProduct(data),
@@ -75,13 +76,14 @@ export const useCreateProduct = () => {
 
 export const useUpdateProduct = () => {
   const queryClient = useQueryClient();
+  const message = useAppMessage();
 
   return useMutation({
     mutationFn: ({ productId, data }: { productId: string; data: UpdateProductRequest }) => 
       productService.updateProduct(productId, data),
     onSuccess: (updatedProduct) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product", updatedProduct.productId] });
+      queryClient.invalidateQueries({ queryKey: ["product", updatedProduct.product_id] });
       message.success("Cập nhật sản phẩm thành công!");
     },
     onError: (error: any) => {
@@ -93,13 +95,14 @@ export const useUpdateProduct = () => {
 // Update product status hook
 export const useUpdateProductStatus = () => {
   const queryClient = useQueryClient();
+  const message = useAppMessage();
 
   return useMutation({
     mutationFn: ({ productId, data }: { productId: string; data: { is_active: boolean } }) => 
       productService.updateProductStatus(productId, data),
     onSuccess: (updatedProduct) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product", updatedProduct.productId] });
+      queryClient.invalidateQueries({ queryKey: ["product", updatedProduct.product_id] });
       message.success("Cập nhật trạng thái sản phẩm thành công!");
     },
     onError: (error: any) => {
@@ -110,6 +113,7 @@ export const useUpdateProductStatus = () => {
 
 export const useDeleteProduct = () => {
   const queryClient = useQueryClient();
+  const message = useAppMessage();
 
   return useMutation({
     mutationFn: (productId: string) => productService.deleteProduct(productId),

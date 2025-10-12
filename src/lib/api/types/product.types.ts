@@ -93,6 +93,36 @@ export interface ProductAttributeValueRequest {
   value_number?: number | null;
 }
 
+export interface CreateProductAttributeValueRequest {
+  product_id: string;
+  attribute_id: string;
+  value_text?: string | null;
+  value_number?: number | null;
+}
+
+export interface UpdateProductAttributeValueRequest {
+  value_text?: string | null;
+  value_number?: number | null;
+}
+
+export interface BulkUpdateProductAttributeValueRequest {
+  product_ids: string[];
+  attribute_id: string;
+  value_text?: string | null;
+  value_number?: number | null;
+}
+
+export interface ProductAttributeValueUpdateRequest {
+  attribute_id: string;
+  value_text?: string | null;
+  value_number?: number | null;
+  operation?: 'CREATE' | 'UPDATE' | 'DELETE';
+}
+
+export interface BulkUpdateProductAttributeValuesRequest {
+  attribute_values: ProductAttributeValueUpdateRequest[];
+}
+
 export interface CreateProductRequest extends BaseProductData {
   is_active?: boolean;
 }
