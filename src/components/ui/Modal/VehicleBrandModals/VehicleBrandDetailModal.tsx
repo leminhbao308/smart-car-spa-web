@@ -217,22 +217,38 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
               }}
             >
               <Descriptions 
-                column={{ xs: 1, sm: 2 }} 
+                column={{ xs: 1, sm: 1 }} 
                 size="small"
                 bordered={false}
                 style={{ marginTop: 8 }}
               >
-                <Descriptions.Item label="Tên hãng" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                <Descriptions.Item label={<span style={{ fontWeight: 500, color: "#595959" }}>Tên hãng</span>}>
                   <Text strong style={{ fontSize: "15px", color: "#262626" }}>
                     {brand.brand_name}
                   </Text>
                 </Descriptions.Item>
-                <Descriptions.Item label="Mã hãng" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                <Descriptions.Item label={<span style={{ fontWeight: 500, color: "#595959" }}>Mã hãng</span>}>
                   <Tag color="blue" style={{ fontSize: "12px", padding: "2px 8px" }}>
                     {brand.brand_code}
                   </Tag>
                 </Descriptions.Item>
-                <Descriptions.Item label="Mô tả" span={{ xs: 1, sm: 2 }} labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                <Descriptions.Item label={<span style={{ fontWeight: 500, color: "#595959" }}>Trạng thái</span>}>
+                  <Tag 
+                    color={brand.is_active ? "green" : "red"} 
+                    style={{ fontSize: "12px", padding: "2px 8px" }}
+                  >
+                    {brand.is_active ? "Hoạt động" : "Không hoạt động"}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label={<span style={{ fontWeight: 500, color: "#595959" }}>Trạng thái xóa</span>}>
+                  <Tag 
+                    color={brand.is_deleted ? "red" : "green"} 
+                    style={{ fontSize: "12px", padding: "2px 8px" }}
+                  >
+                    {brand.is_deleted ? "Đã xóa" : "Chưa xóa"}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label={<span style={{ fontWeight: 500, color: "#595959" }}>Mô tả</span>}>
                   <div style={{
                     backgroundColor: "#fafafa",
                     padding: "12px",
@@ -244,22 +260,6 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
                   }}>
                     {brand.description || "Không có mô tả"}
                   </div>
-                </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái" labelStyle={{ fontWeight: 500, color: "#595959" }}>
-                  <Tag 
-                    color={brand.is_active ? "green" : "red"} 
-                    style={{ fontSize: "12px", padding: "2px 8px" }}
-                  >
-                    {brand.is_active ? "Hoạt động" : "Không hoạt động"}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái xóa" labelStyle={{ fontWeight: 500, color: "#595959" }}>
-                  <Tag 
-                    color={brand.is_deleted ? "red" : "green"} 
-                    style={{ fontSize: "12px", padding: "2px 8px" }}
-                  >
-                    {brand.is_deleted ? "Đã xóa" : "Chưa xóa"}
-                  </Tag>
                 </Descriptions.Item>
               </Descriptions>
             </Card>
@@ -294,12 +294,12 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
               }}
             >
               <Descriptions 
-                column={{ xs: 1, sm: 2 }} 
+                column={{ xs: 1, sm: 1 }} 
                 size="small"
                 bordered={false}
                 style={{ marginTop: 8 }}
               >
-                <Descriptions.Item label="Ngày tạo" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                <Descriptions.Item label={<span style={{ fontWeight: 500, color: "#595959" }}>Ngày tạo</span>}>
                   <div style={{ 
                     display: "flex", 
                     alignItems: "center", 
@@ -315,7 +315,7 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
                     </Text>
                   </div>
                 </Descriptions.Item>
-                <Descriptions.Item label="Ngày cập nhật" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                <Descriptions.Item label={<span style={{ fontWeight: 500, color: "#595959" }}>Ngày cập nhật</span>}>
                   <div style={{ 
                     display: "flex", 
                     alignItems: "center", 
@@ -331,7 +331,7 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
                     </Text>
                   </div>
                 </Descriptions.Item>
-                <Descriptions.Item label="Người tạo" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                <Descriptions.Item label={<span style={{ fontWeight: 500, color: "#595959" }}>Người tạo</span>}>
                   <div style={{
                     backgroundColor: "#fafafa",
                     padding: "6px 10px",
@@ -343,7 +343,7 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
                     </Text>
                   </div>
                 </Descriptions.Item>
-                <Descriptions.Item label="Người cập nhật" labelStyle={{ fontWeight: 500, color: "#595959" }}>
+                <Descriptions.Item label={<span style={{ fontWeight: 500, color: "#595959" }}>Người cập nhật</span>}>
                   <div style={{
                     backgroundColor: "#fafafa",
                     padding: "6px 10px",
