@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import {
   useConfirmationModalContext,
@@ -16,7 +16,7 @@ import {
   Input,
   Button,
   Space,
-  message,
+  App,
 } from "antd";
 import {
   FilterOutlined,
@@ -30,6 +30,7 @@ const { Search } = Input;
 const { Option } = Select;
 
 const ServicesPage = () => {
+  const { message } = App.useApp();
   const [serviceData, setServiceData] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
   const [tableKey, setTableKey] = useState(0); // Force re-render table
@@ -58,7 +59,7 @@ const ServicesPage = () => {
   });
 
   // Load services data
-  const loadServices = async (page: number = 0, size: number = 10) => {
+  const loadServices = useCallback(async (page: number = 0, size: number = 10) => {
     try {
       setLoading(true);
       console.log("Loading services...", { page, size });
@@ -90,7 +91,7 @@ const ServicesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
 
   // Refresh data function
   const refreshData = async () => {
@@ -110,7 +111,7 @@ const ServicesPage = () => {
 
   useEffect(() => {
     loadServices();
-  }, []);
+  }, [loadServices]);
 
   // Debug: Log serviceData changes
   useEffect(() => {
