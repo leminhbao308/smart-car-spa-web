@@ -35,6 +35,7 @@ export interface ProductTags {
 }
 
 export interface ProductAttributeValue {
+  id?: string; // ID của attribute value
   product_id: string;
   attribute_id: string;
   attribute_name: string;
@@ -98,6 +99,8 @@ export interface CreateProductAttributeValueRequest {
   attribute_id: string;
   value_text?: string | null;
   value_number?: number | null;
+  operation?: 'DELETE'; // Chỉ sử dụng cho DELETE
+  id?: string; // ID của attribute value hiện tại (nếu có)
 }
 
 export interface UpdateProductAttributeValueRequest {
@@ -116,7 +119,7 @@ export interface ProductAttributeValueUpdateRequest {
   attribute_id: string;
   value_text?: string | null;
   value_number?: number | null;
-  operation?: 'CREATE' | 'UPDATE' | 'DELETE';
+  operation?: 'DELETE'; // Chỉ hỗ trợ DELETE
 }
 
 export interface BulkUpdateProductAttributeValuesRequest {

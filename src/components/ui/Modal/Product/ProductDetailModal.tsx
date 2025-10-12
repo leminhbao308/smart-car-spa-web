@@ -52,6 +52,8 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   if (!data) return null;
 
   console.log(data);
+  const image =
+    "https://media.istockphoto.com/id/1287044692/vi/anh/c%C3%B4ng-nh%C3%A2n-r%E1%BB%ADa-xe-m%C3%A0u-%C4%91%E1%BB%8F-b%E1%BA%B1ng-b%E1%BB%8Dt-bi%E1%BB%83n-tr%C3%AAn-r%E1%BB%ADa-xe.jpg?s=612x612&w=0&k=20&c=OvMdaw63P3ZwE9FIRsmEGpMvWLjfvzwEBHsErH1JmIk=";
 
   return (
     <Modal
@@ -153,13 +155,13 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   Hình ảnh sản phẩm
                 </Space>
               }
-              size="small"
+              size="default"
               style={{ marginBottom: 16 }}
             >
-              {false ? (
+              {image ? (
                 <Image
                   preview={true}
-                  src=""
+                  src={image}
                   alt={data?.product_name || ""}
                   style={{ width: "100%", borderRadius: 8, maxHeight: 300 }}
                   fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN"
@@ -167,7 +169,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               ) : (
                 <div
                   style={{
-                    height: 200,
+                    height: 300,
                     backgroundColor: "#f5f5f5",
                     borderRadius: 8,
                     display: "flex",
@@ -184,7 +186,53 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               )}
             </Card>
 
-            {/* Thông tin cơ bản */}
+            {/* Thông tin thời gian */}
+            <Card
+              title={
+                <Space>
+                  <CalendarOutlined />
+                  Thông tin thời gian
+                </Space>
+              }
+              size="small"
+            >
+              <Row gutter={[16, 16]}>
+                <Col xs={24} sm={24}>
+                  <Descriptions column={1} size="small">
+                    <Descriptions.Item label="Ngày tạo">
+                      <Space>
+                        <ClockCircleOutlined />
+                        {new Date(data.created_date).toLocaleString("vi-VN")}
+                      </Space>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Người tạo">
+                      <Text code>{data.created_by}</Text>
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Col>
+                <Col xs={24} sm={24}>
+                  <Descriptions column={1} size="small">
+                    <Descriptions.Item label="Ngày cập nhật">
+                      <Space>
+                        <ClockCircleOutlined />
+                        {new Date(data.modified_date).toLocaleString("vi-VN")}
+                      </Space>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Người cập nhật">
+                      <Text code>{data.modified_by}</Text>
+                    </Descriptions.Item>
+                  </Descriptions>
+                </Col>
+              </Row>
+            </Card>
+          </Col>
+
+          {/* Cột phải - Thông tin cơ bản */}
+          <Col
+            xs={24}
+            lg={14}
+            style={{ display: "flex", flexDirection: "column", gap: 16 }}
+          >
             <Card
               title={
                 <Space>
@@ -247,53 +295,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </Descriptions.Item>
               </Descriptions>
             </Card>
-          </Col>
-
-          {/* Cột phải - Thông tin chi tiết */}
-          <Col xs={24} lg={14}>
-            {/* Thông tin giá cả */}
-            {/* <Card
-              title={
-                <Space>
-                  <DollarOutlined />
-                  Thông tin giá cả
-                </Space>
-              }
-              size="small"
-              style={{ marginBottom: 16 }}
-            >
-              <Row gutter={[8, 8]}>
-                <Col xs={24} sm={8}>
-                  <Statistic
-                    title="Giá nhập"
-                    value={data.costPrice}
-                    formatter={(value) => formatCurrency(Number(value))}
-                    valueStyle={{ color: "#1890ff" }}
-                    prefix={<ShopOutlined />}
-                  />
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Statistic
-                    title="Giá bán"
-                    value={data.sellingPrice}
-                    formatter={(value) => formatCurrency(Number(value))}
-                    valueStyle={{ color: "#52c41a" }}
-                    prefix={<DollarOutlined />}
-                  />
-                </Col>
-                <Col xs={24} sm={8}>
-                  <Statistic
-                    title="Tỷ lệ lợi nhuận"
-                    value={profitMargin}
-                    suffix="%"
-                    valueStyle={{ color: profit > 0 ? "#52c41a" : "#f5222d" }}
-                    prefix={<TagOutlined />}
-                  />
-                </Col>
-              </Row>
-            </Card> */}
-
-            {/* Thuộc tính sản phẩm */}
             {data.attribute_values && data.attribute_values.length > 0 && (
               <Card
                 title={
@@ -307,13 +308,16 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               >
                 <Descriptions column={1} size="small">
                   {data.attribute_values.map((attr) => (
-                    <Descriptions.Item 
+                    <Descriptions.Item
                       key={attr.attribute_id}
                       label={
                         <span>
                           {attr.attribute_name}
                           {attr.unit && (
-                            <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
+                            <Text
+                              type="secondary"
+                              style={{ fontSize: 12, marginLeft: 4 }}
+                            >
                               ({attr.unit})
                             </Text>
                           )}
@@ -330,46 +334,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </Descriptions>
               </Card>
             )}
-
-            {/* Thông tin thời gian */}
-            <Card
-              title={
-                <Space>
-                  <CalendarOutlined />
-                  Thông tin thời gian
-                </Space>
-              }
-              size="small"
-            >
-              <Row gutter={[16, 16]}>
-                <Col xs={24} sm={24}>
-                  <Descriptions column={1} size="small">
-                    <Descriptions.Item label="Ngày tạo">
-                      <Space>
-                        <ClockCircleOutlined />
-                        {new Date(data.created_date).toLocaleString("vi-VN")}
-                      </Space>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Người tạo">
-                      <Text code>{data.created_by}</Text>
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Col>
-                <Col xs={24} sm={24}>
-                  <Descriptions column={1} size="small">
-                    <Descriptions.Item label="Ngày cập nhật">
-                      <Space>
-                        <ClockCircleOutlined />
-                        {new Date(data.modified_date).toLocaleString("vi-VN")}
-                      </Space>
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Người cập nhật">
-                      <Text code>{data.modified_by}</Text>
-                    </Descriptions.Item>
-                  </Descriptions>
-                </Col>
-              </Row>
-            </Card>
           </Col>
         </Row>
       </div>

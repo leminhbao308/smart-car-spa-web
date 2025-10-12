@@ -37,9 +37,24 @@ export const productAttributeValueService = {
 
   // Tạo nhiều thuộc tính cùng lúc cho sản phẩm
   createMultipleProductAttributeValues: async (productId: string, attributeValues: CreateProductAttributeValueRequest[]): Promise<ApiResponse<ProductAttributeValue[]>> => {
-    const response = await apiClient.post(`${API_URL}/product/${productId}/bulk`, {
-      attribute_values: attributeValues
+    // Map to backend format
+    const bulkUpdateRequest = {
+      attribute_values: attributeValues.map(attr => ({
+        attribute_id: attr.attribute_id,
+        value_text: attr.value_text,
+        value_number: attr.value_number,
+        operation: attr.operation || 'CREATE' // Default to CREATE for new attributes
+      }))
+    };
+    
+    console.log("createMultipleProductAttributeValues request:", {
+      url: `${API_URL}/products/${productId}/bulk-update`,
+      productId,
+      attributeValues: attributeValues.length,
+      bulkUpdateRequest
     });
+    
+    const response = await apiClient.post(`${API_URL}/products/${productId}/bulk-update`, bulkUpdateRequest);
     return response.data;
   },
 
@@ -66,7 +81,7 @@ export const productAttributeValueService = {
       attribute_id: string;
       value_text?: string | null;
       value_number?: number | null;
-      operation?: 'CREATE' | 'UPDATE' | 'DELETE';
+      operation?: 'DELETE'; // Chỉ hỗ trợ DELETE
     }>
   ): Promise<ApiResponse<ProductAttributeValue[]>> => {
     const bulkUpdateRequest: BulkUpdateProductAttributeValuesRequest = {
@@ -74,7 +89,7 @@ export const productAttributeValueService = {
         attribute_id: attr.attribute_id,
         value_text: attr.value_text,
         value_number: attr.value_number,
-        operation: attr.operation
+        operation: attr.operation || undefined // Chỉ gửi khi có giá trị
       }))
     };
 

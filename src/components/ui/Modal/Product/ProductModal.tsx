@@ -11,7 +11,8 @@ import {
   Card,
   Switch,
   Typography,
-  Avatar} from "antd";
+  Avatar,
+  App} from "antd";
 import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
 import ProductAttributeManager from "@/components/ui/ProductAttributeManager/ProductAttributeManager";
 import {
@@ -31,7 +32,7 @@ import {
   useUpdateProduct} from "@/lib/api/hooks/useProducts";
 import { useProductTypes } from "@/lib/api/hooks/useProductTypes";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
-import { useUpdateAllProductAttributeValues } from "@/lib/api/hooks/useProductAttributeValues";
+import { productAttributeValueService } from "@/lib/api/services/productAttributeValue.service";
 
 const { Option } = Select;
 const { Title, Text } = Typography;
@@ -50,10 +51,10 @@ const ProductModal: React.FC<ProductModalProps> = ({
   editData}) => {
   const [form] = Form.useForm();
   const [attributeValues, setAttributeValues] = React.useState<CreateProductAttributeValueRequest[]>([]);
+  const { message } = App.useApp();
 
   const createProductMutation = useCreateProduct();
   const updateProductMutation = useUpdateProduct();
-  const updateAllAttributesMutation = useUpdateAllProductAttributeValues();
   const { data: productTypesData } = useProductTypes({
     filters: {
       is_active: true
@@ -66,8 +67,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
   const loading =
     createProductMutation.isPending || 
-    updateProductMutation.isPending || 
-    updateAllAttributesMutation.isPending;
+    updateProductMutation.isPending;
 
   useEffect(() => {
     if (visible && editData) {
@@ -108,6 +108,20 @@ const ProductModal: React.FC<ProductModalProps> = ({
     try {
       const values = await form.validateFields();
 
+      // Validate attributes for new products
+      if (!editData && attributeValues.length > 0) {
+        const invalidAttributes = attributeValues.filter(attr => 
+          !attr.attribute_id || 
+          (attr.value_text === undefined && attr.value_number === undefined) ||
+          (attr.value_text === null && attr.value_number === null)
+        );
+        
+        if (invalidAttributes.length > 0) {
+          message.error("Vui lòng hoàn thiện thông tin thuộc tính sản phẩm");
+          return;
+        }
+      }
+
       if (editData) {
         // Update existing product - transform to API format
         const updateData: UpdateProductRequest = {
@@ -132,19 +146,25 @@ const ProductModal: React.FC<ProductModalProps> = ({
           onSuccess: () => {
             // Then update attributes if there are any
             if (attributeValues.length > 0) {
-              updateAllAttributesMutation.mutate({
-                productId: editData.product_id,
-                attributeValues: attributeValues
-              }, {
-                onSuccess: () => {
-                  onSuccess();
-                },
-                onError: (error) => {
-                  console.error("Failed to update attributes:", error);
-                  onSuccess(); // Still call onSuccess for product update
-                }
+              // Use the new service with operation support
+              productAttributeValueService.bulkUpdateProductAttributeValuesByProduct(
+                editData.product_id,
+                attributeValues.map(attr => ({
+                  attribute_id: attr.attribute_id,
+                  value_text: attr.value_text,
+                  value_number: attr.value_number,
+                  operation: attr.operation // Chỉ có khi là DELETE
+                }))
+              ).then(() => {
+                message.success("Cập nhật sản phẩm và thuộc tính thành công!");
+                onSuccess();
+              }).catch((error) => {
+                console.error("Failed to update attributes:", error);
+                message.warning("Cập nhật sản phẩm thành công nhưng có lỗi khi cập nhật thuộc tính");
+                onSuccess(); // Still call onSuccess for product update
               });
             } else {
+              message.success("Cập nhật sản phẩm thành công!");
               onSuccess();
             }
           }
@@ -169,24 +189,33 @@ const ProductModal: React.FC<ProductModalProps> = ({
           onSuccess: (newProduct) => {
             // After creating product, create attributes if there are any
             if (attributeValues.length > 0 && newProduct?.product_id) {
-              const attributesWithProductId = attributeValues.map(attr => ({
-                ...attr,
-                product_id: newProduct.product_id
-              }));
+              // Filter out DELETE operations for new products (shouldn't happen but safety check)
+              const createAttributes = attributeValues.filter(attr => attr.operation !== 'DELETE');
               
-              updateAllAttributesMutation.mutate({
-                productId: newProduct.product_id,
-                attributeValues: attributesWithProductId
-              }, {
-                onSuccess: () => {
+              if (createAttributes.length > 0) {
+                // Use createMultipleProductAttributeValues for new products
+                productAttributeValueService.createMultipleProductAttributeValues(
+                  newProduct.product_id,
+                  createAttributes.map(attr => ({
+                    product_id: newProduct.product_id,
+                    attribute_id: attr.attribute_id,
+                    value_text: attr.value_text,
+                    value_number: attr.value_number,
+                  }))
+                ).then(() => {
+                  message.success("Tạo sản phẩm và thuộc tính thành công!");
                   onSuccess();
-                },
-                onError: (error) => {
+                }).catch((error) => {
                   console.error("Failed to create attributes:", error);
+                  message.warning("Tạo sản phẩm thành công nhưng có lỗi khi tạo thuộc tính");
                   onSuccess(); // Still call onSuccess for product creation
-                }
-              });
+                });
+              } else {
+                message.success("Tạo sản phẩm thành công!");
+                onSuccess();
+              }
             } else {
+              message.success("Tạo sản phẩm thành công!");
               onSuccess();
             }
           }
@@ -523,6 +552,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
           initialAttributeValues={editData?.attribute_values || []}
           onChange={handleAttributeChange}
           disabled={loading}
+          isEditMode={!!editData}
         />
       </Form>
     </Modal>

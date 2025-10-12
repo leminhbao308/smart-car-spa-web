@@ -27,20 +27,28 @@ import {
 } from "@/lib/api/types/product.types";
 import { ProductAttributeInfoDto } from "@/lib/api/types/product-attribute.types";
 
+// Extended interface to include id field
+interface ProductAttributeValueWithId extends ProductAttributeValue {
+  id?: string;
+}
+
 const { Option } = Select;
 const { Text } = Typography;
 
 interface ProductAttributeManagerProps {
   productId?: string;
-  initialAttributeValues?: ProductAttributeValue[];
+  initialAttributeValues?: ProductAttributeValueWithId[];
   onChange?: (attributeValues: CreateProductAttributeValueRequest[]) => void;
   disabled?: boolean;
+  isEditMode?: boolean; // Phân biệt giữa create và edit mode
 }
 
 interface AttributeFormData {
   attribute_id: string;
   value_text?: string;
   value_number?: number;
+  operation?: 'DELETE'; // Chỉ sử dụng cho DELETE
+  id?: string; // ID của attribute value hiện tại (nếu có)
 }
 
 const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
@@ -48,6 +56,7 @@ const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
   initialAttributeValues = [],
   onChange,
   disabled = false,
+  isEditMode = false,
 }) => {
   const [attributeForms, setAttributeForms] = useState<AttributeFormData[]>([]);
   const [availableAttributes, setAvailableAttributes] = useState<
@@ -59,24 +68,33 @@ const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
 
   // Load available attributes
   useEffect(() => {
+    console.log("Loading available attributes", { 
+      productAttributesData: productAttributesData?.data?.length,
+      attributesLoading 
+    });
+    
     if (productAttributesData?.data) {
       setAvailableAttributes(productAttributesData.data);
     }
-  }, [productAttributesData]);
+  }, [productAttributesData, attributesLoading]);
 
   // Initialize attribute forms from initial values
   useEffect(() => {
+    console.log("useEffect initialAttributeValues called", { 
+      initialAttributeValues: initialAttributeValues.length
+    });
+    
     if (initialAttributeValues.length > 0) {
       const forms = initialAttributeValues.map((attr) => ({
         attribute_id: attr.attribute_id,
         value_text: attr.value_text || undefined,
         value_number: attr.value_number || undefined,
+        id: attr.id, // Keep the ID for tracking
       }));
+      console.log("Setting forms from initial values:", forms.length);
       setAttributeForms(forms);
-    } else {
-      // Reset forms when no initial values
-      setAttributeForms([]);
     }
+    // Don't reset forms to [] when no initial values - let user add forms manually
   }, [initialAttributeValues]);
 
   // Get available attributes that are not already selected
@@ -100,21 +118,61 @@ const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
 
   // Add new attribute form
   const addAttributeForm = () => {
+    console.log("addAttributeForm called", { 
+      availableAttributes: availableAttributes.length,
+      disabled,
+      isEditMode,
+      currentForms: attributeForms.length
+    });
+    
     const newForm: AttributeFormData = {
       attribute_id: "",
       value_text: undefined,
       value_number: undefined,
     };
     const newForms = [...attributeForms, newForm];
+    
+    console.log("Before setAttributeForms:", { 
+      oldForms: attributeForms.length, 
+      newForms: newForms.length 
+    });
+    
     setAttributeForms(newForms);
     handleAttributeChange(newForms);
+    
+    console.log("After setAttributeForms, total forms:", newForms.length);
+    
+    // Force a re-render to see if state is preserved
+    setTimeout(() => {
+      console.log("After timeout, forms should still be:", newForms.length);
+    }, 100);
   };
 
   // Remove attribute form
   const removeAttributeForm = (index: number) => {
-    const newForms = attributeForms.filter((_, i) => i !== index);
-    setAttributeForms(newForms);
-    handleAttributeChange(newForms);
+    const attributeToRemove = attributeForms[index];
+    
+    // If it's already marked for deletion, remove it completely
+    if (attributeToRemove.operation === 'DELETE') {
+      const newForms = attributeForms.filter((_, i) => i !== index);
+      setAttributeForms(newForms);
+      handleAttributeChange(newForms);
+    }
+    // If it's an existing attribute (has ID) and in edit mode, mark it for deletion
+    else if (attributeToRemove.id && isEditMode) {
+      const newForms = [...attributeForms];
+      newForms[index] = {
+        ...attributeToRemove,
+        operation: 'DELETE' as const,
+      };
+      setAttributeForms(newForms);
+      handleAttributeChange(newForms);
+    } else {
+      // If it's a new attribute (no ID) or in create mode, just remove it
+      const newForms = attributeForms.filter((_, i) => i !== index);
+      setAttributeForms(newForms);
+      handleAttributeChange(newForms);
+    }
   };
 
   // Clear all forms
@@ -137,6 +195,8 @@ const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
         attribute_id: value as string,
         value_text: undefined,
         value_number: undefined,
+        id: newForms[index].id, // Keep existing ID
+        operation: newForms[index].operation, // Keep existing operation (if DELETE)
       };
     } else {
       newForms[index] = { ...newForms[index], [field]: value };
@@ -148,20 +208,26 @@ const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
 
   // Handle attribute change and notify parent
   const handleAttributeChange = (forms: AttributeFormData[]) => {
-    const validForms = forms.filter(
-      (form) =>
-        form.attribute_id &&
-        (form.value_text !== undefined || form.value_number !== undefined)
-    );
+    console.log("handleAttributeChange called", { 
+      forms: forms.length, 
+      productId, 
+      onChange: !!onChange 
+    });
+    
+    // Include all forms - let parent component decide what to do with them
+    const allForms = forms;
 
     const attributeValues: CreateProductAttributeValueRequest[] =
-      validForms.map((form) => ({
+      allForms.map((form) => ({
         product_id: productId || "",
         attribute_id: form.attribute_id,
         value_text: form.value_text || null,
         value_number: form.value_number || null,
+        operation: form.operation, // Chỉ có khi là DELETE
+        id: form.id, // Include ID for existing attributes
       }));
 
+    console.log("Calling onChange with:", attributeValues);
     onChange?.(attributeValues);
   };
 
@@ -249,6 +315,17 @@ const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
     }
   };
 
+  console.log("ProductAttributeManager render", {
+    attributeForms: attributeForms.length,
+    availableAttributes: availableAttributes.length,
+    disabled,
+    isEditMode,
+    attributesLoading,
+    productId,
+    initialAttributeValues: initialAttributeValues.length,
+    initialAttributeValuesRef: initialAttributeValues
+  });
+
   return (
     <Card
       title={
@@ -279,7 +356,10 @@ const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
             <Button
               type="dashed"
               icon={<PlusOutlined />}
-              onClick={addAttributeForm}
+              onClick={() => {
+                console.log("Button clicked!", { disabled, availableAttributes: availableAttributes.length });
+                addAttributeForm();
+              }}
               size="small"
             >
               Thêm thuộc tính
@@ -292,8 +372,16 @@ const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
         <div style={{ textAlign: "center", padding: "20px", color: "#999" }}>
           <InfoCircleOutlined style={{ fontSize: 24, marginBottom: 8 }} />
           <p style={{ margin: 0 }}>
-            Chưa có thuộc tính nào. Nhấn &quot;Thêm thuộc tính&quot; để bắt đầu.
+            {isEditMode 
+              ? "Chưa có thuộc tính nào. Nhấn \"Thêm thuộc tính\" để bắt đầu."
+              : "Chưa có thuộc tính nào. Nhấn \"Thêm thuộc tính\" để thêm thuộc tính cho sản phẩm mới."
+            }
           </p>
+          {!isEditMode && (
+            <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: "#666" }}>
+              Bạn có thể thêm thuộc tính như màu sắc, kích thước, trọng lượng, v.v.
+            </p>
+          )}
         </div>
       ) : (
         <Space direction="vertical" style={{ width: "100%" }} size="middle">
@@ -305,14 +393,21 @@ const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
               <Card
                 key={index}
                 size="small"
-                style={{ border: "1px solid #e8e8e8" }}
+                style={{ 
+                  border: form.operation === 'DELETE' ? "1px solid #ff4d4f" : "1px solid #e8e8e8",
+                  backgroundColor: form.operation === 'DELETE' ? "#fff2f0" : "white",
+                  opacity: form.operation === 'DELETE' ? 0.7 : 1
+                }}
                 title={
                   <Space>
-                    <Text strong>
+                    <Text strong style={{ color: form.operation === 'DELETE' ? "#ff4d4f" : "inherit" }}>
                       {attributeInfo
                         ? attributeInfo.attribute_name
                         : "Chọn thuộc tính"}
                     </Text>
+                    {form.operation === 'DELETE' && (
+                      <Tag color="red">SẼ XÓA</Tag>
+                    )}
                     {attributeInfo && (
                       <Tag color="blue">{attributeInfo.data_type}</Tag>
                     )}
@@ -326,16 +421,19 @@ const ProductAttributeManager: React.FC<ProductAttributeManagerProps> = ({
                 extra={
                   !disabled && (
                     <Popconfirm
-                      title="Xóa thuộc tính này?"
+                      title={form.operation === 'DELETE' ? "Hủy xóa thuộc tính này?" : "Xóa thuộc tính này?"}
                       onConfirm={() => removeAttributeForm(index)}
-                      okText="Xóa"
+                      okText={form.operation === 'DELETE' ? "Hủy xóa" : "Xóa"}
                       cancelText="Hủy"
                     >
                       <Button
                         type="text"
-                        danger
+                        danger={form.operation !== 'DELETE'}
                         icon={<DeleteOutlined />}
                         size="small"
+                        style={{ 
+                          color: form.operation === 'DELETE' ? '#52c41a' : undefined 
+                        }}
                       />
                     </Popconfirm>
                   )
