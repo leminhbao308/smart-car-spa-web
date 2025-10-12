@@ -181,15 +181,6 @@ const ImportInventoryPage = () => {
         searchable={true}
         searchPlaceholder="Tìm kiếm phiếu nhập theo chi nhánh, người tạo..."
         searchFields={["branch.branch_name", "created_by"]}
-        actions={[
-          {
-            key: "viewDetail",
-            label: "Xem chi tiết",
-            type: "link",
-            icon: <EyeOutlined/>,
-            onClick: handleView,
-          },
-        ]}
         scroll={{x: 1200}}
       />
 

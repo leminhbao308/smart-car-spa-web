@@ -127,10 +127,10 @@ const PriceBookPage = () => {
       setServicePackages(servicePackagesResponse.data || []);
 
       // Filter items in this price book
-      const priceBookProductIds = priceBookDetail.items?.map(item => item.product.id) || [];
+      const priceBookProductIds = priceBookDetail.items?.map(item => item.product?.id) || [];
 
       // Set filtered data based on price book items
-      setProducts(prev => prev.filter(p => priceBookProductIds.includes(p.productId)));
+      setProducts(prev => prev.filter(p => priceBookProductIds.includes(p.product_id)));
 
     } catch (error: any) {
       message.error(error?.message || "Không thể tải chi tiết bảng giá");
@@ -169,17 +169,17 @@ const PriceBookPage = () => {
   }, [priceBooks, searchText, selectedBranch, selectedStatus]);
 
   const getProductNameById = (productId: string) => {
-    const product = products.find((p) => p.productId === productId);
-    return product ? product.productName : "N/A";
+    const product = products.find((p) => p.product_id === productId);
+    return product ? product.product_name : "N/A";
   }
 
   const getProductSkuById = (productId: string) => {
-    const product = products.find((p) => p.productId === productId);
+    const product = products.find((p) => p.product_id === productId);
     return product ? product.sku : "N/A";
   }
 
   const getProductBrandById = (productId: string) => {
-    const product = products.find((p) => p.productId === productId);
+    const product = products.find((p) => p.product_id === productId);
     return product ? product.brand : "N/A";
   }
 

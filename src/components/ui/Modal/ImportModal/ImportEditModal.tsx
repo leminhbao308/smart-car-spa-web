@@ -83,7 +83,7 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
 
       setBranches(branchesRes.branches);
       setProducts(productsRes.data.content);
-      setSuppliers(suppliersRes.suppliers);
+      setSuppliers(suppliersRes.data.content);
     } catch (error: any) {
       message.error("Không thể tải dữ liệu: " + (error?.message || ""));
     } finally {
@@ -216,8 +216,8 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
           }
         >
           {products.map((product) => (
-            <Option key={product.productId} value={product.productId}>
-              {product.productName}
+            <Option key={product.product_id} value={product.product_id}>
+              {product.product_name}
             </Option>
           ))}
         </Select>

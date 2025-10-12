@@ -36,7 +36,7 @@ export const categoryService = {
       searchText?: string;
     };
   }): Promise<ApiResponse<CategoryResponse>> => {
-    const response = await apiClient.get('/categories', { params });
+    const response = await apiClient.get('/categories/get-all', { params });
     return response.data;
   },
 

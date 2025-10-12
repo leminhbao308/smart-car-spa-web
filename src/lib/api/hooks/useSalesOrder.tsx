@@ -1,100 +1,187 @@
 "use client";
-import {useState, useCallback} from "react";
-import {CreateSORequest, SaleOrderResponse, SalesOrderService} from "@/lib/api";
-import {UUID} from "node:crypto";
+import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
+import {SalesOrderService} from "../services/sales-order.service";
+import {CreateSORequest, SaleOrderResponse} from "../types/sale-order.types";
+import {message} from "antd";
 
+/**
+ * Hook for managing sales orders
+ */
+export const useSalesOrders = () => {
+  const {
+    data: orders,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["salesOrders", "list"],
+    queryFn: async () => {
+      const response = await SalesOrderService.getAllSaleOrders();
+      return response;
+    },
+    staleTime: 3 * 60 * 1000, // 3 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 
-export interface UseSalesOrderReturn {
-  order: SaleOrderResponse | null;
-  loading: boolean;
-  error: string | null;
-  createDraft: (payload: CreateSORequest) => Promise<SaleOrderResponse>;
-  confirm: (soId?: UUID) => Promise<SaleOrderResponse>;
-  fulfill: (soId?: UUID) => Promise<SaleOrderResponse>;
-  refresh: (soId?: UUID) => Promise<SaleOrderResponse>;
-// Convenience: confirm then fulfill (when payment already done)
-  completeAfterPaid: (soId?: UUID) => Promise<SaleOrderResponse>;
-}
+  return {
+    orders: orders || [],
+    loading,
+    error,
+    refetch,
+  };
+};
 
+/**
+ * Hook for single sales order
+ */
+export const useSalesOrder = (orderId: string | null) => {
+  const {
+    data: order,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["salesOrders", "detail", orderId],
+    queryFn: async () => {
+      if (!orderId) return null;
+      return await SalesOrderService.getSaleOrderById(orderId);
+    },
+    enabled: !!orderId,
+    staleTime: 3 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
 
-export const useSalesOrder = (): UseSalesOrderReturn => {
-  const [order, setOrder] = useState<SaleOrderResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  return {
+    order,
+    loading,
+    error,
+    refetch,
+  };
+};
 
+/**
+ * Hook for creating and managing sales order workflow
+ */
+export const useCreateSalesOrder = () => {
+  const queryClient = useQueryClient();
 
-  const createDraft = useCallback(async (payload: CreateSORequest) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const so = await SalesOrderService.createDraftOrder(payload);
-      setOrder(so);
-      return so;
-    } catch (e: any) {
-      setError(e?.message || "Failed to create order");
-      throw e;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const createDraft = useMutation({
+    mutationFn: async (payload: CreateSORequest) => {
+      return await SalesOrderService.createDraftOrder(payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi tạo đơn hàng");
+    },
+  });
 
+  const confirm = useMutation({
+    mutationFn: async (orderId: string) => {
+      return await SalesOrderService.confirmSaleOrder(orderId);
+    },
+    onSuccess: (updatedOrder) => {
+      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
+      queryClient.invalidateQueries({queryKey: ["salesOrders", "detail", updatedOrder.id]});
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi xác nhận đơn hàng");
+    },
+  });
 
-  const confirm = useCallback(async (soId?: UUID) => {
-    const id = soId || order?.id;
-    if (!id) throw new Error("Missing soId");
-    setLoading(true);
-    setError(null);
-    try {
-      const so = await SalesOrderService.confirmSaleOrder(id);
-      setOrder(so);
-      return so;
-    } catch (e: any) {
-      setError(e?.message || "Failed to confirm order");
-      throw e;
-    } finally {
-      setLoading(false);
-    }
-  }, [order?.id]);
+  const fulfill = useMutation({
+    mutationFn: async (orderId: string) => {
+      return await SalesOrderService.fullFillSaleOrder(orderId);
+    },
+    onSuccess: (updatedOrder) => {
+      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
+      queryClient.invalidateQueries({queryKey: ["salesOrders", "detail", updatedOrder.id]});
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi hoàn thành đơn hàng");
+    },
+  });
 
+  return {
+    createDraft: createDraft.mutateAsync,
+    confirm: confirm.mutateAsync,
+    fulfill: fulfill.mutateAsync,
+    loading: createDraft.isPending || confirm.isPending || fulfill.isPending,
+  };
+};
 
-  const fulfill = useCallback(async (soId?: UUID) => {
-    const id = soId || order?.id;
-    if (!id) throw new Error("Missing soId");
-    setLoading(true);
-    setError(null);
-    try {
-      const so = await SalesOrderService.fullFillSaleOrder(id);
-      setOrder(so);
-      return so;
-    } catch (e: any) {
-      setError(e?.message || "Failed to fulfill order");
-      throw e;
-    } finally {
-      setLoading(false);
-    }
-  }, [order?.id]);
+/**
+ * Hook for confirming sales order
+ */
+export const useConfirmSalesOrder = () => {
+  const queryClient = useQueryClient();
 
+  return useMutation({
+    mutationFn: async (orderId: string) => {
+      return await SalesOrderService.confirmSaleOrder(orderId);
+    },
+    onSuccess: (updatedOrder) => {
+      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
+      queryClient.invalidateQueries({queryKey: ["salesOrders", "detail", updatedOrder.id]});
+      message.success("Xác nhận đơn hàng thành công!");
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi xác nhận đơn hàng");
+    },
+  });
+};
 
-  const refresh = useCallback(async (soId?: UUID) => {
-    const id = soId || order?.id;
-    if (!id) throw new Error("Missing soId");
-    try {
-      const so = await SalesOrderService.getSaleOrderById(id);
-      setOrder(so);
-      return so;
-    } catch (e) {
-      throw e;
-    }
-  }, [order?.id]);
+/**
+ * Hook for fulfilling sales order
+ */
+export const useFulfillSalesOrder = () => {
+  const queryClient = useQueryClient();
 
+  return useMutation({
+    mutationFn: async (orderId: string) => {
+      return await SalesOrderService.fullFillSaleOrder(orderId);
+    },
+    onSuccess: (updatedOrder) => {
+      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
+      queryClient.invalidateQueries({queryKey: ["salesOrders", "detail", updatedOrder.id]});
+      message.success("Hoàn thành đơn hàng thành công!");
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi hoàn thành đơn hàng");
+    },
+  });
+};
 
-  const completeAfterPaid = useCallback(async (soId?: UUID) => {
-    const id = soId || order?.id;
-    if (!id) throw new Error("Missing soId");
-    await confirm(); // reserve + price
-    return fulfill(id); // ship/complete
-  }, [order?.id, confirm, fulfill]);
+/**
+ * Hook for creating return
+ */
+export const useCreateReturn = () => {
+  const queryClient = useQueryClient();
 
-
-  return {order, loading, error, createDraft, confirm, fulfill, refresh, completeAfterPaid};
+  return useMutation({
+    mutationFn: async ({
+                         orderId,
+                         items
+                       }: {
+      orderId: string;
+      items: { product_id: string; qty: number; unit_cost: number }[]
+    }) => {
+      return await SalesOrderService.returnSaleOrder(orderId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
+      queryClient.invalidateQueries({queryKey: ["returns", "list"]});
+      message.success("Tạo yêu cầu hoàn trả thành công!");
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message;
+      message.error(errorMessage || "Có lỗi xảy ra khi tạo yêu cầu hoàn trả");
+    },
+  });
 };
