@@ -51,9 +51,9 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
 
   if (!process) return null;
 
-  // Debug: Log process data to check estimatedDuration
+  // Debug: Log process data to check estimated_duration
   console.log("Process data:", process);
-  console.log("Estimated duration:", process.estimatedDuration);
+  console.log("Estimated duration:", process.estimated_duration);
 
   return (
     <Modal
@@ -106,7 +106,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
             <Card size="small" style={{ textAlign: "center" }}>
               <Statistic
                 title="Tổng số bước"
-                value={process.stepCount || process.processSteps?.length || 0}
+                value={process.step_count || process.process_steps?.length || 0}
                 prefix={<FileTextOutlined />}
                 valueStyle={{ color: "#1890ff", fontSize: 20 }}
               />
@@ -116,7 +116,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
             <Card size="small" style={{ textAlign: "center" }}>
               <Statistic
                 title="Thời gian ước tính"
-                value={process.estimatedDuration ?? 0}
+                value={process.estimated_duration ?? 0}
                 suffix="phút"
                 prefix={<ClockCircleOutlined />}
                 valueStyle={{ color: "#52c41a", fontSize: 20 }}
@@ -127,10 +127,10 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
             <Card size="small" style={{ textAlign: "center" }}>
               <Statistic
                 title="Loại quy trình"
-                value={process.isDefault ? "Mặc định" : "Tùy chỉnh"}
+                value={process.is_default ? "Mặc định" : "Tùy chỉnh"}
                 prefix={<StarOutlined />}
                 valueStyle={{
-                  color: process.isDefault ? "#fa8c16" : "#722ed1",
+                  color: process.is_default ? "#fa8c16" : "#722ed1",
                   fontSize: 16,
                 }}
               />
@@ -144,7 +144,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
                 >
                   Trạng thái
                 </div>
-                {process.isActive ? (
+                {process.is_active ? (
                   <Tag color="green" icon={<CheckCircleOutlined />}>
                     Đang hoạt động
                   </Tag>
@@ -169,12 +169,12 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
             </Descriptions.Item>
             <Descriptions.Item label="Trạng thái">
               <Space wrap>
-                {process.isDefault && (
+                {process.is_default && (
                   <Tag color="gold" icon={<StarOutlined />}>
                     Mặc định
                   </Tag>
                 )}
-                {process.isActive ? (
+                {process.is_active ? (
                   <Tag color="green" icon={<CheckCircleOutlined />}>
                     Đang hoạt động
                   </Tag>
@@ -191,7 +191,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
         {/* Process Timeline - Vertical with Split Cards */}
         <Card title="Quy trình thực hiện" style={{ marginBottom: 16 }}>
           <div style={{ position: "relative", paddingLeft: 40 }}>
-            {(process.processSteps || process.steps || []).map(
+            {(process.process_steps || process.steps || []).map(
               (
                 step: any, // eslint-disable-line @typescript-eslint/no-explicit-any
                 index: number,
@@ -237,7 +237,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
                       zIndex: 2,
                     }}
                   >
-                    {step.stepOrder || step.order || index + 1}
+                    {step.step_order || step.order || index + 1}
                   </div>
 
                   {/* Frame bên ngoài - Bao bọc cả 2 card */}
@@ -300,9 +300,9 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
                                 <ClockCircleOutlined
                                   style={{ marginRight: 4 }}
                                 />
-                                {step.estimatedTime || 0} phút
+                                {step.estimated_time || 0} phút
                               </div>
-                              {step.isRequired !== false && (
+                              {step.is_required !== false && (
                                 <Tag color="red">Bắt buộc</Tag>
                               )}
                             </div>
@@ -722,7 +722,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
                             justifyContent: "center",
                           }}
                         >
-                          {(step.stepProducts || []).length > 0 ? (
+                          {(step.step_products || []).length > 0 ? (
                             <div
                               style={{
                                 backgroundColor: "#f0f9ff",
@@ -774,7 +774,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
                                       color: "#666",
                                     }}
                                   >
-                                    {step.stepProducts?.length || 0} sản phẩm
+                                    {step.step_products?.length || 0} sản phẩm
                                   </Text>
                                 </div>
                                 <Button
@@ -783,7 +783,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
                                   icon={<EyeOutlined />}
                                  onClick={() =>
                                    handleViewProducts(
-                                     step.stepProducts || [],
+                                     step.step_products || [],
                                      step.name
                                    )
                                  }
@@ -879,7 +879,7 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
           pagination={false}
           size="small"
           rowKey={(record) =>
-            record.id || record.productId || Math.random().toString()
+            record.id || record.product_id || Math.random().toString()
           }
           columns={[
             {
@@ -891,18 +891,18 @@ const CareProcessDetailModal: React.FC<CareProcessDetailModalProps> = ({
             },
             {
               title: "Tên sản phẩm",
-              dataIndex: "productName",
-              key: "productName",
+              dataIndex: "product_name",
+              key: "product_name",
               render: (
                 text: string,
                 record: any // eslint-disable-line @typescript-eslint/no-explicit-any
               ) => (
                 <div>
                   <Text strong>{text || record.name || "N/A"}</Text>
-                  {record.productCode && (
+                  {record.product_code && (
                     <div>
                       <Text type="secondary" style={{ fontSize: 12 }}>
-                        Mã: {record.productCode}
+                        Mã: {record.product_code}
                       </Text>
                     </div>
                   )}

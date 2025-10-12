@@ -82,8 +82,8 @@ const CareProcessesPage = () => {
     },
     {
       title: "Thời gian",
-      dataIndex: "estimatedDuration",
-      key: "estimatedDuration",
+      dataIndex: "estimated_duration",
+      key: "estimated_duration",
       width: 120,
       render: (duration: number) => (
         <div style={{ textAlign: "center" }}>
@@ -96,7 +96,7 @@ const CareProcessesPage = () => {
             }}
           >
             <ClockCircleOutlined style={{ marginRight: 4, color: "#1890ff" }} />
-            <Text strong>{duration} phút</Text>
+            <Text strong>{duration || 0} phút</Text>
           </div>
           <Text style={{ fontSize: 11, color: "#8c8c8c" }}>Ước tính</Text>
         </div>
@@ -104,8 +104,8 @@ const CareProcessesPage = () => {
     },
     {
       title: "Số bước",
-      dataIndex: "stepCount",
-      key: "stepCount",
+      dataIndex: "step_count",
+      key: "step_count",
       width: 100,
       render: (stepCount: number) => (
         <div style={{ textAlign: "center" }}>
@@ -118,7 +118,7 @@ const CareProcessesPage = () => {
             }}
           >
             <CarOutlined style={{ marginRight: 4, color: "#722ed1" }} />
-            <Text strong>{stepCount}</Text>
+            <Text strong>{stepCount || 0}</Text>
           </div>
           <Text style={{ fontSize: 11, color: "#8c8c8c" }}>bước</Text>
         </div>
@@ -126,8 +126,8 @@ const CareProcessesPage = () => {
     },
     {
       title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "isActive",
+      dataIndex: "is_active",
+      key: "is_active",
       width: 150,
       render: (isActive: boolean, record: ServiceProcessInfoDto) => (
         <div style={{ textAlign: "center" }}>
@@ -154,12 +154,12 @@ const CareProcessesPage = () => {
     {
       key: "toggle-status",
       label: (record: ServiceProcessInfoDto) =>
-        record.isActive ? "Tạm dừng" : "Kích hoạt",
+        record.is_active ? "Tạm dừng" : "Kích hoạt",
       type: "default" as const,
-      danger: (record: ServiceProcessInfoDto) => record.isActive,
+      danger: (record: ServiceProcessInfoDto) => record.is_active,
       condition: (record: ServiceProcessInfoDto) => !record.audit?.is_deleted,
       onClick: (record: ServiceProcessInfoDto) => {
-        const isActivating = !record.isActive;
+        const isActivating = !record.is_active;
         showModal({
           title: isActivating ? "Xác nhận kích hoạt" : "Xác nhận tạm dừng",
           content: isActivating 
@@ -176,8 +176,8 @@ const CareProcessesPage = () => {
                   code: record.code,
                   name: record.name,
                   description: record.description,
-                  estimated_duration: record.estimatedDuration,
-                  is_default: record.isDefault
+                  estimated_duration: record.estimated_duration,
+                  is_default: record.is_default
                 },
               });
               message.success(isActivating ? "Kích hoạt quy trình thành công!" : "Tạm dừng quy trình thành công!");
@@ -238,19 +238,19 @@ const CareProcessesPage = () => {
   };
 
   // Thống kê tổng quan
-  const data = serviceProcessesData || [];
-  const totalProcesses = data.length;
-  const activeProcesses = data.filter(
-    (item) => item.isActive && !item.audit?.is_deleted
-  ).length;
-  const inactiveProcesses = data.filter(
-    (item) => !item.isActive && !item.audit?.is_deleted
-  ).length;
-  const deletedProcesses = data.filter((item) => item.audit?.is_deleted).length;
-  const totalSteps = data.reduce((sum, item) => sum + (item.stepCount || 0), 0);
+  const data = serviceProcessesData?.content || serviceProcessesData?.data || serviceProcessesData || [];
+  const totalProcesses = data?.length || 0;
+  const activeProcesses = data?.filter(
+    (item) => item?.is_active && !item?.audit?.is_deleted
+  )?.length || 0;
+  const inactiveProcesses = data?.filter(
+    (item) => !item?.is_active && !item?.audit?.is_deleted
+  )?.length || 0;
+  const deletedProcesses = data?.filter((item) => item?.audit?.is_deleted)?.length || 0;
+  const totalSteps = data?.reduce((sum, item) => sum + (item?.step_count || 0), 0) || 0;
   const averageDuration =
-    data.length > 0
-      ? data.reduce((sum, item) => sum + (item.estimatedDuration || 0), 0) /
+    data?.length > 0
+      ? data.reduce((sum, item) => sum + (item?.estimated_duration || 0), 0) /
         data.length
       : 0;
 

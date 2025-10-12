@@ -557,6 +557,7 @@ const StepProgressModal: React.FC<StepProgressModalProps> = ({
               </Button>
             ))}
           </Space>
+          
         </div>
         
         <Divider />

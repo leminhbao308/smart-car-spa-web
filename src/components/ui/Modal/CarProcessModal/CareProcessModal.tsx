@@ -1,5 +1,11 @@
 ﻿"use client";
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   Modal,
   Form,
@@ -37,6 +43,7 @@ import {
   useCreateServiceProcess,
   useUpdateServiceProcess,
 } from "@/lib/api/hooks/useServiceProcesses";
+import { ProductService } from "@/lib/api/services/product.service";
 import {
   MemoizedInput,
   MemoizedTextArea,
@@ -64,74 +71,201 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
   const [form] = Form.useForm();
   const formRef = useRef(form);
   formRef.current = form;
-  
+
   const [steps, setSteps] = useState<CreateServiceProcessStepRequest[]>([]);
-  const [editingStep, setEditingStep] = useState<CreateServiceProcessStepRequest | null>(null);
+  const [editingStep, setEditingStep] =
+    useState<CreateServiceProcessStepRequest | null>(null);
   const [stepModalOpen, setStepModalOpen] = useState(false);
+  const [shouldClearAllSteps, setShouldClearAllSteps] = useState(false);
 
   // Ant Design App hook for message
   const { message } = App.useApp();
+
+  // Function to fetch product name if missing
+  const fetchProductName = useCallback(
+    async (productId: string): Promise<string | null> => {
+      try {
+        const product = await ProductService.getProductById(productId);
+        if (product) {
+          return product.product_name;
+        }
+      } catch (error) {
+        console.error("Error fetching product name:", error);
+      }
+      return null;
+    },
+    []
+  );
 
   // React Query hooks
   const createServiceProcessMutation = useCreateServiceProcess();
   const updateServiceProcessMutation = useUpdateServiceProcess();
 
+  // Function to load initial data with product names
+  const loadInitialData = useCallback(
+    async (data: ServiceProcessInfoDto) => {
+      console.log("Loading initial data:", data);
+      console.log("Initial process_steps:", data.process_steps);
+
+      const convertedSteps: CreateServiceProcessStepRequest[] =
+        await Promise.all(
+          data.process_steps?.map(async (step, index) => {
+            console.log(`Processing step ${index}:`, step);
+            console.log(`Step step_products:`, step.step_products);
+
+            const stepProducts = await Promise.all(
+              step.step_products?.map(async (product) => {
+                console.log(
+                  "Loading product:",
+                  product,
+                  "product_name:",
+                  product.product_name
+                );
+                let productName = product.product_name;
+
+                // If product_name is missing but product_id exists, fetch it
+                if (!productName && product.product_id) {
+                  const fetchedName = await fetchProductName(
+                    product.product_id
+                  );
+                  productName = fetchedName || "";
+                  console.log("Fetched product name:", productName);
+                }
+
+                return {
+                  id: product.id, // Keep product ID for updates
+                  product_id: product.product_id,
+                  product_name: productName || "", // Include product name for display
+                  quantity: product.quantity,
+                  unit: product.unit,
+                };
+              }) || []
+            );
+
+            return {
+              id: step.id, // Keep step ID for updates
+              step_order: index + 1, // Ensure step_order starts from 1
+              name: step.name,
+              description: step.description,
+              estimated_time: step.estimated_time,
+              is_required: step.is_required,
+              step_products: stepProducts,
+            };
+          }) || []
+        );
+
+      console.log("Converted steps:", convertedSteps);
+      setSteps(convertedSteps);
+
+      // Calculate total duration from steps
+      const totalDuration = convertedSteps.reduce(
+        (total, step) => total + (step.estimated_time || 0),
+        0
+      );
+
+      formRef.current.setFieldsValue({
+        code: data.code,
+        name: data.name,
+        description: data.description,
+        estimated_duration: totalDuration, // Updated to use snake_case
+        is_default: data.is_default,
+        is_active: data.is_active,
+      });
+    },
+    [fetchProductName]
+  );
+
   useEffect(() => {
     if (initialData) {
-      // Convert ServiceProcessStepInfoDto to CreateServiceProcessStepRequest with IDs
-      const convertedSteps: CreateServiceProcessStepRequest[] = initialData.processSteps?.map(step => ({
-        id: step.id, // Keep step ID for updates
-        stepOrder: step.stepOrder,
-        name: step.name,
-        description: step.description,
-        estimatedTime: step.estimatedTime,
-        isRequired: step.isRequired,
-        stepProducts: step.stepProducts?.map(product => ({
-          id: product.id, // Keep product ID for updates
-          productId: product.productId,
-          productName: product.productName, // Include product name for display
-          quantity: product.quantity,
-          unit: product.unit,
-        })) || [],
-      })) || [];
-      setSteps(convertedSteps);
-      
-      // Calculate total duration from steps
-      const totalDuration = convertedSteps.reduce((total, step) => total + (step.estimatedTime || 0), 0);
-      
-      formRef.current.setFieldsValue({
-        code: initialData.code,
-        name: initialData.name,
-        description: initialData.description,
-        estimatedDuration: totalDuration,
-        isDefault: initialData.isDefault,
-        isActive: initialData.isActive,
-      });
+      loadInitialData(initialData);
     } else {
       formRef.current.resetFields();
       setSteps([]);
     }
-  }, [initialData]);
+  }, [initialData, loadInitialData]);
 
-  // Stable callback to update estimated duration
-  const updateEstimatedDuration = useCallback(() => {
-    const totalDuration = (steps || []).reduce((total, step) => total + (step.estimatedTime || 0), 0);
-    if (formRef.current) {
-      formRef.current.setFieldValue('estimatedDuration', totalDuration);
-    }
+  // Calculate total duration from steps
+  const totalDuration = useMemo(() => {
+    return (steps || []).reduce(
+      (total, step) => total + (step.estimated_time || 0),
+      0
+    );
   }, [steps]);
 
-  // Auto-update estimated duration when steps change
+  // Auto-update estimated duration when totalDuration changes
+  const [lastTotalDuration, setLastTotalDuration] = useState<number>(0);
+
   useEffect(() => {
-    updateEstimatedDuration();
-  }, [updateEstimatedDuration]);
+    if (formRef.current && lastTotalDuration !== totalDuration) {
+      formRef.current.setFieldValue("estimated_duration", totalDuration); // Updated to use snake_case
+      setLastTotalDuration(totalDuration);
+    }
+  }, [totalDuration, lastTotalDuration]);
 
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
 
-      // Calculate total duration from steps
-      const totalDuration = steps.reduce((total, step) => total + (step.estimatedTime || 0), 0);
+      // Debug: Log steps data before processing
+      console.log("handleOk - steps before processing:", steps);
+      steps.forEach((step, index) => {
+        console.log(`Step ${index}:`, step);
+        console.log(`Step ${index} step_products:`, step.step_products);
+      });
+
+      // Validate product selection
+      const productErrors: string[] = [];
+      console.log("Validation - steps:", steps);
+      steps.forEach((step, stepIndex) => {
+        console.log(`Validation - step ${stepIndex + 1}:`, step);
+        console.log(
+          `Validation - step ${stepIndex + 1} step_products:`,
+          step.step_products
+        );
+        step.step_products?.forEach((product, productIndex) => {
+          console.log(
+            `Validation - step ${stepIndex + 1}, product ${productIndex + 1}:`,
+            product
+          );
+          console.log(
+            `Validation - step ${stepIndex + 1}, product ${
+              productIndex + 1
+            } details:`,
+            {
+              product_id: product.product_id,
+              product_name: product.product_name,
+              quantity: product.quantity,
+              unit: product.unit,
+            }
+          );
+          if (!product.product_id || product.product_id.trim() === "") {
+            console.log(
+              `Validation error - step ${stepIndex + 1}, product ${
+                productIndex + 1
+              }: product_id is empty`
+            );
+            productErrors.push(
+              `Bước ${stepIndex + 1}, Sản phẩm ${
+                productIndex + 1
+              }: Vui lòng chọn sản phẩm`
+            );
+          }
+          if (!product.quantity || product.quantity <= 0) {
+            productErrors.push(
+              `Bước ${stepIndex + 1}, Sản phẩm ${
+                productIndex + 1
+              }: Số lượng phải lớn hơn 0`
+            );
+          }
+        });
+      });
+
+      if (productErrors.length > 0) {
+        message.error(productErrors[0]); // Show first error
+        return;
+      }
+
+      // Use the calculated total duration
 
       if (initialData) {
         // Update existing process - convert to UpdateServiceProcessRequest format
@@ -139,29 +273,76 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
           code: values.code,
           name: values.name,
           description: values.description,
-          estimated_duration: totalDuration,
-          is_default: values.isDefault || false,
-          is_active: values.isActive !== false,
-          process_steps: steps.map(step => ({
-            id: step.id, // Include step ID if exists
-            step_order: step.stepOrder,
+          estimated_duration: totalDuration, // Updated to use snake_case
+          is_default: values.is_default || false,
+          is_active: values.is_active !== false,
+          // Xử lý process_steps dựa trên logic:
+          // - Nếu shouldClearAllSteps = true: gửi process_steps: [] để xóa tất cả steps
+          // - Nếu steps.length > 0: gửi process_steps với danh sách steps
+          // - Nếu steps.length = 0 và shouldClearAllSteps = false: không gửi process_steps (giữ nguyên)
+          ...(shouldClearAllSteps || steps.length > 0
+            ? {
+                process_steps: steps.map((step) => {
+                  console.log("Processing step for update:", step);
+                  const processedStep = {
+                    id: step.id, // Include step ID if exists
+                    step_order: step.step_order,
+                    name: step.name,
+                    description: step.description,
+                    estimated_time: step.estimated_time,
+                    is_required: step.is_required,
+                    is_active: true, // Set is_active to true for new steps
+                    step_products:
+                      step.step_products
+                        ?.filter(
+                          (product) =>
+                            product &&
+                            product.product_id &&
+                            product.product_id.trim() !== ""
+                        )
+                        ?.map((product) => ({
+                          id: product.id, // Include product ID if exists
+                          product_id: product.product_id, // Keep product_id for frontend type compatibility
+                          quantity: Number(product.quantity) || 1, // Convert to number for BigDecimal
+                          unit: product.unit || "cái",
+                        })) || [],
+                  };
+                  console.log("Processed step:", processedStep);
+                  return processedStep;
+                }),
+              }
+            : {}),
+        };
+
+        // Map to backend format before sending
+        const mappedUpdateData = {
+          code: updateData.code,
+          name: updateData.name,
+          description: updateData.description,
+          estimated_duration: updateData.estimated_duration,
+          is_default: updateData.is_default,
+          is_active: updateData.is_active,
+          process_steps: updateData.process_steps?.map((step) => ({
+            id: step.id,
+            step_order: step.step_order,
             name: step.name,
             description: step.description,
-            estimated_time: step.estimatedTime,
-            is_required: step.isRequired,
-            is_active: true, // Set is_active to true for new steps
-            step_products: step.stepProducts?.filter(product => product.productId && product.productId.trim() !== '')?.map(product => ({
-              id: product.id, // Include product ID if exists
-              product_id: product.productId, // Backend expects product_id field name
-              quantity: product.quantity,
-              unit: product.unit,
+            estimated_time: step.estimated_time,
+            is_required: step.is_required,
+            is_active: step.is_active,
+            step_products: step.step_products?.map((product) => ({
+              id: product.id,
+              product_id: product.product_id,
+              quantity: Number(product.quantity) || 1,
+              unit: product.unit || "cái",
             })) || [],
-          })),
+          })) || [],
         };
+        console.log("Mapped update data:", mappedUpdateData);
 
         await updateServiceProcessMutation.mutateAsync({
           serviceProcessId: initialData.id,
-          data: updateData,
+          data: mappedUpdateData,
         });
         message.success("Cập nhật quy trình thành công!");
       } else {
@@ -170,21 +351,60 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
           code: values.code,
           name: values.name,
           description: values.description,
-          estimatedDuration: totalDuration,
-          isDefault: values.isDefault || false,
-          isActive: values.isActive !== false,
-          processSteps: steps.map(step => ({
-            ...step,
-            stepProducts: step.stepProducts?.filter(product => product.productId && product.productId.trim() !== '') || [],
-          })),
+          estimated_duration: totalDuration, // Updated to use snake_case
+          is_default: values.is_default || false,
+          is_active: values.is_active !== false,
+          ...(steps.length > 0 && {
+            process_steps: steps.map((step) => ({
+              ...step,
+              step_products:
+                step.step_products
+                  ?.filter(
+                    (product) =>
+                      product &&
+                      product.product_id &&
+                      product.product_id.trim() !== ""
+                  )
+                  ?.map((product) => ({
+                    product_id: product.product_id, // Keep product_id for frontend type compatibility
+                    quantity: Number(product.quantity) || 1, // Convert to number for BigDecimal
+                    unit: product.unit || "cái",
+                  })) || [],
+            })),
+          }),
         };
 
-        await createServiceProcessMutation.mutateAsync(createData);
+        // Map to backend format before sending
+        const mappedCreateData = {
+          code: createData.code,
+          name: createData.name,
+          description: createData.description,
+          estimated_duration: createData.estimated_duration,
+          is_default: createData.is_default,
+          is_active: createData.is_active,
+          process_steps: createData.process_steps?.map((step) => ({
+            step_order: step.step_order,
+            name: step.name,
+            description: step.description,
+            estimated_time: step.estimated_time,
+            is_required: step.is_required,
+            is_active: true,
+            step_products: step.step_products?.map((product) => ({
+              product_id: product.product_id,
+              quantity: Number(product.quantity) || 1,
+              unit: product.unit || "cái",
+            })) || [],
+          })) || [],
+        };
+        console.log("Mapped create data:", mappedCreateData);
+
+        await createServiceProcessMutation.mutateAsync(mappedCreateData);
         message.success("Thêm quy trình thành công!");
       }
 
       form.resetFields();
       setSteps([]);
+      setShouldClearAllSteps(false);
       onSuccess?.();
     } catch (error) {
       console.error("Error saving service process:", error);
@@ -195,53 +415,87 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
   const handleCancel = () => {
     form.resetFields();
     setSteps([]);
+    setShouldClearAllSteps(false);
     onCancel();
   };
 
   const addStep = () => {
     const newStep: CreateServiceProcessStepRequest = {
-      stepOrder: steps.length + 1,
+      step_order: steps.length + 1,
       name: "",
       description: "",
-      estimatedTime: 15,
-      isRequired: true,
-      stepProducts: [],
+      estimated_time: 15,
+      is_required: true,
+      step_products: [],
     };
     setEditingStep(newStep);
     setStepModalOpen(true);
+    // Reset shouldClearAllSteps khi thêm step mới
+    setShouldClearAllSteps(false);
   };
 
   const editStep = (step: CreateServiceProcessStepRequest, index: number) => {
-    setEditingStep({ ...step, stepOrder: index + 1 });
+    setEditingStep({ ...step, step_order: index + 1 });
     setStepModalOpen(true);
   };
 
   const saveStep = (stepData: CreateServiceProcessStepRequest) => {
+    console.log("saveStep - received stepData:", stepData);
+    console.log("saveStep - stepData.step_products:", stepData.step_products);
     let newSteps: CreateServiceProcessStepRequest[];
-    
-    if (editingStep && editingStep.stepOrder && steps.some((step, index) => index === editingStep.stepOrder! - 1)) {
-      // Update existing step
-      newSteps = [...steps];
-      newSteps[editingStep.stepOrder - 1] = { ...stepData, stepOrder: editingStep.stepOrder };
+
+    if (editingStep && editingStep.step_order) {
+      // Update existing step - find by step_order
+      const stepIndex = editingStep.step_order - 1;
+      if (stepIndex >= 0 && stepIndex < steps.length) {
+        newSteps = [...steps];
+        newSteps[stepIndex] = {
+          ...stepData,
+          step_order: editingStep.step_order,
+        };
+      } else {
+        // Fallback: add as new step
+        const newStep = {
+          ...stepData,
+          step_order: steps.length + 1,
+        };
+        newSteps = [...steps, newStep];
+      }
     } else {
       // Add new step
       const newStep = {
         ...stepData,
-        stepOrder: steps.length + 1,
+        step_order: steps.length + 1,
       };
       newSteps = [...steps, newStep];
     }
-    
+
+    console.log("saveStep - newSteps:", newSteps);
+    console.log(
+      "saveStep - newSteps details:",
+      newSteps.map((step) => ({
+        step_order: step.step_order,
+        name: step.name,
+        step_products: step.step_products?.map((p) => ({
+          product_id: p.product_id,
+          product_name: p.product_name,
+          quantity: p.quantity,
+          unit: p.unit,
+        })),
+      }))
+    );
     setSteps(newSteps);
     setStepModalOpen(false);
     setEditingStep(null);
   };
 
   const deleteStep = (index: number) => {
+    if (index < 0 || index >= steps.length) return;
+
     const newSteps = steps.filter((_, i) => i !== index);
     // Reorder steps
     newSteps.forEach((step, i) => {
-      step.stepOrder = i + 1;
+      step.step_order = i + 1;
     });
     setSteps(newSteps);
   };
@@ -251,11 +505,15 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
     if (newIndex < 0 || newIndex >= steps.length) return;
 
     const newSteps = [...steps];
-    [newSteps[index], newSteps[newIndex]] = [newSteps[newIndex], newSteps[index]];
+    // Swap the steps
+    [newSteps[index], newSteps[newIndex]] = [
+      newSteps[newIndex],
+      newSteps[index],
+    ];
 
-    // Update step order
+    // Update step order for all steps
     newSteps.forEach((step, i) => {
-      step.stepOrder = i + 1;
+      step.step_order = i + 1;
     });
 
     setSteps(newSteps);
@@ -295,7 +553,11 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
             label="Tên quy trình"
             rules={[
               { required: true, message: "Vui lòng nhập tên quy trình!" },
-              { min: 2, max: 150, message: "Tên quy trình phải từ 2-150 ký tự!" },
+              {
+                min: 2,
+                max: 150,
+                message: "Tên quy trình phải từ 2-150 ký tự!",
+              },
             ]}
           >
             <MemoizedInput placeholder="Nhập tên quy trình chăm sóc" />
@@ -317,7 +579,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
         </Col>
         <Col span={12}>
           <Form.Item
-            name="estimatedDuration"
+            name="estimated_duration"
             label="Thời gian ước tính (phút)"
             extra="Tự động tính từ tổng thời gian các bước"
           >
@@ -326,13 +588,16 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
               placeholder="Tự động tính toán"
               style={{ width: "100%" }}
               readOnly
-              value={steps.reduce((total, step) => total + (step.estimatedTime || 0), 0)}
+              value={steps.reduce(
+                (total, step) => total + (step.estimated_time || 0),
+                0
+              )}
             />
           </Form.Item>
         </Col>
         <Col span={12}>
           <Form.Item
-            name="isDefault"
+            name="is_default"
             label="Quy trình mặc định"
             valuePropName="checked"
           >
@@ -341,7 +606,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
         </Col>
         <Col span={12}>
           <Form.Item
-            name="isActive"
+            name="is_active"
             label="Trạng thái hoạt động"
             valuePropName="checked"
           >
@@ -366,15 +631,34 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
         <Title level={5} style={{ margin: 0 }}>
           Các bước thực hiện ({steps.length} bước)
         </Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={addStep}>
-          Thêm bước
-        </Button>
+        <Space>
+          {steps.length > 0 && (
+            <Popconfirm
+              title="Xóa tất cả bước?"
+              description="Bạn có chắc chắn muốn xóa tất cả các bước? Hành động này không thể hoàn tác."
+              onConfirm={() => {
+                setSteps([]);
+                setShouldClearAllSteps(true);
+                message.success("Đã xóa tất cả các bước");
+              }}
+              okText="Xóa"
+              cancelText="Hủy"
+            >
+              <Button danger icon={<DeleteOutlined />}>
+                Xóa tất cả
+              </Button>
+            </Popconfirm>
+          )}
+          <Button type="primary" icon={<PlusOutlined />} onClick={addStep}>
+            Thêm bước
+          </Button>
+        </Space>
       </div>
 
       <List
         dataSource={steps}
         renderItem={(step, index) => (
-          <List.Item key={index}>
+          <List.Item key={step.step_order || index}>
             <Card
               title={
                 <div
@@ -385,23 +669,22 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center" }}>
-                    <span style={{ fontSize: 20, marginRight: 8 }}>
-                      📋
-                    </span>
+                    <span style={{ fontSize: 20, marginRight: 8 }}>📋</span>
                     <Text strong>
-                      Bước {step.stepOrder}: {step.name}
+                      Bước {step.step_order}: {step.name}
                     </Text>
                     <Tag color="blue" style={{ marginLeft: 8 }}>
-                      {formatTime(step.estimatedTime || 0)}
+                      {formatTime(step.estimated_time || 0)}
                     </Tag>
-                    {step.isRequired && (
+                    {step.is_required && (
                       <Tag color="red" style={{ marginLeft: 8 }}>
                         Bắt buộc
                       </Tag>
                     )}
-                    {step.stepProducts && step.stepProducts.length > 0 && (
+                    {step.step_products && step.step_products.length > 0 && (
                       <Tag color="green" style={{ marginLeft: 8 }}>
-                        <ShoppingCartOutlined /> {step.stepProducts.length} sản phẩm
+                        <ShoppingCartOutlined /> {step.step_products.length} sản
+                        phẩm
                       </Tag>
                     )}
                   </div>
@@ -430,11 +713,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
                       okText="Xóa"
                       cancelText="Hủy"
                     >
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                      />
+                      <Button type="text" danger icon={<DeleteOutlined />} />
                     </Popconfirm>
                   </Space>
                 </div>
@@ -445,13 +724,31 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
               <div style={{ marginBottom: 8 }}>
                 <Text type="secondary">{step.description}</Text>
               </div>
-              {step.stepProducts && step.stepProducts.length > 0 && (
+              {step.step_products && step.step_products.length > 0 && (
                 <div style={{ marginTop: 12 }}>
                   <Text strong>Sản phẩm sử dụng:</Text>
                   <div style={{ marginTop: 8 }}>
-                    {step.stepProducts.map((product, idx) => (
-                      <Tag key={idx} color="green" style={{ marginBottom: 4 }}>
-                        {product.productName || product.productId} - {product.quantity} {product.unit || 'cái'}
+                    {step.step_products.map((product, idx) => (
+                      <Tag
+                        key={idx}
+                        color="green"
+                        style={{ marginBottom: 4, marginRight: 4 }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                          }}
+                        >
+                          <div style={{ fontWeight: 500 }}>
+                            {product.product_name ||
+                              `Sản phẩm ${product.product_id}`}
+                          </div>
+                          <div style={{ fontSize: 11, opacity: 0.8 }}>
+                            {product.quantity} {product.unit || "cái"}
+                          </div>
+                        </div>
                       </Tag>
                     ))}
                   </div>
@@ -478,7 +775,10 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
         onOk={handleOk}
         onCancel={handleCancel}
         width={1200}
-        confirmLoading={createServiceProcessMutation.isPending || updateServiceProcessMutation.isPending}
+        confirmLoading={
+          createServiceProcessMutation.isPending ||
+          updateServiceProcessMutation.isPending
+        }
         okText={initialData ? "Cập nhật" : "Thêm mới"}
         cancelText="Hủy"
       >
@@ -486,8 +786,8 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
           form={form}
           layout="vertical"
           initialValues={{
-            isActive: true,
-            isDefault: false,
+            is_active: true,
+            is_default: false,
           }}
         >
           {/* Thông tin cơ bản */}
@@ -509,7 +809,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
         }}
         onOk={saveStep}
         initialData={editingStep}
-        title={editingStep?.stepOrder ? "Chỉnh sửa bước" : "Thêm bước mới"}
+        title={editingStep?.step_order ? "Chỉnh sửa bước" : "Thêm bước mới"}
       />
     </>
   );
@@ -533,26 +833,43 @@ const StepModal: React.FC<StepModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [stepProducts, setStepProducts] = useState<CreateServiceProcessStepProductRequest[]>([]);
+  const [stepProducts, setStepProducts] = useState<
+    CreateServiceProcessStepProductRequest[]
+  >([]);
 
-  // Ant Design App hook for message
-  const { message } = App.useApp();
+  // Debug logging for stepProducts state changes
+  useEffect(() => {
+    console.log("StepModal - stepProducts state changed:", stepProducts);
+    console.log(
+      "StepModal - stepProducts details:",
+      stepProducts.map((p) => ({
+        product_id: p.product_id,
+        product_name: p.product_name,
+        quantity: p.quantity,
+        unit: p.unit,
+      }))
+    );
+  }, [stepProducts]);
+
+  // Ant Design App hook for message and modal
+  const { message, modal } = App.useApp();
 
   useEffect(() => {
     if (initialData) {
       form.setFieldsValue({
         name: initialData.name,
         description: initialData.description,
-        estimatedTime: initialData.estimatedTime,
-        isRequired: initialData.isRequired,
+        estimated_time: initialData.estimated_time, // Updated to use snake_case
+        is_required: initialData.is_required, // Updated to use snake_case
       });
-      setStepProducts(initialData.stepProducts || []);
+      console.log("Loading initial step_products:", initialData.step_products);
+      setStepProducts(initialData.step_products || []);
     } else {
       form.resetFields();
       // Set default values for new step
       form.setFieldsValue({
-        estimatedTime: 15,
-        isRequired: true,
+        estimated_time: 15, // Updated to use snake_case
+        is_required: true, // Updated to use snake_case
       });
       setStepProducts([]);
     }
@@ -563,14 +880,29 @@ const StepModal: React.FC<StepModalProps> = ({
       setLoading(true);
       const values = await form.validateFields();
 
+      console.log("StepModal handleOk - stepProducts:", stepProducts);
+      console.log(
+        "StepModal handleOk - stepProducts details:",
+        stepProducts.map((p) => ({
+          product_id: p.product_id,
+          product_name: p.product_name,
+          quantity: p.quantity,
+          unit: p.unit,
+        }))
+      );
       const stepData: CreateServiceProcessStepRequest = {
-        stepOrder: initialData?.stepOrder || 1,
+        step_order: initialData?.step_order || 1,
         name: values.name,
         description: values.description,
-        estimatedTime: values.estimatedTime,
-        isRequired: values.isRequired,
-        stepProducts: stepProducts,
+        estimated_time: values.estimated_time, // Updated to use snake_case
+        is_required: values.is_required, // Updated to use snake_case
+        step_products: stepProducts,
       };
+      console.log("StepModal handleOk - stepData:", stepData);
+      console.log(
+        "StepModal handleOk - stepData.step_products:",
+        stepData.step_products
+      );
 
       onOk(stepData);
       message.success(
@@ -593,22 +925,58 @@ const StepModal: React.FC<StepModalProps> = ({
 
   const addProduct = () => {
     const newProduct: CreateServiceProcessStepProductRequest = {
-      productId: "",
-      productName: "",
+      product_id: "",
+      product_name: "",
       quantity: 1,
       unit: "cái",
     };
-    setStepProducts([...stepProducts, newProduct]);
+    setStepProducts((prevProducts) => [...prevProducts, newProduct]);
   };
 
-  const updateProduct = (index: number, field: keyof CreateServiceProcessStepProductRequest, value: string | number) => {
-    const updatedProducts = [...stepProducts];
-    updatedProducts[index] = { ...updatedProducts[index], [field]: value };
-    setStepProducts(updatedProducts);
+  const updateProduct = (
+    index: number,
+    field: keyof CreateServiceProcessStepProductRequest,
+    value: string | number
+  ) => {
+    console.log(
+      "updateProduct - index:",
+      index,
+      "field:",
+      field,
+      "value:",
+      value
+    );
+    console.log("updateProduct - current stepProducts:", stepProducts);
+
+    setStepProducts((prevProducts) => {
+      const updatedProducts = [...prevProducts];
+      updatedProducts[index] = { ...updatedProducts[index], [field]: value };
+      console.log("updateProduct - updated stepProducts:", updatedProducts);
+      console.log(
+        "updateProduct - updated stepProducts details:",
+        updatedProducts.map((p) => ({
+          product_id: p.product_id,
+          product_name: p.product_name,
+          quantity: p.quantity,
+          unit: p.unit,
+        }))
+      );
+      return updatedProducts;
+    });
   };
 
   const removeProduct = (index: number) => {
-    setStepProducts(stepProducts.filter((_, i) => i !== index));
+    modal.confirm({
+      title: "Xác nhận xóa",
+      content: "Bạn có chắc chắn muốn xóa sản phẩm này?",
+      okText: "Xóa",
+      cancelText: "Hủy",
+      onOk: () => {
+        setStepProducts((prevProducts) =>
+          prevProducts.filter((_, i) => i !== index)
+        );
+      },
+    });
   };
 
   return (
@@ -626,8 +994,8 @@ const StepModal: React.FC<StepModalProps> = ({
         form={form}
         layout="vertical"
         initialValues={{
-          estimatedTime: 15,
-          isRequired: true,
+          estimated_time: 15,
+          is_required: true,
         }}
       >
         <Row gutter={16}>
@@ -645,11 +1013,15 @@ const StepModal: React.FC<StepModalProps> = ({
           </Col>
           <Col span={12}>
             <Form.Item
-              name="estimatedTime"
+              name="estimated_time"
               label="Thời gian ước tính (phút)"
               rules={[
                 { required: true, message: "Vui lòng nhập thời gian!" },
-                { type: "number", min: 1, message: "Thời gian phải ít nhất 1 phút!" },
+                {
+                  type: "number",
+                  min: 1,
+                  message: "Thời gian phải ít nhất 1 phút!",
+                },
               ]}
             >
               <MemoizedInputNumber
@@ -672,7 +1044,7 @@ const StepModal: React.FC<StepModalProps> = ({
           </Col>
           <Col span={12}>
             <Form.Item
-              name="isRequired"
+              name="is_required"
               label="Bước bắt buộc"
               valuePropName="checked"
             >
@@ -703,39 +1075,174 @@ const StepModal: React.FC<StepModalProps> = ({
               Thêm sản phẩm
             </Button>
           </div>
-          
+
           {stepProducts.length > 0 ? (
             <Table
+              key={`table-${stepProducts.length}-${stepProducts
+                .map((p) => p.product_id)
+                .join("-")}`}
               dataSource={stepProducts}
               pagination={false}
               size="small"
-              rowKey={(record) => record.productId || `product-${Math.random()}`}
+              rowKey={(record) => `product-${record.product_id}`}
               columns={[
                 {
                   title: "STT",
                   key: "index",
                   width: 60,
                   align: "center" as const,
-                  render: (_: CreateServiceProcessStepProductRequest, __: CreateServiceProcessStepProductRequest, index: number) => index + 1,
+                  render: (
+                    _: CreateServiceProcessStepProductRequest,
+                    __: CreateServiceProcessStepProductRequest,
+                    index: number
+                  ) => index + 1,
                 },
                 {
                   title: "Sản phẩm",
-                  dataIndex: "productId",
-                  key: "productId",
-                  render: (value: string, record: CreateServiceProcessStepProductRequest, index: number) => (
-                    <ProductSearchSelect
-                      value={value}
-                      onChange={(productId, product) => {
-                        updateProduct(index, "productId", productId);
-                        if (product) {
-                          updateProduct(index, "productName", product.productName);
-                          updateProduct(index, "unit", product.unitOfMeasure);
-                        }
-                      }}
-                      placeholder="Tìm kiếm sản phẩm..."
-                      size="small"
-                      style={{ width: "100%" }}
-                    />
+                  dataIndex: "product_id",
+                  key: "product_id",
+                  render: (
+                    value: string,
+                    record: CreateServiceProcessStepProductRequest,
+                    index: number
+                  ) => (
+                    <div>
+                      <ProductSearchSelect
+                        value={value}
+                        onChange={(
+                          productId: string,
+                          product?: {
+                            product_name: string;
+                            unit_of_measure: string;
+                          }
+                        ) => {
+                          console.log(
+                            "ProductSearchSelect onChange - productId:",
+                            productId,
+                            "product:",
+                            product
+                          );
+
+                          if (!productId) {
+                            // Clear product info when no product selected
+                            updateProduct(index, "product_id", "");
+                            updateProduct(index, "product_name", "");
+                            updateProduct(index, "unit", "cái");
+                            return;
+                          }
+
+                          console.log(
+                            "Before updateProduct - stepProducts:",
+                            stepProducts
+                          );
+                          updateProduct(index, "product_id", productId);
+                          if (product) {
+                            updateProduct(
+                              index,
+                              "product_name",
+                              product.product_name
+                            );
+                            updateProduct(
+                              index,
+                              "unit",
+                              product.unit_of_measure || "cái"
+                            );
+                          }
+                          console.log("After updateProduct calls");
+                        }}
+                        placeholder="Tìm kiếm sản phẩm..."
+                        size="small"
+                        style={{ width: "100%" }}
+                        excludeProductIds={stepProducts
+                          .filter((_, i) => i !== index && _.product_id)
+                          .map((p) => p.product_id)}
+                      />
+                      {(() => {
+                        console.log(
+                          "ProductSearchSelect render - record:",
+                          record,
+                          "product_name:",
+                          record.product_name,
+                          "product_id:",
+                          record.product_id
+                        );
+                        console.log(
+                          "ProductSearchSelect render - stepProducts:",
+                          stepProducts
+                        );
+                        console.log(
+                          "ProductSearchSelect render - stepProducts details:",
+                          stepProducts.map((p) => ({
+                            product_id: p.product_id,
+                            product_name: p.product_name,
+                            quantity: p.quantity,
+                            unit: p.unit,
+                          }))
+                        );
+                        return null;
+                      })()}
+                      {record.product_name ? (
+                        <div
+                          style={{
+                            marginTop: 8,
+                            padding: "12px 16px",
+                            backgroundColor: "#f6ffed",
+                            border: "1px solid #b7eb8f",
+                            borderRadius: 8,
+                            boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              marginBottom: 4,
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                backgroundColor: "#52c41a",
+                              }}
+                            />
+                            <Text
+                              strong
+                              style={{ color: "#389e0d", fontSize: 13 }}
+                            >
+                              {record.product_name}
+                            </Text>
+                          </div>
+                          {record.product_id && (
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#52c41a",
+                                marginLeft: 16,
+                              }}
+                            >
+                              SKU: {record.product_id}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            marginTop: 8,
+                            padding: "8px 12px",
+                            backgroundColor: "#fff7e6",
+                            border: "1px solid #ffd591",
+                            borderRadius: 6,
+                            fontSize: 12,
+                            color: "#d46b08",
+                          }}
+                        >
+                          ⚠️ Vui lòng chọn sản phẩm
+                        </div>
+                      )}
+                    </div>
                   ),
                 },
                 {
@@ -743,12 +1250,19 @@ const StepModal: React.FC<StepModalProps> = ({
                   dataIndex: "quantity",
                   key: "quantity",
                   width: 120,
-                  render: (value: number, record: CreateServiceProcessStepProductRequest, index: number) => (
+                  render: (
+                    value: number,
+                    record: CreateServiceProcessStepProductRequest,
+                    index: number
+                  ) => (
                     <InputNumber
                       value={value}
-                      onChange={(val) => updateProduct(index, "quantity", val || 1)}
+                      onChange={(val) =>
+                        updateProduct(index, "quantity", Number(val) || 1)
+                      }
                       min={0.01}
                       step={0.1}
+                      precision={2}
                       style={{ width: "100%" }}
                     />
                   ),
@@ -757,13 +1271,29 @@ const StepModal: React.FC<StepModalProps> = ({
                   title: "Đơn vị",
                   dataIndex: "unit",
                   key: "unit",
-                  width: 100,
-                  render: (value: string, record: CreateServiceProcessStepProductRequest, index: number) => (
-                    <MemoizedInput
-                      value={value}
-                      onChange={(e) => updateProduct(index, "unit", e.target.value)}
-                      placeholder="cái"
-                    />
+                  width: 120,
+                  render: (
+                    value: string,
+                    record: CreateServiceProcessStepProductRequest,
+                    index: number
+                  ) => (
+                    <div>
+                      <MemoizedInput
+                        value={value}
+                        onChange={(e) =>
+                          updateProduct(index, "unit", e.target.value)
+                        }
+                        placeholder="cái"
+                        size="small"
+                      />
+                      {!value && (
+                        <div
+                          style={{ fontSize: 10, color: "#999", marginTop: 2 }}
+                        >
+                          Mặc định: cái
+                        </div>
+                      )}
+                    </div>
                   ),
                 },
                 {
@@ -771,7 +1301,11 @@ const StepModal: React.FC<StepModalProps> = ({
                   key: "actions",
                   width: 80,
                   align: "center" as const,
-                  render: (_: CreateServiceProcessStepProductRequest, __: CreateServiceProcessStepProductRequest, index: number) => (
+                  render: (
+                    _: CreateServiceProcessStepProductRequest,
+                    __: CreateServiceProcessStepProductRequest,
+                    index: number
+                  ) => (
                     <Button
                       type="text"
                       danger
@@ -784,7 +1318,10 @@ const StepModal: React.FC<StepModalProps> = ({
             />
           ) : (
             <div style={{ textAlign: "center", padding: 20, color: "#8c8c8c" }}>
-              <Text>Chưa có sản phẩm nào. Click &quot;Thêm sản phẩm&quot; để bắt đầu.</Text>
+              <Text>
+                Chưa có sản phẩm nào. Click &quot;Thêm sản phẩm&quot; để bắt
+                đầu.
+              </Text>
             </div>
           )}
         </div>

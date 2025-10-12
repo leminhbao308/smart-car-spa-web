@@ -11,49 +11,49 @@ export interface ServiceProcessInfoDto {
   code: string;
   name: string;
   description?: string;
-  estimatedDuration?: number;
-  isDefault: boolean;
-  isActive: boolean;
-  stepCount: number;
-  processSteps: ServiceProcessStepInfoDto[];
+  estimated_duration?: number;
+  is_default: boolean;
+  is_active: boolean;
+  step_count: number;
+  process_steps: ServiceProcessStepInfoDto[];
   audit: AuditDto;
 }
 
 export interface ServiceProcessStepInfoDto {
   id: string;
-  processId: string;
-  processName: string;
-  stepOrder: number;
+  process_id: string;
+  process_name: string;
+  step_order: number;
   name: string;
   description?: string;
-  estimatedTime?: number;
-  isRequired: boolean;
-  isFirstStep: boolean;
-  isLastStep: boolean;
-  totalProductCount: number;
-  stepProducts: ServiceProcessStepProductInfoDto[];
+  estimated_time?: number;
+  is_required: boolean;
+  is_first_step: boolean | null;
+  is_last_step: boolean | null;
+  total_product_count: number;
+  step_products: ServiceProcessStepProductInfoDto[];
   audit: AuditDto;
 }
 
 export interface ServiceProcessStepProductInfoDto {
   id: string;
-  stepId: string;
-  stepName: string;
-  productId: string;
-  productName: string;
-  productCode: string;
-  productSku: string;
+  step_id: string;
+  step_name: string;
+  product_id: string;
+  product_name: string;
+  product_code: string;
+  product_sku: string;
   quantity: number;
   unit?: string;
-  productCost: number;
+  product_cost: number;
   audit: AuditDto;
 }
 
 export interface ServiceProcessFilterParam {
   name?: string;
   code?: string;
-  isActive?: boolean;
-  isDefault?: boolean;
+  is_active?: boolean;
+  is_default?: boolean;
   search?: string;
   sort?: string;
   direction?: "ASC" | "DESC";
@@ -63,17 +63,17 @@ export interface CreateServiceProcessRequest {
   code: string;
   name: string;
   description?: string;
-  estimatedDuration?: number;
-  isDefault?: boolean;
-  isActive?: boolean;
-  processSteps?: CreateServiceProcessStepRequest[];
+  estimated_duration?: number; // Backend now uses snake_case
+  is_default?: boolean;
+  is_active?: boolean;
+  process_steps?: CreateServiceProcessStepRequest[];
 }
 
 export interface UpdateServiceProcessRequest {
   code?: string;
   name?: string;
   description?: string;
-  estimated_duration?: number;
+  estimated_duration?: number; // Backend now uses snake_case
   is_default?: boolean;
   is_active?: boolean;
   process_steps?: UpdateServiceProcessStepRequest[];
@@ -101,34 +101,34 @@ export interface CreateServiceProcessStepRequest {
   id?: string; // For existing steps
   name: string;
   description?: string;
-  stepOrder: number;
-  estimatedTime?: number;
-  isRequired?: boolean;
-  isFirstStep?: boolean;
-  isLastStep?: boolean;
-  stepProducts?: CreateServiceProcessStepProductRequest[];
+  step_order: number;
+  estimated_time?: number;
+  is_required?: boolean;
+  is_first_step?: boolean;
+  is_last_step?: boolean;
+  step_products?: CreateServiceProcessStepProductRequest[];
 }
 
 export interface UpdateServiceProcessStepRequest {
   name?: string;
   description?: string;
-  stepOrder?: number;
-  estimatedTime?: number;
-  isRequired?: boolean;
-  isFirstStep?: boolean;
-  isLastStep?: boolean;
+  step_order?: number;
+  estimated_time?: number;
+  is_required?: boolean;
+  is_first_step?: boolean;
+  is_last_step?: boolean;
 }
 
 export interface CreateServiceProcessStepProductRequest {
   id?: string; // For existing products
-  productId: string;
-  productName?: string; // For display purposes
-  quantity: number;
+  product_id: string; // Backend expects product_id (snake_case)
+  product_name?: string; // For display purposes
+  quantity: number; // Backend expects BigDecimal
   unit?: string;
 }
 
 export interface UpdateServiceProcessStepProductRequest {
-  productId?: string;
+  product_id?: string;
   quantity?: number;
   unit?: string;
 }

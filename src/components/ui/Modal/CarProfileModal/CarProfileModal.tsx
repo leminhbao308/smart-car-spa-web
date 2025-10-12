@@ -226,8 +226,8 @@ const CarProfileModal: React.FC<CarProfileModalProps> = ({
                 <Select
                   placeholder="Chọn hãng xe"
                   showSearch
-                  filterOption={( option) =>
-                    (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
                   }
                 >
                   {vehicleBrands.map(brand => (
