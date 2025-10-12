@@ -26,26 +26,34 @@ export class ServiceService {
   ): Promise<ServiceResponse> {
     try {
       const queryParams = new URLSearchParams();
-      
+
       // Add pagination params
-      if (params.page !== undefined) queryParams.append("page", params.page.toString());
-      if (params.size !== undefined) queryParams.append("size", params.size.toString());
+      if (params.page !== undefined)
+        queryParams.append("page", params.page.toString());
+      if (params.size !== undefined)
+        queryParams.append("size", params.size.toString());
       if (params.sort) queryParams.append("sort", params.sort);
       if (params.direction) queryParams.append("direction", params.direction);
-      
+
       // Add filter params
-      if (params.category_id) queryParams.append("categoryId", params.category_id);
-      if (params.service_type_id) queryParams.append("serviceTypeId", params.service_type_id);
-      if (params.skill_level) queryParams.append("skillLevel", params.skill_level);
-      if (params.is_package !== undefined) queryParams.append("isPackage", params.is_package.toString());
-      if (params.is_featured !== undefined) queryParams.append("isFeatured", params.is_featured.toString());
-      if (params.is_active !== undefined) queryParams.append("isActive", params.is_active.toString());
-      if (params.search) queryParams.append("keyword", params.search);
+      if (params.category_id)
+        queryParams.append("category_id", params.category_id);
+      if (params.service_type_id)
+        queryParams.append("service_type_id", params.service_type_id);
+      if (params.skill_level)
+        queryParams.append("skill_level", params.skill_level);
+      if (params.is_package !== undefined)
+        queryParams.append("is_package", params.is_package.toString());
+      if (params.is_featured !== undefined)
+        queryParams.append("is_featured", params.is_featured.toString());
+      if (params.is_active !== undefined)
+        queryParams.append("is_active", params.is_active.toString());
+      if (params.search) queryParams.append("search", params.search);
 
       const url = `/services/get-all?${queryParams.toString()}`;
       console.log("Service API URL:", url);
       console.log("Filter params:", params);
-      
+
       const response = await apiClient.get(url);
 
       if (response.data.success && response.data.data) {
@@ -55,13 +63,15 @@ export class ServiceService {
       }
     } catch (error: unknown) {
       console.log("Get all services error:", error);
-      
+
       if (error && typeof error === "object" && "response" in error) {
         const errorResponse = error as { response?: { status?: number } };
         if (errorResponse.response?.status === 500) {
           throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
         } else if (errorResponse.response?.status === 401) {
-          throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
         } else if (errorResponse.response?.status === 403) {
           throw new Error("Bạn không có quyền truy cập tài nguyên này.");
         }
@@ -73,9 +83,9 @@ export class ServiceService {
   /**
    * Get service by ID
    */
-  static async getServiceById(serviceId: string): Promise<Service> {
+  static async getServiceById(service_id: string): Promise<Service> {
     try {
-      const response = await apiClient.get(`/services/${serviceId}`);
+      const response = await apiClient.get(`/services/${service_id}`);
 
       if (response.data.success && response.data.data) {
         return response.data.data;
@@ -90,7 +100,9 @@ export class ServiceService {
         if (errorResponse.response?.status === 404) {
           throw new Error("Không tìm thấy dịch vụ.");
         } else if (errorResponse.response?.status === 401) {
-          throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
         }
       }
       throw error;
@@ -100,9 +112,9 @@ export class ServiceService {
   /**
    * Get service by URL
    */
-  static async getServiceByUrl(serviceUrl: string): Promise<Service> {
+  static async getServiceByUrl(service_url: string): Promise<Service> {
     try {
-      const response = await apiClient.get(`/services/url/${serviceUrl}`);
+      const response = await apiClient.get(`/services/url/${service_url}`);
 
       if (response.data.success && response.data.data) {
         return response.data.data;
@@ -118,9 +130,9 @@ export class ServiceService {
   /**
    * Get services by category
    */
-  static async getServicesByCategory(categoryId: string): Promise<Service[]> {
+  static async getServicesByCategory(category_id: string): Promise<Service[]> {
     try {
-      const response = await apiClient.get(`/services/category/${categoryId}`);
+      const response = await apiClient.get(`/services/category/${category_id}`);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get services by category error:", error);
@@ -131,9 +143,9 @@ export class ServiceService {
   /**
    * Get services by type
    */
-  static async getServicesByType(serviceTypeId: string): Promise<Service[]> {
+  static async getServicesByType(service_type_id: string): Promise<Service[]> {
     try {
-      const response = await apiClient.get(`/services/type/${serviceTypeId}`);
+      const response = await apiClient.get(`/services/type/${service_type_id}`);
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get services by type error:", error);
@@ -144,9 +156,13 @@ export class ServiceService {
   /**
    * Get services by skill level
    */
-  static async getServicesBySkillLevel(skillLevel: string): Promise<Service[]> {
+  static async getServicesBySkillLevel(
+    skill_level: string
+  ): Promise<Service[]> {
     try {
-      const response = await apiClient.get(`/services/skill-level/${skillLevel}`);
+      const response = await apiClient.get(
+        `/services/skill-level/${skill_level}`
+      );
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get services by skill level error:", error);
@@ -159,7 +175,9 @@ export class ServiceService {
    */
   static async searchServices(keyword: string): Promise<Service[]> {
     try {
-      const response = await apiClient.get(`/services/search?keyword=${encodeURIComponent(keyword)}`);
+      const response = await apiClient.get(
+        `/services/search?keyword=${encodeURIComponent(keyword)}`
+      );
       return response.data.data;
     } catch (error: unknown) {
       console.log("Search services error:", error);
@@ -242,7 +260,9 @@ export class ServiceService {
         } else if (errorResponse.response?.status === 500) {
           throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
         } else if (errorResponse.response?.status === 401) {
-          throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
         } else if (errorResponse.response?.status === 403) {
           throw new Error("Bạn không có quyền thực hiện thao tác này.");
         }
@@ -259,14 +279,14 @@ export class ServiceService {
    * Update service
    */
   static async updateService(
-    serviceId: string,
+    service_id: string,
     data: UpdateServiceRequest
   ): Promise<Service> {
     try {
       console.log("Updating service with data:", data);
 
       const response = await apiClient.post(
-        `/services/${serviceId}/update`,
+        `/services/${service_id}/update`,
         data
       );
 
@@ -299,7 +319,9 @@ export class ServiceService {
         } else if (errorResponse.response?.status === 500) {
           throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
         } else if (errorResponse.response?.status === 401) {
-          throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
         } else if (errorResponse.response?.status === 403) {
           throw new Error("Bạn không có quyền thực hiện thao tác này.");
         }
@@ -316,19 +338,21 @@ export class ServiceService {
    * Update service status
    */
   static async updateServiceStatus(
-    serviceId: string,
+    service_id: string,
     data: UpdateServiceStatusRequest
   ): Promise<void> {
     try {
       const response = await apiClient.post(
-        `/services/${serviceId}/status`,
+        `/services/${service_id}/status`,
         data
       );
 
       console.log("Update service status response:", response.data);
 
       if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to update service status");
+        throw new Error(
+          response.data.message || "Failed to update service status"
+        );
       }
     } catch (error: unknown) {
       console.log("Update service status error:", error);
@@ -338,7 +362,9 @@ export class ServiceService {
         if (errorResponse.response?.status === 404) {
           throw new Error("Không tìm thấy dịch vụ.");
         } else if (errorResponse.response?.status === 401) {
-          throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
         } else if (errorResponse.response?.status === 403) {
           throw new Error("Bạn không có quyền thực hiện thao tác này.");
         }
@@ -350,9 +376,9 @@ export class ServiceService {
   /**
    * Delete service (soft delete)
    */
-  static async deleteService(serviceId: string): Promise<void> {
+  static async deleteService(service_id: string): Promise<void> {
     try {
-      const response = await apiClient.post(`/services/${serviceId}/delete`);
+      const response = await apiClient.post(`/services/${service_id}/delete`);
 
       if (!response.data.success) {
         throw new Error(response.data.message || "Failed to delete service");
@@ -371,7 +397,9 @@ export class ServiceService {
         } else if (errorResponse.response?.status === 500) {
           throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
         } else if (errorResponse.response?.status === 401) {
-          throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
         }
       }
       const errorMessage =
@@ -385,9 +413,11 @@ export class ServiceService {
   /**
    * Get service count by category
    */
-  static async getServiceCountByCategory(categoryId: string): Promise<number> {
+  static async getServiceCountByCategory(category_id: string): Promise<number> {
     try {
-      const response = await apiClient.get(`/services/category/${categoryId}/count`);
+      const response = await apiClient.get(
+        `/services/category/${category_id}/count`
+      );
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get service count by category error:", error);
@@ -398,9 +428,11 @@ export class ServiceService {
   /**
    * Get service count by type
    */
-  static async getServiceCountByType(serviceTypeId: string): Promise<number> {
+  static async getServiceCountByType(service_type_id: string): Promise<number> {
     try {
-      const response = await apiClient.get(`/services/type/${serviceTypeId}/count`);
+      const response = await apiClient.get(
+        `/services/type/${service_type_id}/count`
+      );
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get service count by type error:", error);
@@ -411,9 +443,13 @@ export class ServiceService {
   /**
    * Get service count by skill level
    */
-  static async getServiceCountBySkillLevel(skillLevel: string): Promise<number> {
+  static async getServiceCountBySkillLevel(
+    skill_level: string
+  ): Promise<number> {
     try {
-      const response = await apiClient.get(`/services/skill-level/${skillLevel}/count`);
+      const response = await apiClient.get(
+        `/services/skill-level/${skill_level}/count`
+      );
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get service count by skill level error:", error);
@@ -424,10 +460,15 @@ export class ServiceService {
   /**
    * Get service pricing details
    */
-  static async getServicePricing(serviceId: string, priceBookId?: string): Promise<ServicePricingDto> {
+  static async getServicePricing(
+    service_id: string,
+    price_book_id?: string
+  ): Promise<ServicePricingDto> {
     try {
-      const params = priceBookId ? `?priceBookId=${priceBookId}` : "";
-      const response = await apiClient.get(`/services/${serviceId}/pricing${params}`);
+      const params = price_book_id ? `?price_book_id=${price_book_id}` : "";
+      const response = await apiClient.get(
+        `/services/${service_id}/pricing${params}`
+      );
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get service pricing error:", error);
@@ -438,9 +479,13 @@ export class ServiceService {
   /**
    * Get service pricing info
    */
-  static async getServicePricingInfo(serviceId: string): Promise<ServicePricingInfoDto> {
+  static async getServicePricingInfo(
+    service_id: string
+  ): Promise<ServicePricingInfoDto> {
     try {
-      const response = await apiClient.get(`/services/${serviceId}/pricing-info`);
+      const response = await apiClient.get(
+        `/services/${service_id}/pricing-info`
+      );
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get service pricing info error:", error);
@@ -451,10 +496,15 @@ export class ServiceService {
   /**
    * Recalculate service base price
    */
-  static async recalculateBasePrice(serviceId: string, priceBookId?: string): Promise<ServicePricingDto> {
+  static async recalculateBasePrice(
+    service_id: string,
+    price_book_id?: string
+  ): Promise<ServicePricingDto> {
     try {
-      const params = priceBookId ? `?priceBookId=${priceBookId}` : "";
-      const response = await apiClient.post(`/${serviceId}/recalculate-base-price${params}`);
+      const params = price_book_id ? `?price_book_id=${price_book_id}` : "";
+      const response = await apiClient.post(
+        `/${service_id}/recalculate-base-price${params}`
+      );
       return response.data.data;
     } catch (error: unknown) {
       console.log("Recalculate base price error:", error);
@@ -465,9 +515,15 @@ export class ServiceService {
   /**
    * Update service labor cost
    */
-  static async updateLaborCost(serviceId: string, data: UpdateLaborCostRequest): Promise<ServicePricingInfoDto> {
+  static async updateLaborCost(
+    service_id: string,
+    data: UpdateLaborCostRequest
+  ): Promise<ServicePricingInfoDto> {
     try {
-      const response = await apiClient.post(`/services/${serviceId}/update-labor-cost`, data);
+      const response = await apiClient.post(
+        `/services/${service_id}/update-labor-cost`,
+        data
+      );
       return response.data.data;
     } catch (error: unknown) {
       console.log("Update labor cost error:", error);

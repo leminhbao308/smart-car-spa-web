@@ -33,22 +33,22 @@ interface ServiceModalProps {
   onCancel: () => void;
   onSuccess: () => void;
   editData?: {
-    serviceId: string;
-    serviceName: string;
-    serviceUrl: string;
-    categoryId?: string;
+    service_id: string;
+    service_name: string;
+    service_url: string;
+    category_id?: string;
     description?: string;
-    standardDuration?: number;
-    requiredSkillLevel?: string;
-    isPackage?: boolean;
-    basePrice?: number;
-    laborCost?: number;
-    serviceTypeId?: string;
-    isFeatured?: boolean;
-    serviceProcessId?: string;
-    isDefaultProcess?: boolean;
-    branchId?: string;
-    imageUrls?: string[];
+    standard_duration?: number;
+    required_skill_level?: string;
+    is_package?: boolean;
+    base_price?: number;
+    labor_cost?: number;
+    service_type_id?: string;
+    is_featured?: boolean;
+    service_process_id?: string;
+    is_default_process?: boolean;
+    branch_id?: string;
+    image_urls?: string[];
   };
   title?: string;
 }
@@ -79,21 +79,21 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
       if (editData) {
         // Edit mode - populate form with existing data
         form.setFieldsValue({
-          serviceName: editData.serviceName,
-          serviceUrl: editData.serviceUrl,
-          categoryId: editData.categoryId,
+          serviceName: editData.service_name,
+          serviceUrl: editData.service_url,
+          categoryId: editData.category_id,
           description: editData.description,
-          standardDuration: editData.standardDuration,
-          requiredSkillLevel: editData.requiredSkillLevel,
-          isPackage: editData.isPackage,
-          basePrice: editData.basePrice,
-          laborCost: editData.laborCost,
-          serviceTypeId: editData.serviceTypeId,
-          isFeatured: editData.isFeatured,
-          serviceProcessId: editData.serviceProcessId,
-          branchId: editData.branchId,
+          standardDuration: editData.standard_duration,
+          requiredSkillLevel: editData.required_skill_level,
+          isPackage: editData.is_package,
+          basePrice: editData.base_price,
+          laborCost: editData.labor_cost,
+          serviceTypeId: editData.service_type_id,
+          isFeatured: editData.is_featured,
+          serviceProcessId: editData.service_process_id,
+          branchId: editData.branch_id,
         });
-        setImageUrls(editData.imageUrls || []);
+        setImageUrls(editData.image_urls || []);
       } else {
         // Create mode - reset form
         form.resetFields();
@@ -113,13 +113,13 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
   const updateFormFields = useCallback(() => {
     if (serviceProcessId && serviceProcessesData) {
       const selectedProcess = serviceProcessesData.find(p => p.id === serviceProcessId);
-      if (selectedProcess) {
-        // Update estimated duration if not set
-        const currentDuration = formRef.current.getFieldValue('standardDuration');
-        if (!currentDuration && selectedProcess.estimatedDuration) {
-          formRef.current.setFieldValue('standardDuration', selectedProcess.estimatedDuration);
+        if (selectedProcess) {
+          // Update estimated duration if not set
+          const currentDuration = formRef.current.getFieldValue('standardDuration');
+          if (!currentDuration && selectedProcess.estimated_duration) {
+            formRef.current.setFieldValue('standardDuration', selectedProcess.estimated_duration);
+          }
         }
-      }
     }
   }, [serviceProcessId, serviceProcessesData]);
 
@@ -152,20 +152,20 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         };
 
         await updateServiceMutation.mutateAsync({
-          serviceId: editData.serviceId,
+          serviceId: editData.service_id,
           data: updateData,
         });
 
         // Cập nhật labor cost riêng nếu có thay đổi
-        if (values.laborCost !== editData.laborCost) {
-          await ServiceService.updateLaborCost(editData.serviceId, {
+        if (values.laborCost !== editData.labor_cost) {
+          await ServiceService.updateLaborCost(editData.service_id, {
             labor_cost: values.laborCost
           });
         }
 
         // Tính lại base price nếu có thay đổi quy trình
-        if (values.serviceProcessId !== editData.serviceProcessId) {
-          await ServiceService.recalculateBasePrice(editData.serviceId);
+        if (values.serviceProcessId !== editData.service_process_id) {
+          await ServiceService.recalculateBasePrice(editData.service_id);
         }
 
         message.success("Cập nhật dịch vụ thành công!");
@@ -190,8 +190,8 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         const newService = await createServiceMutation.mutateAsync(createData);
 
         // Tính lại base price sau khi tạo (chỉ khi có serviceProcessId)
-        if (newService && newService.serviceId && values.serviceProcessId) {
-          await ServiceService.recalculateBasePrice(newService.serviceId);
+        if (newService && newService.service_id && values.serviceProcessId) {
+          await ServiceService.recalculateBasePrice(newService.service_id);
         }
 
         message.success("Tạo dịch vụ thành công!");
@@ -508,9 +508,9 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                           </div>
                           <div style={{ fontSize: 12, color: '#666' }}>
                             {selectedProcess.description || 'Không có mô tả'} • 
-                            {selectedProcess.estimatedDuration} phút • 
-                            {selectedProcess.stepCount} bước
-                            {selectedProcess.isDefault && ' • Mặc định'}
+                            {selectedProcess.estimated_duration} phút • 
+                            {selectedProcess.step_count} bước
+                            {selectedProcess.is_default && ' • Mặc định'}
                           </div>
                         </div>
                       );

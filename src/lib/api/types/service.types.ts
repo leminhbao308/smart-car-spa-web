@@ -10,28 +10,28 @@ export interface AuditDto {
 
 // Service API Types - Updated to match backend ServiceInfoDto with audit object
 export interface Service {
-  serviceId: string;
-  serviceUrl: string;
-  serviceName: string;
-  categoryId: string;
-  categoryName: string;
+  service_id: string;
+  service_url: string;
+  service_name: string;
+  category_id: string;
+  category_name: string;
   description: string;
-  standardDuration: number;
-  requiredSkillLevel: SkillLevel;
-  isPackage: boolean;
-  basePrice: number; // Base price for the service
-  laborCost: number; // Tiền công lao động
-  serviceTypeId: string;
-  serviceTypeName: string;
-  isFeatured: boolean;
-  isActive: boolean;
-  serviceProcessId: string;
-  serviceProcessName: string;
-  serviceProcessCode: string;
-  isDefaultProcess: boolean;
-  estimatedDuration: number;
-  branchId: string;
-  branchName: string;
+  standard_duration: number;
+  required_skill_level: SkillLevel;
+  is_package: boolean;
+  base_price: number; // Base price for the service
+  labor_cost: number; // Tiền công lao động
+  service_type_id: string;
+  service_type_name: string;
+  is_featured: boolean;
+  is_active: boolean;
+  service_process_id: string;
+  service_process_name: string;
+  service_process_code: string;
+  is_default_process: boolean;
+  estimated_duration: number;
+  branch_id: string;
+  branch_name: string;
   audit: AuditDto; // Audit fields are now in a separate object
 }
 
@@ -157,57 +157,57 @@ export const SERVICE_TYPE_OPTIONS = [
 
 // Service Pricing Types - Updated to match backend DTOs
 export interface ProcessStepPricingDto {
-  stepId: string;
-  stepName: string;
-  stepOrder: number;
-  estimatedTime: number;
-  productCost: number;
+  step_id: string;
+  step_name: string;
+  step_order: number;
+  estimated_time: number;
+  product_cost: number;
   products: ProductPricingDto[];
 }
 
 export interface ProductPricingDto {
-  productId: string;
-  productName: string;
+  product_id: string;
+  product_name: string;
   sku: string;
-  productType: string;
+  product_type: string;
   brand: string;
   model: string;
   quantity: number;
   unit: string;
-  unitPrice: number; // Giá đơn vị từ PriceBook
-  totalPrice: number; // unitPrice * quantity
-  policyType: "FIXED" | "MARKUP_ON_PEAK";
-  priceSource: "PRICE_BOOK" | "DEFAULT" | "OVERRIDE";
-  priceBookId?: string;
-  priceBookItemId?: string;
-  priceBookName?: string;
-  priceCalculatedAt: string;
+  unit_price: number; // Giá đơn vị từ PriceBook
+  total_price: number; // unitPrice * quantity
+  policy_type: "FIXED" | "MARKUP_ON_PEAK";
+  price_source: "PRICE_BOOK" | "DEFAULT" | "OVERRIDE";
+  price_book_id?: string;
+  price_book_item_id?: string;
+  price_book_name?: string;
+  price_calculated_at: string;
 }
 
 export interface ServicePricingDto {
-  serviceId: string;
-  serviceName: string;
-  basePrice: number;
-  laborCost: number;
-  productCost: number;
-  totalCost: number;
+  service_id: string;
+  service_name: string;
+  base_price: number;
+  labor_cost: number;
+  product_cost: number;
+  total_cost: number;
   markup: number;
-  finalPrice: number;
-  priceBookId?: string;
-  priceBookName?: string;
-  processSteps: ProcessStepPricingDto[];
+  final_price: number;
+  price_book_id?: string;
+  price_book_name?: string;
+  process_steps: ProcessStepPricingDto[];
 }
 
 export interface ServicePricingInfoDto {
-  serviceId: string;
-  serviceName: string;
-  basePrice: number;
-  laborCost: number;
-  productCost: number;
-  totalCost: number;
+  service_id: string;
+  service_name: string;
+  base_price: number;
+  labor_cost: number;
+  product_cost: number;
+  total_cost: number;
   markup: number;
-  finalPrice: number;
-  lastUpdated: string;
+  final_price: number;
+  last_updated: string;
 }
 
 export interface UpdateLaborCostRequest {

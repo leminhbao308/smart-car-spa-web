@@ -21,7 +21,6 @@ import {
 import {
   FilterOutlined,
   ReloadOutlined,
-  DeleteOutlined,
 } from "@ant-design/icons";
 import { Service, SERVICE_TYPE_OPTIONS } from "@/lib/api/types/service.types";
 import { ServiceService } from "@/lib/api/services/service.service";
@@ -127,24 +126,24 @@ const ServicesPage = () => {
       const searchLower = filters.searchText.toLowerCase();
       filtered = filtered.filter(
         (item) =>
-          item.serviceName.toLowerCase().includes(searchLower) ||
-          item.serviceUrl.toLowerCase().includes(searchLower) ||
+          item.service_name.toLowerCase().includes(searchLower) ||
+          item.service_url.toLowerCase().includes(searchLower) ||
           item.description.toLowerCase().includes(searchLower) ||
-          item.categoryName.toLowerCase().includes(searchLower)
+          item.category_name.toLowerCase().includes(searchLower)
       );
     }
 
     // Status filter
     if (filters.status) {
       filtered = filtered.filter(
-        (item) => item.isActive === (filters.status === "active")
+        (item) => item.is_active === (filters.status === "active")
       );
     }
 
     // Service type filter
     if (filters.serviceType) {
       filtered = filtered.filter(
-        (item) => item.serviceTypeId === filters.serviceType
+        (item) => item.service_type_id === filters.serviceType
       );
     }
 
@@ -175,18 +174,18 @@ const ServicesPage = () => {
     },
     {
       title: "Tên dịch vụ",
-      key: "service",
+      key: "service_name",
       width: 280,
       render: (_, record) => (
         <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
-          {record.serviceName}
+          {record.service_name}
         </div>
       ),
     },
     {
       title: "Danh mục",
-      dataIndex: "categoryName",
-      key: "categoryName",
+      dataIndex: "category_name",
+      key: "category_name",
       width: 120,
       render: (categoryName: string) => <Tag color="blue">{categoryName}</Tag>,
     },
@@ -194,21 +193,21 @@ const ServicesPage = () => {
       title: "Giá dịch vụ",
       key: "pricing",
       width: 200,
-      sorter: (a, b) => a.basePrice - b.basePrice,
+      sorter: (a, b) => a.base_price - b.base_price,
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 500, color: "#52c41a", fontSize: 14 }}>
-            {formatCurrency(record.basePrice)}
+            {formatCurrency(record.base_price)}
           </div>
         </div>
       ),
     },
     {
       title: "Thời gian",
-      dataIndex: "standardDuration",
-      key: "standardDuration",
+      dataIndex: "standard_duration",
+      key: "standard_duration",
       width: 100,
-      sorter: (a, b) => a.standardDuration - b.standardDuration,
+      sorter: (a, b) => a.standard_duration - b.standard_duration,
       render: (duration: number) => (
         <div style={{ color: "#1890ff" }}>{duration} phút</div>
       ),
@@ -224,8 +223,8 @@ const ServicesPage = () => {
         }
         return (
           <div>
-            <Tag color={record.isActive ? "green" : "red"}>
-              {record.isActive ? "Hoạt động" : "Không hoạt động"}
+            <Tag color={record.is_active ? "green" : "red"}>
+              {record.is_active ? "Hoạt động" : "Không hoạt động"}
             </Tag>
           </div>
         );
@@ -236,8 +235,8 @@ const ServicesPage = () => {
         { text: "Đã xóa", value: "deleted" },
       ],
       onFilter: (value, record) => {
-        if (value === "active") return record.isActive && !record.audit?.is_deleted;
-        if (value === "inactive") return !record.isActive && !record.audit?.is_deleted;
+        if (value === "active") return record.is_active && !record.audit?.is_deleted;
+        if (value === "inactive") return !record.is_active && !record.audit?.is_deleted;
         if (value === "deleted") return record.audit?.is_deleted || false;
         return true;
       },
@@ -271,28 +270,28 @@ const ServicesPage = () => {
   };
 
   const handleToggleStatus = (record: Service) => {
-    const action = record.isActive ? "ngừng hoạt động" : "kích hoạt";
+    const action = record.is_active ? "ngừng hoạt động" : "kích hoạt";
     showModal({
-      title: record.isActive ? "Ngừng hoạt động" : "Kích hoạt",
-      content: `Bạn có chắc chắn muốn ${action} dịch vụ ${record.serviceName}?`,
-      type: record.isActive ? "warning" : "success",
+      title: record.is_active ? "Ngừng hoạt động" : "Kích hoạt",
+      content: `Bạn có chắc chắn muốn ${action} dịch vụ ${record.service_name}?`,
+      type: record.is_active ? "warning" : "success",
       onConfirm: async () => {
         // Optimistic update - update UI immediately
         setServiceData((prevData) =>
           prevData.map((service) =>
-            service.serviceId === record.serviceId
-              ? { ...service, isActive: !record.isActive }
+            service.service_id === record.service_id
+              ? { ...service, is_active: !record.is_active }
               : service
           )
         );
 
         try {
           console.log("Updating service status...", {
-            serviceId: record.serviceId,
-            newStatus: !record.isActive,
+            serviceId: record.service_id,
+            newStatus: !record.is_active,
           });
-          await ServiceService.updateServiceStatus(record.serviceId, {
-            is_active: !record.isActive,
+          await ServiceService.updateServiceStatus(record.service_id, {
+            is_active: !record.is_active,
           });
           message.success(`${action} dịch vụ thành công!`);
           console.log("Service status updated successfully");
@@ -300,8 +299,8 @@ const ServicesPage = () => {
           // Revert optimistic update on error
           setServiceData((prevData) =>
             prevData.map((service) =>
-              service.serviceId === record.serviceId
-                ? { ...service, isActive: record.isActive }
+              service.service_id === record.service_id
+                ? { ...service, is_active: record.is_active }
                 : service
             )
           );
@@ -467,9 +466,9 @@ const ServicesPage = () => {
           {
             key: "toggle-status",
             label: (record: Service) =>
-              record.isActive ? "Ngừng hoạt động" : "Kích hoạt",
+              record.is_active ? "Ngừng hoạt động" : "Kích hoạt",
             type: "default",
-            danger: (record: Service) => record.isActive,
+            danger: (record: Service) => record.is_active,
             onClick: handleToggleStatus,
             condition: (record: Service) => !record.audit?.is_deleted,
           },
