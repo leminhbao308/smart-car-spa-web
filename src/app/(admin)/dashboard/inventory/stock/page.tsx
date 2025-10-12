@@ -84,7 +84,7 @@ const StockInventoryPage = () => {
       .sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
 
     for (const po of relevantPOs) {
-      const line = po.lines.find(l => l.product.productId === productId);
+      const line = po.lines.find(l => l.product.product_id === productId);
       if (line) {
         return line.unit_cost;
       }
@@ -97,18 +97,18 @@ const StockInventoryPage = () => {
 
     setLoading(true);
     try {
-      const productIds = products.map((p: Product) => p.productId);
+      const productIds = products.map((p: Product) => p.product_id);
       const batchResult = await inventoryHook.levelsBatch({
         warehouse_id: warehouse.id,
         product_ids: productIds,
       });
 
       // Fetch selling prices for all products
-      let sellingPrices: { [productId: string]: number } = {};
+      const sellingPrices: { [productId: string]: number } = {};
       try {
         const pricingResult = await pricingHook.previewBatch({
           items: products.map((p: Product) => ({
-            product_id: p.productId,
+            product_id: p.product_id,
             qty: 1,
           })),
         });
@@ -126,7 +126,7 @@ const StockInventoryPage = () => {
         : "N/A";
 
       const stockItems: StockTableItem[] = products.map((product: Product) => {
-        const invData = batchResult.items?.[product.productId];
+        const invData = batchResult.items?.[product.product_id];
         const onHand = invData?.on_hand || 0;
         const reserved = invData?.reserved || 0;
         const available = invData?.available || 0;
@@ -134,21 +134,21 @@ const StockInventoryPage = () => {
         let stockStatus: "low" | "normal" | "high" | "out" = "normal";
         if (onHand === 0) {
           stockStatus = "out";
-        } else if (product.minStockLevel && onHand < product.minStockLevel) {
+        } else if (onHand < 1000) {
           stockStatus = "low";
-        } else if (product.maxStockLevel && onHand > product.maxStockLevel) {
+        } else if (onHand > 2000) {
           stockStatus = "high";
         }
 
-        const lastPurchasePrice = getLastPurchasePrice(product.productId, warehouse.id);
-        const sellingPrice = sellingPrices[product.productId];
+        const lastPurchasePrice = getLastPurchasePrice(product.product_id, warehouse.id);
+        const sellingPrice = sellingPrices[product.product_id];
         const profitMargin = lastPurchasePrice && sellingPrice
           ? ((sellingPrice - lastPurchasePrice) / lastPurchasePrice) * 100
           : undefined;
 
         return {
-          key: product.productId,
-          id: product.productId,
+          key: product.product_id,
+          id: product.product_id,
           product: product,
           warehouse: warehouse,
           on_hand: onHand,
@@ -187,8 +187,8 @@ const StockInventoryPage = () => {
     },
     {
       title: "Tên sản phẩm",
-      dataIndex: ["product", "productName"],
-      key: "productName",
+      dataIndex: ["product", "product_name"],
+      key: "product_name",
       width: 250,
       fixed: "left",
     },

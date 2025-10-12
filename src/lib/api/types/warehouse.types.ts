@@ -1,7 +1,7 @@
-import {BaseAuditEntity, BranchRef} from "@/lib/api";
+import {BaseAuditEntity, Branch} from "@/lib/api";
 
 export interface Warehouse extends BaseAuditEntity {
   id: string,
-  branch: BranchRef,
+  branch: Branch,
   locked: boolean,
 }

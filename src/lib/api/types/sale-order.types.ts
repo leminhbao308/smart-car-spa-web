@@ -1,6 +1,5 @@
-import {BaseAuditEntity, BranchRef, Product, ProductRef, UserManagementInfo, WarehouseRef} from "@/lib/api";
+import {BaseAuditEntity, Branch, BranchRef, Product, ProductRef, UserManagementInfo, WarehouseRef} from "@/lib/api";
 import {UUID} from "node:crypto";
-import {Branch} from "@/components/utils/data/branches.data";
 import {Warehouse} from "@/lib/api/types/warehouse.types";
 
 

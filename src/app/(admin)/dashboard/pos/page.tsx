@@ -18,6 +18,9 @@ import {
   message,
   Radio,
   Spin,
+  Badge,
+  Empty,
+  Statistic,
 } from "antd";
 import {
   SearchOutlined,
@@ -32,27 +35,17 @@ import {
   ShopOutlined,
   CheckCircleOutlined,
   DollarOutlined,
-  // GiftOutlined,
-  // StarOutlined,
-  // PercentageOutlined,
+  ClearOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
-// import {
-//   promotionsData,
-//   Promotion,
-// } from "@/components/utils/data/promotions.data";
-// import {
-//   getTierInfo,
-//   calculatePointsToEarn,
-// } from "@/components/utils/data/points.data";
 import {
-  useProducts,
   useUserManagement,
   useBranches,
   useWarehouseByBranch,
   useCatalogForSale,
   usePricing,
   useInventoryLevels,
-  useSalesOrder,
+  useSalesOrder, useCreateSalesOrder,
 } from "@/lib/api/hooks";
 import {Product, UserManagementInfo, CreateSORequest} from "@/lib/api";
 import {useCategories} from "@/lib/api/hooks/useCategory";
@@ -70,24 +63,16 @@ interface CartItem {
   total: number;
   categoryName: string;
   availableStock: number;
+  maxQuantity: number;
 }
 
-// TODO: Uncomment when promotion API is ready
-// interface AppliedPromotion {
-//   id: number;
-//   name: string;
-//   type: string;
-//   value: number;
-//   discountAmount: number;
-// }
-
-// TODO: Uncomment when points API is ready
-// interface PointsUsage {
-//   pointsUsed: number;
-//   discountAmount: number;
-// }
+interface ProductWithStock extends Product {
+  sellingPrice: number;
+  availableStock: number;
+}
 
 const POSPage = () => {
+  // State Management
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchText, setSearchText] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<UserManagementInfo | null>(null);
@@ -95,29 +80,25 @@ const POSPage = () => {
   const [isCustomerModalVisible, setIsCustomerModalVisible] = useState(false);
   const [isBranchModalVisible, setIsBranchModalVisible] = useState(false);
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
-  // const [isPromotionModalVisible, setIsPromotionModalVisible] = useState(false);
-  // const [isPointsModalVisible, setIsPointsModalVisible] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [receivedAmount, setReceivedAmount] = useState(0);
   const [customerType, setCustomerType] = useState("guest");
   const [customerSearchText, setCustomerSearchText] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
-  // const [appliedPromotions, setAppliedPromotions] = useState<AppliedPromotion[]>([]);
-  // const [pointsUsage, setPointsUsage] = useState<PointsUsage | null>(null);
   const [form] = Form.useForm();
 
   // API Hooks
   const {branches, loading: branchesLoading} = useBranches({});
-  const {warehouse, loading: warehouseLoading} = useWarehouseByBranch(
+  const {warehouse, loading: warehouseLoading, refresh: refreshWarehouse} = useWarehouseByBranch(
     selectedBranch?.branch_id || null
   );
-  const {catalog, loading: catalogLoading} = useCatalogForSale(
-    warehouse?.id
+  const {catalog, loading: catalogLoading, refresh: refreshCatalog} = useCatalogForSale(
+    warehouse?.id || ""
   );
   const {previewBatch, loading: pricingLoading} = usePricing();
   const {levelsBatch, loading: inventoryLoading} = useInventoryLevels();
-  const {createDraft, confirm, fulfill, loading: orderLoading} = useSalesOrder();
+  const {createDraft, confirm, fulfill, loading: orderLoading} = useCreateSalesOrder();
 
   const {
     users,
@@ -133,7 +114,7 @@ const POSPage = () => {
     return cats ? cats.map((cat) => cat.category_name) : [];
   }, [fetchedCategories.data?.data?.content]);
 
-  // Set user filters for customers
+  // Initialize user filters
   const setUserFilters = useCallback(
     (search: string | undefined) => {
       setFilters({
@@ -148,8 +129,8 @@ const POSPage = () => {
     setUserFilters("");
   }, [setUserFilters]);
 
-  // Get available products from catalog
-  const availableProducts = useMemo(() => {
+  // Get available products from catalog with enhanced data
+  const availableProducts = useMemo((): ProductWithStock[] => {
     if (!catalog?.items) return [];
     return catalog.items.map((item: CatalogItem) => ({
       ...item.product,
@@ -158,173 +139,140 @@ const POSPage = () => {
     }));
   }, [catalog]);
 
-  const addToCart = (product: Product & { availableStock: number }) => {
+  // Filtered products with performance optimization
+  const filteredProducts = useMemo(() => {
+    return availableProducts.filter((product) => {
+      const matchesSearch =
+        product.product_name.toLowerCase().includes(searchText.toLowerCase()) ||
+        product.brand?.toLowerCase().includes(searchText.toLowerCase()) ||
+        product.sku?.toLowerCase().includes(searchText.toLowerCase());
+
+      const matchesCategory =
+        categoryFilter === "all" ||
+        product.product_type_name === categoryFilter;
+
+      const matchesStock =
+        stockFilter === "all" ||
+        (stockFilter === "in_stock" && product.availableStock > 10) ||
+        (stockFilter === "low_stock" &&
+          product.availableStock > 0 &&
+          product.availableStock <= 10) ||
+        (stockFilter === "out_of_stock" && product.availableStock === 0);
+
+      return matchesSearch && matchesCategory && matchesStock;
+    });
+  }, [availableProducts, searchText, categoryFilter, stockFilter]);
+
+  // Cart Management Functions
+  const addToCart = useCallback((product: ProductWithStock) => {
     if (product.availableStock <= 0) {
       message.warning("Sản phẩm đã hết hàng!");
       return;
     }
 
-    const existingItem = cart.find((item) => item.productId === product.productId);
-    const currentQty = existingItem ? existingItem.quantity : 0;
+    setCart((prevCart) => {
+      const existingItem = prevCart.find((item) => item.productId === product.product_id);
+      const currentQty = existingItem ? existingItem.quantity : 0;
 
-    if (currentQty + 1 > product.availableStock) {
-      message.warning(`Chỉ còn ${product.availableStock} sản phẩm trong kho!`);
-      return;
-    }
+      if (currentQty + 1 > product.availableStock) {
+        message.warning(`Chỉ còn ${product.availableStock} sản phẩm trong kho!`);
+        return prevCart;
+      }
 
-    if (existingItem) {
-      setCart(
-        cart.map((item) =>
-          item.productId === product.productId
+      if (existingItem) {
+        return prevCart.map((item) =>
+          item.productId === product.product_id
             ? {
               ...item,
               quantity: item.quantity + 1,
               total: (item.quantity + 1) * item.price,
             }
             : item
-        )
-      );
-    } else {
-      const newItem: CartItem = {
-        productId: product.productId,
-        productName: product.productName,
-        price: product.sellingPrice || 0,
-        quantity: 1,
-        total: product.sellingPrice || 0,
-        categoryName: product.categoryName,
-        availableStock: product.availableStock,
-      };
-      setCart([...cart, newItem]);
-    }
-  };
+        );
+      } else {
+        const newItem: CartItem = {
+          productId: product.product_id,
+          productName: product.product_name,
+          price: product.sellingPrice || 0,
+          quantity: 1,
+          total: product.sellingPrice || 0,
+          categoryName: product.product_type_name,
+          availableStock: product.availableStock,
+          maxQuantity: product.availableStock,
+        };
+        message.success(`Đã thêm ${product.product_name} vào giỏ hàng`);
+        return [...prevCart, newItem];
+      }
+    });
+  }, []);
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
     }
 
-    const item = cart.find((i) => i.productId === productId);
-    if (item && quantity > item.availableStock) {
-      message.warning(`Chỉ còn ${item.availableStock} sản phẩm trong kho!`);
-      return;
-    }
+    setCart((prevCart) => {
+      const item = prevCart.find((i) => i.productId === productId);
+      if (item && quantity > item.availableStock) {
+        message.warning(`Chỉ còn ${item.availableStock} sản phẩm trong kho!`);
+        return prevCart;
+      }
 
-    setCart(
-      cart.map((item) =>
+      return prevCart.map((item) =>
         item.productId === productId
           ? {...item, quantity, total: quantity * item.price}
           : item
-      )
-    );
-  };
+      );
+    });
+  }, []);
 
-  const removeFromCart = (productId: string) => {
-    setCart(cart.filter((item) => item.productId !== productId));
-  };
+  const removeFromCart = useCallback((productId: string) => {
+    setCart((prevCart) => prevCart.filter((item) => item.productId !== productId));
+    message.info("Đã xóa sản phẩm khỏi giỏ hàng");
+  }, []);
 
-  const getSubtotal = () => {
+  const clearCart = useCallback(() => {
+    Modal.confirm({
+      title: "Xóa toàn bộ giỏ hàng?",
+      content: "Bạn có chắc chắn muốn xóa tất cả sản phẩm trong giỏ hàng?",
+      okText: "Xóa",
+      cancelText: "Hủy",
+      okButtonProps: {danger: true},
+      onOk: () => {
+        setCart([]);
+        message.success("Đã xóa toàn bộ giỏ hàng");
+      },
+    });
+  }, []);
+
+  // Calculation Functions
+  const getSubtotal = useCallback(() => {
     return cart.reduce((total, item) => total + item.total, 0);
-  };
+  }, [cart]);
 
-  // TODO: Implement when promotion API is ready
-  // const getTotalDiscount = () => {
-  //   const promotionDiscount = appliedPromotions.reduce(
-  //     (total, promo) => total + promo.discountAmount,
-  //     0
-  //   );
-  //   const pointsDiscount = pointsUsage?.discountAmount || 0;
-  //   return promotionDiscount + pointsDiscount;
-  // };
+  const getTotalAmount = useCallback(() => {
+    return getSubtotal();
+  }, [getSubtotal]);
 
-  const getTotalAmount = () => {
-    // return getSubtotal() - getTotalDiscount();
-    return getSubtotal(); // TODO: Add discount calculation when API is ready
-  };
-
-  const getTotalItems = () => {
+  const getTotalItems = useCallback(() => {
     return cart.reduce((total, item) => total + item.quantity, 0);
-  };
+  }, [cart]);
 
-  // TODO: Implement when points API is ready
-  // const getPointsToEarn = () => {
-  //   if (!selectedCustomer?.customer_rank) return 0;
-  //   return calculatePointsToEarn(getTotalAmount(), selectedCustomer.customer_rank.toLowerCase());
-  // };
+  const getChange = useCallback(() => {
+    return Math.max(0, receivedAmount - getTotalAmount());
+  }, [receivedAmount, getTotalAmount]);
 
-  const handleCheckout = () => {
-    if (cart.length === 0) {
-      message.warning("Giỏ hàng trống!");
-      return;
-    }
-    if (!selectedBranch) {
-      message.warning("Vui lòng chọn chi nhánh!");
-      return;
-    }
-    if (!warehouse) {
-      message.warning("Không tìm thấy kho cho chi nhánh này!");
-      return;
-    }
-    setIsPaymentModalVisible(true);
-  };
+  // Branch Management
+  const handleSelectBranch = useCallback((branch: BranchDisplay) => {
+    setSelectedBranch(branch);
+    setCart([]);
+    setIsBranchModalVisible(false);
+    message.success(`Đã chọn chi nhánh: ${branch.branch_name}`);
+  }, []);
 
-  const handlePayment = async () => {
-    if (paymentMethod === "cash" && receivedAmount < getTotalAmount()) {
-      message.error("Số tiền nhận không đủ!");
-      return;
-    }
-
-    if (!selectedBranch || !warehouse) {
-      message.error("Thiếu thông tin chi nhánh hoặc kho!");
-      return;
-    }
-
-    try {
-      // Create sales order
-      const orderRequest: CreateSORequest = {
-        branch_id: selectedBranch.branch_id,
-        warehouse_id: warehouse.id,
-        customer_id: selectedCustomer?.user_id,
-        lines: cart.map((item) => ({
-          product_id: item.productId,
-          qty: item.quantity,
-          unit_price: item.price,
-        })),
-      };
-
-      // Create draft order
-      const draftOrder = await createDraft(orderRequest);
-
-      // Confirm order (reserve inventory and lock prices)
-      const confirmedOrder = await confirm(draftOrder.id);
-
-      // Fulfill order (complete the sale)
-      await fulfill(confirmedOrder.id);
-
-      // TODO: Calculate and award points when API is ready
-      // const pointsToEarn = getPointsToEarn();
-
-      message.success("Thanh toán thành công!");
-      // TODO: Show points earned message
-      // message.success(
-      //   `Thanh toán thành công! ${
-      //     pointsToEarn > 0 ? `Tích được ${pointsToEarn} điểm.` : ""
-      //   }`
-      // );
-
-      // Reset states
-      setCart([]);
-      setSelectedCustomer(null);
-      // setAppliedPromotions([]);
-      // setPointsUsage(null);
-      setIsPaymentModalVisible(false);
-      setReceivedAmount(0);
-    } catch (error: any) {
-      message.error(error?.message || "Có lỗi xảy ra khi thanh toán!");
-    }
-  };
-
-  const handleCustomerTypeChange = (type: string) => {
+  // Customer Management
+  const handleCustomerTypeChange = useCallback((type: string) => {
     setCustomerType(type);
     if (type === "guest") {
       setSelectedCustomer({
@@ -333,12 +281,13 @@ const POSPage = () => {
         phone_number: "N/A",
         email: "N/A",
       } as UserManagementInfo);
+      setIsCustomerModalVisible(false);
     } else {
       setSelectedCustomer(null);
     }
-  };
+  }, []);
 
-  const handleSearchCustomer = async () => {
+  const handleSearchCustomer = useCallback(async () => {
     if (!customerSearchText.trim()) {
       await refreshUsers();
       return;
@@ -361,95 +310,124 @@ const POSPage = () => {
     } catch (error) {
       message.error("Lỗi khi tìm kiếm khách hàng!");
     }
-  };
+  }, [customerSearchText, refreshUsers, searchUsers, users]);
 
-  const handleSelectBranch = (branch: BranchDisplay) => {
-    setSelectedBranch(branch);
-    setCart([]); // Clear cart when switching branch
-    setIsBranchModalVisible(false);
-    message.success(`Đã chọn chi nhánh: ${branch.branch_name}`);
-  };
+  // Checkout and Payment
+  const handleCheckout = useCallback(() => {
+    if (cart.length === 0) {
+      message.warning("Giỏ hàng trống!");
+      return;
+    }
+    if (!selectedBranch) {
+      message.warning("Vui lòng chọn chi nhánh!");
+      return;
+    }
+    if (!warehouse) {
+      message.warning("Không tìm thấy kho cho chi nhánh này!");
+      return;
+    }
+    setReceivedAmount(getTotalAmount());
+    setIsPaymentModalVisible(true);
+  }, [cart.length, selectedBranch, warehouse, getTotalAmount]);
 
-  // ============ PROMOTION FUNCTIONS (TODO: Implement when API is ready) ============
-  // const getAvailablePromotions = () => {
-  //   if (!selectedCustomer) return [];
-  //   const currentDate = new Date().toISOString().split("T")[0];
-  //   return promotionsData.filter(
-  //     (promo) =>
-  //       promo.status === "active" &&
-  //       promo.startDate <= currentDate &&
-  //       promo.endDate >= currentDate &&
-  //       (promo.usageLimit ? promo.usedCount < promo.usageLimit : true)
-  //   );
-  // };
+  const handlePayment = useCallback(async () => {
+    if (paymentMethod === "cash" && receivedAmount < getTotalAmount()) {
+      message.error("Số tiền nhận không đủ!");
+      return;
+    }
 
-  // const applyPromotion = (promotion: Promotion) => {
-  //   const subtotal = getSubtotal();
-  //   let discountAmount = 0;
-  //   const minAmountCondition = promotion.conditions.find(
-  //     (condition) => condition.type === "min_amount"
-  //   );
-  //   if (minAmountCondition?.value && subtotal < minAmountCondition.value) {
-  //     message.warning(
-  //       `Đơn hàng tối thiểu ${minAmountCondition.value.toLocaleString()} VNĐ`
-  //     );
-  //     return;
-  //   }
-  //   if (promotion.type === "percentage") {
-  //     discountAmount = (subtotal * promotion.value) / 100;
-  //   } else if (promotion.type === "fixed") {
-  //     discountAmount = promotion.value;
-  //   }
-  //   const appliedPromo: AppliedPromotion = {
-  //     id: promotion.id,
-  //     name: promotion.name,
-  //     type: promotion.type,
-  //     value: promotion.value,
-  //     discountAmount: discountAmount,
-  //   };
-  //   setAppliedPromotions((prev) => [...prev, appliedPromo]);
-  //   message.success(`Áp dụng khuyến mãi: ${promotion.name}`);
-  // };
+    if (!selectedBranch || !warehouse) {
+      message.error("Thiếu thông tin chi nhánh hoặc kho!");
+      return;
+    }
 
-  // const removePromotion = (promotionId: number) => {
-  //   setAppliedPromotions((prev) => prev.filter((p) => p.id !== promotionId));
-  //   message.success("Đã xóa khuyến mãi");
-  // };
+    const hide = message.loading("Đang xử lý thanh toán...", 0);
 
-  // const clearPointsUsage = () => {
-  //   setPointsUsage(null);
-  //   message.success("Đã xóa sử dụng điểm");
-  // };
-  // ============ END PROMOTION FUNCTIONS ============
+    try {
+      const orderRequest: CreateSORequest = {
+        branch_id: selectedBranch.branch_id,
+        warehouse_id: warehouse.id,
+        customer_id: selectedCustomer?.user_id || undefined,
+        lines: cart.map((item) => ({
+          product_id: item.productId,
+          qty: item.quantity,
+          unit_price: item.price,
+        })),
+      };
 
+      const draftOrder = await createDraft(orderRequest);
+      const confirmedOrder = await confirm(draftOrder.id);
+      await fulfill(confirmedOrder.id);
+
+      hide();
+      message.success("Thanh toán thành công!");
+
+      // Reset states
+      setCart([]);
+      setSelectedCustomer(null);
+      setIsPaymentModalVisible(false);
+      setReceivedAmount(0);
+      setPaymentMethod("cash");
+
+      // Refresh catalog and warehouse
+      refreshCatalog();
+      refreshWarehouse();
+    } catch (error: any) {
+      hide();
+      message.error(error?.message || "Có lỗi xảy ra khi thanh toán!");
+    }
+  }, [
+    paymentMethod,
+    receivedAmount,
+    getTotalAmount,
+    selectedBranch,
+    warehouse,
+    selectedCustomer,
+    cart,
+    createDraft,
+    confirm,
+    fulfill,
+    refreshCatalog,
+    refreshWarehouse,
+  ]);
+
+  // Cart Table Columns
   const cartColumns = [
     {
       title: "Sản phẩm",
       dataIndex: "productName",
       key: "productName",
+      ellipsis: true,
     },
     {
       title: "Đơn giá",
       dataIndex: "price",
       key: "price",
-      render: (price: number) => `₫${price.toLocaleString()}`,
+      width: 120,
+      render: (price: number) => (
+        <Text strong style={{color: "#1890ff"}}>
+          ₫{price.toLocaleString()}
+        </Text>
+      ),
     },
     {
       title: "Số lượng",
       dataIndex: "quantity",
       key: "quantity",
+      width: 150,
       render: (quantity: number, record: CartItem) => (
         <Space>
           <Button
             size="small"
             icon={<MinusOutlined/>}
             onClick={() => updateQuantity(record.productId, quantity - 1)}
+            disabled={quantity <= 1}
           />
           <InputNumber
             size="small"
             value={quantity}
             min={1}
-            max={record.availableStock}
+            max={record.maxQuantity}
             style={{width: 60}}
             onChange={(value) => updateQuantity(record.productId, value || 1)}
           />
@@ -457,6 +435,7 @@ const POSPage = () => {
             size="small"
             icon={<PlusOutlined/>}
             onClick={() => updateQuantity(record.productId, quantity + 1)}
+            disabled={quantity >= record.maxQuantity}
           />
         </Space>
       ),
@@ -465,11 +444,15 @@ const POSPage = () => {
       title: "Thành tiền",
       dataIndex: "total",
       key: "total",
-      render: (total: number) => `₫${total.toLocaleString()}`,
+      width: 120,
+      render: (total: number) => (
+        <Text strong>₫{total.toLocaleString()}</Text>
+      ),
     },
     {
-      title: "Thao tác",
+      title: "",
       key: "action",
+      width: 50,
       render: (_: unknown, record: CartItem) => (
         <Button
           type="text"
@@ -480,25 +463,6 @@ const POSPage = () => {
       ),
     },
   ];
-
-  const filteredProducts = availableProducts.filter((product: any) => {
-    const matchesSearch =
-      product.productName.toLowerCase().includes(searchText.toLowerCase()) ||
-      product.categoryName.toLowerCase().includes(searchText.toLowerCase());
-
-    const matchesCategory =
-      categoryFilter === "all" || product.categoryName === categoryFilter;
-
-    const matchesStock =
-      stockFilter === "all" ||
-      (stockFilter === "in_stock" && product.availableStock > 10) ||
-      (stockFilter === "low_stock" &&
-        product.availableStock > 0 &&
-        product.availableStock <= 10) ||
-      (stockFilter === "out_of_stock" && product.availableStock === 0);
-
-    return matchesSearch && matchesCategory && matchesStock;
-  });
 
   const isLoading = catalogLoading || warehouseLoading || pricingLoading || inventoryLoading;
 
@@ -511,9 +475,30 @@ const POSPage = () => {
       }}
     >
       <Row gutter={[24, 24]} style={{height: "100%"}}>
+        {/* Products Section */}
         <Col xs={24} lg={14} style={{height: "100%"}}>
           <Card
-            title="Sản phẩm"
+            title={
+              <Space>
+                <ShopOutlined/>
+                <span>Sản phẩm</span>
+                {selectedBranch && (
+                  <Tag color="blue">{selectedBranch.branch_name}</Tag>
+                )}
+              </Space>
+            }
+            extra={
+              <Button
+                icon={<ReloadOutlined/>}
+                onClick={() => {
+                  refreshCatalog();
+                  refreshWarehouse();
+                }}
+                loading={isLoading}
+              >
+                Làm mới
+              </Button>
+            }
             style={{height: "100%", borderRadius: "12px"}}
             styles={{
               body: {height: "calc(100% - 57px)", overflow: "auto"},
@@ -522,11 +507,12 @@ const POSPage = () => {
             <Row gutter={[16, 16]} style={{marginBottom: "16px"}}>
               <Col span={8}>
                 <Input
-                  placeholder="Tìm kiếm sản phẩm..."
+                  placeholder="Tìm kiếm sản phẩm, mã SKU..."
                   prefix={<SearchOutlined/>}
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   size="large"
+                  allowClear
                 />
               </Col>
               <Col span={4}>
@@ -568,16 +554,11 @@ const POSPage = () => {
                   type={selectedBranch ? "primary" : "default"}
                 >
                   {selectedBranch ? (
-                    <Text
-                      ellipsis={{tooltip: true}}
-                      style={{color: "white"}}
-                    >
+                    <Text ellipsis={{tooltip: true}} style={{color: "white"}}>
                       {selectedBranch.branch_name}
                     </Text>
                   ) : (
-                    <Text ellipsis={{tooltip: true}}>
-                      "Chọn chi nhánh"
-                    </Text>
+                    "Chọn chi nhánh"
                   )}
                 </Button>
               </Col>
@@ -596,94 +577,149 @@ const POSPage = () => {
             </Row>
 
             {!selectedBranch ? (
-              <div
-                style={{
-                  textAlign: "center",
-                  padding: "80px 20px",
-                  color: "#999",
-                }}
-              >
-                <ShopOutlined style={{fontSize: "64px", marginBottom: "16px"}}/>
-                <Title level={4} style={{color: "#999"}}>
-                  Vui lòng chọn chi nhánh để xem sản phẩm
-                </Title>
-              </div>
+              <Empty
+                style={{marginTop: "100px"}}
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={
+                  <Space direction="vertical">
+                    <Text type="secondary">Vui lòng chọn chi nhánh để xem sản phẩm</Text>
+                  </Space>
+                }
+              />
             ) : isLoading ? (
               <div style={{textAlign: "center", padding: "80px 20px"}}>
                 <Spin size="large"/>
                 <div style={{marginTop: "16px"}}>Đang tải sản phẩm...</div>
               </div>
+            ) : filteredProducts.length === 0 ? (
+              <Empty description="Không tìm thấy sản phẩm"/>
             ) : (
               <Row gutter={[16, 16]}>
-                {filteredProducts.map((product: any) => (
-                  <Col xs={12} sm={8} md={6} key={product.productId}>
-                    <Card
-                      hoverable
-                      style={{
-                        borderRadius: "8px",
-                        opacity: product.availableStock === 0 ? 0.5 : 1,
-                      }}
-                      styles={{
-                        body: {padding: "12px"},
-                      }}
-                      onClick={() =>
-                        product.availableStock > 0 && addToCart(product)
+                {filteredProducts.map((product) => (
+                  <Col xs={12} sm={8} md={6} lg={6} xl={6} key={product.product_id}>
+                    <Badge.Ribbon
+                      text={product.availableStock === 0 ? "Hết hàng" : `Còn ${product.availableStock}`}
+                      color={
+                        product.availableStock === 0
+                          ? "red"
+                          : product.availableStock <= 10
+                            ? "orange"
+                            : "green"
                       }
                     >
-                      <div style={{textAlign: "center"}}>
-                        <div
-                          style={{
-                            height: "60px",
-                            backgroundColor: "#f5f5f5",
-                            borderRadius: "4px",
+                      <Card
+                        hoverable={product.availableStock > 0}
+                        style={{
+                          borderRadius: "8px",
+                          opacity: product.availableStock === 0 ? 0.5 : 1,
+                          cursor: product.availableStock === 0 ? "not-allowed" : "pointer",
+                          height: "100%",
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                        styles={{
+                          body: {
+                            padding: "12px",
+                            flex: 1,
                             display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            marginBottom: "8px",
-                          }}
-                        >
-                          <BarcodeOutlined
-                            style={{fontSize: "24px", color: "#999"}}
-                          />
-                        </div>
-                        <Text
-                          strong
-                          style={{
-                            fontSize: "12px",
-                            display: "block",
-                            marginBottom: "4px",
-                          }}
-                        >
-                          {product.productName}
-                        </Text>
-                        <Text
-                          style={{
-                            color: "#1890ff",
-                            fontSize: "14px",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          ₫{product.sellingPrice?.toLocaleString()}
-                        </Text>
-                        <div style={{marginTop: "4px"}}>
-                          <Tag color="blue" style={{fontSize: "10px"}}>
-                            {product.categoryName}
-                          </Tag>
-                          <Tag
-                            color={
-                              product.availableStock > 10
-                                ? "green"
-                                : product.availableStock > 0
-                                  ? "orange"
-                                  : "red"
-                            }
-                            style={{fontSize: "10px"}}
+                            flexDirection: "column",
+                            height: "100%"
+                          },
+                        }}
+                        onClick={() =>
+                          product.availableStock > 0 && addToCart(product)
+                        }
+                      >
+                        <div style={{
+                          textAlign: "center",
+                          display: "flex",
+                          flexDirection: "column",
+                          height: "100%",
+                        }}>
+                          <div
+                            style={{
+                              height: "80px",
+                              backgroundColor: "#f5f5f5",
+                              borderRadius: "4px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              marginBottom: "12px",
+                            }}
                           >
-                            Tồn: {product.availableStock}
-                          </Tag>
+                            <BarcodeOutlined
+                              style={{fontSize: "32px", color: "#999"}}
+                            />
+                          </div>
+                          <div style={{flex: 1, display: "flex", flexDirection: "column"}}>
+                            <Text
+                              strong
+                              style={{
+                                fontSize: "13px",
+                                display: "block",
+                                marginBottom: "8px",
+                                minHeight: "40px",
+                                lineHeight: "1.4",
+                              }}
+                              ellipsis={{
+                                tooltip: product.product_name
+                              }}
+                            >
+                              {product.product_name}
+                            </Text>
+                            <Text
+                              style={{
+                                color: "#1890ff",
+                                fontSize: "16px",
+                                fontWeight: "bold",
+                                display: "block",
+                                marginBottom: "8px",
+                              }}
+                            >
+                              ₫{product.sellingPrice?.toLocaleString()}
+                            </Text>
+                            <div style={{
+                              marginTop: "auto",
+                              marginBottom: "8px",
+                              display: "flex",
+                              flexWrap: "wrap",
+                              justifyContent: "center"
+                            }}>
+                              {product.brand && (
+                                <Tag color="purple" style={{
+                                  fontSize: "10px",
+                                  margin: 0,
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: "4px",
+                                  justifyContent: "center"
+                                }}>
+                                  <Text ellipsis={{tooltip: product.brand}}>
+                                    {product.brand}
+                                  </Text>
+                                </Tag>
+                              )}
+                            </div>
+                            <div style={{
+                              marginTop: "auto",
+                              marginBottom: "8px",
+                              display: "flex",
+                              flexWrap: "wrap",
+                              justifyContent: "center"
+                            }}>
+                              {product.sku && (
+                                <Tag color="blue" style={{fontSize: "10px", margin: 0}}>
+                                  <Text
+                                    ellipsis={{tooltip: product.sku}}>
+                                    {product.sku}
+                                  </Text>
+                                </Tag>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </Card>
+                      </Card>
+                    </Badge.Ribbon>
                   </Col>
                 ))}
               </Row>
@@ -691,9 +727,28 @@ const POSPage = () => {
           </Card>
         </Col>
 
+        {/* Cart Section */}
         <Col xs={24} lg={10} style={{height: "100%"}}>
           <Card
-            title="Giỏ hàng"
+            title={
+              <Space>
+                <ShoppingCartOutlined/>
+                <span>Giỏ hàng</span>
+                <Badge count={getTotalItems()} showZero color="#1890ff"/>
+              </Space>
+            }
+            extra={
+              cart.length > 0 && (
+                <Button
+                  size="small"
+                  danger
+                  icon={<ClearOutlined/>}
+                  onClick={clearCart}
+                >
+                  Xóa tất cả
+                </Button>
+              )
+            }
             style={{height: "100%", borderRadius: "12px"}}
             styles={{
               body: {
@@ -703,223 +758,94 @@ const POSPage = () => {
               },
             }}
           >
-            <div style={{flex: 1, overflow: "auto", marginBottom: "16px"}}>
-              <Table
-                dataSource={cart}
-                columns={cartColumns}
-                pagination={false}
-                size="small"
-                rowKey="productId"
+            {cart.length === 0 ? (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="Giỏ hàng trống"
+                style={{flex: 1, display: "flex", flexDirection: "column", justifyContent: "center"}}
               />
-            </div>
-
-            <Divider/>
-
-            <div style={{marginBottom: "16px"}}>
-              <Row justify="space-between" style={{marginBottom: "8px"}}>
-                <Text>Tổng sản phẩm:</Text>
-                <Text strong>{getTotalItems()}</Text>
-              </Row>
-              <Row justify="space-between" style={{marginBottom: "8px"}}>
-                <Text>Khách hàng:</Text>
-                <div style={{display: "flex", alignItems: "center", gap: "8px"}}>
-                  <Text>{selectedCustomer?.full_name || "Khách lẻ"}</Text>
-                  {/* TODO: Show customer tier when API is ready */}
-                  {/* {selectedCustomer?.customer_rank && (
-                    <Tag color={getTierInfo(selectedCustomer.customer_rank.toLowerCase())?.color}>
-                      {getTierInfo(selectedCustomer.customer_rank.toLowerCase())?.label}
-                    </Tag>
-                  )} */}
+            ) : (
+              <>
+                <div style={{flex: 1, overflow: "auto", marginBottom: "16px"}}>
+                  <Table
+                    dataSource={cart}
+                    columns={cartColumns}
+                    pagination={false}
+                    size="small"
+                    rowKey="productId"
+                  />
                 </div>
-              </Row>
-              <Row justify="space-between" style={{marginBottom: "8px"}}>
-                <Text>Chi nhánh:</Text>
-                <Text>{selectedBranch?.branch_name || "Chưa chọn"}</Text>
-              </Row>
 
-              {/* TODO: Show customer points when API is ready */}
-              {/* {selectedCustomer?.accumulated_points && (
-                <Row justify="space-between" style={{ marginBottom: "8px" }}>
-                  <Text>Điểm hiện có:</Text>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <Text strong style={{ color: "#52c41a" }}>
-                      {selectedCustomer.accumulated_points.toLocaleString()} điểm
-                    </Text>
-                    <Button
-                      size="small"
-                      icon={<StarOutlined />}
-                      onClick={() => setIsPointsModalVisible(true)}
-                    >
-                      Sử dụng
-                    </Button>
-                  </div>
-                </Row>
-              )} */}
+                <Divider style={{margin: "12px 0"}}/>
 
-              {/* TODO: Show applied promotions when API is ready */}
-              {/* {appliedPromotions.length > 0 && (
-                <div style={{ marginBottom: "8px" }}>
-                  <Text strong style={{ color: "#1890ff" }}>
-                    Khuyến mãi đã áp dụng:
-                  </Text>
-                  {appliedPromotions.map((promo) => (
-                    <div
-                      key={promo.id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginTop: "4px",
-                        padding: "4px 8px",
-                        backgroundColor: "#f6ffed",
-                        borderRadius: "4px",
-                      }}
-                    >
-                      <Text style={{ fontSize: "12px" }}>{promo.name}</Text>
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                        <Text style={{ fontSize: "12px", color: "#52c41a" }}>
-                          -₫{promo.discountAmount.toLocaleString()}
-                        </Text>
-                        <Button
-                          size="small"
-                          type="text"
-                          danger
-                          onClick={() => removePromotion(promo.id)}
-                        >
-                          ×
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                <div style={{marginBottom: "16px"}}>
+                  <Row justify="space-between" style={{marginBottom: "8px"}}>
+                    <Text>Tổng sản phẩm:</Text>
+                    <Text strong>{getTotalItems()}</Text>
+                  </Row>
+                  <Row justify="space-between" style={{marginBottom: "8px"}}>
+                    <Text>Khách hàng:</Text>
+                    <Text>{selectedCustomer?.full_name || "Khách lẻ"}</Text>
+                  </Row>
+                  <Row justify="space-between" style={{marginBottom: "8px"}}>
+                    <Text>Chi nhánh:</Text>
+                    <Text>{selectedBranch?.branch_name || "Chưa chọn"}</Text>
+                  </Row>
+
+                  <Divider style={{margin: "8px 0"}}/>
+
+                  <Row justify="space-between" style={{marginBottom: "4px"}}>
+                    <Text>Tạm tính:</Text>
+                    <Text>₫{getSubtotal().toLocaleString()}</Text>
+                  </Row>
+
+                  <Row justify="space-between">
+                    <Title level={4} style={{margin: 0}}>
+                      Tổng cộng:
+                    </Title>
+                    <Title level={4} style={{margin: 0, color: "#1890ff"}}>
+                      ₫{getTotalAmount().toLocaleString()}
+                    </Title>
+                  </Row>
                 </div>
-              )} */}
 
-              {/* TODO: Show points usage when API is ready */}
-              {/* {pointsUsage && (
-                <div style={{ marginBottom: "8px" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "4px 8px",
-                      backgroundColor: "#fff7e6",
-                      borderRadius: "4px",
-                    }}
+                <Space direction="vertical" style={{width: "100%"}}>
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<ShoppingCartOutlined/>}
+                    onClick={handleCheckout}
+                    disabled={cart.length === 0 || !selectedBranch}
+                    loading={orderLoading}
+                    style={{width: "100%"}}
                   >
-                    <Text style={{ fontSize: "12px" }}>
-                      Sử dụng {pointsUsage.pointsUsed.toLocaleString()} điểm
-                    </Text>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      <Text style={{ fontSize: "12px", color: "#fa8c16" }}>
-                        -₫{pointsUsage.discountAmount.toLocaleString()}
-                      </Text>
-                      <Button size="small" type="text" danger onClick={clearPointsUsage}>
-                        ×
+                    Thanh toán
+                  </Button>
+                  <Row gutter={[8, 8]}>
+                    <Col span={12}>
+                      <Button
+                        size="large"
+                        icon={<SaveOutlined/>}
+                        style={{width: "100%"}}
+                        disabled
+                      >
+                        Lưu hóa đơn tạm
                       </Button>
-                    </div>
-                  </div>
-                </div>
-              )} */}
-
-              <Divider style={{margin: "8px 0"}}/>
-
-              <Row justify="space-between" style={{marginBottom: "4px"}}>
-                <Text>Tạm tính:</Text>
-                <Text>₫{getSubtotal().toLocaleString()}</Text>
-              </Row>
-
-              {/* TODO: Show discount when API is ready */}
-              {/* {getTotalDiscount() > 0 && (
-                <Row justify="space-between" style={{ marginBottom: "4px" }}>
-                  <Text style={{ color: "#52c41a" }}>Giảm giá:</Text>
-                  <Text style={{ color: "#52c41a" }}>
-                    -₫{getTotalDiscount().toLocaleString()}
-                  </Text>
-                </Row>
-              )} */}
-
-              <Row justify="space-between">
-                <Title level={4} style={{margin: 0}}>
-                  Tổng cộng:
-                </Title>
-                <Title level={4} style={{margin: 0, color: "#1890ff"}}>
-                  ₫{getTotalAmount().toLocaleString()}
-                </Title>
-              </Row>
-
-              {/* TODO: Show points to earn when API is ready */}
-              {/* {selectedCustomer?.customer_rank && getPointsToEarn() > 0 && (
-                <Row justify="space-between" style={{ marginTop: "8px" }}>
-                  <Text style={{ fontSize: "12px", color: "#52c41a" }}>
-                    Sẽ tích được:
-                  </Text>
-                  <Text style={{ fontSize: "12px", color: "#52c41a" }}>
-                    +{getPointsToEarn()} điểm
-                  </Text>
-                </Row>
-              )} */}
-            </div>
-
-            <Space direction="vertical" style={{width: "100%"}}>
-              {/* TODO: Uncomment when promotion/points API is ready */}
-              {/* <Row gutter={[8, 8]}>
-                <Col span={12}>
-                  <Button
-                    size="large"
-                    icon={<GiftOutlined />}
-                    onClick={() => setIsPromotionModalVisible(true)}
-                    disabled={!selectedCustomer || cart.length === 0}
-                    style={{ width: "100%" }}
-                  >
-                    Khuyến mãi
-                  </Button>
-                </Col>
-                <Col span={12}>
-                  <Button
-                    size="large"
-                    icon={<StarOutlined />}
-                    onClick={() => setIsPointsModalVisible(true)}
-                    disabled={!selectedCustomer?.accumulated_points || cart.length === 0}
-                    style={{ width: "100%" }}
-                  >
-                    Điểm thưởng
-                  </Button>
-                </Col>
-              </Row> */}
-
-              <Button
-                type="primary"
-                size="large"
-                icon={<ShoppingCartOutlined/>}
-                onClick={handleCheckout}
-                disabled={cart.length === 0 || !selectedBranch}
-                loading={orderLoading}
-                style={{width: "100%"}}
-              >
-                Thanh toán
-              </Button>
-              <Row gutter={[8, 8]}>
-                <Col span={12}>
-                  <Button
-                    size="large"
-                    icon={<SaveOutlined/>}
-                    style={{width: "100%"}}
-                  >
-                    Lưu hóa đơn tạm
-                  </Button>
-                </Col>
-                <Col span={12}>
-                  <Button
-                    size="large"
-                    icon={<PrinterOutlined/>}
-                    style={{width: "100%"}}
-                  >
-                    In hóa đơn
-                  </Button>
-                </Col>
-              </Row>
-            </Space>
+                    </Col>
+                    <Col span={12}>
+                      <Button
+                        size="large"
+                        icon={<PrinterOutlined/>}
+                        style={{width: "100%"}}
+                        disabled
+                      >
+                        In hóa đơn
+                      </Button>
+                    </Col>
+                  </Row>
+                </Space>
+              </>
+            )}
           </Card>
         </Col>
       </Row>
@@ -948,6 +874,8 @@ const POSPage = () => {
                     selectedBranch?.branch_id === branch.branch_id
                       ? "#1890ff"
                       : undefined,
+                  borderWidth:
+                    selectedBranch?.branch_id === branch.branch_id ? 2 : 1,
                 }}
               >
                 <Space direction="vertical" style={{width: "100%"}}>
@@ -970,9 +898,7 @@ const POSPage = () => {
                     <Tag color="blue">{branch.branch_code}</Tag>
                     <Tag
                       color={
-                        branch.operating_status === "ACTIVE"
-                          ? "green"
-                          : "orange"
+                        branch.operating_status === "ACTIVE" ? "green" : "orange"
                       }
                     >
                       {branch.operating_status}
@@ -1071,6 +997,7 @@ const POSPage = () => {
                       onClick={() => {
                         setSelectedCustomer(record);
                         setIsCustomerModalVisible(false);
+                        message.success(`Đã chọn khách hàng: ${record.full_name}`);
                       }}
                     >
                       Chọn
@@ -1078,7 +1005,10 @@ const POSPage = () => {
                   ),
                 },
               ]}
-              pagination={false}
+              pagination={{
+                pageSize: 5,
+                showSizeChanger: false,
+              }}
               rowKey="user_id"
               size="small"
             />
@@ -1086,267 +1016,181 @@ const POSPage = () => {
         )}
 
         {customerType === "new" && (
-          //    TODO: Create new customer functionality
-          <></>
-        )
-        }
-      </Modal>
-
-      {/* TODO: Promotion Modal - Uncomment when API is ready */}
-      {/* <Modal
-        title="Áp dụng khuyến mãi"
-        open={isPromotionModalVisible}
-        onCancel={() => setIsPromotionModalVisible(false)}
-        footer={null}
-        width={800}
-      >
-        <div style={{ maxHeight: "500px", overflowY: "auto" }}>
-          <Text strong style={{ marginBottom: "16px", display: "block" }}>
-            Khuyến mãi có thể áp dụng cho khách hàng: {selectedCustomer?.full_name}
-          </Text>
-
-          <Row gutter={[16, 16]}>
-            {getAvailablePromotions().map((promotion) => (
-              <Col span={24} key={promotion.id}>
-                <Card
-                  hoverable
-                  style={{ marginBottom: "8px" }}
-                  actions={[
-                    <Button
-                      key="apply"
-                      type="primary"
-                      icon={<GiftOutlined />}
-                      onClick={() => {
-                        applyPromotion(promotion);
-                        setIsPromotionModalVisible(false);
-                      }}
-                    >
-                      Áp dụng
-                    </Button>,
-                  ]}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <Title level={5} style={{ margin: 0, marginBottom: "8px" }}>
-                        {promotion.name}
-                      </Title>
-                      <Text style={{ color: "#666", fontSize: "12px" }}>
-                        {promotion.description}
-                      </Text>
-                      <div style={{ marginTop: "8px" }}>
-                        {promotion.type === "percentage" && (
-                          <Tag color="blue">
-                            <PercentageOutlined /> Giảm {promotion.value}%
-                          </Tag>
-                        )}
-                        {promotion.type === "fixed" && (
-                          <Tag color="green">
-                            <DollarOutlined /> Giảm {promotion.value.toLocaleString()} VNĐ
-                          </Tag>
-                        )}
-                        {promotion.conditions
-                          .filter((condition) => condition.type === "min_amount")
-                          .map((condition) => (
-                            <Tag key={condition.id} color="orange">
-                              Đơn tối thiểu: {condition.value?.toLocaleString()} VNĐ
-                            </Tag>
-                          ))}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <Text style={{ fontSize: "12px", color: "#999" }}>
-                        HSD: {new Date(promotion.endDate).toLocaleDateString("vi-VN")}
-                      </Text>
-                    </div>
-                  </div>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-
-          {getAvailablePromotions().length === 0 && (
-            <div style={{ textAlign: "center", padding: "40px", color: "#999" }}>
-              <GiftOutlined style={{ fontSize: "48px", marginBottom: "16px" }} />
-              <div>Không có khuyến mãi nào khả dụng</div>
-            </div>
-          )}
-        </div>
-      </Modal> */}
-
-      {/* TODO: Points Modal - Uncomment when API is ready */}
-      {/* <Modal
-        title="Sử dụng điểm thưởng"
-        open={isPointsModalVisible}
-        onCancel={() => setIsPointsModalVisible(false)}
-        footer={null}
-        width={500}
-      >
-        {selectedCustomer && (
-          <div>
-            <div
-              style={{
-                backgroundColor: "#f6ffed",
-                padding: "16px",
-                borderRadius: "8px",
-                marginBottom: "16px",
-              }}
-            >
-              <Row justify="space-between" style={{ marginBottom: "8px" }}>
-                <Text strong>Khách hàng:</Text>
-                <Text>{selectedCustomer.full_name}</Text>
-              </Row>
-              <Row justify="space-between" style={{ marginBottom: "8px" }}>
-                <Text strong>Hạng:</Text>
-                <Tag color={getTierInfo(selectedCustomer.customer_rank?.toLowerCase() || "bronze")?.color}>
-                  {getTierInfo(selectedCustomer.customer_rank?.toLowerCase() || "bronze")?.label}
-                </Tag>
-              </Row>
-              <Row justify="space-between">
-                <Text strong>Điểm hiện có:</Text>
-                <Text strong style={{ color: "#52c41a", fontSize: "16px" }}>
-                  {selectedCustomer.accumulated_points?.toLocaleString()} điểm
-                </Text>
-              </Row>
-            </div>
-
-            <div style={{ marginBottom: "16px" }}>
-              <Text strong style={{ marginBottom: "8px", display: "block" }}>
-                Tỷ lệ quy đổi:
-              </Text>
-              <div
-                style={{
-                  backgroundColor: "#fff7e6",
-                  padding: "12px",
-                  borderRadius: "6px",
-                  fontSize: "14px",
-                }}
-              >
-                {selectedCustomer.customer_rank?.toLowerCase() === "bronze" && "1,000 điểm = 10,000 VNĐ"}
-                {selectedCustomer.customer_rank?.toLowerCase() === "silver" && "950 điểm = 10,000 VNĐ"}
-                {selectedCustomer.customer_rank?.toLowerCase() === "gold" && "900 điểm = 10,000 VNĐ"}
-                {selectedCustomer.customer_rank?.toLowerCase() === "platinum" && "850 điểm = 10,000 VNĐ"}
-                {selectedCustomer.customer_rank?.toLowerCase() === "diamond" && "800 điểm = 10,000 VNĐ"}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: "16px" }}>
-              <Text strong style={{ marginBottom: "8px", display: "block" }}>
-                Số điểm muốn sử dụng:
-              </Text>
-              <InputNumber
-                style={{ width: "100%" }}
-                placeholder="Nhập số điểm"
-                min={100}
-                max={selectedCustomer.accumulated_points}
-                step={100}
-                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                parser={(value) => Number(value!.replace(/\$\s?|(,*)/g, ""))}
-                onChange={(value) => {
-                  if (value) {
-                    const discountAmount = Math.floor(value / 100) * 1000;
-                    setPointsUsage({
-                      pointsUsed: value,
-                      discountAmount: discountAmount,
-                    });
-                  }
-                }}
-              />
-            </div>
-
-            {pointsUsage && (
-              <div
-                style={{
-                  backgroundColor: "#e6f7ff",
-                  padding: "12px",
-                  borderRadius: "6px",
-                  marginBottom: "16px",
-                }}
-              >
-                <Row justify="space-between">
-                  <Text>Số tiền được giảm:</Text>
-                  <Text strong style={{ color: "#1890ff" }}>
-                    ₫{pointsUsage.discountAmount.toLocaleString()}
-                  </Text>
-                </Row>
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-              <Button onClick={() => setIsPointsModalVisible(false)}>Hủy</Button>
-              <Button
-                type="primary"
-                onClick={() => {
-                  if (pointsUsage) {
-                    message.success(`Đã sử dụng ${pointsUsage.pointsUsed.toLocaleString()} điểm`);
-                    setIsPointsModalVisible(false);
-                  }
-                }}
-                disabled={!pointsUsage}
-              >
-                Xác nhận
-              </Button>
-            </div>
+          <div style={{textAlign: "center", padding: "40px"}}>
+            <Text type="secondary">Chức năng tạo khách hàng mới đang được phát triển</Text>
           </div>
         )}
-      </Modal> */}
+      </Modal>
 
       {/* Payment Modal */}
       <Modal
-        title="Thanh toán"
+        title={
+          <Space>
+            <DollarOutlined/>
+            <span>Thanh toán</span>
+          </Space>
+        }
         open={isPaymentModalVisible}
         onCancel={() => setIsPaymentModalVisible(false)}
         onOk={handlePayment}
         confirmLoading={orderLoading}
-        width={400}
+        width={500}
+        okText="Xác nhận thanh toán"
+        cancelText="Hủy"
       >
-        <Space direction="vertical" style={{width: "100%"}}>
+        <Space direction="vertical" style={{width: "100%"}} size="large">
+          {/* Order Summary */}
+          <Card size="small" style={{backgroundColor: "#f5f5f5"}}>
+            <Row gutter={[16, 16]}>
+              <Col span={12}>
+                <Statistic
+                  title="Tổng sản phẩm"
+                  value={getTotalItems()}
+                  prefix={<ShoppingCartOutlined/>}
+                />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title="Tổng tiền"
+                  value={getTotalAmount()}
+                  prefix="₫"
+                  valueStyle={{color: "#1890ff"}}
+                />
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Customer Info */}
           <div>
-            <Text strong>Tổng tiền: </Text>
-            <Text style={{fontSize: "18px", color: "#1890ff"}}>
-              ₫{getTotalAmount().toLocaleString()}
+            <Text strong style={{display: "block", marginBottom: "8px"}}>
+              Thông tin khách hàng:
             </Text>
+            <Card size="small">
+              <Row gutter={[8, 8]}>
+                <Col span={8}>
+                  <Text type="secondary">Tên:</Text>
+                </Col>
+                <Col span={16}>
+                  <Text strong>{selectedCustomer?.full_name || "Khách lẻ"}</Text>
+                </Col>
+                <Col span={8}>
+                  <Text type="secondary">SĐT:</Text>
+                </Col>
+                <Col span={16}>
+                  <Text>{selectedCustomer?.phone_number || "N/A"}</Text>
+                </Col>
+              </Row>
+            </Card>
           </div>
 
+          {/* Payment Method */}
           <div>
-            <Text strong>Phương thức thanh toán:</Text>
+            <Text strong style={{display: "block", marginBottom: "8px"}}>
+              Phương thức thanh toán:
+            </Text>
             <Select
               value={paymentMethod}
               onChange={setPaymentMethod}
-              style={{width: "100%", marginTop: "8px"}}
+              style={{width: "100%"}}
+              size="large"
             >
               <Option value="cash">
-                <DollarOutlined/> Tiền mặt
+                <Space>
+                  <DollarOutlined/>
+                  <span>Tiền mặt</span>
+                </Space>
               </Option>
-              <Option value="card">Thẻ</Option>
-              <Option value="transfer">Chuyển khoản</Option>
+              <Option value="card">
+                <Space>
+                  <span>💳</span>
+                  <span>Thẻ</span>
+                </Space>
+              </Option>
+              <Option value="transfer">
+                <Space>
+                  <span>🏦</span>
+                  <span>Chuyển khoản</span>
+                </Space>
+              </Option>
             </Select>
           </div>
 
+          {/* Cash Payment Details */}
           {paymentMethod === "cash" && (
             <div>
-              <Text strong>Số tiền nhận:</Text>
+              <Text strong style={{display: "block", marginBottom: "8px"}}>
+                Số tiền nhận:
+              </Text>
               <InputNumber
                 value={receivedAmount}
                 onChange={(value) => setReceivedAmount(value || 0)}
-                style={{width: "100%", marginTop: "8px"}}
+                style={{width: "100%"}}
+                size="large"
                 formatter={(value) =>
                   `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                 }
                 parser={(value) => Number(value!.replace(/₫\s?|(,*)/g, ""))}
+                min={0}
               />
-              {receivedAmount > getTotalAmount() && (
-                <Text style={{color: "#52c41a", fontSize: "12px"}}>
-                  Tiền thừa: ₫
-                  {(receivedAmount - getTotalAmount()).toLocaleString()}
-                </Text>
+
+              {receivedAmount >= getTotalAmount() && receivedAmount > 0 && (
+                <Card
+                  size="small"
+                  style={{
+                    marginTop: "12px",
+                    backgroundColor: "#f6ffed",
+                    borderColor: "#b7eb8f",
+                  }}
+                >
+                  <Row justify="space-between" align="middle">
+                    <Col>
+                      <Text strong style={{color: "#52c41a"}}>
+                        Tiền thừa:
+                      </Text>
+                    </Col>
+                    <Col>
+                      <Text strong style={{color: "#52c41a", fontSize: "18px"}}>
+                        ₫{getChange().toLocaleString()}
+                      </Text>
+                    </Col>
+                  </Row>
+                </Card>
+              )}
+
+              {receivedAmount < getTotalAmount() && receivedAmount > 0 && (
+                <Card
+                  size="small"
+                  style={{
+                    marginTop: "12px",
+                    backgroundColor: "#fff2e8",
+                    borderColor: "#ffbb96",
+                  }}
+                >
+                  <Row justify="space-between" align="middle">
+                    <Col>
+                      <Text strong style={{color: "#fa8c16"}}>
+                        Còn thiếu:
+                      </Text>
+                    </Col>
+                    <Col>
+                      <Text strong style={{color: "#fa8c16", fontSize: "18px"}}>
+                        ₫{(getTotalAmount() - receivedAmount).toLocaleString()}
+                      </Text>
+                    </Col>
+                  </Row>
+                </Card>
               )}
             </div>
+          )}
+
+          {/* Other Payment Methods */}
+          {paymentMethod !== "cash" && (
+            <Card size="small" style={{backgroundColor: "#e6f7ff"}}>
+              <Text type="secondary">
+                {paymentMethod === "card" && "Vui lòng quẹt thẻ hoặc nhập thông tin thẻ"}
+                {paymentMethod === "transfer" && "Vui lòng chuyển khoản đến tài khoản của cửa hàng"}
+              </Text>
+            </Card>
           )}
         </Space>
       </Modal>

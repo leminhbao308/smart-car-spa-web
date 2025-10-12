@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, {useState, useMemo} from "react";
 import {
   Card,
   Table,
@@ -17,6 +17,8 @@ import {
   Divider,
   message,
   Tooltip,
+  Spin,
+  Empty,
 } from "antd";
 import {
   SearchOutlined,
@@ -26,194 +28,209 @@ import {
   FilterOutlined,
   ReloadOutlined,
   FileTextOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import {useConfirmSalesOrder, useCreateReturn, useFulfillSalesOrder, useSalesOrders} from "@/lib/api/hooks";
+import {SaleOrderLineResponse, SaleOrderResponse} from "@/lib/api";
 
-const { Title, Text } = Typography;
-const { RangePicker } = DatePicker;
-const { Option } = Select;
-
-interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  customerName: string;
-  customerPhone: string;
-  totalAmount: number;
-  paymentMethod: string;
-  status: string;
-  createdAt: string;
-  staffName: string;
-  items: InvoiceItem[];
-}
-
-interface InvoiceItem {
-  id: string;
-  productName: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-}
+const {Title, Text} = Typography;
+const {RangePicker} = DatePicker;
+const {Option} = Select;
 
 const InvoicesPage = () => {
-  const [invoices, setInvoices] = useState<Invoice[]>([
-    {
-      id: "1",
-      invoiceNumber: "HD001",
-      customerName: "Nguyễn Văn A",
-      customerPhone: "0123456789",
-      totalAmount: 1250000,
-      paymentMethod: "cash",
-      status: "completed",
-      createdAt: "2024-01-15 10:30:00",
-      staffName: "Nguyễn Thị B",
-      items: [
-        { id: "1", productName: "Dầu nhớt Castrol 5W-30", quantity: 2, unitPrice: 450000, totalPrice: 900000 },
-        { id: "2", productName: "Lọc gió động cơ", quantity: 1, unitPrice: 120000, totalPrice: 120000 },
-        { id: "3", productName: "Nước làm mát", quantity: 1, unitPrice: 180000, totalPrice: 180000 },
-        { id: "4", productName: "Phí dịch vụ", quantity: 1, unitPrice: 50000, totalPrice: 50000 },
-      ]
-    },
-    {
-      id: "2",
-      invoiceNumber: "HD002",
-      customerName: "Trần Thị C",
-      customerPhone: "0987654321",
-      totalAmount: 850000,
-      paymentMethod: "card",
-      status: "completed",
-      createdAt: "2024-01-15 14:20:00",
-      staffName: "Lê Văn D",
-      items: [
-        { id: "1", productName: "Phanh đĩa trước", quantity: 1, unitPrice: 850000, totalPrice: 850000 },
-      ]
-    },
-    {
-      id: "3",
-      invoiceNumber: "HD003",
-      customerName: "Lê Văn E",
-      customerPhone: "0369852147",
-      totalAmount: 315000,
-      paymentMethod: "transfer",
-      status: "pending",
-      createdAt: "2024-01-15 16:45:00",
-      staffName: "Phạm Thị F",
-      items: [
-        { id: "1", productName: "Bugi NGK", quantity: 2, unitPrice: 95000, totalPrice: 190000 },
-        { id: "2", productName: "Dầu phanh DOT 4", quantity: 1, unitPrice: 220000, totalPrice: 220000 },
-        { id: "3", productName: "Phí dịch vụ", quantity: 1, unitPrice: 50000, totalPrice: 50000 },
-      ]
-    },
-  ]);
+  const {orders, loading, refetch} = useSalesOrders();
+  const confirmMutation = useConfirmSalesOrder();
+  const fulfillMutation = useFulfillSalesOrder();
+  const returnMutation = useCreateReturn();
 
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<SaleOrderResponse | null>(null);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
   const [dateRange, setDateRange] = useState<any>(null);
 
+  // Status utilities
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "completed": return "green";
-      case "pending": return "orange";
-      case "cancelled": return "red";
-      default: return "default";
+      case "FULFILLED":
+        return "green";
+      case "CONFIRMED":
+        return "blue";
+      case "DRAFT":
+        return "orange";
+      case "PARTIALLY_RETURNED":
+        return "purple";
+      case "RETURNED":
+        return "volcano";
+      case "CANCELLED":
+        return "red";
+      default:
+        return "default";
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case "completed": return "Hoàn thành";
-      case "pending": return "Chờ xử lý";
-      case "cancelled": return "Đã hủy";
-      default: return status;
+      case "FULFILLED":
+        return "Hoàn thành";
+      case "CONFIRMED":
+        return "Đã xác nhận";
+      case "DRAFT":
+        return "Nháp";
+      case "PARTIALLY_RETURNED":
+        return "Hoàn trả một phần";
+      case "RETURNED":
+        return "Đã hoàn trả";
+      case "CANCELLED":
+        return "Đã hủy";
+      default:
+        return status;
     }
   };
 
-  const getPaymentMethodText = (method: string) => {
-    switch (method) {
-      case "cash": return "Tiền mặt";
-      case "card": return "Thẻ";
-      case "transfer": return "Chuyển khoản";
-      default: return method;
-    }
+  // Filter orders
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      const matchesSearch =
+        order.id.toLowerCase().includes(searchText.toLowerCase()) ||
+        order.customer?.full_name.toLowerCase().includes(searchText.toLowerCase()) ||
+        order.customer?.phone_number.includes(searchText) ||
+        order.branch.branch_name.toLowerCase().includes(searchText.toLowerCase());
+
+      const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+
+      const matchesDate = !dateRange || (
+        dayjs(order.created_date).isAfter(dateRange[0]) &&
+        dayjs(order.created_date).isBefore(dateRange[1])
+      );
+
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [orders, searchText, statusFilter, dateRange]);
+
+  // Calculate total amount
+  const calculateTotal = (order: SaleOrderResponse) => {
+    return order.lines.reduce((sum, line) => sum + (line.quantity * line.unit_price), 0);
   };
 
-  const filteredInvoices = invoices.filter(invoice => {
-    const matchesSearch = 
-      invoice.invoiceNumber.toLowerCase().includes(searchText.toLowerCase()) ||
-      invoice.customerName.toLowerCase().includes(searchText.toLowerCase()) ||
-      invoice.customerPhone.includes(searchText);
-    
-    const matchesStatus = statusFilter === "all" || invoice.status === statusFilter;
-    const matchesPayment = paymentMethodFilter === "all" || invoice.paymentMethod === paymentMethodFilter;
-    
-    const matchesDate = !dateRange || (
-      dayjs(invoice.createdAt).isAfter(dateRange[0]) &&
-      dayjs(invoice.createdAt).isBefore(dateRange[1])
-    );
-
-    return matchesSearch && matchesStatus && matchesPayment && matchesDate;
-  });
-
-  const handleViewDetail = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
+  // Action handlers
+  const handleViewDetail = (order: SaleOrderResponse) => {
+    setSelectedOrder(order);
     setIsDetailModalVisible(true);
   };
 
-  const handlePrint = (invoice: Invoice) => {
-    message.success(`In hóa đơn ${invoice.invoiceNumber}`);
+  const handleConfirmOrder = async (order: SaleOrderResponse) => {
+    try {
+      await confirmMutation.mutateAsync(order.id);
+      message.success(`Xác nhận đơn hàng ${order.id} thành công`);
+    } catch (error) {
+      // Error handled by mutation
+    }
   };
 
-  const handleExport = (invoice: Invoice) => {
-    message.success(`Xuất hóa đơn ${invoice.invoiceNumber}`);
+  const handleFulfillOrder = async (order: SaleOrderResponse) => {
+    try {
+      await fulfillMutation.mutateAsync(order.id);
+      message.success(`Hoàn thành đơn hàng ${order.id} thành công`);
+    } catch (error) {
+      // Error handled by mutation
+    }
   };
 
+  const handleCreateReturn = async (order: SaleOrderResponse) => {
+    Modal.confirm({
+      title: "Xác nhận hoàn trả",
+      content: `Bạn có chắc chắn muốn tạo yêu cầu hoàn trả cho đơn hàng ${order.id}?`,
+      onOk: async () => {
+        try {
+          const items = order.lines.map(line => ({
+            product_id: line.product.product_id,
+            qty: line.quantity,
+            unit_cost: line.unit_price,
+          }));
+          await returnMutation.mutateAsync({orderId: order.id, items});
+        } catch (error) {
+          // Error handled by mutation
+        }
+      },
+    });
+  };
+
+  const handlePrint = (order: SaleOrderResponse) => {
+    message.success(`In hóa đơn ${order.id}`);
+    // Implement print logic
+  };
+
+  const handleExport = (order: SaleOrderResponse) => {
+    message.success(`Xuất hóa đơn ${order.id}`);
+    // Implement export logic
+  };
+
+  const handleRefresh = () => {
+    refetch();
+    message.success("Đã làm mới dữ liệu");
+  };
+
+  const handleResetFilters = () => {
+    setSearchText("");
+    setStatusFilter("all");
+    setDateRange(null);
+  };
+
+  // Table columns
   const columns = [
     {
-      title: "Mã hóa đơn",
-      dataIndex: "invoiceNumber",
-      key: "invoiceNumber",
-      width: 120,
+      title: "Mã đơn hàng",
+      dataIndex: "id",
+      key: "id",
+      width: 180,
       render: (text: string) => (
-        <Text strong style={{ color: "#1890ff" }}>{text}</Text>
+        <Text strong style={{color: "#1890ff", fontSize: "12px"}} ellipsis={{tooltip: text}}>
+          {text}
+        </Text>
       ),
     },
     {
       title: "Khách hàng",
       key: "customer",
-      render: (_, record: Invoice) => (
+      width: 180,
+      render: (_: any, record: SaleOrderResponse) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{record.customerName}</div>
-          <Text type="secondary" style={{ fontSize: "12px" }}>
-            {record.customerPhone}
-          </Text>
+          <div style={{fontWeight: 500}}>
+            {record.customer?.full_name || "Khách lẻ"}
+          </div>
+          {record.customer?.phone_number && (
+            <Text type="secondary" style={{fontSize: "12px"}}>
+              {record.customer.phone_number}
+            </Text>
+          )}
         </div>
       ),
     },
     {
-      title: "Tổng tiền",
-      dataIndex: "totalAmount",
-      key: "totalAmount",
-      width: 120,
-      render: (amount: number) => (
-        <Text strong style={{ color: "#52c41a" }}>
-          ₫{amount.toLocaleString()}
-        </Text>
-      ),
+      title: "Chi nhánh",
+      dataIndex: ["branch", "branch_name"],
+      key: "branch",
+      width: 150,
     },
     {
-      title: "Thanh toán",
-      dataIndex: "paymentMethod",
-      key: "paymentMethod",
-      width: 100,
-      render: (method: string) => getPaymentMethodText(method),
+      title: "Tổng tiền",
+      key: "total",
+      width: 130,
+      render: (_: any, record: SaleOrderResponse) => (
+        <Text strong style={{color: "#52c41a"}}>
+          ₫{calculateTotal(record).toLocaleString()}
+        </Text>
+      ),
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      width: 100,
+      width: 140,
       render: (status: string) => (
         <Tag color={getStatusColor(status)}>
           {getStatusText(status)}
@@ -221,42 +238,79 @@ const InvoicesPage = () => {
       ),
     },
     {
-      title: "Nhân viên",
-      dataIndex: "staffName",
-      key: "staffName",
-      width: 120,
-    },
-    {
       title: "Ngày tạo",
-      dataIndex: "createdAt",
-      key: "createdAt",
+      dataIndex: "created_date",
+      key: "created_date",
       width: 150,
       render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm"),
     },
     {
       title: "Thao tác",
       key: "action",
-      width: 150,
-      render: (_, record: Invoice) => (
-        <Space>
+      width: 200,
+      fixed: "right" as const,
+      render: (_: any, record: SaleOrderResponse) => (
+        <Space size="small">
           <Tooltip title="Xem chi tiết">
             <Button
               type="text"
-              icon={<EyeOutlined />}
+              size="small"
+              icon={<EyeOutlined/>}
               onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
+
+          {record.status === "DRAFT" && (
+            <Tooltip title="Xác nhận">
+              <Button
+                type="text"
+                size="small"
+                icon={<CheckCircleOutlined/>}
+                onClick={() => handleConfirmOrder(record)}
+                loading={confirmMutation.isPending}
+              />
+            </Tooltip>
+          )}
+
+          {record.status === "CONFIRMED" && (
+            <Tooltip title="Hoàn thành">
+              <Button
+                type="text"
+                size="small"
+                icon={<CheckCircleOutlined/>}
+                style={{color: "#52c41a"}}
+                onClick={() => handleFulfillOrder(record)}
+                loading={fulfillMutation.isPending}
+              />
+            </Tooltip>
+          )}
+
+          {record.status === "FULFILLED" && (
+            <Tooltip title="Hoàn trả">
+              <Button
+                type="text"
+                size="small"
+                icon={<UndoOutlined/>}
+                onClick={() => handleCreateReturn(record)}
+                loading={returnMutation.isPending}
+              />
+            </Tooltip>
+          )}
+
           <Tooltip title="In hóa đơn">
             <Button
               type="text"
-              icon={<PrinterOutlined />}
+              size="small"
+              icon={<PrinterOutlined/>}
               onClick={() => handlePrint(record)}
             />
           </Tooltip>
+
           <Tooltip title="Xuất file">
             <Button
               type="text"
-              icon={<DownloadOutlined />}
+              size="small"
+              icon={<DownloadOutlined/>}
               onClick={() => handleExport(record)}
             />
           </Tooltip>
@@ -266,66 +320,66 @@ const InvoicesPage = () => {
   ];
 
   return (
-    <div style={{ padding: "24px" }}>
-      <div style={{ marginBottom: "24px" }}>
-        <Title level={2} style={{ margin: 0, color: "rgba(0, 0, 0, 0.85)" }}>
+    <div style={{padding: "24px"}}>
+      <div style={{marginBottom: "24px"}}>
+        <Title level={2} style={{margin: 0, color: "rgba(0, 0, 0, 0.85)"}}>
           Quản lý hóa đơn
         </Title>
-        <Text type="secondary" style={{ fontSize: "16px" }}>
+        <Text type="secondary" style={{fontSize: "16px"}}>
           Danh sách hóa đơn bán hàng
         </Text>
       </div>
 
-      <Card style={{ borderRadius: "12px", marginBottom: "24px" }}>
+      {/* Filters */}
+      <Card style={{borderRadius: "12px", marginBottom: "24px"}}>
         <Row gutter={[16, 16]} align="middle">
-          <Col xs={24} sm={12} md={6}>
+          <Col xs={24} sm={12} md={8}>
             <Input
-              placeholder="Tìm kiếm hóa đơn, khách hàng..."
-              prefix={<SearchOutlined />}
+              placeholder="Tìm kiếm đơn hàng, khách hàng, chi nhánh..."
+              prefix={<SearchOutlined/>}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
+              allowClear
             />
           </Col>
-          <Col xs={24} sm={12} md={4}>
+          <Col xs={24} sm={12} md={5}>
             <Select
               placeholder="Trạng thái"
               value={statusFilter}
               onChange={setStatusFilter}
-              style={{ width: "100%" }}
+              style={{width: "100%"}}
             >
               <Option value="all">Tất cả</Option>
-              <Option value="completed">Hoàn thành</Option>
-              <Option value="pending">Chờ xử lý</Option>
-              <Option value="cancelled">Đã hủy</Option>
+              <Option value="DRAFT">Nháp</Option>
+              <Option value="CONFIRMED">Đã xác nhận</Option>
+              <Option value="FULFILLED">Hoàn thành</Option>
+              <Option value="PARTIALLY_RETURNED">Hoàn trả một phần</Option>
+              <Option value="RETURNED">Đã hoàn trả</Option>
+              <Option value="CANCELLED">Đã hủy</Option>
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={4}>
-            <Select
-              placeholder="Thanh toán"
-              value={paymentMethodFilter}
-              onChange={setPaymentMethodFilter}
-              style={{ width: "100%" }}
-            >
-              <Option value="all">Tất cả</Option>
-              <Option value="cash">Tiền mặt</Option>
-              <Option value="card">Thẻ</Option>
-              <Option value="transfer">Chuyển khoản</Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
+          <Col xs={24} sm={12} md={7}>
             <RangePicker
-              style={{ width: "100%" }}
+              style={{width: "100%"}}
               value={dateRange}
               onChange={setDateRange}
               placeholder={["Từ ngày", "Đến ngày"]}
+              format="DD/MM/YYYY"
             />
           </Col>
           <Col xs={24} sm={12} md={4}>
             <Space>
-              <Button icon={<FilterOutlined />}>
-                Lọc
+              <Button
+                icon={<FilterOutlined/>}
+                onClick={handleResetFilters}
+              >
+                Xóa lọc
               </Button>
-              <Button icon={<ReloadOutlined />}>
+              <Button
+                icon={<ReloadOutlined/>}
+                onClick={handleRefresh}
+                loading={loading}
+              >
                 Làm mới
               </Button>
             </Space>
@@ -333,101 +387,145 @@ const InvoicesPage = () => {
         </Row>
       </Card>
 
-      <Card style={{ borderRadius: "12px" }}>
-        <Table
-          dataSource={filteredInvoices}
-          columns={columns}
-          rowKey="id"
-          pagination={{
-            total: filteredInvoices.length,
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} hóa đơn`,
-          }}
-          scroll={{ x: 1000 }}
-        />
+      {/* Table */}
+      <Card style={{borderRadius: "12px"}}>
+        <Spin spinning={loading}>
+          <Table
+            dataSource={filteredOrders}
+            columns={columns}
+            rowKey="id"
+            pagination={{
+              total: filteredOrders.length,
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} của ${total} hóa đơn`,
+            }}
+            scroll={{x: 1200}}
+            locale={{
+              emptyText: (
+                <Empty
+                  description="Không có dữ liệu"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              ),
+            }}
+          />
+        </Spin>
       </Card>
 
-      {/* Invoice Detail Modal */}
+      {/* Detail Modal */}
       <Modal
         title={
           <Space>
-            <FileTextOutlined />
-            <span>Chi tiết hóa đơn {selectedInvoice?.invoiceNumber}</span>
+            <FileTextOutlined/>
+            <span>Chi tiết hóa đơn</span>
           </Space>
         }
         open={isDetailModalVisible}
         onCancel={() => setIsDetailModalVisible(false)}
         footer={[
-          <Button key="print" icon={<PrinterOutlined />} onClick={() => selectedInvoice && handlePrint(selectedInvoice)}>
+          <Button
+            key="print"
+            icon={<PrinterOutlined/>}
+            onClick={() => selectedOrder && handlePrint(selectedOrder)}
+          >
             In hóa đơn
           </Button>,
-          <Button key="export" icon={<DownloadOutlined />} onClick={() => selectedInvoice && handleExport(selectedInvoice)}>
+          <Button
+            key="export"
+            icon={<DownloadOutlined/>}
+            onClick={() => selectedOrder && handleExport(selectedOrder)}
+          >
             Xuất file
           </Button>,
-          <Button key="close" onClick={() => setIsDetailModalVisible(false)}>
+          <Button key="close" type="primary" onClick={() => setIsDetailModalVisible(false)}>
             Đóng
           </Button>,
         ]}
-        width={800}
+        width={900}
       >
-        {selectedInvoice && (
+        {selectedOrder && (
           <div>
-            <Descriptions column={2} bordered>
-              <Descriptions.Item label="Mã hóa đơn" span={1}>
-                <Text strong>{selectedInvoice.invoiceNumber}</Text>
+            <Descriptions column={2} bordered size="small">
+              <Descriptions.Item label="Mã đơn hàng" span={2}>
+                <Text strong copyable>{selectedOrder.id}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Ngày tạo" span={1}>
-                {dayjs(selectedInvoice.createdAt).format("DD/MM/YYYY HH:mm")}
+                {dayjs(selectedOrder.created_date).format("DD/MM/YYYY HH:mm")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Người tạo" span={1}>
+                {selectedOrder.created_by}
               </Descriptions.Item>
               <Descriptions.Item label="Khách hàng" span={1}>
-                {selectedInvoice.customerName}
+                {selectedOrder.customer?.full_name || "Khách lẻ"}
               </Descriptions.Item>
               <Descriptions.Item label="Số điện thoại" span={1}>
-                {selectedInvoice.customerPhone}
+                {selectedOrder.customer?.phone_number || "N/A"}
               </Descriptions.Item>
-              <Descriptions.Item label="Nhân viên" span={1}>
-                {selectedInvoice.staffName}
+              <Descriptions.Item label="Chi nhánh" span={1}>
+                {selectedOrder.branch.branch_name}
               </Descriptions.Item>
-              <Descriptions.Item label="Phương thức thanh toán" span={1}>
-                {getPaymentMethodText(selectedInvoice.paymentMethod)}
+              <Descriptions.Item label="Địa chỉ" span={1}>
+                {selectedOrder.branch.address}
+              </Descriptions.Item>
+              <Descriptions.Item label="Kho hàng" span={1}>
+                <Text copyable={{text: selectedOrder.warehouse.id}}>
+                  {selectedOrder.warehouse.id.slice(0, 8)}...
+                </Text>
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái" span={1}>
-                <Tag color={getStatusColor(selectedInvoice.status)}>
-                  {getStatusText(selectedInvoice.status)}
+                <Tag color={getStatusColor(selectedOrder.status)}>
+                  {getStatusText(selectedOrder.status)}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Tổng tiền" span={1}>
-                <Text strong style={{ fontSize: "16px", color: "#52c41a" }}>
-                  ₫{selectedInvoice.totalAmount.toLocaleString()}
+              <Descriptions.Item label="Tổng tiền" span={2}>
+                <Text strong style={{fontSize: "18px", color: "#52c41a"}}>
+                  ₫{calculateTotal(selectedOrder).toLocaleString()}
                 </Text>
               </Descriptions.Item>
             </Descriptions>
 
-            <Divider />
+            <Divider/>
 
             <Title level={5}>Chi tiết sản phẩm</Title>
             <Table
-              dataSource={selectedInvoice.items}
+              dataSource={selectedOrder.lines}
               columns={[
-                { title: "Sản phẩm", dataIndex: "productName", key: "productName" },
-                { title: "Số lượng", dataIndex: "quantity", key: "quantity", width: 100 },
-                { 
-                  title: "Đơn giá", 
-                  dataIndex: "unitPrice", 
-                  key: "unitPrice", 
+                {
+                  title: "Sản phẩm",
+                  dataIndex: ["product", "product_name"],
+                  key: "product_name",
+                },
+                {
+                  title: "Mã SP",
+                  dataIndex: ["product", "sku"],
+                  key: "sku",
                   width: 120,
+                },
+                {
+                  title: "Số lượng",
+                  dataIndex: "quantity",
+                  key: "quantity",
+                  width: 100,
+                  align: "center" as const,
+                },
+                {
+                  title: "Đơn giá",
+                  dataIndex: "unit_price",
+                  key: "unit_price",
+                  width: 130,
                   render: (price: number) => `₫${price.toLocaleString()}`
                 },
-                { 
-                  title: "Thành tiền", 
-                  dataIndex: "totalPrice", 
-                  key: "totalPrice", 
-                  width: 120,
-                  render: (price: number) => (
-                    <Text strong>₫{price.toLocaleString()}</Text>
+                {
+                  title: "Thành tiền",
+                  key: "total",
+                  width: 140,
+                  render: (_: any, record: SaleOrderLineResponse) => (
+                    <Text strong>
+                      ₫{(record.quantity * record.unit_price).toLocaleString()}
+                    </Text>
                   )
                 },
               ]}

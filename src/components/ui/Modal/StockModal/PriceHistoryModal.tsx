@@ -4,14 +4,7 @@ import {ColumnsType} from "antd/es/table";
 import {LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer} from "recharts";
 import {ArrowUpOutlined, ArrowDownOutlined, MinusOutlined} from "@ant-design/icons";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import {PurchaseHistory, PurchaseOrderLine} from "@/lib/api";
-
-interface Product {
-  productId: string;
-  productName: string;
-  sku: string;
-  brand?: string;
-}
+import {Product, PurchaseHistory, PurchaseOrderLine} from "@/lib/api";
 
 interface PriceHistoryModalProps {
   visible: boolean;
@@ -43,7 +36,7 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({
 
     setLoading(true);
     try {
-      const data = await onFetchHistory(product.productId);
+      const data = await onFetchHistory(product.product_id);
 
       if (!data || !data.lines) {
         setHistory([]);
@@ -193,7 +186,7 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({
         <div>
           <div style={{fontSize: 18, fontWeight: 600}}>Lịch sử giá nhập</div>
           <div style={{fontSize: 14, fontWeight: 400, color: "#666", marginTop: 4}}>
-            {product.productName} ({product.sku})
+            {product.product_name} ({product.sku})
           </div>
         </div>
       }
