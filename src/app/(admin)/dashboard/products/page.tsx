@@ -169,18 +169,18 @@ const ProductsPage = () => {
       width: 80,
       render: (unit: string) => <Tag color="green">{unit}</Tag>,
     },
-    // {
-    //   title: "Giá bán",
-    //   dataIndex: "sellingPrice",
-    //   key: "sellingPrice",
-    //   width: 120,
-    //   sorter: (a, b) => a.sellingPrice - b.sellingPrice,
-    //   render: (price: number) => (
-    //     <div style={{ fontWeight: 500, color: "#52c41a" }}>
-    //       {formatCurrency(price)}
-    //     </div>
-    //   ),
-    // },
+    {
+      title: "Giá cao nhất",
+      dataIndex: "peakPrice",
+      key: "peakPrice",
+      width: 120,
+      sorter: (a, b) => (a.peakPrice || 0) - (b.peakPrice || 0),
+      render: (price: number) => (
+        <div style={{ fontWeight: 500, color: "#52c41a" }}>
+          {price ? price.toLocaleString() + "đ" : "N/A"}
+        </div>
+      ),
+    },
     {
       title: "Trạng thái",
       dataIndex: "is_active",
@@ -354,19 +354,14 @@ const ProductsPage = () => {
                 allowClear
                 style={{ width: "100%" }}
               >
-                {productTypes.map(
-                  (productType: {
-                    productTypeId: string;
-                    productTypeName: string;
-                  }) => (
-                    <Option
-                      key={productType.productTypeId}
-                      value={productType.productTypeId}
-                    >
-                      {productType.productTypeName}
-                    </Option>
-                  )
-                )}
+                {productTypes.map((productType) => (
+                  <Option
+                    key={productType.product_type_id}
+                    value={productType.product_type_id}
+                  >
+                    {productType.product_type_name}
+                  </Option>
+                ))}
               </Select>
             </div>
           </Col>

@@ -1,28 +1,153 @@
 "use client";
-import React, { useState } from "react";
-import { Button, Space, Tag, Popconfirm, Switch } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import React, { useState, useMemo } from "react";
 import { AdminTable } from "@/components/ui/Table";
-import { ProductTypeModal } from "@/components/ui/Modal/ProductTypeModals";
-import { useProductTypes, useUpdateProductTypeStatus, useDeleteProductType } from "@/lib/api/hooks/useProductManagement";
+import { ProductTypeModal } from "@/components/ui/Modal/ProductTypeModals/ProductTypeModal";
+import { ColumnsType } from "antd/es/table";
+import { Tag, Card, Row, Col, Select, Input, Button, Space, message } from "antd";
+import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
+import { useProductTypes, useUpdateProductTypeStatus } from "@/lib/api/hooks/useProductManagement";
 import { ProductType } from "@/lib/api/types/product.types";
 
+const { Search } = Input;
+const { Option } = Select;
+
+// Product Type Status Options
+const PRODUCT_TYPE_STATUS_OPTIONS = [
+  { value: true, label: "Hoạt động", color: "green" },
+  { value: false, label: "Tạm dừng", color: "red" },
+];
+
 const ProductTypesPage: React.FC = () => {
+  // React Query hooks
+  const { data: productTypesData, isLoading } = useProductTypes({});
+  const updateStatusMutation = useUpdateProductTypeStatus();
+
+  // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProductType, setEditingProductType] = useState<ProductType | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
 
-  const { data: productTypesData, isLoading, refetch } = useProductTypes({
-    page: currentPage - 1,
-    size: pageSize,
-    sort: "createdDate",
-    direction: "DESC",
+  // Filter states
+  const [filters, setFilters] = useState<{
+    status?: string;
+    searchText?: string;
+  }>({
+    status: undefined,
+    searchText: undefined,
   });
 
-  const updateStatusMutation = useUpdateProductTypeStatus();
-  const deleteMutation = useDeleteProductType();
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
 
+  // Extract data from response
+  const productTypes = useMemo(() => {
+    return productTypesData?.data?.content || [];
+  }, [productTypesData]);
+
+  // Update pagination when data changes
+  React.useEffect(() => {
+    if (productTypesData?.data) {
+      setPagination(prev => ({
+        ...prev,
+        total: productTypesData.data.totalElements || 0,
+      }));
+    }
+  }, [productTypesData]);
+
+  // Filtered data
+  const filteredData = useMemo(() => {
+    let filtered = [...productTypes];
+
+    // Search filter
+    if (filters.searchText) {
+      const searchLower = filters.searchText.toLowerCase();
+      filtered = filtered.filter(
+        (item) =>
+          item.product_type_name.toLowerCase().includes(searchLower) ||
+          item.product_type_code.toLowerCase().includes(searchLower) ||
+          (item.description && item.description.toLowerCase().includes(searchLower))
+      );
+    }
+
+    // Status filter
+    if (filters.status) {
+      filtered = filtered.filter((item) => item.is_active === (filters.status === "true"));
+    }
+
+    return filtered;
+  }, [productTypes, filters]);
+
+  // Reset filters
+  const handleResetFilters = () => {
+    setFilters({
+      status: undefined,
+      searchText: undefined,
+    });
+  };
+
+  // Định nghĩa columns cho loại sản phẩm
+  const productTypeColumns: ColumnsType<ProductType> = [
+    {
+      title: "STT",
+      key: "index",
+      width: 60,
+      align: "center",
+      render: (_, __, index) => {
+        const currentPage = pagination?.current || 1;
+        const pageSize = pagination?.pageSize || 10;
+        return (currentPage - 1) * pageSize + index + 1;
+      },
+    },
+    {
+      title: "Tên loại sản phẩm",
+      key: "productType",
+      width: 300,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
+            {record.product_type_name}
+          </div>
+          <div style={{ fontSize: 12, color: "#666", marginBottom: 2 }}>
+            {record.product_type_code}
+          </div>
+          <div style={{ fontSize: 11, color: "#999", lineHeight: 1.3 }}>
+            {record.description || "Không có mô tả"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Danh mục",
+      dataIndex: "category_name",
+      key: "category_name",
+      width: 150,
+      render: (categoryName: string) => (
+        <Tag color="blue">{categoryName}</Tag>
+      ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "is_active",
+      key: "is_active",
+      width: 100,
+      render: (isActive: boolean) => {
+        const statusConfig = PRODUCT_TYPE_STATUS_OPTIONS.find(
+          (s) => s.value === isActive
+        );
+        return <Tag color={statusConfig?.color}>{statusConfig?.label}</Tag>;
+      },
+      filters: PRODUCT_TYPE_STATUS_OPTIONS.map((status) => ({
+        text: status.label,
+        value: status.value.toString(),
+      })),
+      onFilter: (value, record) => record.is_active.toString() === value,
+    },
+  ];
+
+  // Handlers
   const handleAdd = () => {
     setEditingProductType(null);
     setModalOpen(true);
@@ -33,132 +158,132 @@ const ProductTypesPage: React.FC = () => {
     setModalOpen(true);
   };
 
-  const handleStatusChange = async (record: ProductType, checked: boolean) => {
-    try {
-      await updateStatusMutation.mutateAsync({
-        productTypeId: record.productTypeId,
-        isActive: checked,
-      });
-    } catch (error) {
-      console.error("Failed to update status:", error);
-    }
+  const handleView = (record: ProductType) => {
+    setEditingProductType(record);
+    setModalOpen(true);
   };
 
-  const handleDelete = async (record: ProductType) => {
-    try {
-      await deleteMutation.mutateAsync(record.productTypeId);
-    } catch (error) {
-      console.error("Failed to delete:", error);
-    }
+  const handleToggleStatus = (record: ProductType) => {
+    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
+    // You can add confirmation modal here if needed
+    updateStatusMutation.mutateAsync({
+      productTypeId: record.product_type_id,
+      isActive: !record.is_active,
+    });
+    message.success(`${action} loại sản phẩm thành công!`);
   };
-
-  const columns = [
-    {
-      title: "Mã loại",
-      dataIndex: "productTypeCode",
-      key: "productTypeCode",
-      width: 120,
-    },
-    {
-      title: "Tên loại sản phẩm",
-      dataIndex: "productTypeName",
-      key: "productTypeName",
-      ellipsis: true,
-    },
-    {
-      title: "Danh mục",
-      dataIndex: "categoryName",
-      key: "categoryName",
-      width: 150,
-    },
-    {
-      title: "Mô tả",
-      dataIndex: "description",
-      key: "description",
-      ellipsis: true,
-      render: (text: string) => text || "-",
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "isActive",
-      width: 100,
-      align: "center" as const,
-      render: (isActive: boolean, record: ProductType) => (
-        <Switch
-          checked={isActive}
-          onChange={(checked) => handleStatusChange(record, checked)}
-          loading={updateStatusMutation.isPending}
-        />
-      ),
-    },
-    {
-      title: "Ngày tạo",
-      dataIndex: "createdDate",
-      key: "createdDate",
-      width: 120,
-      render: (date: string) => new Date(date).toLocaleDateString("vi-VN"),
-    },
-  ];
-
-  const actions = [
-    {
-      key: "edit",
-      label: "Chỉnh sửa",
-      icon: <EditOutlined />,
-      onClick: handleEdit,
-    },
-    {
-      key: "delete",
-      label: "Xóa",
-      icon: <DeleteOutlined />,
-      danger: true,
-      onClick: handleDelete,
-      confirm: {
-        title: "Xác nhận xóa",
-        description: "Bạn có chắc chắn muốn xóa loại sản phẩm này?",
-      },
-    },
-  ];
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Quản lý loại sản phẩm</h1>
-            <p className="text-gray-600 mt-1">Quản lý các loại sản phẩm trong hệ thống</p>
-          </div>
+    <div>
+      {/* Advanced Filters */}
+      <Card
+        title={
+          <Space>
+            <FilterOutlined />
+            Bộ lọc nâng cao
+          </Space>
+        }
+        style={{ marginBottom: 16 }}
+        extra={
           <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={handleAdd}
-            size="large"
+            icon={<ReloadOutlined />}
+            onClick={handleResetFilters}
+            size="small"
           >
-            Thêm loại sản phẩm
+            Đặt lại
           </Button>
-        </div>
-      </div>
+        }
+      >
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <label
+                style={{
+                  fontSize: 12,
+                  color: "#666",
+                  marginBottom: 4,
+                  display: "block",
+                }}
+              >
+                Tìm kiếm
+              </label>
+              <Search
+                placeholder="Tên, mã loại sản phẩm..."
+                value={filters.searchText}
+                onChange={(e) =>
+                  setFilters({ ...filters, searchText: e.target.value })
+                }
+                allowClear
+              />
+            </div>
+          </Col>
+          <Col xs={24} sm={12} md={6}>
+            <div>
+              <label
+                style={{
+                  fontSize: 12,
+                  color: "#666",
+                  marginBottom: 4,
+                  display: "block",
+                }}
+              >
+                Trạng thái
+              </label>
+              <Select
+                placeholder="Chọn trạng thái"
+                value={filters.status}
+                onChange={(value) => setFilters({ ...filters, status: value })}
+                allowClear
+                style={{ width: "100%" }}
+              >
+                {PRODUCT_TYPE_STATUS_OPTIONS.map((status) => (
+                  <Option key={status.value.toString()} value={status.value.toString()}>
+                    {status.label}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+          </Col>
+        </Row>
+      </Card>
 
       <AdminTable
-        dataSource={productTypesData?.data?.content || []}
-        columns={columns}
+        title="Quản lý loại sản phẩm"
+        dataSource={filteredData}
+        columns={productTypeColumns}
         loading={isLoading}
+        onAdd={handleAdd}
+        onEdit={handleEdit}
+        onView={handleView}
+        addButtonText="Thêm loại sản phẩm"
+        searchable={false}
+        actions={[
+          {
+            key: "toggle-status",
+            label: (record: ProductType) =>
+              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
+            type: "default",
+            danger: (record: ProductType) => record.is_active,
+            onClick: handleToggleStatus,
+          },
+        ]}
+        scroll={{ x: 1200 }}
         pagination={{
-          current: currentPage,
-          pageSize: pageSize,
-          total: productTypesData?.data?.totalElements || 0,
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) =>
+          showTotal: (total: number, range: [number, number]) =>
             `${range[0]}-${range[1]} của ${total} loại sản phẩm`,
-          onChange: (page, size) => {
-            setCurrentPage(page);
-            setPageSize(size || 10);
+          onChange: (page: number, pageSize?: number) => {
+            setPagination(prev => ({
+              ...prev,
+              current: page,
+              pageSize: pageSize || 10,
+            }));
           },
         }}
-        actions={actions}
-        rowKey="productTypeId"
       />
 
       <ProductTypeModal
@@ -170,7 +295,6 @@ const ProductTypesPage: React.FC = () => {
         onSuccess={() => {
           setModalOpen(false);
           setEditingProductType(null);
-          refetch();
         }}
         initialData={editingProductType}
       />

@@ -35,10 +35,15 @@ export interface ProductTags {
 }
 
 export interface ProductAttributeValue {
+  productId: string;
   attributeId: string;
   attributeName: string;
+  attributeCode: string;
+  unit?: string;
+  dataType: string;
   valueText?: string;
   valueNumber?: number;
+  displayValue?: string;
 }
 
 export interface Product extends BaseAuditEntity {
@@ -137,14 +142,20 @@ export interface ProductSearchParams {
 }
 
 // ProductType Types
-export interface ProductType extends BaseAuditEntity {
-  productTypeId: string;
-  productTypeName: string;
-  productTypeCode: string;
+export interface ProductType {
+  product_type_id: string;
+  product_type_name: string;
+  product_type_code: string;
   description?: string;
-  categoryId: string;
-  categoryName: string;
-  isActive: boolean;
+  category_id: string;
+  category_name: string;
+  is_active: boolean;
+  created_date: string;
+  modified_date: string;
+  created_by: string;
+  modified_by: string;
+  is_deleted?: boolean;
+  version?: number;
 }
 
 export interface ProductTypePaginationData extends BasePaginationResponse {
@@ -186,15 +197,21 @@ export interface ProductTypeSearchParams {
 }
 
 // ProductAttribute Types
-export interface ProductAttribute extends BaseAuditEntity {
-  attributeId: string;
-  attributeName: string;
-  attributeCode: string;
-  unit?: string;
-  isRequired: boolean;
-  dataType: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
-  displayName?: string;
-  isActive: boolean;
+export interface ProductAttribute {
+  attribute_id: string;
+  attribute_name: string;
+  attribute_code: string;
+  unit?: string | null;
+  is_required: boolean;
+  data_type: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+  display_name?: string;
+  is_active: boolean;
+  created_date: string;
+  modified_date: string;
+  created_by: string;
+  modified_by: string;
+  is_deleted?: boolean;
+  version?: number;
 }
 
 export interface ProductAttributePaginationData extends BasePaginationResponse {

@@ -218,6 +218,17 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <Descriptions.Item label="Đơn vị">
                   <Tag color="green">{data.unitOfMeasure}</Tag>
                 </Descriptions.Item>
+                <Descriptions.Item label="Thương hiệu">
+                  <Text strong>{data.brand}</Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Model">
+                  <Text strong>{data.model}</Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Giá cao nhất">
+                  <Text strong style={{ color: "#52c41a" }}>
+                    {data.peakPrice?.toLocaleString()}đ
+                  </Text>
+                </Descriptions.Item>
                 <Descriptions.Item label="Nhà cung cấp">
                   <Button
                     type="link"
@@ -309,19 +320,35 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                           border: "1px solid #e1e4e8",
                         }}
                       >
-                        <Text
-                          strong
-                          style={{
-                            textTransform: "capitalize",
-                            color: "#24292e",
-                          }}
-                        >
-                          {attr.attributeName}:
-                        </Text>
-                        <br/>
-                        <Text style={{color: "#586069"}}>
-                          {attr.valueText || attr.valueNumber}
-                        </Text>
+                        <div style={{ marginBottom: 4 }}>
+                          <Text
+                            strong
+                            style={{
+                              textTransform: "capitalize",
+                              color: "#24292e",
+                            }}
+                          >
+                            {attr.attributeName}
+                          </Text>
+                          {attr.unit && (
+                            <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                              ({attr.unit})
+                            </Text>
+                          )}
+                        </div>
+                        <div>
+                          <Text style={{color: "#586069"}}>
+                            {attr.displayValue || attr.valueText || attr.valueNumber}
+                          </Text>
+                        </div>
+                        <div style={{ marginTop: 2 }}>
+                          <Tag color="blue">
+                            {attr.dataType}
+                          </Tag>
+                          <Text type="secondary" style={{ fontSize: 10, marginLeft: 4 }}>
+                            {attr.attributeCode}
+                          </Text>
+                        </div>
                       </div>
                     </Col>
                   ))}

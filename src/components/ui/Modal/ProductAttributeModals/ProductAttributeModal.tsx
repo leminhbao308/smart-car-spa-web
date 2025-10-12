@@ -4,6 +4,7 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   Select,
   Switch,
   Row,
@@ -255,6 +256,22 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
         </Row>
 
         <Divider style={{ margin: "24px 0" }} />
+
+        {/* Version Field (chỉ hiển thị khi edit) */}
+        {isEditing && (
+          <Form.Item
+            name="version"
+            label="Phiên bản"
+            style={{ marginBottom: 16 }}
+          >
+            <InputNumber
+              min={0}
+              disabled
+              style={{ width: "100%" }}
+              addonBefore="v"
+            />
+          </Form.Item>
+        )}
 
         {/* Footer */}
         <Row justify="end" gutter={12}>

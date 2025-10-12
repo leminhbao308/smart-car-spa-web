@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect } from "react";
-import { Modal, Form, Input, Select, Button, Space, App } from "antd";
+import { Modal, Form, Input, InputNumber, Select, Button, Space, App } from "antd";
 import { useCreateProductType, useUpdateProductType } from "@/lib/api/hooks/useProductManagement";
 import { ProductType, CreateProductTypeRequest, UpdateProductTypeRequest } from "@/lib/api/types/product.types";
 
@@ -143,6 +143,20 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
             placeholder="Nhập mô tả loại sản phẩm (tùy chọn)"
           />
         </Form.Item>
+
+        {initialData && (
+          <Form.Item
+            name="version"
+            label="Phiên bản"
+          >
+            <InputNumber
+              min={0}
+              disabled
+              style={{ width: "100%" }}
+              addonBefore="v"
+            />
+          </Form.Item>
+        )}
       </Form>
     </Modal>
   );
