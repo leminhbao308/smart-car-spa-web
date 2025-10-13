@@ -18,7 +18,7 @@ export const promotionService = {
     const {
       page = 0,
       size = 10,
-      sort = "createdAt",
+      sort = "createdDate",
       direction = "DESC",
       filters = {},
     } = params;

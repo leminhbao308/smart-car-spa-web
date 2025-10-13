@@ -6,8 +6,8 @@ export * from './useAuth';
 export * from './useUserManagement';
 export * from './useUsers';
 export * from './useVehicleBrands';
-export { 
-  useVehicleTypes, 
+export {
+  useVehicleTypes,
   useVehicleTypesDropdown,
   useVehicleType,
   useCreateVehicleType,
@@ -17,8 +17,8 @@ export {
   findTypeById,
   findTypeByCode
 } from './useVehicleTypes';
-export { 
-  useVehicleModels, 
+export {
+  useVehicleModels,
   useVehicleModelsDropdown,
   useVehicleModel,
   useCreateVehicleModel,
@@ -44,6 +44,7 @@ export * from './useServiceTypes';
 export * from './useServiceProcesses';
 export * from './usePromotions';
 export * from './useCategory';
+export * from './usePromotionType';
 
 // React Query specific exports
 export { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

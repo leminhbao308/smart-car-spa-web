@@ -63,7 +63,7 @@ const PromotionsPage = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
   const [viewingPromotion, setViewingPromotion] = useState<Promotion | null>(null);
-  
+
   // Filters
   const [filters, setFilters] = useState({
     status: undefined as PromotionStatus | undefined,
@@ -72,14 +72,14 @@ const PromotionsPage = () => {
     search: "",
     dateRange: undefined as [dayjs.Dayjs, dayjs.Dayjs] | undefined,
   });
-  
+
   const [pagination, setPagination] = useState({
     page: 0,
     size: 10,
   });
 
   const { showModal } = useConfirmationModalContext();
-  
+
   // API hooks
   const { data: promotionsResponse, isLoading, refetch } = usePromotions({
     page: pagination.page,
@@ -222,7 +222,7 @@ const PromotionsPage = () => {
       width: 150,
       render: (_: unknown, record: Promotion) => {
         const usagePercentage = getUsagePercentage(record.usedCount, record.usageLimit);
-        
+
         return (
           <div>
             <div style={{ marginBottom: 4 }}>
@@ -279,12 +279,12 @@ const PromotionsPage = () => {
       width: 200,
       render: (conditions: { description: string }[]) => (
         <div>
-          {conditions.slice(0, 2).map((condition, index) => (
+          {conditions?.slice(0, 2).map((condition, index) => (
             <Tag key={index} style={{ marginBottom: 2 }}>
               {condition.description}
             </Tag>
           ))}
-          {conditions.length > 2 && (
+          {conditions?.length > 2 && (
             <Tag color="blue">+{conditions.length - 2} điều kiện</Tag>
           )}
         </div>
@@ -339,7 +339,7 @@ const PromotionsPage = () => {
   const handleDuplicate = (record: Promotion) => {
     const newName = `${record.name} (Copy)`;
     const newCode = `${record.code}_COPY_${Date.now()}`;
-    
+
     showModal({
       title: "Xác nhận sao chép",
       content: `Bạn có chắc chắn muốn sao chép chương trình "${record.name}"?`,

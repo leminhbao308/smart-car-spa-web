@@ -18,7 +18,7 @@ const {RangePicker} = DatePicker;
 export interface AdminTableAction {
   key: string;
   label: string | ((record: any) => string);
-  icon?: React.ReactNode;
+  icon?: React.ReactNode | ((record: any) => React.ReactNode);
   type?: "primary" | "default" | "dashed" | "link" | "text";
   danger?: boolean | ((record: any) => boolean);
   onClick: (record: any) => void;
@@ -251,7 +251,7 @@ const AdminTable: React.FC<AdminTableProps> = ({
             <Button
               type={action.type || "text"}
               danger={danger}
-              icon={action.icon}
+              icon={action.icon || (typeof action.icon === "function" ? undefined : undefined)}
               onClick={() => action.onClick(record)}
               size="small"
             >

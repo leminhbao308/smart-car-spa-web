@@ -26,8 +26,8 @@ export interface PromotionType {
   };
   status: "active" | "inactive";
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdDate: string;
+  updatedDate: string;
 }
 
 export const promotionTypesData: PromotionType[] = [
@@ -57,8 +57,8 @@ export const promotionTypesData: PromotionType[] = [
     },
     status: "active",
     notes: "Áp dụng cho khách hàng VIP",
-    createdAt: "2024-01-01",
-    updatedAt: "2024-06-15",
+    createdDate: "2024-01-01",
+    updatedDate: "2024-06-15",
   },
   {
     id: 2,
@@ -86,8 +86,8 @@ export const promotionTypesData: PromotionType[] = [
     },
     status: "active",
     notes: "Chương trình khuyến mãi đặc biệt",
-    createdAt: "2024-02-01",
-    updatedAt: "2024-06-10",
+    createdDate: "2024-02-01",
+    updatedDate: "2024-06-10",
   },
   {
     id: 3,
@@ -115,8 +115,8 @@ export const promotionTypesData: PromotionType[] = [
     },
     status: "active",
     notes: "Áp dụng cho combo từ 3 dịch vụ trở lên",
-    createdAt: "2024-03-01",
-    updatedAt: "2024-06-05",
+    createdDate: "2024-03-01",
+    updatedDate: "2024-06-05",
   },
   {
     id: 4,
@@ -144,8 +144,8 @@ export const promotionTypesData: PromotionType[] = [
     },
     status: "active",
     notes: "Chỉ áp dụng cho khách hàng lần đầu sử dụng dịch vụ",
-    createdAt: "2024-04-01",
-    updatedAt: "2024-06-01",
+    createdDate: "2024-04-01",
+    updatedDate: "2024-06-01",
   },
   {
     id: 5,
@@ -172,8 +172,8 @@ export const promotionTypesData: PromotionType[] = [
     },
     status: "inactive",
     notes: "Áp dụng vào thứ 7 và chủ nhật",
-    createdAt: "2024-05-01",
-    updatedAt: "2024-05-30",
+    createdDate: "2024-05-01",
+    updatedDate: "2024-05-30",
   },
 ];
 
@@ -216,7 +216,7 @@ export const isPromotionTypeActive = (promotionType: PromotionType) => {
   const now = new Date();
   const startDate = new Date(promotionType.validityPeriod.startDate);
   const endDate = new Date(promotionType.validityPeriod.endDate);
-  
+
   return (
     promotionType.status === "active" &&
     promotionType.validityPeriod.isActive &&

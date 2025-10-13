@@ -38,3 +38,4 @@ export * from './service-process.service';
 export * from './service-process-tracking.service';
 export * from './media.service';
 export * from './product-attribute.service';
+export * from './promotion-type.service'

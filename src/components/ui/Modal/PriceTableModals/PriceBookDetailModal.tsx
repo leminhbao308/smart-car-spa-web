@@ -31,12 +31,12 @@ const PriceBookDetailModal = (props: PriceBookDetailModalProps) => {
   };
 
   const getProductInfo = (productId: string) => {
-    const product = products.find(p => p.productId === productId);
+    const product = products.find(p => p.product_id === productId);
     return product || {productName: "N/A", sku: "N/A", brand: "N/A", costPrice: 0};
   };
 
   const itemsWithProductInfo = (priceBook.items || []).map(item => {
-    const productInfo = getProductInfo(item.product.id);
+    const productInfo = getProductInfo(item?.product?.product_id);
     return {
       ...item,
       product_info: productInfo,
@@ -49,7 +49,7 @@ const PriceBookDetailModal = (props: PriceBookDetailModalProps) => {
       key: "product",
       render: (_, record: ProductInfoRecord) => (
         <Space direction="vertical" size={0}>
-          <Text strong>{record.product_info.productName}</Text>
+          <Text strong>{record.product_info.product_name}</Text>
           <Text type="secondary" style={{fontSize: 12}}>
             SKU: {record.product_info.sku} | {record.product_info.brand}
           </Text>

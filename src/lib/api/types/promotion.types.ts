@@ -40,12 +40,12 @@ export interface PromotionCondition {
   isRequired: boolean;
 }
 
-export type ConditionType = 
-  | "min_amount" 
-  | "min_quantity" 
-  | "specific_service" 
-  | "specific_product" 
-  | "customer_type" 
+export type ConditionType =
+  | "min_amount"
+  | "min_quantity"
+  | "specific_service"
+  | "specific_product"
+  | "customer_type"
   | "customer_tier"
   | "time_period"
   | "day_of_week"
@@ -253,7 +253,7 @@ export const isPromotionActive = (startDate: string, endDate: string, status: Pr
   const now = new Date();
   const start = new Date(startDate);
   const end = new Date(endDate);
-  
+
   return (
     status === "active" &&
     now >= start &&
@@ -276,7 +276,7 @@ export const formatPromotionValue = (type: PromotionType, value: number): string
     case "buy_x_get_y":
       return `Mua ${value} tặng 1`;
     default:
-      return value.toString();
+      return value?.toString();
   }
 };
 

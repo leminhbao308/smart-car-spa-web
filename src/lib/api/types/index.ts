@@ -58,6 +58,8 @@ export * from './service-bay.types';
 export * from './purchase-order.types';
 // Promotion types
 export * from './promotion.types';
+// Promotion Type types
+export * from './promotion-type.types';
 // Booking types
 export * from './booking.types';
 // Service Process types

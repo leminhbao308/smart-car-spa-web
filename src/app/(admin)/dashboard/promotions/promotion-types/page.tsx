@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, {useState} from "react";
 import {
   Tag,
   Typography,
@@ -7,57 +7,72 @@ import {
   Row,
   Col,
   Statistic,
-  Space,
+  Spin,
 } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
   GiftOutlined,
-  PercentageOutlined,
-  DollarOutlined,
-  CalendarOutlined,
+  CheckCircleOutlined,
+  PauseCircleOutlined,
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
 import PromotionTypeModal from "@/components/ui/Modal/PromotionTypeModal/PromotionTypeModal";
-import { useConfirmationModalContext } from "@/components/ui/Modal";
-import {
-  promotionTypesData,
-  PromotionType,
-} from "@/components/utils/data/promotion-types.data";
-import { formatDate } from "@/components/utils/helper/date.format.helper";
+import {useConfirmationModalContext} from "@/components/ui/Modal";
+import {PromotionTypeInfo} from "@/lib/api";
+import {formatDate} from "@/components/utils/helper/date.format.helper";
+import {usePromotionType} from "@/lib/api/hooks";
 
-const { Text } = Typography;
+const {Text} = Typography;
 
 const PromotionTypesPage = () => {
-  const [data, setData] = useState<PromotionType[]>(promotionTypesData);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingPromotionType, setEditingPromotionType] = useState<PromotionType | null>(null);
-  const [viewingPromotionType, setViewingPromotionType] = useState<PromotionType | null>(null);
+  const [editingPromotionType, setEditingPromotionType] = useState<PromotionTypeInfo | null>(null);
+  const [viewingPromotionType, setViewingPromotionType] = useState<PromotionTypeInfo | null>(null);
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'view'>('add');
-  const { showModal } = useConfirmationModalContext();
+  const {showModal} = useConfirmationModalContext();
+
+  const {
+    promotionTypes,
+    totalElements,
+    totalPages,
+    currentPage,
+    pageSize,
+    statistics,
+    isLoadingList,
+    isLoadingStats,
+    isDeleting,
+    createPromotionType,
+    updatePromotionType,
+    deletePromotionType,
+    togglePromotionTypeStatus,
+    changePage,
+    changePageSize,
+    searchByKeyword,
+  } = usePromotionType();
 
   const columns = [
     {
       title: "Loại khuyến mãi",
-      dataIndex: "name",
-      key: "name",
+      dataIndex: "typeName",
+      key: "typeName",
       width: 300,
-      render: (text: string, record: PromotionType) => (
+      render: (text: string, record: PromotionTypeInfo) => (
         <div>
           <div
-            style={{ display: "flex", alignItems: "center", marginBottom: 4 }}
+            style={{display: "flex", alignItems: "center", marginBottom: 4}}
           >
-            <GiftOutlined style={{ fontSize: 16, marginRight: 8, color: "#1890ff" }} />
-            <Text strong style={{ fontSize: 14 }}>
+            <GiftOutlined style={{fontSize: 16, marginRight: 8, color: "#1890ff"}}/>
+            <Text strong style={{fontSize: 14}}>
               {text}
             </Text>
           </div>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            Mã: {record.code}
+          <Text type="secondary" style={{fontSize: 12}}>
+            Mã: {record.typeCode}
           </Text>
-          <div style={{ marginTop: 4 }}>
-            <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
+          <div style={{marginTop: 4}}>
+            <Text style={{fontSize: 11, color: "#8c8c8c"}}>
               {record.description}
             </Text>
           </div>
@@ -65,58 +80,36 @@ const PromotionTypesPage = () => {
       ),
     },
     {
-      title: "Loại giảm giá",
-      dataIndex: "discountType",
-      key: "discountType",
-      width: 150,
-      render: (discountType: string) => (
-        <Tag color={discountType === "percentage" ? "blue" : "green"}>
-          {discountType === "percentage" ? "Phần trăm" : "Số tiền"}
-        </Tag>
-      ),
-    },
-    {
-      title: "Giá trị giảm",
-      dataIndex: "discountValue",
-      key: "discountValue",
-      width: 120,
-      render: (value: number, record: PromotionType) => (
-        <div style={{ textAlign: "center" }}>
-          <Text strong style={{ fontSize: 14, color: "#52c41a" }}>
-            {record.discountType === "percentage" ? `${value}%` : `${value.toLocaleString()} ₫`}
-          </Text>
-        </div>
-      ),
-    },
-    {
-      title: "Điều kiện áp dụng",
-      dataIndex: "conditions",
-      key: "conditions",
-      width: 200,
-      render: (conditions: any) => (
-        <div>
-          <div style={{ marginBottom: 4 }}>
-            <Text style={{ fontSize: 12 }}>
-              Tối thiểu: {conditions.minAmount ? `${conditions.minAmount.toLocaleString()} ₫` : "Không"}
-            </Text>
-          </div>
-          <div>
-            <Text style={{ fontSize: 12 }}>
-              Tối đa: {conditions.maxAmount ? `${conditions.maxAmount.toLocaleString()} ₫` : "Không giới hạn"}
-            </Text>
-          </div>
-        </div>
-      ),
-    },
-    {
       title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
+      dataIndex: "is_active",
+      key: "is_active",
       width: 120,
-      render: (status: string) => (
-        <Tag color={status === "active" ? "green" : "red"}>
-          {status === "active" ? "Hoạt động" : "Tạm dừng"}
+      render: (isActive: boolean) => (
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Hoạt động" : "Tạm dừng"}
         </Tag>
+      ),
+    },
+    {
+      title: "Ngày tạo",
+      dataIndex: "created_date",
+      key: "created_date",
+      width: 150,
+      render: (date: string) => (
+        <Text style={{fontSize: 12}}>
+          {formatDate(date)}
+        </Text>
+      ),
+    },
+    {
+      title: "Cập nhật cuối",
+      dataIndex: "modified_date",
+      key: "modified_date",
+      width: 150,
+      render: (date: string) => (
+        <Text style={{fontSize: 12}}>
+          {formatDate(date)}
+        </Text>
       ),
     },
   ];
@@ -125,8 +118,8 @@ const PromotionTypesPage = () => {
     {
       key: "view",
       label: "Xem chi tiết",
-      icon: <EyeOutlined />,
-      onClick: (record: PromotionType) => {
+      icon: <EyeOutlined/>,
+      onClick: (record: PromotionTypeInfo) => {
         setViewingPromotionType(record);
         setModalMode('view');
         setModalOpen(true);
@@ -135,8 +128,8 @@ const PromotionTypesPage = () => {
     {
       key: "edit",
       label: "Chỉnh sửa",
-      icon: <EditOutlined />,
-      onClick: (record: PromotionType) => {
+      icon: <EditOutlined/>,
+      onClick: (record: PromotionTypeInfo) => {
         setEditingPromotionType(record);
         setModalMode('edit');
         setModalOpen(true);
@@ -144,49 +137,21 @@ const PromotionTypesPage = () => {
     },
     {
       key: "deactivate",
-      label: "Tạm dừng",
-      icon: <DeleteOutlined />,
-      danger: true,
-      condition: (record: PromotionType) => record.status === "active",
-      onClick: (record: PromotionType) => {
+      label: (record: PromotionTypeInfo) => record.is_active ? "Tạm dừng" : "Kích hoạt",
+      icon: (record: PromotionTypeInfo) =>
+        record.is_active ? <PauseCircleOutlined/> : <CheckCircleOutlined/>,
+      danger: (record: PromotionTypeInfo) => record.is_active,
+      onClick: (record: PromotionTypeInfo) => {
         showModal({
-          title: "Xác nhận tạm dừng",
-          content: `Bạn có chắc chắn muốn tạm dừng loại khuyến mãi "${record.name}"?`,
-          type: "warning",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "inactive" as const }
-                  : item
-              )
-            );
+          title: record.is_active ? "Xác nhận tạm dừng" : "Xác nhận kích hoạt",
+          content: `Bạn có chắc chắn muốn ${record.is_active ? "tạm dừng" : "kích hoạt"} loại khuyến mãi "${record.typeName}"?`,
+          type: record.is_active ? "warning" : "success",
+          onConfirm: async () => {
+            await togglePromotionTypeStatus(record.promotionTypeId, record.is_active);
           },
         });
       },
-    },
-    {
-      key: "activate",
-      label: "Kích hoạt",
-      icon: <EditOutlined />,
-      condition: (record: PromotionType) => record.status === "inactive",
-      onClick: (record: PromotionType) => {
-        showModal({
-          title: "Xác nhận kích hoạt",
-          content: `Bạn có chắc chắn muốn kích hoạt loại khuyến mãi "${record.name}"?`,
-          type: "success",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "active" as const }
-                  : item
-              )
-            );
-          },
-        });
-      },
-    },
+    }
   ];
 
   const handleAddNew = () => {
@@ -196,21 +161,27 @@ const PromotionTypesPage = () => {
     setModalOpen(true);
   };
 
-  const handleModalOk = (promotionTypeData: PromotionType) => {
-    if (modalMode === 'edit' && editingPromotionType) {
-      setData(
-        data.map((item) =>
-          item.id === editingPromotionType.id
-            ? { ...promotionTypeData, id: editingPromotionType.id }
-            : item
-        )
-      );
-    } else if (modalMode === 'add') {
-      setData([...data, promotionTypeData]);
+  const handleModalOk = async (promotionTypeData: PromotionTypeInfo) => {
+    try {
+      if (modalMode === 'edit' && editingPromotionType) {
+        await updatePromotionType(editingPromotionType.promotionTypeId, {
+          typeCode: promotionTypeData.typeCode,
+          typeName: promotionTypeData.typeName,
+          description: promotionTypeData.description,
+        });
+      } else if (modalMode === 'add') {
+        await createPromotionType({
+          typeCode: promotionTypeData.typeCode,
+          typeName: promotionTypeData.typeName,
+          description: promotionTypeData.description,
+        });
+      }
+      setModalOpen(false);
+      setEditingPromotionType(null);
+      setViewingPromotionType(null);
+    } catch (error) {
+      console.error("Error saving promotion type:", error);
     }
-    setModalOpen(false);
-    setEditingPromotionType(null);
-    setViewingPromotionType(null);
   };
 
   const handleModalCancel = () => {
@@ -219,24 +190,38 @@ const PromotionTypesPage = () => {
     setViewingPromotionType(null);
   };
 
-  // Thống kê tổng quan
-  const totalTypes = data.length;
-  const activeTypes = data.filter((item) => item.status === "active").length;
-  const inactiveTypes = data.filter((item) => item.status === "inactive").length;
-  const percentageTypes = data.filter((item) => item.discountType === "percentage").length;
-  const amountTypes = data.filter((item) => item.discountType === "amount").length;
+  const handleSearch = (value: string) => {
+    searchByKeyword(value);
+  };
+
+  const handlePageChange = (page: number, size: number) => {
+    if (size !== pageSize) {
+      changePageSize(size);
+    } else {
+      changePage(page - 1);
+    }
+  };
+
+  if (isLoadingList || isLoadingStats) {
+    return (
+      <div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px'}}>
+        <Spin size="large" tip="Đang tải dữ liệu..."/>
+      </div>
+    );
+  }
 
   return (
     <div>
       {/* Thống kê tổng quan */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+      <Row gutter={[16, 16]} style={{marginBottom: 24}}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
               title="Tổng loại khuyến mãi"
-              value={totalTypes}
-              valueStyle={{ color: "#1890ff" }}
-              prefix={<GiftOutlined />}
+              value={statistics?.totalPromotionTypes || 0}
+              valueStyle={{color: "#1890ff"}}
+              prefix={<GiftOutlined/>}
+              loading={isLoadingStats}
             />
           </Card>
         </Col>
@@ -244,9 +229,10 @@ const PromotionTypesPage = () => {
           <Card>
             <Statistic
               title="Đang hoạt động"
-              value={activeTypes}
-              valueStyle={{ color: "#52c41a" }}
-              prefix={<PercentageOutlined />}
+              value={statistics?.activePromotionTypes || 0}
+              valueStyle={{color: "#52c41a"}}
+              prefix={<CheckCircleOutlined/>}
+              loading={isLoadingStats}
             />
           </Card>
         </Col>
@@ -254,19 +240,10 @@ const PromotionTypesPage = () => {
           <Card>
             <Statistic
               title="Tạm dừng"
-              value={inactiveTypes}
-              valueStyle={{ color: "#fa8c16" }}
-              prefix={<CalendarOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Giảm theo %"
-              value={percentageTypes}
-              valueStyle={{ color: "#722ed1" }}
-              prefix={<DollarOutlined />}
+              value={statistics?.inactivePromotionTypes || 0}
+              valueStyle={{color: "#fa8c16"}}
+              prefix={<PauseCircleOutlined/>}
+              loading={isLoadingStats}
             />
           </Card>
         </Col>
@@ -275,19 +252,19 @@ const PromotionTypesPage = () => {
       {/* Main Table */}
       <Card
         title={
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
             alignItems: "center",
             width: "100%"
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <GiftOutlined style={{ color: "#1890ff", fontSize: 18 }} />
-              <span style={{ fontSize: 16, fontWeight: 600 }}>
+            <div style={{display: "flex", alignItems: "center", gap: 8}}>
+              <GiftOutlined style={{color: "#1890ff", fontSize: 18}}/>
+              <span style={{fontSize: 16, fontWeight: 600}}>
                 Quản lý loại khuyến mãi
               </span>
             </div>
-            <button 
+            <button
               type="button"
               onClick={handleAddNew}
               style={{
@@ -302,7 +279,7 @@ const PromotionTypesPage = () => {
                 gap: "8px"
               }}
             >
-              <EditOutlined />
+              <EditOutlined/>
               Thêm loại khuyến mãi mới
             </button>
           </div>
@@ -313,20 +290,24 @@ const PromotionTypesPage = () => {
         }}
       >
         <AdminTable
-          dataSource={data}
+          dataSource={promotionTypes}
           columns={columns}
           actions={actions}
           showAddButton={false}
           searchable={true}
           searchPlaceholder="Tìm kiếm loại khuyến mãi theo tên, mã..."
-          searchFields={["name", "code", "description"]}
+          onSearch={handleSearch}
           pagination={{
-            pageSize: 10,
+            current: currentPage + 1,
+            pageSize: pageSize,
+            total: totalElements,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total: number, range: [number, number]) =>
               `${range[0]}-${range[1]} của ${total} loại khuyến mãi`,
+            onChange: handlePageChange,
           }}
+          loading={isLoadingList || isDeleting}
         />
       </Card>
 
@@ -336,11 +317,11 @@ const PromotionTypesPage = () => {
         onCancel={handleModalCancel}
         initialData={modalMode === 'view' ? viewingPromotionType : editingPromotionType}
         title={
-          modalMode === 'view' 
-            ? "Chi tiết loại khuyến mãi" 
-            : modalMode === 'edit' 
-            ? "Chỉnh sửa loại khuyến mãi" 
-            : "Thêm loại khuyến mãi mới"
+          modalMode === 'view'
+            ? "Chi tiết loại khuyến mãi"
+            : modalMode === 'edit'
+              ? "Chỉnh sửa loại khuyến mãi"
+              : "Thêm loại khuyến mãi mới"
         }
       />
     </div>
