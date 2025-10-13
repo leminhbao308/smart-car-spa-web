@@ -30,11 +30,11 @@ export class ServiceProcessService {
       const queryParams = new URLSearchParams();
       
       if (filterParam) {
-        if (filterParam.name) {
-          queryParams.append("name", filterParam.name);
+        if (filterParam.search) {
+          queryParams.append("search", filterParam.search);
         }
-        if (filterParam.code) {
-          queryParams.append("code", filterParam.code);
+        if (filterParam.branchId) {
+          queryParams.append("branchId", filterParam.branchId);
         }
         if (filterParam.isActive !== undefined) {
           queryParams.append("isActive", filterParam.isActive.toString());
@@ -106,6 +106,25 @@ export class ServiceProcessService {
       }
     } catch (error) {
       console.error("Get service process by code error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get service process by service ID
+   */
+  static async getServiceProcessByServiceId(serviceId: string): Promise<ServiceProcessInfoDto> {
+    try {
+      const response = await apiClient.get(`/service-processes/service/${serviceId}`);
+
+      // Backend returns ServiceProcessInfoDto directly
+      if (response.data) {
+        return response.data;
+      } else {
+        throw new Error("Failed to fetch service process by service ID");
+      }
+    } catch (error) {
+      console.error("Get service process by service ID error:", error);
       throw error;
     }
   }

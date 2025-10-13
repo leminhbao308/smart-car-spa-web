@@ -1,49 +1,96 @@
 /**
  * Booking Management Types
  * Type definitions for booking-related API requests and responses
+ * Updated to match backend BookingInfoDto
  */
 
 export interface BookingInfoDto {
-  id: string;
+  // Core booking info
+  bookingId: string;
   bookingCode: string;
+  
+  // Customer information
+  customerId?: string;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
+  
+  // Vehicle information
+  vehicleId?: string;
   vehicleLicensePlate: string;
-  vehicleBrand?: string;
-  vehicleModel?: string;
-  vehicleType?: string;
+  vehicleBrandName?: string;
+  vehicleModelName?: string;
+  vehicleTypeName?: string;
+  vehicleYear?: number;
+  vehicleColor?: string;
+  
+  // Branch and bay information
   branchId: string;
   branchName?: string;
-  serviceId: string;
-  serviceName?: string;
-  servicePackageId?: string;
-  servicePackageName?: string;
-  bookingDate: string;
-  bookingTime: string;
-  estimatedDuration?: number;
-  actualDuration?: number;
-  status: BookingStatus;
-  notes?: string;
-  totalAmount?: number;
-  paidAmount?: number;
-  remainingAmount?: number;
+  branchCode?: string;
+  bayId?: string;
+  bayName?: string;
+  bayType?: string;
+  
+  // Scheduling information
+  preferredStartAt?: string;
+  scheduledStartAt?: string;
+  scheduledEndAt?: string;
+  actualCheckInAt?: string;
+  actualStartAt?: string;
+  actualEndAt?: string;
+  
+  // Duration information
+  estimatedDurationMinutes?: number;
+  bufferMinutes?: number;
+  actualDurationMinutes?: number;
+  
+  // Pricing information
+  totalPrice?: number;
+  currency?: string;
+  depositAmount?: number;
+  
+  // Status information
   paymentStatus?: PaymentStatus;
-  assignedTechnicianId?: string;
-  assignedTechnicianName?: string;
-  serviceBayId?: string;
-  serviceBayName?: string;
+  status: BookingStatus;
+  priority?: Priority;
+  
+  // Additional information
+  couponCode?: string;
+  notes?: string;
+  specialRequests?: string[];
+  
+  // Cancellation information
+  cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  
+  // Audit information
   createdAt: string;
   updatedAt: string;
   createdBy?: string;
-  updatedBy?: string;
+  modifiedBy?: string;
+  
+  // Related data
+  bookingItems?: BookingItemInfoDto[];
+  assignments?: BookingAssignmentInfoDto[];
+  payments?: BookingPaymentInfoDto[];
+  
+  // Computed fields
+  isActive?: boolean;
+  isCancelled?: boolean;
+  isCompleted?: boolean;
+  needsPayment?: boolean;
+  isFullyPaid?: boolean;
+  totalEstimatedDuration?: number;
 }
 
 export enum BookingStatus {
   PENDING = "PENDING",
-  CONFIRMED = "CONFIRMED",
+  CONFIRMED = "CONFIRMED", 
   CHECKED_IN = "CHECKED_IN",
   IN_PROGRESS = "IN_PROGRESS",
+  PAUSED = "PAUSED",
   COMPLETED = "COMPLETED",
   CANCELLED = "CANCELLED",
   NO_SHOW = "NO_SHOW"
@@ -51,9 +98,15 @@ export enum BookingStatus {
 
 export enum PaymentStatus {
   PENDING = "PENDING",
-  PARTIAL = "PARTIAL",
   PAID = "PAID",
+  PARTIAL = "PARTIAL",
   REFUNDED = "REFUNDED"
+}
+
+export enum Priority {
+  NORMAL = "NORMAL",
+  HIGH = "HIGH", 
+  URGENT = "URGENT"
 }
 
 export interface BookingFilterParam {
@@ -69,41 +122,129 @@ export interface BookingFilterParam {
   direction?: "ASC" | "DESC";
 }
 
-export interface CreateBookingRequest {
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string;
-  vehicleLicensePlate: string;
-  vehicleBrandId?: string;
-  vehicleModelId?: string;
-  vehicleTypeId?: string;
-  branchId: string;
+// Related DTOs
+export interface BookingItemInfoDto {
+  bookingItemId: string;
   serviceId: string;
-  servicePackageId?: string;
-  bookingDate: string;
-  bookingTime: string;
+  serviceName: string;
+  servicePrice: number;
+  quantity: number;
+  totalPrice: number;
   notes?: string;
-  estimatedDuration?: number;
+}
+
+export interface BookingAssignmentInfoDto {
+  assignmentId: string;
+  technicianId: string;
+  technicianName: string;
+  technicianCode: string;
+  role: string;
+  assignedAt: string;
+}
+
+export interface BookingPaymentInfoDto {
+  paymentId: string;
+  amount: number;
+  paymentMethod: string;
+  paymentStatus: PaymentStatus;
+  paidAt?: string;
+  notes?: string;
+}
+
+export interface CreateBookingRequest {
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  vehicle_id: string;
+  vehicle_license_plate: string;
+  vehicle_brand_id: string;
+  vehicle_brand_name?: string;
+  vehicle_model_name?: string;
+  vehicle_type_name?: string;
+  vehicle_year?: number;
+  vehicle_color?: string;
+  branch_id: string;
+  bay_id?: string;
+  preferred_start_at: string;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
+  estimated_duration_minutes?: number;
+  buffer_minutes?: number;
+  total_price?: number;
+  currency?: string;
+  deposit_amount?: number;
+  priority?: Priority;
+  coupon_code?: string;
+  notes?: string;
+  special_requests?: string[];
+  booking_items: {
+    item_type: string;
+    item_id: string;
+    item_name: string;
+    item_url?: string;
+    item_description?: string;
+    unit_price: number;
+    quantity: number;
+    duration_minutes?: number;
+    discount_amount?: number;
+    tax_amount?: number;
+    notes?: string;
+    display_order?: number;
+  }[];
+  assignments: {
+    technician_id: string;
+    role: string;
+  }[];
+  payments?: unknown[];
 }
 
 export interface UpdateBookingRequest {
-  customerName?: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  vehicleLicensePlate?: string;
-  vehicleBrandId?: string;
-  vehicleModelId?: string;
-  vehicleTypeId?: string;
-  branchId?: string;
-  serviceId?: string;
-  servicePackageId?: string;
-  bookingDate?: string;
-  bookingTime?: string;
+  customer_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
+  vehicle_id?: string;
+  vehicle_license_plate?: string;
+  vehicle_brand_id?: string;
+  vehicle_brand_name?: string;
+  vehicle_model_name?: string;
+  vehicle_type_name?: string;
+  vehicle_year?: number;
+  vehicle_color?: string;
+  branch_id?: string;
+  bay_id?: string;
+  preferred_start_at?: string;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
+  estimated_duration_minutes?: number;
+  buffer_minutes?: number;
+  total_price?: number;
+  currency?: string;
+  deposit_amount?: number;
+  priority?: Priority;
+  coupon_code?: string;
   notes?: string;
-  estimatedDuration?: number;
+  special_requests?: string[];
   status?: BookingStatus;
-  assignedTechnicianId?: string;
-  serviceBayId?: string;
+  booking_items?: {
+    item_type: string;
+    item_id: string;
+    item_name: string;
+    item_url?: string;
+    item_description?: string;
+    unit_price: number;
+    quantity: number;
+    duration_minutes?: number;
+    discount_amount?: number;
+    tax_amount?: number;
+    notes?: string;
+    display_order?: number;
+  }[];
+  assignments?: {
+    technician_id: string;
+    role: string;
+  }[];
 }
 
 export interface BookingStatisticsDto {

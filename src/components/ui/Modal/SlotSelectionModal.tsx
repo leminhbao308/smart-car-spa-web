@@ -112,9 +112,9 @@ const SlotSelectionModal: React.FC<SlotSelectionModalProps> = ({
     const isWeekend =
       selectedDateTime.day() === 0 || selectedDateTime.day() === 6;
     const openingHours = isWeekend
-      ? branch.openingHours.weekends
-      : branch.openingHours.weekdays;
-    const [openTime, closeTime] = openingHours.split(" - ");
+      ? branch?.openingHours?.weekends
+      : branch?.openingHours?.weekdays;
+    const [openTime, closeTime] = openingHours?.split(" - ") || ["08:00", "18:00"];
 
     const branchOpenTime = dayjs(`${selectedDate} ${openTime}`);
     const branchCloseTime = dayjs(`${selectedDate} ${closeTime}`);
@@ -125,7 +125,7 @@ const SlotSelectionModal: React.FC<SlotSelectionModalProps> = ({
     );
   };
 
-  const availableSlots = branch.careSlots.filter(isSlotAvailable);
+  const availableSlots = branch?.careSlots?.filter(isSlotAvailable) || [];
 
   const handleSelectSlot = async (slot: CareSlot) => {
     setLoading(true);
@@ -149,7 +149,7 @@ const SlotSelectionModal: React.FC<SlotSelectionModalProps> = ({
       title={
         <Space>
           <EnvironmentOutlined />
-          <span>Chọn slot chăm sóc - {branch.name}</span>
+          <span>Chọn slot chăm sóc - {branch?.name || "Chi nhánh"}</span>
         </Space>
       }
       open={open}
@@ -266,8 +266,8 @@ const SlotSelectionModal: React.FC<SlotSelectionModalProps> = ({
         }}
       >
         <Text type="secondary" style={{ fontSize: 12 }}>
-          <ClockCircleOutlined /> Giờ hoạt động: {branch.openingHours.weekdays}{" "}
-          (T2-T6), {branch.openingHours.weekends} (T7-CN)
+          <ClockCircleOutlined /> Giờ hoạt động: {branch?.openingHours?.weekdays || "N/A"}{" "}
+          (T2-T6), {branch?.openingHours?.weekends || "N/A"} (T7-CN)
         </Text>
       </div>
     </Modal>

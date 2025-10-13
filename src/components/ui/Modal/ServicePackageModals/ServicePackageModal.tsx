@@ -173,6 +173,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
     if (hasServices) {
       console.log("EditData package_services:", editData.package_services);
       setServiceItems(editData.package_services);
+      
       const serviceIds = editData.package_services
         .map((item) => item.service_id)
         .filter(Boolean);
@@ -250,22 +251,25 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
     console.log("selectedServicesData:", selectedServicesData);
     setSelectedServices(selectedServicesData);
 
-    // Get current service IDs in serviceItems
+    // Get current service IDs in serviceItems (both service_id and service_name)
     const currentServiceIds = serviceItems
       .filter((item) => item.service_id)
       .map((item) => item.service_id);
+    
+    const currentServiceNames = serviceItems
+      .filter((item) => item.service_name)
+      .map((item) => item.service_name);
 
-    // Find services to add (new ones)
+    // Find services to add (new ones that are not already in the list)
     const servicesToAdd = selectedServicesData.filter(
-      (service) => !currentServiceIds.includes(service.service_id)
+      (service) => 
+        !currentServiceIds.includes(service.service_id) && 
+        !currentServiceNames.includes(service.service_name)
     );
 
-    // Remove services that are no longer selected
-    const updatedServiceItems = serviceItems.filter(
-      (item) => item.service_id && serviceIds.includes(item.service_id)
-    );
+    console.log("Services to add:", servicesToAdd);
 
-    // Add new services
+    // Create new service items from selected services
     const newServiceItems: ServicePackageServiceItem[] = servicesToAdd.map(
       (service) => ({
         service_id: service.service_id,
@@ -282,7 +286,8 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
       })
     );
 
-    const finalServiceItems = [...updatedServiceItems, ...newServiceItems];
+    // Append new services to existing serviceItems
+    const finalServiceItems = [...serviceItems, ...newServiceItems];
     console.log("Final serviceItems:", finalServiceItems);
     setServiceItems(finalServiceItems);
   };
@@ -306,27 +311,66 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
     );
   };
 
-  const removeServiceItem = (servicePackageServiceId: string) => {
-    setServiceItems((prev) =>
-      prev.filter(
-        (item) =>
-          item.service_package_service_id &&
-          item.service_package_service_id !== servicePackageServiceId
-      )
+  const removeServiceItem = async (servicePackageServiceId: string) => {
+    console.log("=== DEBUG REMOVE SERVICE ===");
+    console.log("servicePackageServiceId:", servicePackageServiceId);
+    console.log("packageType:", packageType);
+    console.log("serviceItems.length:", serviceItems.length);
+    console.log("mode:", mode);
+
+    // Check if this is the last service in a combo package
+    if (packageType === "combo" && serviceItems.length <= 1) {
+      message.warning("Gói dịch vụ combo phải có ít nhất một dịch vụ");
+      return;
+    }
+
+    // Find the item to be removed
+    const itemToRemove = serviceItems.find(
+      (item) => item.service_package_service_id === servicePackageServiceId
     );
 
-    // For existing packages, we don't need to update selectedServices
-    // as they might not have service_id
-    if (mode === "create") {
-      setSelectedServices((prev) =>
-        prev.filter((service) => service.service_id !== servicePackageServiceId)
-      );
+    console.log("itemToRemove:", itemToRemove);
 
-      // Update form field to reflect the change
-      const currentSelectedIds = selectedServices
-        .filter((service) => service.service_id !== servicePackageServiceId)
-        .map((service) => service.service_id);
-      form.setFieldValue("selected_services", currentSelectedIds);
+    if (itemToRemove) {
+      try {
+        // In edit mode, call API to remove service immediately
+        if (mode === "edit" && editData?.package_id && itemToRemove.service_id) {
+          console.log("Calling API to remove service from package");
+          await servicePackageService.removeServiceFromPackage(
+            editData.package_id,
+            itemToRemove.service_id
+          );
+          message.success("Đã xóa dịch vụ khỏi gói thành công");
+        }
+
+        // Remove from current serviceItems
+        setServiceItems((prev) =>
+          prev.filter(
+            (item) =>
+              item.service_package_service_id &&
+              item.service_package_service_id !== servicePackageServiceId
+          )
+        );
+
+        // For existing packages, we don't need to update selectedServices
+        // as they might not have service_id
+        if (mode === "create") {
+          setSelectedServices((prev) =>
+            prev.filter((service) => service.service_id !== servicePackageServiceId)
+          );
+
+          // Update form field to reflect the change
+          const currentSelectedIds = selectedServices
+            .filter((service) => service.service_id !== servicePackageServiceId)
+            .map((service) => service.service_id);
+          form.setFieldValue("selected_services", currentSelectedIds);
+        }
+
+      } catch (error) {
+        console.error("Error removing service from package:", error);
+        const errorMessage = error instanceof Error ? error.message : "Không thể xóa dịch vụ khỏi gói";
+        message.error(errorMessage);
+      }
     }
   };
 
@@ -361,7 +405,20 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      
+      // Validate combo package must have at least one service
+      if (packageType === "combo" && serviceItems.length === 0) {
+        message.error("Gói dịch vụ combo phải có ít nhất một dịch vụ");
+        return;
+      }
+      
       setLoading(true);
+
+      // Debug logs
+      console.log("=== DEBUG SUBMIT ===");
+      console.log("packageType:", packageType);
+      console.log("serviceItems:", serviceItems);
+      console.log("mode:", mode);
 
       const requestData = {
         ...values,
@@ -377,16 +434,26 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
         package_services:
           packageType === "combo"
             ? serviceItems
-                .filter((item) => item.service_id)
+                .filter((item) => item.service_name) // Only include current service items
                 .map((item) => ({
-                  service_id: item.service_id,
+                  service_id: item.service_id, // Use actual service_id from data
+                  service_package_service_id: item.service_package_service_id,
                   quantity: item.quantity,
                   unit_price: item.unit_price,
                   notes: item.notes,
                   is_required: item.is_required,
+                  // No operation field - deleted services are simply not included
                 }))
             : [],
       };
+
+      console.log("Final requestData:", requestData);
+      console.log("package_services details:", requestData.package_services);
+      console.log("serviceItems with service_id:", serviceItems.map(item => ({
+        service_name: item.service_name,
+        service_id: item.service_id,
+        service_package_service_id: item.service_package_service_id
+      })));
 
       if (mode === "create") {
         await servicePackageService.createServicePackage(
@@ -552,9 +619,9 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                           type="text"
                           danger
                           icon={<DeleteOutlined />}
-                          onClick={() =>
-                            removeServiceItem(item.service_package_service_id!)
-                          }
+                          onClick={async () => {
+                            await removeServiceItem(item.service_package_service_id!);
+                          }}
                           size="small"
                         />
                       </Col>

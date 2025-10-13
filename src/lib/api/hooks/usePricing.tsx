@@ -1,6 +1,8 @@
 "use client";
 import {useState, useCallback} from "react";
+import { useQuery } from "@tanstack/react-query";
 import {PricingPreviewBatchRequest, PricingPreviewItemRequest, PricingService} from "@/lib/api";
+import { PriceBook } from "@/lib/api/types/price-book.types";
 
 
 export const usePricing = () => {
@@ -37,4 +39,16 @@ export const usePricing = () => {
 
 
   return {loading, error, preview, previewBatch};
+};
+
+/**
+ * Hook to get active price books for booking
+ */
+export const useActivePriceBooks = () => {
+  return useQuery({
+    queryKey: ["pricing", "active-books"],
+    queryFn: () => PricingService.getActivePriceBooks(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
 };

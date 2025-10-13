@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Tag,
   Typography,
@@ -15,6 +15,7 @@ import {
   Input,
   Radio,
   Space,
+  notification,
 } from "antd";
 import {
   EyeOutlined,
@@ -26,46 +27,89 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   CameraOutlined,
-  VideoCameraOutlined,
   StarOutlined,
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
-import {
-  vehiclesInCareData,
-  VehicleInCare,
-  StepProgress,
-} from "@/components/utils/data/care-processes.data";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 import { formatTime } from "@/components/utils/helper/duration.format.helper";
-import {
-  getStepCategoryIcon,
-  getStepStatusColor,
-  getStepStatusLabel,
-  getStatusColor,
-  getStatusLabel,
-  getStepProgress,
-} from "@/components/utils/helper/vehicle.in.care.helper";
+import { 
+  useInProgressTrackings,
+  useTrackingsByBooking
+} from "@/lib/api/hooks/useTracking";
+import { 
+  useBookingsByStatus,
+  useCompleteService
+} from "@/lib/api/hooks/useBooking";
+import { 
+  ServiceProcessTrackingInfoDto,
+  TrackingStatus
+} from "@/lib/api/types/service-process-tracking.types";
+import { 
+  BookingInfoDto,
+  BookingStatus
+} from "@/lib/api/types/booking.types";
 
 const { Text } = Typography;
 
+// Helper functions
+const getStatusConfig = (status: TrackingStatus) => {
+  const statusConfigs = {
+    [TrackingStatus.PENDING]: { label: "Chờ thực hiện", color: "default", icon: <ClockCircleOutlined /> },
+    [TrackingStatus.IN_PROGRESS]: { label: "Đang thực hiện", color: "blue", icon: <PlayCircleOutlined /> },
+    [TrackingStatus.COMPLETED]: { label: "Hoàn thành", color: "green", icon: <CheckCircleOutlined /> },
+    [TrackingStatus.CANCELLED]: { label: "Đã hủy", color: "red", icon: <ExclamationCircleOutlined /> },
+  };
+  return statusConfigs[status] || { label: "Unknown", color: "default", icon: <ClockCircleOutlined /> };
+};
+
+const getStepCategoryIcon = (category: string) => {
+  const icons = {
+    inspection: "🔍",
+    cleaning: "🧽",
+    maintenance: "🔧",
+    repair: "⚙️",
+    testing: "🧪",
+    default: "📋"
+  };
+  return icons[category as keyof typeof icons] || icons.default;
+};
+
 const VehiclesInCarePage = () => {
-  const [data, setData] = useState<VehicleInCare[]>(vehiclesInCareData);
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleInCare | null>(
-    null
-  );
+  const [selectedVehicle, setSelectedVehicle] = useState<BookingInfoDto | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const { showModal } = useConfirmationModalContext();
+  
+  // API hooks
+  const { data: inProgressBookings, isLoading: isLoadingBookings, error: bookingsError } = useBookingsByStatus(BookingStatus.IN_PROGRESS);
+  const { isLoading: isLoadingTrackings, error: trackingsError } = useInProgressTrackings();
+  
+  const completeServiceMutation = useCompleteService();
+  
+  
+  // Combine bookings with their trackings
+  const data = inProgressBookings?.data || [];
+  
+  // Error handling
+  useEffect(() => {
+    if (bookingsError || trackingsError) {
+      notification.error({
+        message: "Lỗi tải dữ liệu",
+        description: "Có lỗi xảy ra khi tải dữ liệu xe đang chăm sóc",
+        placement: "topRight",
+      });
+    }
+  }, [bookingsError, trackingsError]);
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: BookingStatus) => {
     switch (status) {
-      case "in_progress":
+      case BookingStatus.IN_PROGRESS:
         return <PlayCircleOutlined />;
-      case "completed":
+      case BookingStatus.COMPLETED:
         return <CheckCircleOutlined />;
-      case "paused":
+      case BookingStatus.PAUSED:
         return <PauseCircleOutlined />;
-      case "cancelled":
+      case BookingStatus.CANCELLED:
         return <ExclamationCircleOutlined />;
       default:
         return <ClockCircleOutlined />;
@@ -78,22 +122,19 @@ const VehiclesInCarePage = () => {
       dataIndex: "vehicleInfo",
       key: "vehicleInfo",
       width: 250,
-      render: (
-        vehicleInfo: VehicleInCare["vehicleInfo"],
-        record: VehicleInCare
-      ) => (
+      render: (_: unknown, record: BookingInfoDto) => (
         <div>
           <div
             style={{ display: "flex", alignItems: "center", marginBottom: 4 }}
           >
             <CarOutlined style={{ marginRight: 8, color: "#1890ff" }} />
             <Text strong style={{ fontSize: 14 }}>
-              {vehicleInfo.brand} {vehicleInfo.model}
+              {record.vehicleBrandName} {record.vehicleModelName}
             </Text>
           </div>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {vehicleInfo.licensePlate} • {vehicleInfo.year} •{" "}
-            {vehicleInfo.color}
+            {record.vehicleLicensePlate} • {record.vehicleYear} •{" "}
+            {record.vehicleColor}
           </Text>
           <div style={{ marginTop: 4 }}>
             <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
@@ -108,14 +149,14 @@ const VehiclesInCarePage = () => {
       dataIndex: "careProcessName",
       key: "careProcessName",
       width: 150,
-      render: (processName: string, record: VehicleInCare) => (
+      render: (_: unknown, record: BookingInfoDto) => (
         <div>
           <Text strong style={{ fontSize: 12 }}>
-            {processName}
+            {record.bookingItems?.length || 0} dịch vụ
           </Text>
           <div style={{ marginTop: 4 }}>
             <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
-              Bước hiện tại: {record.currentStepName}
+              Thời gian: {formatTime(record.estimatedDurationMinutes || 0)}
             </Text>
           </div>
         </div>
@@ -126,22 +167,22 @@ const VehiclesInCarePage = () => {
       dataIndex: "time",
       key: "time",
       width: 180,
-      render: (_: unknown, record: VehicleInCare) => (
+      render: (_: unknown, record: BookingInfoDto) => (
         <div>
           <div style={{ marginBottom: 4 }}>
             <Text style={{ fontSize: 12 }}>
-              Bắt đầu: {formatDate(record.startTime)}
+              Bắt đầu: {formatDate(record.actualStartAt || record.scheduledStartAt || record.preferredStartAt || new Date().toISOString())}
             </Text>
           </div>
           <div style={{ marginBottom: 4 }}>
             <Text style={{ fontSize: 12 }}>
-              Dự kiến: {formatDate(record.estimatedEndTime)}
+              Dự kiến: {formatDate(record.scheduledEndAt || new Date().toISOString())}
             </Text>
           </div>
-          {record.actualEndTime && (
+          {record.actualEndAt && (
             <div>
               <Text style={{ fontSize: 12, color: "#52c41a" }}>
-                Hoàn thành: {formatDate(record.actualEndTime)}
+                Hoàn thành: {formatDate(record.actualEndAt)}
               </Text>
             </div>
           )}
@@ -150,12 +191,12 @@ const VehiclesInCarePage = () => {
     },
     {
       title: "Nhân viên",
-      dataIndex: "assignedStaff",
-      key: "assignedStaff",
+      dataIndex: "assignments",
+      key: "assignments",
       width: 150,
-      render: (staff: VehicleInCare["assignedStaff"]) => (
+      render: (assignments: unknown[]) => (
         <div>
-          {staff.map((member, index) => (
+          {(assignments as { technicianName: string; role: string }[])?.map((assignment, index: number) => (
             <div
               key={index}
               style={{ display: "flex", alignItems: "center", marginBottom: 4 }}
@@ -166,10 +207,10 @@ const VehiclesInCarePage = () => {
                 style={{ marginRight: 4 }}
               />
               <div>
-                <Text style={{ fontSize: 11 }}>{member.name}</Text>
+                <Text style={{ fontSize: 11 }}>{assignment.technicianName}</Text>
                 <div>
                   <Text style={{ fontSize: 10, color: "#8c8c8c" }}>
-                    {member.role}
+                    {assignment.role}
                   </Text>
                 </div>
               </div>
@@ -183,11 +224,14 @@ const VehiclesInCarePage = () => {
       dataIndex: "status",
       key: "status",
       width: 120,
-      render: (status: string) => (
-        <Tag color={getStatusColor(status)} icon={getStatusIcon(status)}>
-          {getStatusLabel(status)}
-        </Tag>
-      ),
+      render: (status: BookingStatus) => {
+        const statusConfig = getStatusConfig(status as unknown as TrackingStatus);
+        return (
+          <Tag color={statusConfig.color} icon={getStatusIcon(status)}>
+            {statusConfig.label}
+          </Tag>
+        );
+      },
     },
   ];
 
@@ -196,102 +240,36 @@ const VehiclesInCarePage = () => {
       key: "view",
       label: "Xem chi tiết",
       icon: <EyeOutlined />,
-      onClick: (record: VehicleInCare) => {
+      onClick: (record: BookingInfoDto) => {
         setSelectedVehicle(record);
         setDetailModalOpen(true);
-      },
-    },
-    {
-      key: "pause",
-      label: "Tạm dừng",
-      icon: <PauseCircleOutlined />,
-      condition: (record: VehicleInCare) => record.status === "in_progress",
-      onClick: (record: VehicleInCare) => {
-        showModal({
-          title: "Xác nhận tạm dừng",
-          content: `Bạn có chắc chắn muốn tạm dừng chăm sóc xe "${record.vehicleInfo.brand} ${record.vehicleInfo.model}"?`,
-          type: "warning",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "paused" as const }
-                  : item
-              )
-            );
-          },
-        });
-      },
-    },
-    {
-      key: "resume",
-      label: "Tiếp tục",
-      icon: <PlayCircleOutlined />,
-      condition: (record: VehicleInCare) => record.status === "paused",
-      onClick: (record: VehicleInCare) => {
-        showModal({
-          title: "Xác nhận tiếp tục",
-          content: `Bạn có chắc chắn muốn tiếp tục chăm sóc xe "${record.vehicleInfo.brand} ${record.vehicleInfo.model}"?`,
-          type: "success",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "in_progress" as const }
-                  : item
-              )
-            );
-          },
-        });
       },
     },
     {
       key: "complete",
       label: "Hoàn thành",
       icon: <CheckCircleOutlined />,
-      condition: (record: VehicleInCare) =>
-        record.status === "in_progress" && record.progress === 100,
-      onClick: (record: VehicleInCare) => {
+      condition: (record: BookingInfoDto) => record.status === BookingStatus.IN_PROGRESS,
+      onClick: (record: BookingInfoDto) => {
         showModal({
           title: "Xác nhận hoàn thành",
-          content: `Bạn có chắc chắn muốn hoàn thành chăm sóc xe "${record.vehicleInfo.brand} ${record.vehicleInfo.model}"?`,
+          content: `Bạn có chắc chắn muốn hoàn thành chăm sóc xe "${record.vehicleBrandName} ${record.vehicleModelName}"?`,
           type: "success",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? {
-                      ...item,
-                      status: "completed" as const,
-                      actualEndTime: new Date().toISOString(),
-                    }
-                  : item
-              )
-            );
-          },
-        });
-      },
-    },
-    {
-      key: "cancel",
-      label: "Hủy",
-      icon: <ExclamationCircleOutlined />,
-      danger: true,
-      condition: (record: VehicleInCare) =>
-        record.status === "in_progress" || record.status === "paused",
-      onClick: (record: VehicleInCare) => {
-        showModal({
-          title: "Xác nhận hủy",
-          content: `Bạn có chắc chắn muốn hủy chăm sóc xe "${record.vehicleInfo.brand} ${record.vehicleInfo.model}"?`,
-          type: "error",
-          onConfirm: () => {
-            setData(
-              data.map((item) =>
-                item.id === record.id
-                  ? { ...item, status: "cancelled" as const }
-                  : item
-              )
-            );
+          onConfirm: async () => {
+            try {
+              await completeServiceMutation.mutateAsync(record.bookingId);
+              notification.success({
+                message: "Thành công",
+                description: "Hoàn thành chăm sóc xe thành công",
+                placement: "topRight",
+              });
+            } catch {
+              notification.error({
+                message: "Lỗi",
+                description: "Có lỗi xảy ra khi hoàn thành chăm sóc xe",
+                placement: "topRight",
+              });
+            }
           },
         });
       },
@@ -301,24 +279,21 @@ const VehiclesInCarePage = () => {
   // Thống kê tổng quan
   const totalVehicles = data.length;
   const inProgressVehicles = data.filter(
-    (item) => item.status === "in_progress"
+    (item: BookingInfoDto) => item.status === BookingStatus.IN_PROGRESS
   ).length;
   const completedVehicles = data.filter(
-    (item) => item.status === "completed"
+    (item: BookingInfoDto) => item.status === BookingStatus.COMPLETED
   ).length;
-  const pausedVehicles = data.filter((item) => item.status === "paused").length;
+  const pausedVehicles = data.filter((item: BookingInfoDto) => item.status === BookingStatus.PAUSED).length;
   const cancelledVehicles = data.filter(
-    (item) => item.status === "cancelled"
+    (item: BookingInfoDto) => item.status === BookingStatus.CANCELLED
   ).length;
-  const averageProgress =
-    data.length > 0
-      ? data.reduce((sum, item) => sum + item.progress, 0) / data.length
-      : 0;
+  const averageProgress = 0; // Will be calculated from tracking data
   const urgentVehicles = data.filter(
-    (item) => item.priority === "urgent"
+    (item: BookingInfoDto) => item.priority === "URGENT"
   ).length;
   const highPriorityVehicles = data.filter(
-    (item) => item.priority === "high"
+    (item: BookingInfoDto) => item.priority === "HIGH"
   ).length;
 
   return (
@@ -423,6 +398,7 @@ const VehiclesInCarePage = () => {
         dataSource={data}
         columns={columns}
         actions={actions}
+        loading={isLoadingBookings || isLoadingTrackings}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
@@ -441,7 +417,6 @@ const VehiclesInCarePage = () => {
             setSelectedVehicle(null);
           }}
           vehicle={selectedVehicle}
-          stepProgress={getStepProgress(selectedVehicle.id)}
         />
       )}
     </div>
@@ -452,29 +427,30 @@ const VehiclesInCarePage = () => {
 interface VehicleDetailModalProps {
   open: boolean;
   onCancel: () => void;
-  vehicle: VehicleInCare;
-  stepProgress: StepProgress[];
+  vehicle: BookingInfoDto;
 }
 
 const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
   open,
   onCancel,
   vehicle,
-  stepProgress,
 }) => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [stepDetailModalOpen, setStepDetailModalOpen] = useState(false);
   const [updateStatusModalOpen, setUpdateStatusModalOpen] = useState(false);
-  const [selectedStep, setSelectedStep] = useState<StepProgress | null>(null);
-  const [currentStepId, setCurrentStepId] = useState<number | null>(null);
-  const [stepProgressData, setStepProgressData] = useState<StepProgress[]>(stepProgress);
+  const [selectedStep, setSelectedStep] = useState<ServiceProcessTrackingInfoDto | null>(null);
+  const [currentStepId, setCurrentStepId] = useState<string | null>(null);
+  
+  // Get tracking data for this vehicle
+  const { data: trackingsResponse, isLoading: isLoadingTrackings } = useTrackingsByBooking(vehicle.bookingId);
+  const stepProgressData = trackingsResponse?.data || [];
 
-  const handleUploadImage = (stepId: number) => {
+  const handleUploadImage = (stepId: string) => {
     setCurrentStepId(stepId);
     setUploadModalOpen(true);
   };
 
-  const handleViewStepDetail = (step: StepProgress) => {
+  const handleViewStepDetail = (step: ServiceProcessTrackingInfoDto) => {
     setSelectedStep(step);
     setStepDetailModalOpen(true);
   };
@@ -484,45 +460,19 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
     window.open(url, "_blank");
   };
 
-  const handleUpdateStepStatus = (step: StepProgress, stepIndex: number) => {
-    setSelectedStep({ ...step, stepIndex, allSteps: stepProgressData } as StepProgress & { stepIndex: number; allSteps: StepProgress[] });
+  const handleUpdateStepStatus = (step: ServiceProcessTrackingInfoDto, stepIndex: number) => {
+    setSelectedStep({ ...step, stepIndex, allSteps: stepProgressData } as ServiceProcessTrackingInfoDto & { stepIndex: number; allSteps: ServiceProcessTrackingInfoDto[] });
     setUpdateStatusModalOpen(true);
   };
 
-  const handleStatusUpdate = (stepId: number, newStatus: string, notes?: string) => {
-    const updatedSteps = stepProgressData.map(step => {
-      if (step.id === stepId) {
-        const updatedStep = { ...step, status: newStatus as StepProgress['status'] };
-        
-        // Cập nhật thời gian dựa trên trạng thái
-        if (newStatus === "in_progress" && !step.startTime) {
-          updatedStep.startTime = new Date().toISOString();
-        } else if (newStatus === "completed" && !step.endTime) {
-          updatedStep.endTime = new Date().toISOString();
-          if (step.startTime) {
-            const start = new Date(step.startTime);
-            const end = new Date();
-            updatedStep.actualDuration = Math.round((end.getTime() - start.getTime()) / 1000 / 60); // phút
-          }
-        }
-        
-        // Cập nhật ghi chú nếu có
-        if (notes) {
-          updatedStep.notes = notes;
-        }
-        
-        return updatedStep;
-      }
-      return step;
-    });
-    
-    setStepProgressData(updatedSteps);
+  const handleStatusUpdate = () => {
+    // This will be handled by API mutations
     setUpdateStatusModalOpen(false);
     setSelectedStep(null);
   };
   return (
     <Modal
-      title={`Chi tiết xe ${vehicle.vehicleInfo.brand} ${vehicle.vehicleInfo.model}`}
+      title={`Chi tiết xe ${vehicle.vehicleBrandName} ${vehicle.vehicleModelName}`}
       open={open}
       onCancel={onCancel}
       width={1000}
@@ -542,23 +492,23 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
             </Col>
             <Col span={8}>
               <Text strong>Biển số:</Text>
-              <div>{vehicle.vehicleInfo.licensePlate}</div>
+              <div>{vehicle.vehicleLicensePlate}</div>
             </Col>
             <Col span={8}>
               <Text strong>Năm sản xuất:</Text>
-              <div>{vehicle.vehicleInfo.year}</div>
+              <div>{vehicle.vehicleYear}</div>
             </Col>
             <Col span={8}>
               <Text strong>Màu sắc:</Text>
-              <div>{vehicle.vehicleInfo.color}</div>
+              <div>{vehicle.vehicleColor}</div>
             </Col>
             <Col span={8}>
               <Text strong>Loại xe:</Text>
-              <div>{vehicle.vehicleInfo.type}</div>
+              <div>{vehicle.vehicleTypeName}</div>
             </Col>
             <Col span={8}>
-              <Text strong>Quy trình:</Text>
-              <div>{vehicle.careProcessName}</div>
+              <Text strong>Dịch vụ:</Text>
+              <div>{vehicle.bookingItems?.length || 0} dịch vụ</div>
             </Col>
           </Row>
         </Card>
@@ -574,18 +524,20 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
               <div style={{ marginBottom: 16 }}>
                 <Text strong>Tiến độ hoàn thành:</Text>
                 <Progress
-                  percent={vehicle.progress}
-                  strokeColor={vehicle.progress === 100 ? "#52c41a" : "#1890ff"}
+                  percent={stepProgressData.length > 0 ? 
+                    (stepProgressData.filter((step: ServiceProcessTrackingInfoDto) => step.status === TrackingStatus.COMPLETED).length / stepProgressData.length) * 100 : 0}
+                  strokeColor={stepProgressData.length > 0 && 
+                    stepProgressData.every((step: ServiceProcessTrackingInfoDto) => step.status === TrackingStatus.COMPLETED) ? "#52c41a" : "#1890ff"}
                 />
               </div>
             </Col>
             <Col span={12}>
               <div style={{ marginBottom: 16 }}>
                 <Text strong>Thời gian:</Text>
-                <div>Bắt đầu: {formatDate(vehicle.startTime)}</div>
-                <div>Dự kiến: {formatDate(vehicle.estimatedEndTime)}</div>
-                {vehicle.actualEndTime && (
-                  <div>Hoàn thành: {formatDate(vehicle.actualEndTime)}</div>
+                <div>Bắt đầu: {formatDate(vehicle.actualStartAt || vehicle.scheduledStartAt || vehicle.preferredStartAt || new Date().toISOString())}</div>
+                <div>Dự kiến: {formatDate(vehicle.scheduledEndAt || new Date().toISOString())}</div>
+                {vehicle.actualEndAt && (
+                  <div>Hoàn thành: {formatDate(vehicle.actualEndAt)}</div>
                 )}
               </div>
             </Col>
@@ -595,40 +547,49 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
         {/* Các bước chăm sóc */}
         <Card title="Chi tiết các bước chăm sóc" size="small">
           <div style={{ maxHeight: "500px", overflowY: "auto" }}>
-            {stepProgressData.map((step, index) => {
-              const getStepBackgroundColor = (status: string) => {
-                switch (status) {
-                  case "completed":
-                    return "#f6ffed";
-                  case "in_progress":
-                    return "#e6f7ff";
-                  case "pending":
-                    return "#fafafa";
-                  case "skipped":
-                    return "#fff2f0";
-                  default:
-                    return "#fafafa";
-                }
-              };
+            {isLoadingTrackings ? (
+              <div style={{ textAlign: "center", padding: "20px" }}>
+                Đang tải dữ liệu...
+              </div>
+            ) : stepProgressData.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "20px" }}>
+                Chưa có dữ liệu tracking
+              </div>
+            ) : (
+              stepProgressData.map((step: ServiceProcessTrackingInfoDto, index: number) => {
+                const getStepBackgroundColor = (status: TrackingStatus) => {
+                  switch (status) {
+                    case TrackingStatus.COMPLETED:
+                      return "#f6ffed";
+                    case TrackingStatus.IN_PROGRESS:
+                      return "#e6f7ff";
+                    case TrackingStatus.PENDING:
+                      return "#fafafa";
+                    case TrackingStatus.CANCELLED:
+                      return "#fff2f0";
+                    default:
+                      return "#fafafa";
+                  }
+                };
 
-              const getStepBorderColor = (status: string) => {
-                switch (status) {
-                  case "completed":
-                    return "#b7eb8f";
-                  case "in_progress":
-                    return "#91d5ff";
-                  case "pending":
-                    return "#d9d9d9";
-                  case "skipped":
-                    return "#ffccc7";
-                  default:
-                    return "#d9d9d9";
-                }
-              };
+                const getStepBorderColor = (status: TrackingStatus) => {
+                  switch (status) {
+                    case TrackingStatus.COMPLETED:
+                      return "#b7eb8f";
+                    case TrackingStatus.IN_PROGRESS:
+                      return "#91d5ff";
+                    case TrackingStatus.PENDING:
+                      return "#d9d9d9";
+                    case TrackingStatus.CANCELLED:
+                      return "#ffccc7";
+                    default:
+                      return "#d9d9d9";
+                  }
+                };
 
               return (
                 <Card
-                  key={step.id}
+                  key={step.trackingId}
                   size="small"
                   style={{
                     marginBottom: 16,
@@ -656,9 +617,9 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                           height: 32,
                           borderRadius: "50%",
                           backgroundColor:
-                            getStepStatusColor(step.status) === "green"
+                            step.status === TrackingStatus.COMPLETED
                               ? "#52c41a"
-                              : getStepStatusColor(step.status) === "blue"
+                              : step.status === TrackingStatus.IN_PROGRESS
                               ? "#1890ff"
                               : "#d9d9d9",
                           color: "white",
@@ -670,7 +631,7 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                           fontWeight: "bold",
                         }}
                       >
-                        {index + 1}
+                        {step.serviceStepOrder || index + 1}
                       </div>
                       <div>
                         <div
@@ -684,13 +645,13 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                             {getStepCategoryIcon("inspection")}
                           </span>
                           <Text strong style={{ fontSize: 16 }}>
-                            {step.stepName}
+                            {step.serviceStepName}
                           </Text>
                           <Tag
-                            color={getStepStatusColor(step.status)}
+                            color={getStatusConfig(step.status).color}
                             style={{ marginLeft: 8 }}
                           >
-                            {getStepStatusLabel(step.status)}
+                            {getStatusConfig(step.status).label}
                           </Tag>
                         </div>
                         <div style={{ display: "flex", alignItems: "center" }}>
@@ -698,18 +659,18 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                             style={{ marginRight: 4, color: "#1890ff" }}
                           />
                           <Text style={{ color: "#666", fontSize: 12 }}>
-                            Nhân viên: {step.staffName}
+                            Nhân viên: {step.technicianName}
                           </Text>
                         </div>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      {step.status !== "completed" && (
+                      {step.status !== TrackingStatus.COMPLETED && (
                         <Button
                           type="primary"
                           size="small"
                           icon={<CameraOutlined />}
-                          onClick={() => handleUploadImage(step.id)}
+                          onClick={() => handleUploadImage(step.trackingId)}
                         >
                           Upload ảnh
                         </Button>
@@ -722,8 +683,8 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                         Xem chi tiết
                       </Button>
                       {(() => {
-                        const isNextStep = index === 0 || stepProgressData[index - 1].status === "completed";
-                        const canUpdate = step.status !== "completed" && (isNextStep || step.status === "in_progress" || step.status === "paused");
+                        const isNextStep = index === 0 || stepProgressData[index - 1].status === TrackingStatus.COMPLETED;
+                        const canUpdate = step.status !== TrackingStatus.COMPLETED && (isNextStep || step.status === TrackingStatus.IN_PROGRESS);
                         
                         if (!canUpdate) return null;
                         
@@ -769,34 +730,22 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                     )}
                   </Row>
 
-                  {/* Đánh giá và ghi chú */}
-                  {(step.rating || step.notes) && (
+                  {/* Ghi chú */}
+                  {step.notes && (
                     <Row gutter={[16, 8]} style={{ marginBottom: 12 }}>
-                      {step.rating && (
-                        <Col span={12}>
-                          <Text style={{ fontSize: 12, color: "#666" }}>
-                            <StarOutlined
-                              style={{ marginRight: 4, color: "#faad14" }}
-                            />
-                            Đánh giá: {step.rating}/5 ⭐
-                          </Text>
-                        </Col>
-                      )}
-                      {step.notes && (
-                        <Col span={12}>
-                          <Text style={{ fontSize: 12, color: "#666" }}>
-                            <ExclamationCircleOutlined
-                              style={{ marginRight: 4 }}
-                            />
-                            Ghi chú: {step.notes}
-                          </Text>
-                        </Col>
-                      )}
+                      <Col span={12}>
+                        <Text style={{ fontSize: 12, color: "#666" }}>
+                          <ExclamationCircleOutlined
+                            style={{ marginRight: 4 }}
+                          />
+                          Ghi chú: {step.notes}
+                        </Text>
+                      </Col>
                     </Row>
                   )}
 
-                  {/* Media files */}
-                  {step.mediaFiles.length > 0 && (
+                  {/* Evidence Media */}
+                  {step.evidenceMediaUrls && (
                     <div style={{ marginBottom: 8 }}>
                       <Text
                         style={{
@@ -806,12 +755,12 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                           display: "block",
                         }}
                       >
-                        Hình ảnh đã upload ({step.mediaFiles.length}):
+                        Hình ảnh đã upload:
                       </Text>
                       <div
                         style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
                       >
-                        {step.mediaFiles.map((file, idx) => (
+                        {step.evidenceMediaUrls.split(',').map((url: string, idx: number) => (
                           <div
                             key={idx}
                             style={{
@@ -825,35 +774,20 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                               backgroundColor: "#fafafa",
                               cursor: "pointer",
                             }}
-                            onClick={() => handleViewImage(file.url)}
+                            onClick={() => handleViewImage(url.trim())}
                           >
-                            {file.type === "image" ? (
-                              <CameraOutlined
-                                style={{ fontSize: 20, color: "#1890ff" }}
-                              />
-                            ) : (
-                              <VideoCameraOutlined
-                                style={{ fontSize: 20, color: "#52c41a" }}
-                              />
-                            )}
+                            <CameraOutlined
+                              style={{ fontSize: 20, color: "#1890ff" }}
+                            />
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-
-                  {/* Issues */}
-                  {step.issues.length > 0 && (
-                    <div>
-                      <Text style={{ fontSize: 12, color: "#f5222d" }}>
-                        <ExclamationCircleOutlined style={{ marginRight: 4 }} />
-                        Vấn đề: {step.issues.length} vấn đề cần xử lý
-                      </Text>
-                    </div>
-                  )}
                 </Card>
               );
-            })}
+            })
+            )}
           </div>
         </Card>
       </div>
@@ -865,7 +799,7 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
           setUploadModalOpen(false);
           setCurrentStepId(null);
         }}
-        stepId={currentStepId}
+        stepId={currentStepId ? parseInt(currentStepId) : null}
       />
 
       {/* Modal chi tiết bước */}
@@ -966,7 +900,7 @@ const UploadImageModal: React.FC<UploadImageModalProps> = ({
 interface StepDetailModalProps {
   open: boolean;
   onCancel: () => void;
-  step: StepProgress;
+  step: ServiceProcessTrackingInfoDto;
 }
 
 const StepDetailModal: React.FC<StepDetailModalProps> = ({
@@ -976,7 +910,7 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({
 }) => {
   return (
     <Modal
-      title={`Chi tiết bước: ${step.stepName}`}
+      title={`Chi tiết bước: ${step.serviceStepName}`}
       open={open}
       onCancel={onCancel}
       footer={[
@@ -997,14 +931,14 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({
             <Col span={12}>
               <Text strong>Trạng thái:</Text>
               <div>
-                <Tag color={getStepStatusColor(step.status)}>
-                  {getStepStatusLabel(step.status)}
+                <Tag color={getStatusConfig(step.status).color}>
+                  {getStatusConfig(step.status).label}
                 </Tag>
               </div>
             </Col>
             <Col span={12}>
               <Text strong>Nhân viên thực hiện:</Text>
-              <div>{step.staffName}</div>
+              <div>{step.technicianName}</div>
             </Col>
             {step.startTime && (
               <Col span={12}>
@@ -1024,15 +958,6 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({
                 <div>{formatTime(step.actualDuration)}</div>
               </Col>
             )}
-            {step.rating && (
-              <Col span={12}>
-                <Text strong>Đánh giá chất lượng:</Text>
-                <div>
-                  <StarOutlined style={{ color: "#faad14" }} />
-                  {step.rating}/5
-                </div>
-              </Col>
-            )}
           </Row>
         </Card>
 
@@ -1044,7 +969,7 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({
         )}
 
         {/* Hình ảnh */}
-        {step.mediaFiles.length > 0 && (
+        {step.evidenceMediaUrls && (
           <Card
             title="Hình ảnh đã upload"
             size="small"
@@ -1057,7 +982,7 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({
                 gap: 16,
               }}
             >
-              {step.mediaFiles.map((file, idx) => (
+              {step.evidenceMediaUrls.split(',').map((url: string, idx: number) => (
                 <div
                   key={idx}
                   style={{
@@ -1068,21 +993,12 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({
                   }}
                 >
                   <div style={{ marginBottom: 8 }}>
-                    {file.type === "image" ? (
-                      <CameraOutlined
-                        style={{ fontSize: 24, color: "#1890ff" }}
-                      />
-                    ) : (
-                      <VideoCameraOutlined
-                        style={{ fontSize: 24, color: "#52c41a" }}
-                      />
-                    )}
+                    <CameraOutlined
+                      style={{ fontSize: 24, color: "#1890ff" }}
+                    />
                   </div>
                   <Text style={{ fontSize: 12, display: "block" }}>
-                    {file.description || `File ${idx + 1}`}
-                  </Text>
-                  <Text style={{ fontSize: 10, color: "#8c8c8c" }}>
-                    {formatDate(file.uploadedAt)}
+                    File {idx + 1}
                   </Text>
                 </div>
               ))}
@@ -1090,103 +1006,6 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({
           </Card>
         )}
 
-        {/* Danh sách kiểm tra chất lượng */}
-        {step.qualityChecklist.length > 0 && (
-          <Card
-            title="Danh sách kiểm tra chất lượng"
-            size="small"
-            style={{ marginBottom: 16 }}
-          >
-            <div>
-              {step.qualityChecklist.map((item, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    marginBottom: 8,
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  <CheckCircleOutlined
-                    style={{
-                      color: item.checked ? "#52c41a" : "#d9d9d9",
-                      marginRight: 8,
-                    }}
-                  />
-                  <Text
-                    style={{
-                      textDecoration: item.checked ? "line-through" : "none",
-                      color: item.checked ? "#8c8c8c" : "#000",
-                    }}
-                  >
-                    {item.item}
-                  </Text>
-                  {item.notes && (
-                    <Text
-                      style={{ fontSize: 12, color: "#666", marginLeft: 8 }}
-                    >
-                      ({item.notes})
-                    </Text>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* Vấn đề */}
-        {step.issues.length > 0 && (
-          <Card title="Vấn đề phát hiện" size="small">
-            <div>
-              {step.issues.map((issue, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    marginBottom: 12,
-                    padding: 12,
-                    backgroundColor: "#fff2f0",
-                    border: "1px solid #ffccc7",
-                    borderRadius: 4,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 4,
-                    }}
-                  >
-                    <Text strong style={{ color: "#f5222d" }}>
-                      {issue.description}
-                    </Text>
-                    <Tag
-                      color={
-                        issue.severity === "high"
-                          ? "red"
-                          : issue.severity === "medium"
-                          ? "orange"
-                          : "green"
-                      }
-                    >
-                      {issue.severity}
-                    </Tag>
-                  </div>
-                  <Text style={{ fontSize: 12, color: "#666" }}>
-                    Trạng thái: {issue.resolved ? "Đã xử lý" : "Chưa xử lý"}
-                  </Text>
-                  {issue.resolution && (
-                    <div style={{ marginTop: 4 }}>
-                      <Text style={{ fontSize: 12 }}>
-                        Giải pháp: {issue.resolution}
-                      </Text>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
       </div>
     </Modal>
   );
@@ -1196,8 +1015,8 @@ const StepDetailModal: React.FC<StepDetailModalProps> = ({
 interface UpdateStepStatusModalProps {
   open: boolean;
   onCancel: () => void;
-  step: StepProgress & { stepIndex?: number; allSteps?: StepProgress[] };
-  onUpdate: (stepId: number, newStatus: string, notes?: string) => void;
+  step: ServiceProcessTrackingInfoDto & { stepIndex?: number; allSteps?: ServiceProcessTrackingInfoDto[] };
+  onUpdate: () => void;
 }
 
 const UpdateStepStatusModal: React.FC<UpdateStepStatusModalProps> = ({
@@ -1209,34 +1028,28 @@ const UpdateStepStatusModal: React.FC<UpdateStepStatusModalProps> = ({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  const getAvailableStatuses = (currentStatus: string, stepIndex: number, allSteps: StepProgress[]) => {
+  const getAvailableStatuses = (currentStatus: TrackingStatus, stepIndex: number, allSteps: ServiceProcessTrackingInfoDto[]) => {
     // Kiểm tra xem có phải bước tiếp theo cần thực hiện không
-    const isNextStep = stepIndex === 0 || allSteps[stepIndex - 1].status === "completed";
+    const isNextStep = stepIndex === 0 || allSteps[stepIndex - 1].status === TrackingStatus.COMPLETED;
     
     switch (currentStatus) {
-      case "pending":
+      case TrackingStatus.PENDING:
         if (isNextStep) {
           return [
-            { value: "in_progress", label: "Bắt đầu thực hiện", color: "blue" },
-            { value: "skipped", label: "Bỏ qua bước này", color: "orange" },
+            { value: TrackingStatus.IN_PROGRESS, label: "Bắt đầu thực hiện", color: "blue" },
+            { value: TrackingStatus.CANCELLED, label: "Bỏ qua bước này", color: "orange" },
           ];
         }
         return []; // Không cho phép cập nhật nếu chưa đến lượt
-      case "in_progress":
+      case TrackingStatus.IN_PROGRESS:
         return [
-          { value: "completed", label: "Hoàn thành", color: "green" },
-          { value: "paused", label: "Tạm dừng", color: "orange" },
-          { value: "skipped", label: "Bỏ qua bước này", color: "red" },
+          { value: TrackingStatus.COMPLETED, label: "Hoàn thành", color: "green" },
+          { value: TrackingStatus.CANCELLED, label: "Bỏ qua bước này", color: "red" },
         ];
-      case "paused":
-        return [
-          { value: "in_progress", label: "Tiếp tục thực hiện", color: "blue" },
-          { value: "skipped", label: "Bỏ qua bước này", color: "red" },
-        ];
-      case "skipped":
+      case TrackingStatus.CANCELLED:
         if (isNextStep) {
           return [
-            { value: "in_progress", label: "Thực hiện lại", color: "blue" },
+            { value: TrackingStatus.IN_PROGRESS, label: "Thực hiện lại", color: "blue" },
           ];
         }
         return [];
@@ -1248,12 +1061,12 @@ const UpdateStepStatusModal: React.FC<UpdateStepStatusModalProps> = ({
   const handleSubmit = async () => {
     try {
       setLoading(true);
-      const values = await form.validateFields();
+      await form.validateFields();
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      onUpdate(step.id, values.status, values.notes);
+      onUpdate();
       form.resetFields();
     } catch (error) {
       console.log("Validation failed:", error);
@@ -1270,7 +1083,7 @@ const UpdateStepStatusModal: React.FC<UpdateStepStatusModalProps> = ({
 
   return (
     <Modal
-      title={`Cập nhật trạng thái: ${step.stepName}`}
+      title={`Cập nhật trạng thái: ${step.serviceStepName}`}
       open={open}
       onCancel={onCancel}
       onOk={availableStatuses.length > 0 ? handleSubmit : undefined}
@@ -1289,14 +1102,14 @@ const UpdateStepStatusModal: React.FC<UpdateStepStatusModalProps> = ({
             <Col span={12}>
               <Text strong>Trạng thái hiện tại:</Text>
               <div>
-                <Tag color={getStepStatusColor(step.status)}>
-                  {getStepStatusLabel(step.status)}
+                <Tag color={getStatusConfig(step.status).color}>
+                  {getStatusConfig(step.status).label}
                 </Tag>
               </div>
             </Col>
             <Col span={12}>
               <Text strong>Nhân viên:</Text>
-              <div>{step.staffName}</div>
+              <div>{step.technicianName}</div>
             </Col>
             {step.startTime && (
               <Col span={12}>
