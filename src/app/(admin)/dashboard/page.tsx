@@ -38,7 +38,7 @@ const DashboardPage = () => {
       title: "Bán hàng",
       description: "Giao diện bán hàng tại quầy",
       icon: <ShoppingCartOutlined style={{ fontSize: "24px" }} />,
-      path: "/dashboard/sales-management/pos",
+      path: "/dashboard/pos",
       color: "#1890ff",
     },
     {
