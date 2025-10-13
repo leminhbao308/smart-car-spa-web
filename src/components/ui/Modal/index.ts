@@ -14,16 +14,14 @@ export { default as ServiceModal } from "./ServiceModals/ServiceModal";
 export { default as ServiceTypeDetailModal } from "./ServiceModals/ServiceTypeDetailModal";
 export { default as ServiceTypeEditModal } from "./ServiceModals/ServiceTypeEditModal";
 
-// // Service Package Modals
-// export { default as ServicePackageModal } from "./ServicePackageModals/ServicePackageModalSimple";
-// export { default as ServicePackageDetailModal } from "./ServicePackageModals/ServicePackageDetailModal";
-// export { default as ServicePackageEditModal } from "./ServicePackageModals/ServicePackageEditModal";
-
 // Service Package Type Modals
 export {
   ServicePackageTypeModal,
   ServicePackageTypeDetailModal,
 } from "./ServicePackageTypeModals";
+
+// Service Package Modals
+export { ServicePackageModal, ServicePackageDetailModal } from "./ServicePackageModals";
 
 // Price Table Modals
 export { default as PriceTableModal } from "./PriceTableModals/PriceTableModal";

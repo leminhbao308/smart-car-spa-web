@@ -1,7 +1,17 @@
 "use client";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { AdminTable } from "@/components/ui/Table";
-import { useConfirmationModalContext } from "@/components/ui/Modal";
+import {
+  useConfirmationModalContext,
+  ServicePackageModal,
+  ServicePackageDetailModal,
+} from "@/components/ui/Modal";
+import {
+  ServicePackageModalProvider,
+  ServicePackageDetailModalProvider,
+  useServicePackageModal,
+  useServicePackageDetailModal,
+} from "@/components/ui/Modal/ServicePackageModals";
 import { ColumnsType } from "antd/es/table";
 import { Tag, Card, Row, Col, Select, Input, Button, Space, App } from "antd";
 import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
@@ -14,7 +24,7 @@ import formatCurrency from "@/components/utils/helper/currency.format.helper";
 const { Search } = Input;
 const { Option } = Select;
 
-const ServicePackagesPage = () => {
+const ServicePackagesPageContent = () => {
   const { message } = App.useApp();
   const [packageData, setPackageData] = useState<ServicePackage[]>([]);
   const [packageTypes, setPackageTypes] = useState<ServicePackageType[]>([]);
@@ -27,11 +37,22 @@ const ServicePackagesPage = () => {
   });
   const { showModal } = useConfirmationModalContext();
 
-  // Modal states
-  const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [selectedData, setSelectedData] = useState<ServicePackage | null>(null);
-  const [editData, setEditData] = useState<ServicePackage | null>(null);
+  // Modal hooks
+  const {
+    visible: editModalVisible,
+    mode,
+    editData,
+    openCreateModal: showCreateModal,
+    openEditModal: showEditModal,
+    closeModal: hideEditModal,
+  } = useServicePackageModal();
+
+  const {
+    isModalVisible: detailModalVisible,
+    data: selectedData,
+    showDetailModal,
+    hideModal: hideDetailModal,
+  } = useServicePackageDetailModal();
 
   // Filter states
   const [filters, setFilters] = useState<{
@@ -44,15 +65,56 @@ const ServicePackagesPage = () => {
     searchText: undefined,
   });
 
-  // Load package types for filter
-  const loadPackageTypes = useCallback(async () => {
-    try {
-      const response =
-        await servicePackageTypeService.getActiveServicePackageTypes();
-      setPackageTypes(response);
-    } catch (error) {
-      console.error("Error loading package types:", error);
+  // Load package types for mapping
+  useEffect(() => {
+    const loadPackageTypes = async () => {
+      try {
+        const response =
+          await servicePackageTypeService.getAllServicePackageTypes();
+        setPackageTypes(
+          Array.isArray(response.data)
+            ? response.data
+            : response.data?.content || []
+        );
+      } catch (error) {
+        console.error("Error loading package types:", error);
+      }
+    };
+    loadPackageTypes();
+  }, []);
+
+  // Helper function to get package type name by ID
+  const getPackageTypeName = useCallback(
+    (packageTypeId: string) => {
+      const packageType = packageTypes.find(
+        (type) => type.service_package_type_id === packageTypeId
+      );
+      return packageType?.name || "N/A";
+    },
+    [packageTypes]
+  );
+
+  // Helper function to get display duration
+  const getDisplayDuration = useCallback((record: ServicePackage) => {
+    // For combo packages, use total_duration from data
+    if (record.service_package_type_name === "COMBO") {
+      return record.total_duration;
     }
+
+    // For process packages, check if we have process information
+    if (
+      record.service_package_type_name !== "COMBO" &&
+      record.service_process_name
+    ) {
+      // If total_duration is 0 or very small, it might be incorrect
+      // In this case, we should show a note that duration comes from process
+      if (record.total_duration <= 0) {
+        return "Từ quy trình";
+      }
+      return record.total_duration;
+    }
+
+    return record.total_duration;
   }, []);
 
   // Load service packages data
@@ -108,9 +170,8 @@ const ServicePackagesPage = () => {
   };
 
   useEffect(() => {
-    loadPackageTypes();
     loadServicePackages();
-  }, [loadPackageTypes, loadServicePackages]);
+  }, [loadServicePackages]);
 
   // Helper function to calculate package price
   const calculatePackagePrice = (serviceCost: number): number => {
@@ -119,18 +180,52 @@ const ServicePackagesPage = () => {
 
   // Helper function to get display price
   const getDisplayPrice = (
-    packagePrice: number | null,
-    serviceCost: number
+    record: ServicePackage
   ): {
     price: number;
     isCalculated: boolean;
+    source: string;
   } => {
-    if (packagePrice !== null && packagePrice > 0) {
-      return { price: packagePrice, isCalculated: false };
+    // For combo packages, use package_price or calculate from service_cost
+    if (record.service_package_type_name === "COMBO") {
+      if (record.package_price !== null && record.package_price > 0) {
+        return {
+          price: record.package_price,
+          isCalculated: false,
+          source: "package",
+        };
+      }
+      return {
+        price: calculatePackagePrice(record.service_cost),
+        isCalculated: true,
+        source: "services",
+      };
     }
+
+    // For process packages
+    if (record.service_package_type_name !== "COMBO") {
+      if (record.package_price !== null && record.package_price > 0) {
+        return {
+          price: record.package_price,
+          isCalculated: false,
+          source: "package",
+        };
+      }
+      // If package_price is 0 or null, it might be calculated from process
+      if (record.service_process_name) {
+        return {
+          price: 0, // Will be handled in UI
+          isCalculated: true,
+          source: "process",
+        };
+      }
+    }
+
+    // Fallback
     return {
-      price: calculatePackagePrice(serviceCost),
-      isCalculated: true,
+      price: record.package_price || 0,
+      isCalculated: false,
+      source: "default",
     };
   };
 
@@ -230,57 +325,16 @@ const ServicePackagesPage = () => {
     },
     {
       title: "Loại gói",
-      dataIndex: "service_package_type_name",
-      key: "service_package_type_name",
+      dataIndex: "service_package_type_id",
+      key: "service_package_type_id",
       width: 120,
-      render: (packageType: string) => (
-        <Tag color="blue">{packageType || "N/A"}</Tag>
-      ),
-    },
-    {
-      title: "Giá gói",
-      key: "pricing",
-      width: 200,
-      sorter: (a: ServicePackage, b: ServicePackage) => {
-        const priceA = getDisplayPrice(a.package_price, a.service_cost).price;
-        const priceB = getDisplayPrice(b.package_price, b.service_cost).price;
-        return priceA - priceB;
+      render: (packageTypeId: string, record: ServicePackage) => {
+        const packageTypeName =
+          record.service_package_type_name || getPackageTypeName(packageTypeId);
+        return <Tag color="blue">{packageTypeName}</Tag>;
       },
-      render: (_: unknown, record: ServicePackage) => {
-        const { price, isCalculated } = getDisplayPrice(
-          record.package_price,
-          record.service_cost
-        );
+    },
 
-        return (
-          <div>
-            <div
-              style={{
-                fontWeight: 500,
-                color: isCalculated ? "#1890ff" : "#52c41a",
-                fontSize: 14,
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              {formatCurrency(price)}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      title: "Thời gian",
-      dataIndex: "total_duration",
-      key: "total_duration",
-      width: 100,
-      sorter: (a: ServicePackage, b: ServicePackage) =>
-        a.total_duration - b.total_duration,
-      render: (duration: number) => (
-        <div style={{ color: "#1890ff" }}>{duration} phút</div>
-      ),
-    },
     {
       title: "Trạng thái",
       key: "status",
@@ -314,23 +368,19 @@ const ServicePackagesPage = () => {
 
   // Handlers
   const handleAdd = () => {
-    setEditData(null);
-    setEditModalVisible(true);
+    showCreateModal();
   };
 
   const handleEdit = (record: ServicePackage) => {
-    setEditData(record);
-    setEditModalVisible(true);
+    showEditModal(record);
   };
 
   const handleView = (record: ServicePackage) => {
-    setSelectedData(record);
-    setDetailModalVisible(true);
+    showDetailModal(record);
   };
 
   const handleEditModalSuccess = () => {
-    setEditModalVisible(false);
-    setEditData(null);
+    hideEditModal();
     loadServicePackages(0, 100);
     setTableKey((prev) => prev + 1);
   };
@@ -513,7 +563,32 @@ const ServicePackagesPage = () => {
           onChange: handlePaginationChange,
         }}
       />
+
+      {/* Modals */}
+      <ServicePackageModal
+        visible={editModalVisible}
+        onCancel={hideEditModal}
+        onSuccess={handleEditModalSuccess}
+        mode={mode}
+        editData={editData}
+      />
+
+      <ServicePackageDetailModal
+        visible={detailModalVisible}
+        onCancel={hideDetailModal}
+        data={selectedData}
+      />
     </div>
+  );
+};
+
+const ServicePackagesPage = () => {
+  return (
+    <ServicePackageModalProvider>
+      <ServicePackageDetailModalProvider>
+        <ServicePackagesPageContent />
+      </ServicePackageDetailModalProvider>
+    </ServicePackageModalProvider>
   );
 };
 
