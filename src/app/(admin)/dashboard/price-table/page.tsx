@@ -1,5 +1,5 @@
 "use client";
-import React, {useState, useEffect, useCallback} from "react";
+import React, {useState, useEffect, useCallback, useMemo} from "react";
 import {
   Tag,
   Space,
@@ -13,11 +13,6 @@ import {
   Button,
   message,
   Spin,
-  Table,
-  Tabs,
-  Modal,
-  Descriptions,
-  Empty,
 } from "antd";
 import {
   EditOutlined,
@@ -30,10 +25,9 @@ import {
   ReloadOutlined,
   PlusOutlined,
   LoadingOutlined,
-  AppstoreOutlined,
-  ToolOutlined,
   ShoppingOutlined,
-  CloseOutlined, InsertRowBelowOutlined,
+  ToolOutlined,
+  InsertRowBelowOutlined,
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
 import {useConfirmationModalContext} from "@/components/ui/Modal";
@@ -44,10 +38,11 @@ import {servicePackageService} from "@/lib/api/services/service-package.service"
 import {PriceBook, PriceBookItem} from "@/lib/api/types/price-book.types";
 import {useBranches} from "@/lib/api/hooks/useBranches";
 import {Product, Service, ServicePackage} from "@/lib/api";
+import PriceBookDetailModal from "@/components/ui/Modal/PriceTableModals/PriceBookDetailModal";
+import PriceBookFormModal from "@/components/ui/Modal/PriceTableModals/PriceBookFormModal";
 
 const {Text} = Typography;
 const {Option} = Select;
-const {TabPane} = Tabs;
 
 // Transform API PriceBook to UI format
 interface PriceTableUI extends PriceBook {
@@ -78,10 +73,16 @@ const PriceBookPage = () => {
   const [viewDetailLoading, setViewDetailLoading] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
 
-  // Product, Service, Service Package states
+  // Form modal states
+  const [formModalVisible, setFormModalVisible] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit">("create");
+  const [formLoading, setFormLoading] = useState(false);
+
+  // Cached data for products, services, service packages
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [servicePackages, setServicePackages] = useState<ServicePackage[]>([]);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   const {showModal} = useConfirmationModalContext();
   const {branches} = useBranches({});
@@ -90,6 +91,38 @@ const PriceBookPage = () => {
   const [searchText, setSearchText] = useState("");
   const [selectedBranch, setSelectedBranch] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string | undefined>(undefined);
+
+  // Fetch products, services, packages ONCE and cache them
+  const fetchMasterData = useCallback(async () => {
+    if (dataLoaded) return; // Skip if already loaded
+
+    try {
+      const [productsResponse, servicesResponse, servicePackagesResponse] = await Promise.all([
+        productService.getAllProducts({
+          page: 1,
+          size: 1000,
+          filters: {is_active: true},
+        }),
+        ServiceService.getAllServices({
+          page: 0,
+          size: 1000,
+        }),
+        servicePackageService.getAllServicePackages(0, 1000),
+      ]);
+
+      setProducts(productsResponse.data.content || []);
+      if ("content" in servicesResponse.data) {
+        setServices(servicesResponse.data.content || []);
+      } else {
+        setServices(servicesResponse.data || []);
+      }
+      setServicePackages(servicePackagesResponse.data.content || []);
+      setDataLoaded(true);
+    } catch (error: any) {
+      console.error("Failed to fetch master data:", error);
+      message.error("Không thể tải dữ liệu sản phẩm/dịch vụ");
+    }
+  }, [dataLoaded]);
 
   // Fetch all price books
   const fetchPriceBooks = useCallback(async () => {
@@ -107,41 +140,26 @@ const PriceBookPage = () => {
     }
   }, []);
 
-  // Fetch products, services, service packages for a price book
+  // Fetch price book details
   const fetchPriceBookDetails = useCallback(async (priceBookId: string) => {
     setViewDetailLoading(true);
     try {
-      // Fetch full price book details
+      // Load master data if not loaded
+      if (!dataLoaded) {
+        await fetchMasterData();
+      }
+
+      // Fetch only the price book details
       const priceBookDetail = await PricingService.getPriceBookById(priceBookId);
-
-      // Fetch all products
-      const productsResponse = await productService.getAllProducts({
-        page: 1,
-        size: 1000,
-        filters: {is_active: true}
-      });
-
-      // Fetch all services
-      const servicesResponse = await ServiceService.getAllServices({page: 0, size: 1000});
-
-      // Fetch all service packages
-      const servicePackagesResponse = await servicePackageService.getAllServicePackages(0, 1000);
-
-      setProducts(productsResponse.data.content || []);
-      setServices(servicesResponse.data.content || []);
-      setServicePackages(servicePackagesResponse.data || []);
-
-      // Update selected price book with full details
       setSelectedPriceBook(transformPriceBookToUI(priceBookDetail));
       setDetailModalVisible(true);
-
     } catch (error: any) {
       message.error(error?.message || "Không thể tải chi tiết bảng giá");
       console.error("Failed to fetch price book details:", error);
     } finally {
       setViewDetailLoading(false);
     }
-  }, []);
+  }, [dataLoaded, fetchMasterData]);
 
   useEffect(() => {
     fetchPriceBooks();
@@ -181,40 +199,9 @@ const PriceBookPage = () => {
     setSelectedStatus(undefined);
   };
 
-  const formatCurrency = (amount: number) => {
-    if (amount === null || amount === undefined) return "N/A";
-    return `${amount.toLocaleString("vi-VN")} ₫`;
-  };
-
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "N/A";
     return new Date(dateStr).toLocaleDateString("vi-VN");
-  };
-
-  const getItemTypeIcon = (type: string) => {
-    switch (type) {
-      case "PRODUCT":
-        return <ShoppingOutlined style={{color: "#1890ff"}}/>;
-      case "SERVICE":
-        return <ToolOutlined style={{color: "#52c41a"}}/>;
-      case "SERVICE_PACKAGE":
-        return <InsertRowBelowOutlined style={{color: "#fa8c16"}}/>;
-      default:
-        return <AppstoreOutlined/>;
-    }
-  };
-
-  const getItemTypeLabel = (type: string) => {
-    switch (type) {
-      case "PRODUCT":
-        return "Sản phẩm";
-      case "SERVICE":
-        return "Dịch vụ";
-      case "SERVICE_PACKAGE":
-        return "Gói dịch vụ";
-      default:
-        return type;
-    }
   };
 
   const getItemTypeCounts = (items: PriceBookItem[]) => {
@@ -229,34 +216,55 @@ const PriceBookPage = () => {
     return counts;
   };
 
-  const getProductInfo = (productId: string) => {
-    const product = products.find(p => p.product_id === productId);
-    return product || null;
-  };
-
-  const getServiceInfo = (serviceId: string) => {
-    const service = services.find(s => s.service_id === serviceId);
-    return service || null;
-  };
-
-  const getServicePackageInfo = (packageId: string) => {
-    const pkg = servicePackages.find(p => p.packageId === packageId);
-    return pkg || null;
-  };
-
-  // Get base cost for markup calculation
-  const getBasePrice = (record: PriceBookItem) => {
-    if (record.item_type === "PRODUCT" && record.product) {
-      const product = getProductInfo(record.product.product_id);
-      return product?.peak_price || 0;
-    } else if (record.item_type === "SERVICE" && record.service) {
-      const service = getServiceInfo(record.service.service_id);
-      return service?.base_price || 0;
-    } else if (record.item_type === "SERVICE_PACKAGE" && record.servicePackage) {
-      const pkg = getServicePackageInfo(record.servicePackage.packageId);
-      return (pkg?.serviceCost || 0) + (pkg?.productCost || 0);
+  // Handle create price book
+  const handleCreate = async () => {
+    // Load master data if not loaded
+    if (!dataLoaded) {
+      setFormLoading(true);
+      await fetchMasterData();
+      setFormLoading(false);
     }
-    return 0;
+    setFormMode("create");
+    setSelectedPriceBook(null);
+    setFormModalVisible(true);
+  };
+
+  // Handle edit price book
+  const handleEdit = async (record: PriceTableUI) => {
+    // Load master data if not loaded
+    if (!dataLoaded) {
+      setFormLoading(true);
+      await fetchMasterData();
+      setFormLoading(false);
+    }
+
+    try {
+      // Fetch full details
+      const priceBookDetail = await PricingService.getPriceBookById(record.id);
+      setSelectedPriceBook(transformPriceBookToUI(priceBookDetail));
+      setFormMode("edit");
+      setFormModalVisible(true);
+    } catch (error: any) {
+      message.error(error?.message || "Không thể tải thông tin bảng giá");
+    }
+  };
+
+  // Handle form submit
+  const handleFormSubmit = async (data: any) => {
+    try {
+      if (formMode === "create") {
+        await PricingService.createPriceBook(data);
+        message.success("Tạo bảng giá thành công");
+      } else {
+        await PricingService.updatePriceBook(selectedPriceBook!.id, data);
+        message.success("Cập nhật bảng giá thành công");
+      }
+      setFormModalVisible(false);
+      fetchPriceBooks();
+    } catch (error: any) {
+      message.error(error?.message || "Có lỗi xảy ra");
+      throw error;
+    }
   };
 
   const columns = [
@@ -272,7 +280,10 @@ const PriceBookPage = () => {
               {text}
             </Text>
             {record.isDefault && (
-              <Tag color="gold" style={{marginLeft: 12, fontSize: 11, fontWeight: 500}}>
+              <Tag
+                color="gold"
+                style={{marginLeft: 12, fontSize: 11, fontWeight: 500}}
+              >
                 Mặc định
               </Tag>
             )}
@@ -290,11 +301,11 @@ const PriceBookPage = () => {
     },
     {
       title: "Chi nhánh",
-      dataIndex: "branchId",
-      key: "branchId",
+      dataIndex: "branch_id",
+      key: "branch_id",
       width: 200,
-      render: (branchId: string | null) => {
-        if (!branchId) {
+      render: (branch_id: string | null) => {
+        if (!branch_id) {
           return (
             <div style={{padding: "8px 0"}}>
               <Space>
@@ -306,14 +317,14 @@ const PriceBookPage = () => {
             </div>
           );
         }
-        const branch = branches.find((b) => b.branch_id === branchId);
+        const branch = branches.find((b) => b.branch_id === branch_id);
         return (
           <div style={{padding: "8px 0"}}>
             <Space direction="vertical" size={4}>
               <Space>
                 <ShopOutlined style={{color: "#1890ff", fontSize: 16}}/>
                 <Text strong style={{fontSize: 14}}>
-                  {branch?.branch_name || "N/A"}
+                  {branch?.branch_name || "Toàn hệ thống"}
                 </Text>
               </Space>
             </Space>
@@ -419,128 +430,24 @@ const PriceBookPage = () => {
       label: "Chỉnh sửa",
       icon: <EditOutlined/>,
       onClick: (record: PriceTableUI) => {
-        message.info("Chức năng chỉnh sửa đang được phát triển");
+        handleEdit(record);
       },
-    },
+    }
   ];
 
-  // Detail modal item columns
-  const itemColumns = [
-    {
-      title: "Loại",
-      dataIndex: "item_type",
-      key: "item_type",
-      width: 140,
-      render: (type: string) => (
-        <Tag icon={getItemTypeIcon(type)} color={type === "PRODUCT" ? "blue" : type === "SERVICE" ? "green" : "orange"}>
-          {getItemTypeLabel(type)}
-        </Tag>
-      ),
-    },
-    {
-      title: "Tên mục",
-      dataIndex: "item_name",
-      key: "item_name",
-      render: (text: string, record: PriceBookItem) => {
-        let extraInfo = null;
-        let additionalDetails = null;
+  // Statistics - use useMemo to avoid recalculation
+  const statistics = useMemo(() => {
+    const totalTables = priceBooks.length;
+    const activeTables = priceBooks.filter((t) => t.active).length;
+    const allItems = priceBooks.flatMap((pb) => pb.items || []);
+    const itemTypeCounts = getItemTypeCounts(allItems);
 
-        if (record.item_type === "PRODUCT" && record.product) {
-          const product = getProductInfo(record.product.product_id);
-          if (product) {
-            extraInfo = (
-              <Text type="secondary" style={{fontSize: 12}}>
-                SKU: {product.sku} | {product.brand}
-              </Text>
-            );
-            additionalDetails = (
-              <Text type="secondary" style={{fontSize: 11}}>
-                Giá niêm yết: {formatCurrency(product.peak_price)}
-              </Text>
-            );
-          }
-        } else if (record.item_type === "SERVICE" && record.service) {
-          const service = getServiceInfo(record.service.service_id);
-          if (service) {
-            extraInfo = (
-              <Text type="secondary" style={{fontSize: 12}}>
-                Mã: {service.service_id}
-              </Text>
-            );
-            additionalDetails = (
-              <Text type="secondary" style={{fontSize: 11}}>
-                Giá cơ bản: {formatCurrency(service.base_price)} | Tiền công: {formatCurrency(service.labor_cost)}
-              </Text>
-            );
-          }
-        } else if (record.item_type === "SERVICE_PACKAGE" && record.servicePackage) {
-          const pkg = getServicePackageInfo(record.servicePackage.packageId);
-          if (pkg) {
-            extraInfo = (
-              <Text type="secondary" style={{fontSize: 12}}>
-                Loại: {pkg.packageType}
-              </Text>
-            );
-            additionalDetails = (
-              <Text type="secondary" style={{fontSize: 11}}>
-                Chi phí DV: {formatCurrency(pkg.serviceCost)} | Chi phí SP: {formatCurrency(pkg.productCost)}
-              </Text>
-            );
-          }
-        }
-
-        return (
-          <Space direction="vertical" size={0}>
-            <Text strong>{text}</Text>
-            {extraInfo}
-            {additionalDetails}
-          </Space>
-        );
-      },
-    },
-    {
-      title: "Chính sách giá",
-      dataIndex: "policy_type",
-      key: "policy_type",
-      width: 180,
-      render: (policy: string) => (
-        <Tag color={policy === "FIXED" ? "blue" : "orange"}>
-          {policy === "FIXED" ? "Giá cố định" : "Markup theo giá vốn"}
-        </Tag>
-      ),
-    },
-    {
-      title: "Giá",
-      key: "price",
-      width: 180,
-      render: (_: any, record: PriceBookItem) => {
-        if (record.policy_type === "FIXED" && record.fixed_price) {
-          return (
-            <Text strong style={{color: "#52c41a"}}>
-              {formatCurrency(record.fixed_price)}
-            </Text>
-          );
-        } else if (record.markup_percent !== null) {
-          return (
-            <Space direction="vertical" size={0}>
-              <Text strong style={{color: "#fa8c16"}}>
-                +{record.markup_percent}%
-              </Text>
-            </Space>
-          );
-        }
-        return <Text type="secondary">N/A</Text>;
-      },
-    },
-  ];
-
-  // Statistics
-  const totalTables = priceBooks.length;
-  const activeTables = priceBooks.filter((t) => t.active).length;
-  const totalItems = priceBooks.reduce((sum, t) => sum + (t.items?.length || 0), 0);
-
-  const allItems = priceBooks.flatMap(pb => pb.items || []);
-  const itemTypeCounts = getItemTypeCounts(allItems);
+    return {
+      totalTables,
+      activeTables,
+      itemTypeCounts,
+    };
+  }, [priceBooks]);
 
   return (
     <div>
@@ -550,7 +457,7 @@ const PriceBookPage = () => {
           <Card>
             <Statistic
               title="Tổng bảng giá"
-              value={totalTables}
+              value={statistics.totalTables}
               prefix={<DollarOutlined/>}
               valueStyle={{color: "#1890ff"}}
             />
@@ -560,7 +467,7 @@ const PriceBookPage = () => {
           <Card>
             <Statistic
               title="Đang áp dụng"
-              value={activeTables}
+              value={statistics.activeTables}
               prefix={<ShopOutlined/>}
               valueStyle={{color: "#52c41a"}}
             />
@@ -570,7 +477,7 @@ const PriceBookPage = () => {
           <Card>
             <Statistic
               title="Sản phẩm"
-              value={itemTypeCounts.PRODUCT}
+              value={statistics.itemTypeCounts.PRODUCT}
               prefix={<ShoppingOutlined/>}
               valueStyle={{color: "#1890ff"}}
             />
@@ -580,7 +487,7 @@ const PriceBookPage = () => {
           <Card>
             <Statistic
               title="Dịch vụ & Gói"
-              value={itemTypeCounts.SERVICE + itemTypeCounts.SERVICE_PACKAGE}
+              value={statistics.itemTypeCounts.SERVICE + statistics.itemTypeCounts.SERVICE_PACKAGE}
               prefix={<ToolOutlined/>}
               valueStyle={{color: "#52c41a"}}
             />
@@ -643,12 +550,22 @@ const PriceBookPage = () => {
       {/* Price Books List */}
       <Card
         title={
-          <div style={{display: "flex", justifyContent: "space-between", alignItems: "center"}}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Space>
               <DollarOutlined style={{color: "#1890ff", fontSize: 18}}/>
               <span style={{fontSize: 16, fontWeight: 600}}>Quản lý bảng giá</span>
             </Space>
-            <Button type="primary" icon={<PlusOutlined/>} onClick={() => message.info("Chức năng đang phát triển")}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined/>}
+              onClick={handleCreate}
+            >
               Thêm bảng giá mới
             </Button>
           </div>
@@ -672,176 +589,32 @@ const PriceBookPage = () => {
       </Card>
 
       {/* Detail Modal */}
-      <Modal
-        title={
-          <Space>
-            <EyeOutlined/>
-            Chi tiết bảng giá
-          </Space>
-        }
-        open={detailModalVisible}
-        onCancel={() => setDetailModalVisible(false)}
-        footer={[
-          <Button key="close" type="primary" icon={<CloseOutlined/>} onClick={() => setDetailModalVisible(false)}>
-            Đóng
-          </Button>,
-        ]}
-        width={1200}
-        style={{top: 20}}
-      >
-        <Spin spinning={viewDetailLoading}>
-          {selectedPriceBook && (
-            <Space direction="vertical" size={16} style={{width: "100%"}}>
-              {/* Price Book Info */}
-              <Card size="small" title="Thông tin bảng giá">
-                <Descriptions column={2} bordered size="small">
-                  <Descriptions.Item label="Mã">
-                    <Text code strong>
-                      {selectedPriceBook.code}
-                    </Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Tên">
-                    <Text strong>{selectedPriceBook.name}</Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Đơn vị tiền tệ">
-                    <Tag color="blue">{selectedPriceBook.currency}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Trạng thái">
-                    <Tag color={selectedPriceBook.is_active ? "success" : "default"}>
-                      {selectedPriceBook.is_active ? "Đang áp dụng" : "Ngừng áp dụng"}
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Ngày hiệu lực">
-                    <Space>
-                      <CalendarOutlined style={{color: "#52c41a"}}/>
-                      {formatDate(selectedPriceBook.valid_from)}
-                    </Space>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Ngày hết hạn">
-                    <Space>
-                      <CalendarOutlined style={{color: "#ff4d4f"}}/>
-                      {selectedPriceBook.valid_to ? formatDate(selectedPriceBook.valid_to) : "Không giới hạn"}
-                    </Space>
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
+      <PriceBookDetailModal
+        visible={detailModalVisible}
+        loading={viewDetailLoading}
+        selectedPriceBook={selectedPriceBook}
+        products={products}
+        services={services}
+        servicePackages={servicePackages}
+        onClose={() => setDetailModalVisible(false)}
+      />
 
-              {/* Statistics */}
-              <Card title="Thống kê" size="small">
-                <Row gutter={16}>
-                  <Col span={6}>
-                    <Statistic
-                      title="Tổng mục"
-                      value={selectedPriceBook.items?.length || 0}
-                      prefix={<AppstoreOutlined/>}
-                      valueStyle={{color: "#1890ff"}}
-                    />
-                  </Col>
-                  <Col span={6}>
-                    <Statistic
-                      title="Sản phẩm"
-                      value={getItemTypeCounts(selectedPriceBook.items || []).PRODUCT}
-                      prefix={<ShoppingOutlined/>}
-                      valueStyle={{color: "#1890ff"}}
-                    />
-                  </Col>
-                  <Col span={6}>
-                    <Statistic
-                      title="Dịch vụ"
-                      value={getItemTypeCounts(selectedPriceBook.items || []).SERVICE}
-                      prefix={<ToolOutlined/>}
-                      valueStyle={{color: "#52c41a"}}
-                    />
-                  </Col>
-                  <Col span={6}>
-                    <Statistic
-                      title="Gói dịch vụ"
-                      value={getItemTypeCounts(selectedPriceBook.items || []).SERVICE_PACKAGE}
-                      prefix={<InsertRowBelowOutlined/>}
-                      valueStyle={{color: "#fa8c16"}}
-                    />
-                  </Col>
-                </Row>
-              </Card>
-
-              {/* Items List with Tabs */}
-              <Card
-                size="small"
-                title={
-                  <Space>
-                    <span>Danh sách mục giá</span>
-                    <Tag color="blue">{selectedPriceBook.items?.length || 0}</Tag>
-                  </Space>
-                }
-              >
-                {selectedPriceBook.items && selectedPriceBook.items.length > 0 ? (
-                  <Tabs defaultActiveKey="all">
-                    <TabPane tab={`Tất cả (${selectedPriceBook.items.length})`} key="all">
-                      <Table
-                        dataSource={selectedPriceBook.items}
-                        columns={itemColumns}
-                        rowKey="id"
-                        pagination={{pageSize: 5, showTotal: (total) => `Tổng ${total} mục`}}
-                        size="small"
-                      />
-                    </TabPane>
-                    <TabPane
-                      tab={
-                        <span>
-                          <ShoppingOutlined/> Sản phẩm ({getItemTypeCounts(selectedPriceBook.items).PRODUCT})
-                        </span>
-                      }
-                      key="products"
-                    >
-                      <Table
-                        dataSource={selectedPriceBook.items.filter((i) => i.item_type === "PRODUCT")}
-                        columns={itemColumns}
-                        rowKey="id"
-                        pagination={{pageSize: 5, showTotal: (total) => `Tổng ${total} sản phẩm`}}
-                        size="small"
-                      />
-                    </TabPane>
-                    <TabPane
-                      tab={
-                        <span>
-                          <ToolOutlined/> Dịch vụ ({getItemTypeCounts(selectedPriceBook.items).SERVICE})
-                        </span>
-                      }
-                      key="services"
-                    >
-                      <Table
-                        dataSource={selectedPriceBook.items.filter((i) => i.item_type === "SERVICE")}
-                        columns={itemColumns}
-                        rowKey="id"
-                        pagination={{pageSize: 5, showTotal: (total) => `Tổng ${total} dịch vụ`}}
-                        size="small"
-                      />
-                    </TabPane>
-                    <TabPane
-                      tab={
-                        <span>
-                          <InsertRowBelowOutlined/> Gói dịch vụ ({getItemTypeCounts(selectedPriceBook.items).SERVICE_PACKAGE})
-                        </span>
-                      }
-                      key="packages"
-                    >
-                      <Table
-                        dataSource={selectedPriceBook.items.filter((i) => i.item_type === "SERVICE_PACKAGE")}
-                        columns={itemColumns}
-                        rowKey="id"
-                        pagination={{pageSize: 5, showTotal: (total) => `Tổng ${total} gói`}}
-                        size="small"
-                      />
-                    </TabPane>
-                  </Tabs>
-                ) : (
-                  <Empty description="Chưa có mục giá nào" image={Empty.PRESENTED_IMAGE_SIMPLE}/>
-                )}
-              </Card>
-            </Space>
-          )}
-        </Spin>
-      </Modal>
+      {/* Form Modal */}
+      <PriceBookFormModal
+        visible={formModalVisible}
+        loading={formLoading}
+        mode={formMode}
+        priceBook={selectedPriceBook}
+        products={products}
+        services={services}
+        servicePackages={servicePackages}
+        branches={branches}
+        onClose={() => {
+          setFormModalVisible(false);
+          setSelectedPriceBook(null);
+        }}
+        onSubmit={handleFormSubmit}
+      />
     </div>
   );
 };

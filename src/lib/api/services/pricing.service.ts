@@ -73,5 +73,15 @@ export const PricingService = {
   createServicePackagePriceBookItem: async (priceBookId: string, data: any): Promise<PriceBookItem> => { // eslint-disable-line @typescript-eslint/no-explicit-any
     const response = await api.post(`/pricing/books/${priceBookId}/create-service-package-item`, data);
     return response.data.data;
+  },
+
+  updatePriceBook: async (priceBookId: string, data: CreatePriceBookRequest): Promise<PriceBook> => {
+    const response = await api.post(`/pricing/books/update/${priceBookId}`, data);
+    return response.data.data;
+  },
+
+  updatePriceBookItem: async (bookId: string, itemId: string, data: CreatePriceBookItemRequest): Promise<PriceBookItem> => {
+    const response = await api.post(`/pricing/books/${bookId}/update-item/${itemId}`, data);
+    return response.data.data;
   }
 }
