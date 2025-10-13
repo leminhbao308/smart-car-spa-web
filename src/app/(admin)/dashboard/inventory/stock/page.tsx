@@ -3,16 +3,19 @@ import React, {useEffect, useMemo, useState} from "react";
 import {AdminTable} from "@/components/ui/Table";
 import {useConfirmationModalContext} from "@/components/ui/Modal";
 import {ColumnsType} from "antd/es/table";
-import {message, Select, Space, Tag, Tooltip} from "antd";
-import {DollarOutlined, HistoryOutlined,} from "@ant-design/icons";
+import {Button, DatePicker, message, Modal, Select, Space, Tag, Tooltip} from "antd";
+import {DollarOutlined, DownloadOutlined, FileExcelOutlined, HistoryOutlined,} from "@ant-design/icons";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import {InventoryLevel, Product, PurchaseOrder, PurchaseOrderService} from "@/lib/api";
+import {InventoryLevel, InventoryService, Product, PurchaseOrder, PurchaseOrderService} from "@/lib/api";
 import {useInventoryLevels} from "@/lib/api/hooks";
 import {useProducts} from "@/lib/api/hooks/useProducts";
 import {useBranches} from "@/lib/api/hooks/useBranches";
 import {usePricing} from "@/lib/api/hooks/usePricing";
 import {useWarehouseByBranch} from "@/lib/api/hooks/useWarehouseByBranch";
 import PriceHistoryModal from "@/components/ui/Modal/StockModal/PriceHistoryModal";
+import dayjs, {Dayjs} from "dayjs";
+
+const {RangePicker} = DatePicker;
 
 interface StockTableItem extends InventoryLevel {
   key: string;
@@ -36,6 +39,12 @@ const StockInventoryPage = () => {
   const {products} = useProducts({});
   const {branches, loading: branchesLoading} = useBranches({});
   const pricingHook = usePricing();
+
+  // Export report states
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportDate, setExportDate] = useState<Dayjs | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportBranch, setExportBranch] = useState<string | undefined>(undefined);
 
   // Get warehouse based on selected branch
   const {warehouse, loading: warehouseLoading} = useWarehouseByBranch(selectedBranch);
@@ -121,8 +130,8 @@ const StockInventoryPage = () => {
         console.error("Failed to fetch pricing:", error);
       }
 
-      const branchName = warehouse?.branch?.id
-        ? branchMap.get(warehouse.branch.id)
+      const branchName = warehouse?.branch?.branch_id
+        ? branchMap.get(warehouse.branch.branch_id)
         : "N/A";
 
       const stockItems: StockTableItem[] = products.map((product: Product) => {
@@ -173,6 +182,43 @@ const StockInventoryPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpenExportModal = () => {
+    // Set default date to today
+    setExportDate(dayjs());
+    setExportBranch(undefined);
+    setExportModalVisible(true);
+  };
+
+  const handleExportReport = async () => {
+    if (!exportDate) {
+      message.error("Vui lòng chọn ngày để xuất báo cáo");
+      return;
+    }
+
+    setExportLoading(true);
+    try {
+      const date = exportDate.format("YYYY-MM-DD");
+
+      await InventoryService.exportStockReport(
+        date,
+        exportBranch
+      );
+
+      message.success("Xuất báo cáo thành công");
+      setExportModalVisible(false);
+    } catch (error: any) {
+      message.error(error?.message || "Có lỗi xảy ra khi xuất báo cáo");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleCloseExportModal = () => {
+    setExportModalVisible(false);
+    setExportDate(null);
+    setExportBranch(undefined);
   };
 
   // Định nghĩa columns
@@ -358,6 +404,21 @@ const StockInventoryPage = () => {
             fixed: true
           },
         ]}
+        extraButtons={[
+          <Button
+            key="export"
+            type="default"
+            icon={<FileExcelOutlined/>}
+            onClick={handleOpenExportModal}
+            style={{
+              backgroundColor: "#10b981",
+              borderColor: "#10b981",
+              color: "white",
+            }}
+          >
+            Xuất báo cáo Excel
+          </Button>
+        ]}
         scroll={{x: 2000}}
       />
 
@@ -372,6 +433,88 @@ const StockInventoryPage = () => {
         warehouseId={warehouse?.id || ""}
         onFetchHistory={fetchPriceHistory}
       />
+
+      {/* Modal xuất báo cáo */}
+      <Modal
+        title={
+          <Space>
+            <FileExcelOutlined style={{color: "#10b981"}}/>
+            <span>Xuất báo cáo tồn kho</span>
+          </Space>
+        }
+        open={exportModalVisible}
+        onCancel={handleCloseExportModal}
+        footer={[
+          <Button key="cancel" onClick={handleCloseExportModal}>
+            Hủy
+          </Button>,
+          <Button
+            key="export"
+            type="primary"
+            icon={<DownloadOutlined/>}
+            loading={exportLoading}
+            onClick={handleExportReport}
+            style={{backgroundColor: "#10b981", borderColor: "#10b981"}}
+            disabled={!exportDate || (!exportBranch && branches.length > 1)}
+          >
+            Xuất Excel
+          </Button>
+        ]}
+        width={500}
+      >
+        <Space direction="vertical" style={{width: "100%"}} size="large">
+          <div>
+            <label style={{display: "block", marginBottom: 8, fontWeight: 500}}>
+              Ngày xuất báo cáo <span style={{color: "red"}}>*</span>
+            </label>
+            <DatePicker
+              value={exportDate}
+              onChange={(date) => setExportDate(date)}
+              format="DD/MM/YYYY"
+              placeholder="Chọn ngày"
+              style={{width: "100%"}}
+            />
+          </div>
+
+          <div>
+            <label style={{display: "block", marginBottom: 8, fontWeight: 500}}>
+              Chi nhánh
+            </label>
+            <Select
+              value={exportBranch}
+              onChange={setExportBranch}
+              placeholder="Chọn chi nhánh"
+              allowClear
+              style={{width: "100%"}}
+              options={branches.map(branch => ({
+                value: branch.branch_id,
+                label: branch.branch_name
+              }))}
+            />
+            {!selectedBranch && (
+              <div style={{fontSize: 12, color: "#6b7280", marginTop: 4}}>
+                Vui lòng chọn chi nhánh để xuất báo cáo tồn kho
+              </div>
+            )}
+          </div>
+
+          <div style={{
+            padding: 12,
+            backgroundColor: "#f0f9ff",
+            borderRadius: 6,
+            border: "1px solid #bae6fd"
+          }}>
+            <div style={{fontSize: 12, color: "#0369a1"}}>
+              <strong>Lưu ý:</strong>
+              <ul style={{marginTop: 8, marginBottom: 0, paddingLeft: 20}}>
+                <li>Báo cáo sẽ bao gồm tất cả sản phẩm trong kho tính đến ngày chọn</li>
+                <li>Vui lòng chọn chi nhánh để thực hiện xuất báo cáo</li>
+                <li>File Excel sẽ được tải xuống tự động</li>
+              </ul>
+            </div>
+          </div>
+        </Space>
+      </Modal>
     </div>
   );
 };
