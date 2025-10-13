@@ -6,14 +6,11 @@
 import apiClient from "../axios";
 import {
   ServicePackage,
-  ServicePackageCamelCase,
   ServicePackageResponse,
   ServicePackagePaginatedResponse,
   CreateServicePackageRequest,
   UpdateServicePackageRequest,
   UpdateServicePackageStatusRequest,
-  convertServicePackageFromSnakeCase,
-  convertServicePackageToSnakeCase,
 } from "../types/service-package.types";
 
 export const servicePackageService = {
@@ -46,12 +43,11 @@ export const servicePackageService = {
         
         // Handle both array and paginated object responses
         if (Array.isArray(response.data.data)) {
-          // Direct array response - convert snake_case to camelCase
-          const convertedContent = response.data.data.map(convertServicePackageFromSnakeCase);
+          // Direct array response - data is already in snake_case format
           return {
             ...response.data,
             data: {
-              content: convertedContent,
+              content: response.data.data,
               totalElements: response.data.data.length,
               totalPages: 1,
               first: true,
@@ -72,15 +68,8 @@ export const servicePackageService = {
             }
           };
         } else {
-          // Paginated object response - convert content array
-          const convertedData = {
-            ...response.data,
-            data: {
-              ...response.data.data,
-              content: response.data.data.content.map(convertServicePackageFromSnakeCase)
-            }
-          };
-          return convertedData;
+          // Paginated object response - data is already in snake_case format
+          return response.data;
         }
       } else {
         console.error("API response error:", response.data);

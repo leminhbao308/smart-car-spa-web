@@ -1,37 +1,14 @@
 "use client";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { AdminTable } from "@/components/ui/Table";
-import {
-  useConfirmationModalContext,
-  ServicePackageDetailModal,
-  ServicePackageModal,
-} from "@/components/ui/Modal";
+import { useConfirmationModalContext } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import {
-  Tag,
-  Card,
-  Row,
-  Col,
-  Select,
-  Input,
-  Button,
-  Space,
-  App,
-  Tooltip,
-} from "antd";
-import {
-  FilterOutlined,
-  ReloadOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
-import {
-  ServicePackage,
-  SERVICE_PACKAGE_TYPE_OPTIONS,
-  ServicePackageCamelCase,
-} from "@/lib/api/types/service-package.types";
+import { Tag, Card, Row, Col, Select, Input, Button, Space, App } from "antd";
+import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
+import { ServicePackage } from "@/lib/api/types/service-package.types";
 import { servicePackageService } from "@/lib/api/services/service-package.service";
 import { servicePackageTypeService } from "@/lib/api/services/service-package-type.service";
-import { ServicePackageTypeCamelCase } from "@/lib/api/types/service-package-type.types";
+import { ServicePackageType } from "@/lib/api/types/service-package-type.types";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
 
 const { Search } = Input;
@@ -39,8 +16,8 @@ const { Option } = Select;
 
 const ServicePackagesPage = () => {
   const { message } = App.useApp();
-  const [packageData, setPackageData] = useState<ServicePackageCamelCase[]>([]);
-  const [, setPackageTypes] = useState<ServicePackageTypeCamelCase[]>([]);
+  const [packageData, setPackageData] = useState<ServicePackage[]>([]);
+  const [packageTypes, setPackageTypes] = useState<ServicePackageType[]>([]);
   const [loading, setLoading] = useState(false);
   const [tableKey, setTableKey] = useState(0);
   const [pagination, setPagination] = useState({
@@ -53,8 +30,8 @@ const ServicePackagesPage = () => {
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [selectedData, setSelectedData] = useState<ServicePackageCamelCase | null>(null);
-  const [editData, setEditData] = useState<ServicePackageCamelCase | null>(null);
+  const [selectedData, setSelectedData] = useState<ServicePackage | null>(null);
+  const [editData, setEditData] = useState<ServicePackage | null>(null);
 
   // Filter states
   const [filters, setFilters] = useState<{
@@ -136,18 +113,14 @@ const ServicePackagesPage = () => {
   }, [loadPackageTypes, loadServicePackages]);
 
   // Helper function to calculate package price
-  const calculatePackagePrice = (
-    serviceCost: number,
-    productCost?: number
-  ): number => {
-    return serviceCost + (productCost || 0);
+  const calculatePackagePrice = (serviceCost: number): number => {
+    return serviceCost;
   };
 
   // Helper function to get display price
   const getDisplayPrice = (
     packagePrice: number | null,
-    serviceCost: number,
-    productCost?: number
+    serviceCost: number
   ): {
     price: number;
     isCalculated: boolean;
@@ -156,7 +129,7 @@ const ServicePackagesPage = () => {
       return { price: packagePrice, isCalculated: false };
     }
     return {
-      price: calculatePackagePrice(serviceCost, productCost),
+      price: calculatePackagePrice(serviceCost),
       isCalculated: true,
     };
   };
@@ -170,24 +143,24 @@ const ServicePackagesPage = () => {
       const searchLower = filters.searchText.toLowerCase();
       filtered = filtered.filter(
         (item) =>
-          item.packageName.toLowerCase().includes(searchLower) ||
-          item.packageUrl.toLowerCase().includes(searchLower) ||
+          item.package_name.toLowerCase().includes(searchLower) ||
+          item.package_url.toLowerCase().includes(searchLower) ||
           item.description.toLowerCase().includes(searchLower) ||
-          item.categoryName.toLowerCase().includes(searchLower)
+          item.category_name.toLowerCase().includes(searchLower)
       );
     }
 
     // Status filter
     if (filters.status) {
       filtered = filtered.filter(
-        (item) => item.isActive === (filters.status === "active")
+        (item) => item.is_active === (filters.status === "active")
       );
     }
 
     // Package type filter
     if (filters.packageType) {
       filtered = filtered.filter(
-        (item) => item.packageType === filters.packageType
+        (item) => item.service_package_type_name === filters.packageType
       );
     }
 
@@ -237,62 +210,46 @@ const ServicePackagesPage = () => {
       render: (_: unknown, record: ServicePackage) => (
         <div>
           <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
-            {record.packageName}
+            {record.package_name}
           </div>
           <div style={{ fontSize: 12, color: "#666", marginBottom: 2 }}>
             {record.description}
           </div>
           <div style={{ fontSize: 11, color: "#999" }}>
-            URL: {record.packageUrl}
+            URL: {record.package_url}
           </div>
         </div>
       ),
     },
     {
       title: "Danh mục",
-      dataIndex: "categoryName",
-      key: "categoryName",
+      dataIndex: "category_name",
+      key: "category_name",
       width: 120,
       render: (categoryName: string) => <Tag color="blue">{categoryName}</Tag>,
     },
     {
       title: "Loại gói",
-      dataIndex: "packageType",
-      key: "packageType",
+      dataIndex: "service_package_type_name",
+      key: "service_package_type_name",
       width: 120,
-      render: (packageType: string) => {
-        const typeOption = SERVICE_PACKAGE_TYPE_OPTIONS.find(
-          (option) => option.value === packageType
-        );
-        return (
-          <Tag color={typeOption?.color || "default"}>
-            {typeOption?.label || packageType}
-          </Tag>
-        );
-      },
+      render: (packageType: string) => (
+        <Tag color="blue">{packageType || "N/A"}</Tag>
+      ),
     },
     {
       title: "Giá gói",
       key: "pricing",
       width: 200,
       sorter: (a: ServicePackage, b: ServicePackage) => {
-        const priceA = getDisplayPrice(
-          a.packagePrice,
-          a.serviceCost,
-          a.productCost
-        ).price;
-        const priceB = getDisplayPrice(
-          b.packagePrice,
-          b.serviceCost,
-          b.productCost
-        ).price;
+        const priceA = getDisplayPrice(a.package_price, a.service_cost).price;
+        const priceB = getDisplayPrice(b.package_price, b.service_cost).price;
         return priceA - priceB;
       },
       render: (_: unknown, record: ServicePackage) => {
         const { price, isCalculated } = getDisplayPrice(
-          record.packagePrice,
-          record.serviceCost,
-          record.productCost
+          record.package_price,
+          record.service_cost
         );
 
         return (
@@ -315,11 +272,11 @@ const ServicePackagesPage = () => {
     },
     {
       title: "Thời gian",
-      dataIndex: "totalDuration",
-      key: "totalDuration",
+      dataIndex: "total_duration",
+      key: "total_duration",
       width: 100,
       sorter: (a: ServicePackage, b: ServicePackage) =>
-        a.totalDuration - b.totalDuration,
+        a.total_duration - b.total_duration,
       render: (duration: number) => (
         <div style={{ color: "#1890ff" }}>{duration} phút</div>
       ),
@@ -333,8 +290,8 @@ const ServicePackagesPage = () => {
           return <Tag color="default">Đã xóa</Tag>;
         }
         return (
-          <Tag color={record.isActive ? "green" : "red"}>
-            {record.isActive ? "Hoạt động" : "Không hoạt động"}
+          <Tag color={record.is_active ? "green" : "red"}>
+            {record.is_active ? "Hoạt động" : "Không hoạt động"}
           </Tag>
         );
       },
@@ -346,9 +303,9 @@ const ServicePackagesPage = () => {
       onFilter: (value: boolean | React.Key, record: ServicePackage) => {
         const stringValue = String(value);
         if (stringValue === "active")
-          return record.isActive && !record.is_deleted;
+          return record.is_active && !record.is_deleted;
         if (stringValue === "inactive")
-          return !record.isActive && !record.is_deleted;
+          return !record.is_active && !record.is_deleted;
         if (stringValue === "deleted") return record.is_deleted || false;
         return true;
       },
@@ -379,16 +336,16 @@ const ServicePackagesPage = () => {
   };
 
   const handleToggleStatus = (record: ServicePackage) => {
-    const action = record.isActive ? "ngừng hoạt động" : "kích hoạt";
+    const action = record.is_active ? "ngừng hoạt động" : "kích hoạt";
     showModal({
-      title: record.isActive ? "Ngừng hoạt động" : "Kích hoạt",
-      content: `Bạn có chắc chắn muốn ${action} gói dịch vụ ${record.packageName}?`,
-      type: record.isActive ? "warning" : "success",
+      title: record.is_active ? "Ngừng hoạt động" : "Kích hoạt",
+      content: `Bạn có chắc chắn muốn ${action} gói dịch vụ ${record.package_name}?`,
+      type: record.is_active ? "warning" : "success",
       onConfirm: async () => {
         try {
           await servicePackageService.updateServicePackageStatus(
-            record.packageId,
-            { is_active: !record.isActive }
+            record.package_id,
+            { is_active: !record.is_active }
           );
           message.success(`${action} gói dịch vụ thành công!`);
           loadServicePackages(0, 100);
@@ -399,24 +356,6 @@ const ServicePackagesPage = () => {
       },
     });
   };
-
-  // const handleDelete = (record: ServicePackage) => {
-  //   showModal({
-  //     title: "Xóa gói dịch vụ",
-  //     content: `Bạn có chắc chắn muốn xóa gói dịch vụ ${record.packageName}? Hành động này không thể hoàn tác.`,
-  //     type: "error",
-  //     onConfirm: async () => {
-  //       try {
-  //         await servicePackageService.deleteServicePackage(record.packageId);
-  //         message.success("Xóa gói dịch vụ thành công!");
-  //         loadServicePackages(0, 100);
-  //       } catch (error) {
-  //         message.error("Có lỗi xảy ra khi xóa gói dịch vụ");
-  //         console.error("Error deleting package:", error);
-  //       }
-  //     },
-  //   });
-  // };
 
   // Handle pagination changes (client-side pagination)
   const handlePaginationChange = (page: number, pageSize?: number) => {
@@ -527,11 +466,11 @@ const ServicePackagesPage = () => {
                 allowClear
                 style={{ width: "100%" }}
               >
-                {SERVICE_PACKAGE_TYPE_OPTIONS.map((type) => (
-                  <Option key={type.value} value={type.value}>
-                    {type.label}
-                  </Option>
-                ))}
+                <Option value="MAINTENANCE">Bảo dưỡng</Option>
+                <Option value="REPAIR">Sửa chữa</Option>
+                <Option value="INSPECTION">Kiểm tra</Option>
+                <Option value="CLEANING">Vệ sinh</Option>
+                <Option value="CUSTOM">Tùy chỉnh</Option>
               </Select>
             </div>
           </Col>
@@ -547,14 +486,14 @@ const ServicePackagesPage = () => {
         onAdd={handleAdd}
         onEdit={handleEdit}
         onEditCondition={(record: ServicePackage) => !record.is_deleted}
-        rowKey="packageId"
+        rowKey="package_id"
         actions={[
           {
             key: "toggle-status",
             label: (record: ServicePackage) =>
-              record.isActive ? "Ngừng hoạt động" : "Kích hoạt",
+              record.is_active ? "Ngừng hoạt động" : "Kích hoạt",
             type: "default",
-            danger: (record: ServicePackage) => record.isActive,
+            danger: (record: ServicePackage) => record.is_active,
             onClick: handleToggleStatus,
             condition: (record: ServicePackage) => !record.is_deleted,
           },
@@ -573,21 +512,6 @@ const ServicePackagesPage = () => {
             `${range[0]}-${range[1]} của ${total} gói dịch vụ`,
           onChange: handlePaginationChange,
         }}
-      />
-
-      {/* Modals */}
-      <ServicePackageDetailModal
-        open={detailModalVisible}
-        onCancel={() => setDetailModalVisible(false)}
-        data={selectedData}
-      />
-
-      <ServicePackageModal
-        open={editModalVisible}
-        onOk={handleEditModalSuccess}
-        onCancel={() => setEditModalVisible(false)}
-        initialData={editData}
-        title={editData ? "Chỉnh sửa gói dịch vụ" : "Thêm gói dịch vụ mới"}
       />
     </div>
   );
