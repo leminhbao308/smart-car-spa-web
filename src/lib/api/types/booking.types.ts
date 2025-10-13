@@ -152,72 +152,97 @@ export interface BookingPaymentInfoDto {
 }
 
 export interface CreateBookingRequest {
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string;
-  vehicleLicensePlate: string;
-  vehicleBrandName?: string;
-  vehicleModelName?: string;
-  vehicleTypeName?: string;
-  vehicleYear?: number;
-  vehicleColor?: string;
-  branchId: string;
-  bayId?: string;
-  preferredStartAt: string;
-  scheduledStartAt?: string;
-  scheduledEndAt?: string;
-  estimatedDurationMinutes?: number;
-  bufferMinutes?: number;
-  totalPrice?: number;
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  vehicle_id: string;
+  vehicle_license_plate: string;
+  vehicle_brand_id: string;
+  vehicle_brand_name?: string;
+  vehicle_model_name?: string;
+  vehicle_type_name?: string;
+  vehicle_year?: number;
+  vehicle_color?: string;
+  branch_id: string;
+  bay_id?: string;
+  preferred_start_at: string;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
+  estimated_duration_minutes?: number;
+  buffer_minutes?: number;
+  total_price?: number;
   currency?: string;
-  depositAmount?: number;
+  deposit_amount?: number;
   priority?: Priority;
-  couponCode?: string;
+  coupon_code?: string;
   notes?: string;
-  specialRequests?: string[];
-  bookingItems: {
-    serviceId: string;
+  special_requests?: string[];
+  booking_items: {
+    item_type: string;
+    item_id: string;
+    item_name: string;
+    item_url?: string;
+    item_description?: string;
+    unit_price: number;
     quantity: number;
+    duration_minutes?: number;
+    discount_amount?: number;
+    tax_amount?: number;
     notes?: string;
+    display_order?: number;
   }[];
   assignments: {
-    technicianId: string;
+    technician_id: string;
     role: string;
   }[];
+  payments?: unknown[];
 }
 
 export interface UpdateBookingRequest {
-  customerName?: string;
-  customerPhone?: string;
-  customerEmail?: string;
-  vehicleLicensePlate?: string;
-  vehicleBrandName?: string;
-  vehicleModelName?: string;
-  vehicleTypeName?: string;
-  vehicleYear?: number;
-  vehicleColor?: string;
-  branchId?: string;
-  bayId?: string;
-  preferredStartAt?: string;
-  scheduledStartAt?: string;
-  scheduledEndAt?: string;
-  estimatedDurationMinutes?: number;
-  bufferMinutes?: number;
-  totalPrice?: number;
+  customer_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
+  vehicle_id?: string;
+  vehicle_license_plate?: string;
+  vehicle_brand_id?: string;
+  vehicle_brand_name?: string;
+  vehicle_model_name?: string;
+  vehicle_type_name?: string;
+  vehicle_year?: number;
+  vehicle_color?: string;
+  branch_id?: string;
+  bay_id?: string;
+  preferred_start_at?: string;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
+  estimated_duration_minutes?: number;
+  buffer_minutes?: number;
+  total_price?: number;
   currency?: string;
-  depositAmount?: number;
+  deposit_amount?: number;
   priority?: Priority;
-  couponCode?: string;
+  coupon_code?: string;
   notes?: string;
-  specialRequests?: string[];
+  special_requests?: string[];
   status?: BookingStatus;
-  bookingItems?: {
-    serviceId: string;
+  booking_items?: {
+    item_type: string;
+    item_id: string;
+    item_name: string;
+    item_url?: string;
+    item_description?: string;
+    unit_price: number;
     quantity: number;
+    duration_minutes?: number;
+    discount_amount?: number;
+    tax_amount?: number;
     notes?: string;
+    display_order?: number;
   }[];
   assignments?: {
-    technicianId: string;
+    technician_id: string;
     role: string;
   }[];
 }

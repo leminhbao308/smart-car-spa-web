@@ -88,6 +88,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
     name: string;
     type: string;
   } | null>(null);
+  const [bookingDate, setBookingDate] = useState<string>("");
+  const [bookingTime, setBookingTime] = useState<string>("");
 
   // API hooks
   const createBookingMutation = useCreateBooking();
@@ -95,21 +97,35 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   // Data hooks
   const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
-  const { profiles: vehicles, loading: isLoadingVehicles } = useVehicleProfiles(
-    {
-      owner_id: selectedCustomer?.user_id || "",
-    }
-  );
+  const { profiles: allVehicles, loading: isLoadingVehicles } =
+    useVehicleProfiles({ size: 1000 });
   const { branches, loading: isLoadingBranches } = useBranches();
   const { data: priceBooksData, isLoading: isLoadingPriceBooks } =
     useActivePriceBooks();
 
+  // Filter vehicles by selected customer
+  const vehicles = React.useMemo(() => {
+    if (!selectedCustomer?.user_id) return [];
+    return allVehicles.filter(
+      (vehicle) => vehicle.owner_id === selectedCustomer.user_id
+    );
+  }, [allVehicles, selectedCustomer?.user_id]);
+
   // Debug: Log để kiểm tra việc lọc xe
   useEffect(() => {
+    console.log("=== Vehicle Filtering Debug ===");
     console.log("Selected customer:", selectedCustomer);
-    console.log("Vehicles for customer:", vehicles);
+    console.log("All vehicles count:", allVehicles.length);
+    console.log("Filtered vehicles for customer:", vehicles);
     console.log("Is loading vehicles:", isLoadingVehicles);
-  }, [selectedCustomer, vehicles, isLoadingVehicles]);
+    if (selectedCustomer) {
+      console.log("Customer ID:", selectedCustomer.user_id);
+      console.log(
+        "Vehicles with matching owner_id:",
+        allVehicles.filter((v) => v.owner_id === selectedCustomer.user_id)
+      );
+    }
+  }, [selectedCustomer, vehicles, allVehicles, isLoadingVehicles]);
 
   // Get services and packages from price books
   const availableServices = React.useMemo(() => {
@@ -170,6 +186,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         setTotalPrice(0);
         setTotalDuration(0);
         setSelectedSlot(null);
+        setBookingDate("");
+        setBookingTime("");
       }
     }
   }, [open, mode, initialData, form]);
@@ -232,8 +250,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   );
 
   const handleOpenSlotSelection = () => {
-    const values = form.getFieldsValue();
-    if (!values.bookingDate || !values.bookingTime || !selectedBranch) {
+    if (!selectedBranch || !bookingDate || !bookingTime) {
       return;
     }
     setSlotModalOpen(true);
@@ -252,35 +269,52 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }
 
         const createRequest: CreateBookingRequest = {
-          customerName: selectedCustomer.full_name,
-          customerPhone: selectedCustomer.phone_number,
-          customerEmail: selectedCustomer.email,
-          vehicleLicensePlate: selectedVehicle.license_plate,
-          vehicleBrandName: selectedVehicle.brand_name || "",
-          vehicleModelName: selectedVehicle.model_name || "",
-          vehicleTypeName: selectedVehicle.type_name || "",
-          vehicleYear: selectedVehicle.model_year || new Date().getFullYear(),
-          vehicleColor: selectedVehicle.color || "",
-          branchId: selectedBranch.branch_id,
-          bayId: selectedSlot?.bayId || undefined,
-          preferredStartAt: values.bookingDate.format("YYYY-MM-DDTHH:mm:ss"),
-          estimatedDurationMinutes: totalDuration,
-          bufferMinutes: 15, // Default buffer time
-          totalPrice: totalPrice,
+          customer_id: selectedCustomer.user_id,
+          customer_name: selectedCustomer.full_name,
+          customer_phone: selectedCustomer.phone_number,
+          customer_email: selectedCustomer.email,
+          vehicle_id: selectedVehicle.vehicle_id,
+          vehicle_license_plate: selectedVehicle.license_plate,
+          vehicle_brand_id: selectedVehicle.vehicle_brand_id,
+          vehicle_brand_name: selectedVehicle.brand_name || "",
+          vehicle_model_name: selectedVehicle.model_name || "",
+          vehicle_type_name: selectedVehicle.type_name || "",
+          vehicle_year: selectedVehicle.model_year || new Date().getFullYear(),
+          vehicle_color: selectedVehicle.color || "",
+          branch_id: selectedBranch.branch_id,
+          preferred_start_at: values.bookingDate.format("YYYY-MM-DDTHH:mm:ss"),
+          estimated_duration_minutes: totalDuration,
+          buffer_minutes: 15, // Default buffer time
+          total_price: totalPrice,
           currency: "VND",
-          depositAmount: totalPrice * 0.3, // 30% deposit
+          deposit_amount: 0,
           priority: values.priority as Priority,
-          notes: values.notes,
-          specialRequests: values.specialRequests || [],
-          bookingItems: selectedItems.map((item) => ({
-            serviceId: item.item_id,
+          special_requests: values.specialRequests || [],
+          booking_items: selectedItems.map((item, index) => ({
+            item_type: item.item_type,
+            item_id: item.item_id,
+            item_name: item.item_name,
+            item_url: item.service?.service_url || "",
+            item_description:
+              item.service?.description ||
+              item.servicePackage?.description ||
+              "",
+            unit_price: item.fixed_price || 0,
             quantity: 1,
+            duration_minutes:
+              item.service?.standard_duration ||
+              item.servicePackage?.total_duration ||
+              0,
+            discount_amount: 0,
+            tax_amount: Math.round((item.fixed_price || 0) * 0.1), // 10% tax
             notes:
               item.service?.description ||
               item.servicePackage?.description ||
               "",
+            display_order: index + 1,
           })),
-          assignments: [], // Will be assigned later
+          assignments: [],
+          payments: [],
         };
 
         await createBookingMutation.mutateAsync(createRequest);
@@ -288,28 +322,52 @@ const BookingModal: React.FC<BookingModalProps> = ({
         onOk(createRequest);
       } else if (mode === "edit" && initialData) {
         const updateRequest: UpdateBookingRequest = {
-          customerName: values.customerName,
-          customerPhone: values.customerPhone,
-          customerEmail: values.customerEmail,
-          vehicleLicensePlate: values.vehicleLicensePlate,
-          vehicleBrandName: values.vehicleBrand,
-          vehicleModelName: values.vehicleModel,
-          vehicleTypeName: "Sedan", // Default value
-          vehicleYear: values.vehicleYear,
-          vehicleColor: values.vehicleColor,
-          branchId: selectedBranch?.branch_id || "",
-          preferredStartAt: values.bookingDate.format("YYYY-MM-DDTHH:mm:ss"),
-          estimatedDurationMinutes: totalDuration,
-          totalPrice: totalPrice,
+          customer_id: selectedCustomer?.user_id || initialData.customerId,
+          customer_name:
+            selectedCustomer?.full_name || initialData.customerName,
+          customer_phone:
+            selectedCustomer?.phone_number || initialData.customerPhone,
+          customer_email: selectedCustomer?.email || initialData.customerEmail,
+          vehicle_id: selectedVehicle?.vehicle_id || initialData.vehicleId,
+          vehicle_license_plate:
+            selectedVehicle?.license_plate || initialData.vehicleLicensePlate,
+          vehicle_brand_id: selectedVehicle?.vehicle_brand_id || "",
+          vehicle_brand_name:
+            selectedVehicle?.brand_name || initialData.vehicleBrandName,
+          vehicle_model_name:
+            selectedVehicle?.model_name || initialData.vehicleModelName,
+          vehicle_type_name:
+            selectedVehicle?.type_name || initialData.vehicleTypeName,
+          vehicle_year: selectedVehicle?.model_year || initialData.vehicleYear,
+          vehicle_color: selectedVehicle?.color || initialData.vehicleColor,
+          branch_id: selectedBranch?.branch_id || initialData.branchId,
+          preferred_start_at: values.bookingDate.format("YYYY-MM-DDTHH:mm:ss"),
+          estimated_duration_minutes: totalDuration,
+          total_price: totalPrice,
           priority: values.priority as Priority,
           notes: values.notes,
-          bookingItems: selectedItems.map((item) => ({
-            serviceId: item.item_id,
+          booking_items: selectedItems.map((item, index) => ({
+            item_type: item.item_type,
+            item_id: item.item_id,
+            item_name: item.item_name,
+            item_url: item.service?.service_url || "",
+            item_description:
+              item.service?.description ||
+              item.servicePackage?.description ||
+              "",
+            unit_price: item.fixed_price || 0,
             quantity: 1,
+            duration_minutes:
+              item.service?.standard_duration ||
+              item.servicePackage?.total_duration ||
+              0,
+            discount_amount: 0,
+            tax_amount: Math.round((item.fixed_price || 0) * 0.1), // 10% tax
             notes:
               item.service?.description ||
               item.servicePackage?.description ||
               "",
+            display_order: index + 1,
           })),
           assignments: [],
         };
@@ -456,7 +514,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
             >
               <Form.Item
                 name="vehicleId"
-                label="Chọn xe"
+                label={
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
+                    <span>Chọn xe</span>
+                    {selectedCustomer && (
+                      <Tag color="blue" style={{ fontSize: 11 }}>
+                        {vehicles.length} xe
+                      </Tag>
+                    )}
+                  </div>
+                }
                 rules={[{ required: true, message: "Vui lòng chọn xe" }]}
               >
                 <Select
@@ -473,10 +542,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     !selectedCustomer
                       ? "Vui lòng chọn khách hàng trước"
                       : isLoadingVehicles
-                      ? "Đang tải..."
+                      ? "Đang tải danh sách xe..."
                       : vehicles.length === 0
-                      ? "Khách hàng này chưa có xe nào"
-                      : "Không tìm thấy xe"
+                      ? `Khách hàng "${selectedCustomer.full_name}" chưa có xe nào trong hệ thống`
+                      : "Không tìm thấy xe phù hợp"
                   }
                 >
                   {vehicles.map((vehicle: VehicleProfileDisplay) => (
@@ -563,9 +632,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     }}
                   >
                     <Text style={{ color: "#ff4d4f" }}>
-                      Khách hàng &quot;{selectedCustomer.full_name}&quot; chưa
-                      có xe nào trong hệ thống
+                      ⚠️ Khách hàng &quot;{selectedCustomer.full_name}&quot;
+                      chưa có xe nào trong hệ thống
                     </Text>
+                    <div style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
+                      Vui lòng thêm thông tin xe cho khách hàng trước khi đặt
+                      lịch
+                    </div>
                   </div>
                 )}
             </Card>
@@ -604,9 +677,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       : "Không tìm thấy dịch vụ"
                   }
                 >
-                  {availableServices.map((item) => (
+                  {availableServices.map((item, index) => (
                     <Option
-                      key={item.item_id}
+                      key={`${item.item_id}-${index}`}
                       value={item.item_id}
                       label={item.item_name}
                     >
@@ -657,9 +730,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 <div style={{ marginTop: 8 }}>
                   <Text strong>Dịch vụ đã chọn:</Text>
                   <div style={{ marginTop: 4 }}>
-                    {selectedItems.map((item) => (
+                    {selectedItems.map((item, index) => (
                       <Tag
-                        key={item.item_id}
+                        key={`${item.item_id}-${index}`}
                         color={item.item_type === "SERVICE" ? "blue" : "green"}
                         style={{ marginBottom: 4 }}
                       >
@@ -696,6 +769,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       disabledDate={(current) =>
                         current && current < dayjs().startOf("day")
                       }
+                      onChange={(date) => {
+                        setBookingDate(date ? date.format("YYYY-MM-DD") : "");
+                      }}
                     />
                   </Form.Item>
                 </Col>
@@ -709,6 +785,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       style={{ width: "100%" }}
                       format="HH:mm"
                       placeholder="Chọn giờ"
+                      onChange={(time) => {
+                        setBookingTime(time ? time.format("HH:mm") : "");
+                      }}
                     />
                   </Form.Item>
                 </Col>
@@ -809,17 +888,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
                         Chi nhánh đã chọn:
                       </Text>
                     </div>
-                    <Button
-                      type="primary"
-                      size="small"
-                      onClick={handleOpenSlotSelection}
-                      disabled={
-                        !form.getFieldValue("bookingDate") ||
-                        !form.getFieldValue("bookingTime")
-                      }
-                    >
-                      Chọn slot
-                    </Button>
                   </div>
                   <div style={{ fontSize: 13, color: "#666" }}>
                     <div style={{ fontWeight: 500, marginBottom: 2 }}>
@@ -961,56 +1029,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
               placeholder="Nhập ghi chú cho lịch đặt..."
             />
           </Form.Item>
-
-          <Form.Item name="specialRequests" label="Yêu cầu đặc biệt">
-            <Select
-              mode="tags"
-              placeholder="Nhập yêu cầu đặc biệt (có thể thêm nhiều)"
-              style={{ width: "100%" }}
-            />
-          </Form.Item>
         </Card>
       </Form>
-
-      <SlotSelectionModal
-        open={slotModalOpen}
-        onCancel={() => setSlotModalOpen(false)}
-        onSelectSlot={(slot: unknown) => {
-          const slotData = slot as {
-            id?: string;
-            bayId?: string;
-            name: string;
-            type?: string;
-          };
-          setSelectedSlot({
-            bayId: slotData.id || slotData.bayId || "",
-            name: slotData.name,
-            type: slotData.type || "basic",
-          });
-          setSlotModalOpen(false);
-        }}
-        branch={
-          selectedBranch
-            ? ({
-                id: selectedBranch.branch_id,
-                name: selectedBranch.branch_name,
-                address: selectedBranch.address,
-                phone: selectedBranch.phone,
-                email: selectedBranch.email || "",
-                manager: selectedBranch.manager_name || "",
-                status: "ACTIVE",
-                openingHours: "08:00-18:00",
-                totalSlots: 10,
-                availableSlots: 8,
-              } as any)
-            : null
-        }
-        selectedDate={
-          form.getFieldValue("bookingDate")?.format("YYYY-MM-DD") || ""
-        }
-        selectedTime={form.getFieldValue("bookingTime")?.format("HH:mm") || ""}
-        estimatedDuration={totalDuration}
-      />
     </Modal>
   );
 };
