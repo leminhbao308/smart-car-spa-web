@@ -8,7 +8,7 @@ import {
   Card,
   Row,
   Col,
-  message,
+  App,
   Divider,
   Typography,
   Tag,
@@ -65,6 +65,7 @@ const ServicePackageEditModal: React.FC<ServicePackageEditModalProps> = ({
   onCancel,
   onSuccess,
   editData}) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [selectedServices, setSelectedServices] = useState<Array<{

@@ -39,7 +39,9 @@ export const ROUTES = {
 
   // Services & Packages
   DASHBOARD_SERVICE_CATEGORIES: "/dashboard/service-categories",
-  DASHBOARD_PACKAGE_CATEGORIES: "/dashboard/package-categories",
+  DASHBOARD_SERVICE_PACKAGES_OVERVIEW: "/dashboard/services-packages",
+  DASHBOARD_SERVICE_PACKAGE_TYPES: "/dashboard/services-packages/package-types",
+  DASHBOARD_SERVICE_PACKAGES_LIST: "/dashboard/services-packages/packages",
 
   // Promotions & Pricing
   DASHBOARD_PROMOTIONS: "/dashboard/promotions",

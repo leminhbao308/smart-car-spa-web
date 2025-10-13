@@ -19,6 +19,12 @@ export { default as ServicePackageModal } from "./ServicePackageModals/ServicePa
 export { default as ServicePackageDetailModal } from "./ServicePackageModals/ServicePackageDetailModal";
 export { default as ServicePackageEditModal } from "./ServicePackageModals/ServicePackageEditModal";
 
+// Service Package Type Modals
+export {
+  ServicePackageTypeModal,
+  ServicePackageTypeDetailModal
+} from "./ServicePackageTypeModals";
+
 // Price Table Modals
 export { default as PriceTableModal } from "./PriceTableModals/PriceTableModal";
 export { default as PriceTableDetailModal } from "./PriceTableModals/PriceBookDetailModal";

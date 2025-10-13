@@ -10,15 +10,10 @@ import {
   List,
   Space,
   Badge,
-  Divider,
 } from "antd";
 import {
   ShoppingCartOutlined,
-  DollarOutlined,
   ClockCircleOutlined,
-  GiftOutlined,
-  StarOutlined,
-  FireOutlined,
   CheckCircleOutlined,
   ToolOutlined,
   InboxOutlined,
@@ -151,19 +146,19 @@ const ServicePackageDetailModal: React.FC<ServicePackageDetailModalProps> = ({
 
         <Row gutter={[16, 16]}>
           {/* Services Information */}
-          <Col span={12}>
+          <Col span={24}>
             <Card 
               title={
                 <Space>
                   <ToolOutlined />
-                  Dịch vụ trong gói ({data.packageServices.length} dịch vụ)
+                  Dịch vụ trong gói ({data.packageServices?.length || 0} dịch vụ)
                 </Space>
               } 
               style={{ marginBottom: 16 }}
             >
-              {data.packageServices.length > 0 ? (
+              {data.packageServices && data.packageServices.length > 0 ? (
                 <List
-                  dataSource={data.packageServices}
+                  dataSource={data.packageServices || []}
                   renderItem={(service, index) => (
                     <List.Item key={service.servicePackageServiceId || index}>
                       <List.Item.Meta
@@ -227,87 +222,6 @@ const ServicePackageDetailModal: React.FC<ServicePackageDetailModalProps> = ({
           </Col>
 
           {/* Products Information */}
-          <Col span={12}>
-            <Card 
-              title={
-                <Space>
-                  <InboxOutlined />
-                  Sản phẩm trong gói ({data.packageProducts.length} sản phẩm)
-                </Space>
-              } 
-              style={{ marginBottom: 16 }}
-            >
-              {data.packageProducts.length > 0 ? (
-                <List
-                  dataSource={data.packageProducts}
-                  renderItem={(product, index) => (
-                    <List.Item key={product.servicePackageProductId || index}>
-                      <List.Item.Meta
-                        avatar={
-                          <Badge count={index + 1} style={{ backgroundColor: "#fa8c16" }}>
-                            <div style={{ 
-                              width: 40, 
-                              height: 40, 
-                              backgroundColor: "#f0f0f0", 
-                              borderRadius: 8, 
-                              display: "flex", 
-                              alignItems: "center", 
-                              justifyContent: "center" 
-                            }}>
-                              <InboxOutlined style={{ color: "#fa8c16" }} />
-                            </div>
-                          </Badge>
-                        }
-                        title={
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <Text strong style={{ fontSize: 14 }}>
-                              {product.productName || "Sản phẩm không tên"}
-                            </Text>
-                            <Tag color="orange">
-                              x{product.quantity}
-                            </Tag>
-                          </div>
-                        }
-                        description={
-                          <div>
-                            <Text style={{ color: "#fa8c16", fontSize: 16, fontWeight: "bold" }}>
-                              {formatCurrency(product.unitPrice)}
-                            </Text>
-                            <Text type="secondary" style={{ marginLeft: 8 }}>
-                              / đơn vị
-                            </Text>
-                            <br />
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Tổng: {formatCurrency(product.totalPrice)}
-                            </Text>
-                            {product.productCode && (
-                              <div style={{ marginTop: 4 }}>
-                                <Text type="secondary" style={{ fontSize: 11 }}>
-                                  Mã: {product.productCode}
-                                </Text>
-                              </div>
-                            )}
-                            {product.notes && (
-                              <div style={{ marginTop: 4 }}>
-                                <Text type="secondary" style={{ fontSize: 11 }}>
-                                  {product.notes}
-                                </Text>
-                              </div>
-                            )}
-                          </div>
-                        }
-                      />
-                    </List.Item>
-                  )}
-                />
-              ) : (
-                <div style={{ textAlign: "center", padding: 20, color: "#999" }}>
-                  <InboxOutlined style={{ fontSize: 24, marginBottom: 8 }} />
-                  <div>Chưa có sản phẩm nào</div>
-                </div>
-              )}
-            </Card>
-          </Col>
         </Row>
 
         {/* Package URL */}
@@ -319,18 +233,6 @@ const ServicePackageDetailModal: React.FC<ServicePackageDetailModalProps> = ({
           </Card>
         )}
 
-        {/* Images */}
-        {data.imageUrls && data.imageUrls !== "[]" && (
-          <Card title="Hình ảnh" style={{ marginBottom: 16 }}>
-            <div>
-              <Text type="secondary">URL hình ảnh:</Text>
-              <br />
-              <Text code style={{ fontSize: 12 }}>
-                {data.imageUrls}
-              </Text>
-            </div>
-          </Card>
-        )}
       </div>
     </Modal>
   );

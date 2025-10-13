@@ -23,6 +23,7 @@ const safeCompare = (a: any, b: any): boolean => {
     return JSON.stringify(a) === JSON.stringify(b);
   } catch (error) {
     // If JSON.stringify fails (circular reference), fall back to reference comparison
+    console.warn('Circular reference detected in MemoizedInput comparison, using reference comparison');
     return a === b;
   }
 };

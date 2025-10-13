@@ -6,11 +6,14 @@
 import apiClient from "../axios";
 import {
   ServicePackage,
+  ServicePackageCamelCase,
   ServicePackageResponse,
   ServicePackagePaginatedResponse,
   CreateServicePackageRequest,
   UpdateServicePackageRequest,
   UpdateServicePackageStatusRequest,
+  convertServicePackageFromSnakeCase,
+  convertServicePackageToSnakeCase,
 } from "../types/service-package.types";
 
 export const servicePackageService = {
@@ -22,7 +25,7 @@ export const servicePackageService = {
     size: number = 10,
     sort: string = "createdDate",
     direction: string = "DESC"
-  ): Promise<ServicePackageResponse> => {
+  ): Promise<ServicePackagePaginatedResponse> => {
     try {
       const queryParams = new URLSearchParams({
         page: page.toString(),
@@ -35,9 +38,52 @@ export const servicePackageService = {
         `/service-packages/get-all?${queryParams.toString()}`
       );
 
+      console.log("Raw API response:", response.data);
+      
       if (response.data.success && response.data.data) {
-        return response.data;
+        console.log("API response data:", response.data.data);
+        console.log("API response data type:", Array.isArray(response.data.data) ? "array" : typeof response.data.data);
+        
+        // Handle both array and paginated object responses
+        if (Array.isArray(response.data.data)) {
+          // Direct array response - convert snake_case to camelCase
+          const convertedContent = response.data.data.map(convertServicePackageFromSnakeCase);
+          return {
+            ...response.data,
+            data: {
+              content: convertedContent,
+              totalElements: response.data.data.length,
+              totalPages: 1,
+              first: true,
+              last: true,
+              size: response.data.data.length,
+              number: 0,
+              numberOfElements: response.data.data.length,
+              empty: response.data.data.length === 0,
+              pageable: {
+                pageNumber: 0,
+                pageSize: response.data.data.length,
+                sort: { empty: true, sorted: false, unsorted: true },
+                offset: 0,
+                paged: false,
+                unpaged: true
+              },
+              sort: { empty: true, sorted: false, unsorted: true }
+            }
+          };
+        } else {
+          // Paginated object response - convert content array
+          const convertedData = {
+            ...response.data,
+            data: {
+              ...response.data.data,
+              content: response.data.data.content.map(convertServicePackageFromSnakeCase)
+            }
+          };
+          return convertedData;
+        }
       } else {
+        console.error("API response error:", response.data);
         throw new Error(
           response.data.message || "Failed to fetch service packages"
         );

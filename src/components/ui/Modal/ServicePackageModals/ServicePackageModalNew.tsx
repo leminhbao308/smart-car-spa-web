@@ -9,7 +9,7 @@ import {
   Card,
   Row,
   Col,
-  message,
+  App,
   Divider,
   Typography,
   Tag,
@@ -80,6 +80,7 @@ const ServicePackageModalNew: React.FC<ServicePackageModalProps> = ({
   onOk,
   initialData,
   title = "Thêm gói dịch vụ mới"}) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
