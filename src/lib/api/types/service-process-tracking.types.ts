@@ -1,35 +1,68 @@
 /**
  * Service Process Tracking Management Types
  * Type definitions for service process tracking-related API requests and responses
+ * Updated to match backend ServiceProcessTrackingInfoDto
  */
 
 export interface ServiceProcessTrackingInfoDto {
-  id: string;
+  // Core tracking info
+  trackingId: string;
+  
+  // Booking information
   bookingId: string;
   bookingCode?: string;
   customerName?: string;
+  customerPhone?: string;
   vehicleLicensePlate?: string;
-  serviceProcessId: string;
-  serviceProcessName?: string;
+  
+  // Service step information
+  serviceStepId: string;
+  serviceStepName?: string;
+  serviceStepDescription?: string;
+  serviceStepOrder?: number;
+  estimatedTime?: number;
+  isRequired?: boolean;
+  
+  // Technician information
   technicianId: string;
   technicianName?: string;
-  bayId?: string;
+  technicianCode?: string;
+  
+  // Bay information
+  bayId: string;
   bayName?: string;
-  status: TrackingStatus;
-  currentStepId?: string;
-  currentStepName?: string;
-  progress: number; // 0-100
+  bayCode?: string;
+  
+  // Timing information
   startTime?: string;
   endTime?: string;
   estimatedDuration?: number;
   actualDuration?: number;
+  
+  // Status and progress
+  status: TrackingStatus;
+  progressPercent?: number;
+  
+  // Additional information
   notes?: string;
-  evidenceMedia?: string[];
-  steps: TrackingStepInfo[];
+  evidenceMediaUrls?: string;
+  
+  // Last update information
+  lastUpdatedBy?: string;
+  lastUpdatedByName?: string;
+  lastUpdatedAt?: string;
+  
+  // Audit information
   createdAt: string;
-  updatedAt: string;
+  modifiedAt: string;
   createdBy?: string;
-  updatedBy?: string;
+  modifiedBy?: string;
+  
+  // Calculated fields
+  efficiency?: number;
+  statusDisplay?: string;
+  durationDisplay?: string;
+  progressDisplay?: string;
 }
 
 export interface TrackingStepInfo {
@@ -58,10 +91,9 @@ export interface TrackingStepProductInfo {
 
 export enum TrackingStatus {
   PENDING = "PENDING",
-  IN_PROGRESS = "IN_PROGRESS",
+  IN_PROGRESS = "IN_PROGRESS", 
   COMPLETED = "COMPLETED",
-  CANCELLED = "CANCELLED",
-  PAUSED = "PAUSED"
+  CANCELLED = "CANCELLED"
 }
 
 export enum StepStatus {
@@ -86,9 +118,9 @@ export interface ServiceProcessTrackingFilterParam {
 
 export interface CreateServiceProcessTrackingRequest {
   bookingId: string;
-  serviceProcessId: string;
+  serviceStepId: string;
   technicianId: string;
-  bayId?: string;
+  bayId: string;
   notes?: string;
 }
 

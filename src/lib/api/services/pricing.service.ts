@@ -41,6 +41,11 @@ export const PricingService = {
     return response.data.data;
   },
 
+  getActivePriceBooks: async (): Promise<PriceBook[]> => {
+    const response = await api.get(`/pricing/books/active`);
+    return response.data.data;
+  },
+
   getAllPriceBooks: async (): Promise<PriceBook[]> => {
     const response = await api.get(`/pricing/books/get-all`);
     return response.data.data;

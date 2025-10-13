@@ -12,8 +12,9 @@ import {
   Tag,
   Row,
   Col,
-  Avatar,
-  Typography} from "antd";
+  Typography,
+  message,
+} from "antd";
 import {
   CarOutlined,
   UserOutlined,
@@ -21,27 +22,43 @@ import {
   ClockCircleOutlined,
   DollarOutlined,
   EnvironmentOutlined,
-  PhoneOutlined} from "@ant-design/icons";
+  PhoneOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
-import {
-  serviceTypes,
-  priorityLevels,
-  branches,
-  staffMembers,
-  availableServices} from "@/components/utils/data/bookings.data";
 import { formatDurationVer01 } from "@/components/utils/helper/duration.format.helper";
 import SlotSelectionModal from "../SlotSelectionModal";
-import { branchesData } from "@/components/utils/data/branches.data";
-import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
+import { MemoizedTextArea } from "@/components/ui/MemoizedComponents";
+import { useCreateBooking, useUpdateBooking } from "@/lib/api/hooks/useBooking";
+import { useCustomersDropdown } from "@/lib/api/hooks/useUsers";
+import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
+import { useBranches } from "@/lib/api/hooks/useBranches";
+import { useActivePriceBooks } from "@/lib/api/hooks/usePricing";
+import {
+  BookingInfoDto,
+  CreateBookingRequest,
+  UpdateBookingRequest,
+  Priority,
+} from "@/lib/api/types/booking.types";
+import { UserManagementInfo } from "@/lib/api/types/user.types";
+import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
+import { BranchDisplay } from "@/lib/api/types/branch.types";
+import { PriceBookItem } from "@/lib/api/types/price-book.types";
 
 const { Option } = Select;
 const { Text } = Typography;
 
+// Priority levels
+const priorityLevels = [
+  { value: "NORMAL", label: "Bình thường", icon: "⚪" },
+  { value: "HIGH", label: "Cao", icon: "🟡" },
+  { value: "URGENT", label: "Khẩn cấp", icon: "🔴" },
+];
+
 interface BookingModalProps {
   open: boolean;
   onCancel: () => void;
-  onOk: (bookingData: any) => void;
-  initialData?: any;
+  onOk: (bookingData: unknown) => void;
+  initialData?: BookingInfoDto;
   mode?: "create" | "edit";
   loading?: boolean;
 }
@@ -52,77 +69,167 @@ const BookingModal: React.FC<BookingModalProps> = ({
   onOk,
   initialData,
   mode = "create",
-  loading = false}) => {
+  loading = false,
+}) => {
   const [form] = Form.useForm();
-  const [selectedServices, setSelectedServices] = useState<any[]>([]);
-  const [selectedStaff, setSelectedStaff] = useState<any[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<any>(null);
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<UserManagementInfo | null>(null);
+  const [selectedVehicle, setSelectedVehicle] =
+    useState<VehicleProfileDisplay | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<BranchDisplay | null>(
+    null
+  );
+  const [selectedItems, setSelectedItems] = useState<PriceBookItem[]>([]);
   const [totalPrice, setTotalPrice] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
   const [slotModalOpen, setSlotModalOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<any>(null);
+  const [selectedSlot, setSelectedSlot] = useState<{
+    bayId: string;
+    name: string;
+    type: string;
+  } | null>(null);
+
+  // API hooks
+  const createBookingMutation = useCreateBooking();
+  const updateBookingMutation = useUpdateBooking();
+
+  // Data hooks
+  const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
+  const { profiles: vehicles, loading: isLoadingVehicles } = useVehicleProfiles(
+    {
+      owner_id: selectedCustomer?.user_id || "",
+    }
+  );
+  const { branches, loading: isLoadingBranches } = useBranches();
+  const { data: priceBooksData, isLoading: isLoadingPriceBooks } =
+    useActivePriceBooks();
+
+  // Debug: Log để kiểm tra việc lọc xe
+  useEffect(() => {
+    console.log("Selected customer:", selectedCustomer);
+    console.log("Vehicles for customer:", vehicles);
+    console.log("Is loading vehicles:", isLoadingVehicles);
+  }, [selectedCustomer, vehicles, isLoadingVehicles]);
+
+  // Get services and packages from price books
+  const availableServices = React.useMemo(() => {
+    if (!priceBooksData) return [];
+
+    const allItems: PriceBookItem[] = [];
+    priceBooksData.forEach((priceBook) => {
+      priceBook.items.forEach((item) => {
+        if (
+          item.item_type === "SERVICE" ||
+          item.item_type === "SERVICE_PACKAGE"
+        ) {
+          allItems.push(item);
+        }
+      });
+    });
+
+    return allItems;
+  }, [priceBooksData]);
 
   useEffect(() => {
     if (open) {
       if (mode === "edit" && initialData) {
         form.setFieldsValue({
-          ...initialData,
-          bookingDate: dayjs(initialData.bookingDate),
-          bookingTime: dayjs(initialData.bookingTime, "HH:mm"),
-          preferredDate: dayjs(initialData.preferredDate),
-          preferredTime: dayjs(initialData.preferredTime, "HH:mm")});
-        setSelectedServices(initialData.services || []);
-        setSelectedStaff(initialData.assignedStaff || []);
-        const branch = branches.find((b) => b.id === initialData.branchId);
-        setSelectedBranch(branch);
-        calculateTotals(initialData.services || []);
+          customerId: initialData.customerId,
+          vehicleId: initialData.vehicleId,
+          branchId: initialData.branchId,
+          bookingDate: dayjs(
+            initialData.scheduledStartAt || initialData.preferredStartAt
+          ),
+          notes: initialData.notes,
+          priority: initialData.priority,
+        });
+        // Convert BookingItemInfoDto to our item format
+        const items = (initialData.bookingItems || []).map(
+          (item) =>
+            ({
+              item_id: item.serviceId,
+              item_name: item.serviceName || "Dịch vụ",
+              item_type: "SERVICE" as const,
+              fixed_price: 0, // Will be set from price book data
+              policy_type: "FIXED" as const,
+              markup_percent: null,
+              service: null,
+              servicePackage: null,
+              product: null,
+            } as unknown as PriceBookItem)
+        );
+        setSelectedItems(items);
+        setTotalPrice(initialData.totalPrice || 0);
+        setTotalDuration(initialData.estimatedDurationMinutes || 0);
       } else {
         form.resetFields();
-        setSelectedServices([]);
-        setSelectedStaff([]);
+        setSelectedCustomer(null);
+        setSelectedVehicle(null);
         setSelectedBranch(null);
+        setSelectedItems([]);
         setTotalPrice(0);
         setTotalDuration(0);
+        setSelectedSlot(null);
       }
     }
   }, [open, mode, initialData, form]);
 
-  const calculateTotals = (services: any[]) => {
-    const price = services.reduce((sum, service) => sum + service.price, 0);
-    const duration = services.reduce(
-      (sum, service) => sum + service.duration,
-      0
-    );
+  const calculateTotals = React.useCallback((items: PriceBookItem[]) => {
+    const price = items.reduce((sum, item) => sum + (item.fixed_price || 0), 0);
+    const duration = items.reduce((sum, item) => {
+      if (item.service) {
+        return sum + (item.service.standard_duration || 0);
+      } else if (item.servicePackage) {
+        return sum + (item.servicePackage.total_duration || 0);
+      }
+      return sum;
+    }, 0);
     setTotalPrice(price);
     setTotalDuration(duration);
-  };
+  }, []);
 
-  const handleServiceChange = (serviceIds: number[]) => {
-    const services = availableServices.filter((service) =>
-      serviceIds.includes(service.id)
-    );
-    setSelectedServices(services);
-    calculateTotals(services);
-  };
+  const handleCustomerChange = React.useCallback(
+    (customerId: string) => {
+      const customer = customers.find((c) => c.user_id === customerId);
+      setSelectedCustomer(customer || null);
+      setSelectedVehicle(null); // Reset vehicle when customer changes
 
-  const handleStaffChange = (staffIds: number[]) => {
-    const staff = staffMembers.filter((member) => staffIds.includes(member.id));
-    setSelectedStaff(staff);
-  };
+      // Reset form vehicle field
+      setTimeout(() => {
+        form.setFieldValue("vehicleId", undefined);
+      }, 0);
 
-  const handleBranchChange = (branchId: number) => {
-    const branch = branchesData.find((b) => b.id === branchId);
-    setSelectedBranch(branch);
-  };
+      console.log("Customer changed to:", customer);
+    },
+    [customers, form]
+  );
 
-  const handleSelectSlot = (
-    slot: any,
-    branch: any,
-    selectedDateTime: string
-  ) => {
-    setSelectedSlot({ ...slot, branch, selectedDateTime });
-    setSlotModalOpen(false);
-  };
+  const handleVehicleChange = React.useCallback(
+    (vehicleId: string) => {
+      const vehicle = vehicles.find((v) => v.vehicle_id === vehicleId);
+      setSelectedVehicle(vehicle || null);
+    },
+    [vehicles]
+  );
+
+  const handleBranchChange = React.useCallback(
+    (branchId: string) => {
+      const branch = branches.find((b) => b.branch_id === branchId);
+      setSelectedBranch(branch || null);
+    },
+    [branches]
+  );
+
+  const handleServiceChange = React.useCallback(
+    (itemIds: string[]) => {
+      const items = availableServices.filter((item) =>
+        itemIds.includes(item.item_id)
+      );
+      setSelectedItems(items);
+      calculateTotals(items);
+    },
+    [availableServices, calculateTotals]
+  );
 
   const handleOpenSlotSelection = () => {
     const values = form.getFieldsValue();
@@ -135,19 +242,88 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const bookingData = {
-        ...values,
-        services: selectedServices,
-        assignedStaff: selectedStaff,
-        totalPrice,
-        estimatedDuration: totalDuration,
-        bookingDate: values.bookingDate.format("YYYY-MM-DD"),
-        bookingTime: values.bookingTime.format("HH:mm"),
-        preferredDate: values.preferredDate.format("YYYY-MM-DD"),
-        preferredTime: values.preferredTime.format("HH:mm")};
-      onOk(bookingData);
+
+      if (mode === "create") {
+        if (!selectedCustomer || !selectedVehicle || !selectedBranch) {
+          message.error(
+            "Vui lòng chọn đầy đủ thông tin khách hàng, xe và chi nhánh"
+          );
+          return;
+        }
+
+        const createRequest: CreateBookingRequest = {
+          customerName: selectedCustomer.full_name,
+          customerPhone: selectedCustomer.phone_number,
+          customerEmail: selectedCustomer.email,
+          vehicleLicensePlate: selectedVehicle.license_plate,
+          vehicleBrandName: selectedVehicle.brand_name || "",
+          vehicleModelName: selectedVehicle.model_name || "",
+          vehicleTypeName: selectedVehicle.type_name || "",
+          vehicleYear: selectedVehicle.model_year || new Date().getFullYear(),
+          vehicleColor: selectedVehicle.color || "",
+          branchId: selectedBranch.branch_id,
+          bayId: selectedSlot?.bayId || undefined,
+          preferredStartAt: values.bookingDate.format("YYYY-MM-DDTHH:mm:ss"),
+          estimatedDurationMinutes: totalDuration,
+          bufferMinutes: 15, // Default buffer time
+          totalPrice: totalPrice,
+          currency: "VND",
+          depositAmount: totalPrice * 0.3, // 30% deposit
+          priority: values.priority as Priority,
+          notes: values.notes,
+          specialRequests: values.specialRequests || [],
+          bookingItems: selectedItems.map((item) => ({
+            serviceId: item.item_id,
+            quantity: 1,
+            notes:
+              item.service?.description ||
+              item.servicePackage?.description ||
+              "",
+          })),
+          assignments: [], // Will be assigned later
+        };
+
+        await createBookingMutation.mutateAsync(createRequest);
+        message.success("Tạo booking thành công");
+        onOk(createRequest);
+      } else if (mode === "edit" && initialData) {
+        const updateRequest: UpdateBookingRequest = {
+          customerName: values.customerName,
+          customerPhone: values.customerPhone,
+          customerEmail: values.customerEmail,
+          vehicleLicensePlate: values.vehicleLicensePlate,
+          vehicleBrandName: values.vehicleBrand,
+          vehicleModelName: values.vehicleModel,
+          vehicleTypeName: "Sedan", // Default value
+          vehicleYear: values.vehicleYear,
+          vehicleColor: values.vehicleColor,
+          branchId: selectedBranch?.branch_id || "",
+          preferredStartAt: values.bookingDate.format("YYYY-MM-DDTHH:mm:ss"),
+          estimatedDurationMinutes: totalDuration,
+          totalPrice: totalPrice,
+          priority: values.priority as Priority,
+          notes: values.notes,
+          bookingItems: selectedItems.map((item) => ({
+            serviceId: item.item_id,
+            quantity: 1,
+            notes:
+              item.service?.description ||
+              item.servicePackage?.description ||
+              "",
+          })),
+          assignments: [],
+        };
+
+        await updateBookingMutation.mutateAsync({
+          bookingId: initialData.bookingId,
+          request: updateRequest,
+        });
+        message.success("Cập nhật booking thành công");
+        onOk(updateRequest);
+      }
     } catch (error) {
       console.log("Validation failed:", error);
+      message.error("Có lỗi xảy ra khi xử lý booking");
     }
   };
 
@@ -171,7 +347,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
         <Button
           key="submit"
           type="primary"
-          loading={loading}
+          loading={
+            loading ||
+            createBookingMutation.isPending ||
+            updateBookingMutation.isPending
+          }
           onClick={handleSubmit}
         >
           {mode === "create" ? "Đặt lịch" : "Cập nhật"}
@@ -182,8 +362,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         form={form}
         layout="vertical"
         initialValues={{
-          priority: "normal",
-          status: "pending"}}
+          priority: "NORMAL",
+        }}
       >
         <Row gutter={16}>
           {/* Thông tin khách hàng */}
@@ -194,38 +374,76 @@ const BookingModal: React.FC<BookingModalProps> = ({
               style={{ marginBottom: 16 }}
             >
               <Form.Item
-                name="customerName"
-                label="Tên khách hàng"
+                name="customerId"
+                label="Chọn khách hàng"
                 rules={[
-                  { required: true, message: "Vui lòng nhập tên khách hàng" },
+                  { required: true, message: "Vui lòng chọn khách hàng" },
                 ]}
               >
-                <MemoizedInput
-                  prefix={<UserOutlined />}
-                  placeholder="Nhập tên khách hàng"
-                />
+                <Select
+                  placeholder="Tìm kiếm khách hàng"
+                  showSearch
+                  loading={isLoadingCustomers}
+                  onChange={handleCustomerChange}
+                  filterOption={(input, option) => {
+                    const label = option?.label?.toString() || "";
+                    return label.toLowerCase().includes(input.toLowerCase());
+                  }}
+                  optionLabelProp="label"
+                >
+                  {customers.map((customer) => (
+                    <Option
+                      key={customer.user_id}
+                      value={customer.user_id}
+                      label={customer.full_name}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 500 }}>
+                          {customer.full_name}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#666" }}>
+                          {customer.phone_number} • {customer.email}
+                        </div>
+                      </div>
+                    </Option>
+                  ))}
+                </Select>
               </Form.Item>
 
-              <Form.Item
-                name="customerPhone"
-                label="Số điện thoại"
-                rules={[
-                  { required: true, message: "Vui lòng nhập số điện thoại" },
-                  {
-                    pattern: /^[0-9]{10,11}$/,
-                    message: "Số điện thoại không hợp lệ"},
-                ]}
-              >
-                <MemoizedInput placeholder="Nhập số điện thoại" />
-              </Form.Item>
-
-              <Form.Item
-                name="customerEmail"
-                label="Email"
-                rules={[{ type: "email", message: "Email không hợp lệ" }]}
-              >
-                <MemoizedInput placeholder="Nhập email" />
-              </Form.Item>
+              {selectedCustomer && (
+                <div
+                  style={{
+                    padding: 8,
+                    backgroundColor: "#f6ffed",
+                    border: "1px solid #b7eb8f",
+                    borderRadius: 4,
+                    marginBottom: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <UserOutlined style={{ color: "#52c41a" }} />
+                    <Text strong style={{ color: "#52c41a" }}>
+                      Khách hàng đã chọn:
+                    </Text>
+                  </div>
+                  <div style={{ fontSize: 13, color: "#666" }}>
+                    <div>
+                      <strong>{selectedCustomer.full_name}</strong>
+                    </div>
+                    <div>{selectedCustomer.phone_number}</div>
+                    {selectedCustomer.email && (
+                      <div>{selectedCustomer.email}</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </Card>
           </Col>
 
@@ -237,78 +455,119 @@ const BookingModal: React.FC<BookingModalProps> = ({
               style={{ marginBottom: 16 }}
             >
               <Form.Item
-                name="licensePlate"
-                label="Biển số xe"
-                rules={[
-                  { required: true, message: "Vui lòng nhập biển số xe" },
-                ]}
+                name="vehicleId"
+                label="Chọn xe"
+                rules={[{ required: true, message: "Vui lòng chọn xe" }]}
               >
-                <MemoizedInput prefix={<CarOutlined />} placeholder="Nhập biển số xe" />
+                <Select
+                  placeholder={
+                    selectedCustomer
+                      ? "Chọn xe của khách hàng"
+                      : "Vui lòng chọn khách hàng trước"
+                  }
+                  loading={isLoadingVehicles}
+                  onChange={handleVehicleChange}
+                  disabled={!selectedCustomer}
+                  optionLabelProp="label"
+                  notFoundContent={
+                    !selectedCustomer
+                      ? "Vui lòng chọn khách hàng trước"
+                      : isLoadingVehicles
+                      ? "Đang tải..."
+                      : vehicles.length === 0
+                      ? "Khách hàng này chưa có xe nào"
+                      : "Không tìm thấy xe"
+                  }
+                >
+                  {vehicles.map((vehicle: VehicleProfileDisplay) => (
+                    <Option
+                      key={vehicle.vehicle_id}
+                      value={vehicle.vehicle_id}
+                      label={vehicle.license_plate}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 500 }}>
+                          {vehicle.license_plate}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#666" }}>
+                          {vehicle.brand_name} {vehicle.model_name} •{" "}
+                          {vehicle.type_name}
+                        </div>
+                      </div>
+                    </Option>
+                  ))}
+                </Select>
               </Form.Item>
 
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item
-                    name="brand"
-                    label="Hãng xe"
-                    rules={[
-                      { required: true, message: "Vui lòng chọn hãng xe" },
-                    ]}
+              {selectedVehicle && (
+                <div
+                  style={{
+                    padding: 8,
+                    backgroundColor: "#e6f7ff",
+                    border: "1px solid #91d5ff",
+                    borderRadius: 4,
+                    marginBottom: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      marginBottom: 4,
+                    }}
                   >
-                    <Select placeholder="Chọn hãng xe">
-                      <Option value="Toyota">Toyota</Option>
-                      <Option value="Honda">Honda</Option>
-                      <Option value="Mazda">Mazda</Option>
-                      <Option value="BMW">BMW</Option>
-                      <Option value="Mercedes">Mercedes</Option>
-                      <Option value="Audi">Audi</Option>
-                      <Option value="Lexus">Lexus</Option>
-                      <Option value="Porsche">Porsche</Option>
-                      <Option value="Hyundai">Hyundai</Option>
-                      <Option value="Ford">Ford</Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="model"
-                    label="Model"
-                    rules={[{ required: true, message: "Vui lòng nhập model" }]}
-                  >
-                    <MemoizedInput placeholder="Nhập model" />
-                  </Form.Item>
-                </Col>
-              </Row>
+                    <CarOutlined style={{ color: "#1890ff" }} />
+                    <Text strong style={{ color: "#1890ff" }}>
+                      Xe đã chọn:
+                    </Text>
+                  </div>
+                  <div style={{ fontSize: 13, color: "#666" }}>
+                    <div>
+                      <strong>{selectedVehicle.license_plate}</strong>
+                    </div>
+                    <div>
+                      {selectedVehicle.brand_name} {selectedVehicle.model_name}
+                    </div>
+                    <div>{selectedVehicle.type_name}</div>
+                  </div>
+                </div>
+              )}
 
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item
-                    name="year"
-                    label="Năm sản xuất"
-                    rules={[
-                      { required: true, message: "Vui lòng nhập năm sản xuất" },
-                    ]}
+              {!selectedCustomer && (
+                <div
+                  style={{
+                    padding: 12,
+                    backgroundColor: "#fff7e6",
+                    border: "1px solid #ffd591",
+                    borderRadius: 4,
+                    textAlign: "center",
+                  }}
+                >
+                  <Text style={{ color: "#d46b08" }}>
+                    Vui lòng chọn khách hàng trước để xem danh sách xe
+                  </Text>
+                </div>
+              )}
+
+              {selectedCustomer &&
+                vehicles.length === 0 &&
+                !isLoadingVehicles && (
+                  <div
+                    style={{
+                      padding: 12,
+                      backgroundColor: "#fff1f0",
+                      border: "1px solid #ffccc7",
+                      borderRadius: 4,
+                      textAlign: "center",
+                    }}
                   >
-                    <MemoizedInputNumber
-                      style={{ width: "100%" }}
-                      min={1990}
-                      max={2024}
-                      placeholder="Năm"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="color"
-                    label="Màu sắc"
-                    rules={[
-                      { required: true, message: "Vui lòng nhập màu sắc" },
-                    ]}
-                  >
-                    <MemoizedInput placeholder="Nhập màu sắc" />
-                  </Form.Item>
-                </Col>
-              </Row>
+                    <Text style={{ color: "#ff4d4f" }}>
+                      Khách hàng &quot;{selectedCustomer.full_name}&quot; chưa
+                      có xe nào trong hệ thống
+                    </Text>
+                  </div>
+                )}
             </Card>
           </Col>
         </Row>
@@ -316,73 +575,99 @@ const BookingModal: React.FC<BookingModalProps> = ({
         <Row gutter={16}>
           {/* Dịch vụ */}
           <Col span={12}>
-            <Card size="small" title="Dịch vụ" style={{ marginBottom: 16 }}>
-              <Form.Item
-                name="serviceType"
-                label="Loại dịch vụ"
-                rules={[
-                  { required: true, message: "Vui lòng chọn loại dịch vụ" },
-                ]}
-              >
-                <Select placeholder="Chọn loại dịch vụ">
-                  {serviceTypes.map((service) => (
-                    <Option key={service.value} value={service.value}>
-                      <Space>
-                        <span>{service.icon}</span>
-                        <span>{service.label}</span>
-                      </Space>
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
+            <Card
+              size="small"
+              title="Dịch vụ & Gói dịch vụ"
+              style={{ marginBottom: 16 }}
+            >
               <Form.Item
                 name="services"
-                label="Dịch vụ chi tiết"
+                label="Chọn dịch vụ"
                 rules={[
                   {
                     required: true,
-                    message: "Vui lòng chọn ít nhất một dịch vụ"},
+                    message: "Vui lòng chọn ít nhất một dịch vụ",
+                  },
                 ]}
               >
                 <Select
                   mode="multiple"
-                  placeholder="Chọn dịch vụ"
+                  placeholder="Chọn dịch vụ hoặc gói dịch vụ"
                   onChange={handleServiceChange}
                   optionLabelProp="label"
+                  loading={isLoadingPriceBooks}
+                  notFoundContent={
+                    isLoadingPriceBooks
+                      ? "Đang tải..."
+                      : availableServices.length === 0
+                      ? "Không có dịch vụ nào"
+                      : "Không tìm thấy dịch vụ"
+                  }
                 >
-                  {availableServices.map((service) => (
+                  {availableServices.map((item) => (
                     <Option
-                      key={service.id}
-                      value={service.id}
-                      label={service.name}
+                      key={item.item_id}
+                      value={item.item_id}
+                      label={item.item_name}
                     >
                       <div
                         style={{
                           display: "flex",
-                          justifyContent: "space-between"}}
+                          justifyContent: "space-between",
+                        }}
                       >
-                        <span>{service.name}</span>
-                        <span style={{ color: "#52c41a", fontWeight: 500 }}>
-                          {service.price.toLocaleString()} VNĐ
-                        </span>
+                        <div>
+                          <div style={{ fontWeight: 500 }}>
+                            {item.item_name}
+                            <Tag
+                              color={
+                                item.item_type === "SERVICE" ? "blue" : "green"
+                              }
+                              style={{ marginLeft: 8, fontSize: 10 }}
+                            >
+                              {item.item_type === "SERVICE"
+                                ? "Dịch vụ"
+                                : "Gói dịch vụ"}
+                            </Tag>
+                          </div>
+                          <div style={{ fontSize: 12, color: "#666" }}>
+                            {item.service?.description ||
+                              item.servicePackage?.description ||
+                              ""}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ color: "#52c41a", fontWeight: 500 }}>
+                            {item.fixed_price?.toLocaleString()} VNĐ
+                          </div>
+                          <div style={{ fontSize: 12, color: "#666" }}>
+                            {item.service?.standard_duration ||
+                              item.servicePackage?.total_duration ||
+                              0}{" "}
+                            phút
+                          </div>
+                        </div>
                       </div>
                     </Option>
                   ))}
                 </Select>
               </Form.Item>
 
-              {selectedServices.length > 0 && (
+              {selectedItems.length > 0 && (
                 <div style={{ marginTop: 8 }}>
                   <Text strong>Dịch vụ đã chọn:</Text>
                   <div style={{ marginTop: 4 }}>
-                    {selectedServices.map((service) => (
+                    {selectedItems.map((item) => (
                       <Tag
-                        key={service.id}
-                        color="blue"
+                        key={item.item_id}
+                        color={item.item_type === "SERVICE" ? "blue" : "green"}
                         style={{ marginBottom: 4 }}
                       >
-                        {service.name} - {service.price.toLocaleString()} VNĐ
+                        {item.item_name} - {item.fixed_price?.toLocaleString()}{" "}
+                        VNĐ
+                        <span style={{ fontSize: 10, marginLeft: 4 }}>
+                          ({item.item_type === "SERVICE" ? "Dịch vụ" : "Gói"})
+                        </span>
                       </Tag>
                     ))}
                   </div>
@@ -438,6 +723,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   placeholder="Chọn chi nhánh"
                   optionLabelProp="label"
                   onChange={handleBranchChange}
+                  loading={isLoadingBranches}
                   showSearch
                   filterOption={(input, option) => {
                     const childrenText =
@@ -456,16 +742,17 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 >
                   {branches.map((branch) => (
                     <Option
-                      key={branch.id}
-                      value={branch.id}
-                      label={branch.name}
+                      key={branch.branch_id}
+                      value={branch.branch_id}
+                      label={branch.branch_name}
                     >
                       <div
                         style={{
                           display: "flex",
                           flexDirection: "column",
                           maxWidth: "100%",
-                          overflow: "hidden"}}
+                          overflow: "hidden",
+                        }}
                       >
                         <div
                           style={{
@@ -473,9 +760,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
                             marginBottom: 2,
                             whiteSpace: "nowrap",
                             overflow: "hidden",
-                            textOverflow: "ellipsis"}}
+                            textOverflow: "ellipsis",
+                          }}
                         >
-                          {branch.name}
+                          {branch.branch_name}
                         </div>
                         <div
                           style={{
@@ -484,7 +772,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
-                            maxWidth: "250px"}}
+                            maxWidth: "250px",
+                          }}
                         >
                           {branch.address}
                         </div>
@@ -501,14 +790,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     padding: 8,
                     backgroundColor: "#f6ffed",
                     border: "1px solid #b7eb8f",
-                    borderRadius: 4}}
+                    borderRadius: 4,
+                  }}
                 >
                   <div
                     style={{
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      marginBottom: 4}}
+                      marginBottom: 4,
+                    }}
                   >
                     <div
                       style={{ display: "flex", alignItems: "center", gap: 8 }}
@@ -532,21 +823,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   </div>
                   <div style={{ fontSize: 13, color: "#666" }}>
                     <div style={{ fontWeight: 500, marginBottom: 2 }}>
-                      {selectedBranch.name}
+                      {selectedBranch.branch_name}
                     </div>
                     <div>{selectedBranch.address}</div>
                     <div style={{ marginTop: 2 }}>
                       <PhoneOutlined style={{ marginRight: 4 }} />
                       {selectedBranch.phone}
                     </div>
-                    {selectedBranch.totalSlots && (
-                      <div style={{ marginTop: 2, display: "flex", gap: 8 }}>
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          Slot trống: {selectedBranch.availableSlots}/
-                          {selectedBranch.totalSlots}
-                        </Text>
-                      </div>
-                    )}
                   </div>
                   {selectedSlot && (
                     <div
@@ -554,7 +837,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                         marginTop: 8,
                         padding: 8,
                         backgroundColor: "#e6f7ff",
-                        borderRadius: 4}}
+                        borderRadius: 4,
+                      }}
                     >
                       <Text strong style={{ color: "#1890ff" }}>
                         Slot đã chọn: {selectedSlot.name} (
@@ -578,7 +862,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     rules={[
                       {
                         required: true,
-                        message: "Vui lòng chọn mức độ ưu tiên"},
+                        message: "Vui lòng chọn mức độ ưu tiên",
+                      },
                     ]}
                   >
                     <Select placeholder="Chọn mức độ ưu tiên">
@@ -615,65 +900,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
         </Row>
 
         <Row gutter={16}>
-          {/* Nhân viên */}
-          <Col span={12}>
-            <Card
-              size="small"
-              title="Nhân viên phụ trách"
-              style={{ marginBottom: 16 }}
-            >
-              <Form.Item name="assignedStaff" label="Chọn nhân viên">
-                <Select
-                  mode="multiple"
-                  placeholder="Chọn nhân viên"
-                  onChange={handleStaffChange}
-                  optionLabelProp="label"
-                >
-                  {staffMembers.map((staff) => (
-                    <Option key={staff.id} value={staff.id} label={staff.name}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8}}
-                      >
-                        <Avatar
-                          size="small"
-                          style={{ backgroundColor: "#1890ff" }}
-                        >
-                          {staff.name.charAt(0)}
-                        </Avatar>
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{staff.name}</div>
-                          <div style={{ fontSize: 12, color: "#666" }}>
-                            {staff.role}
-                          </div>
-                        </div>
-                      </div>
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-
-              {selectedStaff.length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  <Text strong>Nhân viên đã chọn:</Text>
-                  <div style={{ marginTop: 4 }}>
-                    {selectedStaff.map((staff) => (
-                      <Tag
-                        key={staff.id}
-                        color="green"
-                        style={{ marginBottom: 4 }}
-                      >
-                        {staff.name} - {staff.role}
-                      </Tag>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Card>
-          </Col>
-
           {/* Tổng kết */}
           <Col span={12}>
             <Card size="small" title="Tổng kết" style={{ marginBottom: 16 }}>
@@ -684,7 +910,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       textAlign: "center",
                       padding: 8,
                       backgroundColor: "#f0f0f0",
-                      borderRadius: 4}}
+                      borderRadius: 4,
+                    }}
                   >
                     <DollarOutlined
                       style={{ color: "#52c41a", fontSize: 20 }}
@@ -705,7 +932,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       textAlign: "center",
                       padding: 8,
                       backgroundColor: "#f0f0f0",
-                      borderRadius: 4}}
+                      borderRadius: 4,
+                    }}
                   >
                     <ClockCircleOutlined
                       style={{ color: "#1890ff", fontSize: 20 }}
@@ -728,7 +956,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
         {/* Ghi chú và yêu cầu đặc biệt */}
         <Card size="small" title="Ghi chú và yêu cầu đặc biệt">
           <Form.Item name="notes" label="Ghi chú">
-            <MemoizedTextArea rows={3} placeholder="Nhập ghi chú cho lịch đặt..." />
+            <MemoizedTextArea
+              rows={3}
+              placeholder="Nhập ghi chú cho lịch đặt..."
+            />
           </Form.Item>
 
           <Form.Item name="specialRequests" label="Yêu cầu đặc biệt">
@@ -744,8 +975,36 @@ const BookingModal: React.FC<BookingModalProps> = ({
       <SlotSelectionModal
         open={slotModalOpen}
         onCancel={() => setSlotModalOpen(false)}
-        onSelectSlot={handleSelectSlot}
-        branch={selectedBranch}
+        onSelectSlot={(slot: unknown) => {
+          const slotData = slot as {
+            id?: string;
+            bayId?: string;
+            name: string;
+            type?: string;
+          };
+          setSelectedSlot({
+            bayId: slotData.id || slotData.bayId || "",
+            name: slotData.name,
+            type: slotData.type || "basic",
+          });
+          setSlotModalOpen(false);
+        }}
+        branch={
+          selectedBranch
+            ? ({
+                id: selectedBranch.branch_id,
+                name: selectedBranch.branch_name,
+                address: selectedBranch.address,
+                phone: selectedBranch.phone,
+                email: selectedBranch.email || "",
+                manager: selectedBranch.manager_name || "",
+                status: "ACTIVE",
+                openingHours: "08:00-18:00",
+                totalSlots: 10,
+                availableSlots: 8,
+              } as any)
+            : null
+        }
         selectedDate={
           form.getFieldValue("bookingDate")?.format("YYYY-MM-DD") || ""
         }
@@ -757,4 +1016,3 @@ const BookingModal: React.FC<BookingModalProps> = ({
 };
 
 export default BookingModal;
-
