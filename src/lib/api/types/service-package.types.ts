@@ -1,58 +1,52 @@
-// Service Package API Types
-export interface ServicePackageProduct {
-  servicePackageProductId?: string;
-  packageId?: string;
-  packageName?: string;
-  productId: string;
-  productName?: string;
-  productCode?: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  notes?: string;
-  isRequired: boolean;
-  isActive: boolean;
-  audit?: any;
-}
-
+// Service Package Service Item (snake_case from backend)
 export interface ServicePackageServiceItem {
-  servicePackageServiceId?: string;
-  packageId?: string;
-  serviceId?: string | null;
-  serviceName?: string;
-  serviceUrl?: string;
-  serviceDescription?: string;
-  serviceStandardDuration?: number;
-  serviceBasePrice?: number;
+  service_package_service_id?: string;
+  package_id?: string;
+  service_id?: string | null;
+  service_name?: string;
+  service_url?: string;
+  service_description?: string;
+  service_standard_duration?: number;
+  service_base_price?: number;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
+  unit_price: number;
+  total_price: number;
   notes?: string;
-  isRequired: boolean;
-  isActive: boolean;
-  createdAt?: string | null;
-  updatedAt?: string | null;
+  is_required: boolean;
+  is_active: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
+// Service Package API Types (snake_case from backend)
 export interface ServicePackage {
-  packageId: string;
-  packageUrl: string;
-  packageName: string;
-  categoryId: string;
-  categoryName: string;
+  package_id: string;
+  package_url: string;
+  package_name: string;
+  category_id: string;
+  category_name: string;
   description: string;
-  totalDuration: number;
-  packagePrice: number | null;
-  serviceCost: number;
-  productCost: number;
-  packageType: "MAINTENANCE" | "REPAIR" | "INSPECTION" | "CLEANING" | "CUSTOM";
-  imageUrls: string;
-  isActive: boolean;
+  total_duration: number;
+  package_price: number;
+  service_cost: number;
+  service_package_type_id: string;
+  service_package_type_name?: string | null;
+  is_active: boolean;
   is_deleted?: boolean;
-  packageProducts: ServicePackageProduct[];
-  packageServices: ServicePackageServiceItem[];
-  audit?: any;
+  package_services: ServicePackageServiceItem[];
+  service_process_id?: string;
+  service_process_name?: string;
+  service_process_code?: string;
+  is_default_process?: boolean;
+  service_count?: number;
+  audit?: {
+    created_date?: string;
+    modified_date?: string;
+    created_by?: string;
+    modified_by?: string;
+  };
 }
+
 
 export interface ServicePackageResponse {
   success: boolean;
@@ -61,7 +55,7 @@ export interface ServicePackageResponse {
   data: ServicePackage[];
 }
 
-// Legacy paginated response interface (for backward compatibility)
+// Paginated response interface matching backend structure
 export interface ServicePackagePaginatedResponse {
   success: boolean;
   message: string;
@@ -96,52 +90,50 @@ export interface ServicePackagePaginatedResponse {
   };
 }
 
-// Create Service Package Request
+
+// Create Service Package Request (snake_case for backend)
 export interface CreateServicePackageRequest {
   package_name: string;
   package_url: string;
   category_id: string;
   description: string;
-  package_type: "MAINTENANCE" | "REPAIR" | "INSPECTION" | "CLEANING" | "CUSTOM";
-  image_urls: string;
-  package_products: {
-    productId: string;
-    quantity: number;
-    unitPrice: number;
-    notes?: string;
-    isRequired: boolean;
-  }[];
-  package_services: {
-    serviceId: string;
-    quantity: number;
-    unitPrice: number;
-    notes?: string;
-    isRequired: boolean;
-  }[];
+  total_duration: number;
+  service_package_type_id: string;
+  package_services: CreateServicePackageServiceRequest[];
+  service_process_id?: string;
+  is_default_process?: boolean;
 }
 
-// Update Service Package Request
+// Create Service Package Service Request (snake_case for backend)
+export interface CreateServicePackageServiceRequest {
+  service_id: string;
+  quantity: number;
+  unit_price?: number;
+  notes?: string;
+  is_required?: boolean;
+}
+
+// Update Service Package Request (snake_case for backend)
 export interface UpdateServicePackageRequest {
   package_name: string;
   package_url: string;
   category_id: string;
   description: string;
-  package_type: "MAINTENANCE" | "REPAIR" | "INSPECTION" | "CLEANING" | "CUSTOM";
-  image_urls: string;
-  package_products: {
-    productId: string;
-    quantity: number;
-    unitPrice: number;
-    notes?: string;
-    isRequired: boolean;
-  }[];
-  package_services: {
-    serviceId: string;
-    quantity: number;
-    unitPrice: number;
-    notes?: string;
-    isRequired: boolean;
-  }[];
+  total_duration: number;
+  service_package_type_id: string;
+  is_active: boolean;
+  package_services: UpdateServicePackageServiceRequest[];
+  service_process_id?: string;
+  is_default_process?: boolean;
+}
+
+// Update Service Package Service Request (snake_case for backend)
+export interface UpdateServicePackageServiceRequest {
+  service_id: string;
+  quantity: number;
+  unit_price?: number;
+  notes?: string;
+  is_required?: boolean;
 }
 
 // Update Service Package Status Request
@@ -149,11 +141,3 @@ export interface UpdateServicePackageStatusRequest {
   is_active: boolean;
 }
 
-// Service Package Type Options
-export const SERVICE_PACKAGE_TYPE_OPTIONS = [
-  { value: "MAINTENANCE", label: "Bảo dưỡng", color: "blue" },
-  { value: "REPAIR", label: "Sửa chữa", color: "red" },
-  { value: "INSPECTION", label: "Kiểm tra", color: "green" },
-  { value: "CLEANING", label: "Vệ sinh", color: "cyan" },
-  { value: "CUSTOM", label: "Tùy chỉnh", color: "purple" },
-];

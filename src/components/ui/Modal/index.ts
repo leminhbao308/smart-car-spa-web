@@ -3,7 +3,7 @@ export { useConfirmationModal } from "./useConfirmationModal";
 export {
   ConfirmationModalProvider,
   ConfirmationModalContext,
-  useConfirmationModalContext
+  useConfirmationModalContext,
 } from "./ConfirmationModalProvider";
 export { default as BranchModal } from "./BranchModal/BranchModal";
 export { default as PricingModal } from "./PriceModal/PricingModal";
@@ -14,10 +14,16 @@ export { default as ServiceModal } from "./ServiceModals/ServiceModal";
 export { default as ServiceTypeDetailModal } from "./ServiceModals/ServiceTypeDetailModal";
 export { default as ServiceTypeEditModal } from "./ServiceModals/ServiceTypeEditModal";
 
-// Service Package Modals
-export { default as ServicePackageModal } from "./ServicePackageModals/ServicePackageModalSimple";
-export { default as ServicePackageDetailModal } from "./ServicePackageModals/ServicePackageDetailModal";
-export { default as ServicePackageEditModal } from "./ServicePackageModals/ServicePackageEditModal";
+// // Service Package Modals
+// export { default as ServicePackageModal } from "./ServicePackageModals/ServicePackageModalSimple";
+// export { default as ServicePackageDetailModal } from "./ServicePackageModals/ServicePackageDetailModal";
+// export { default as ServicePackageEditModal } from "./ServicePackageModals/ServicePackageEditModal";
+
+// Service Package Type Modals
+export {
+  ServicePackageTypeModal,
+  ServicePackageTypeDetailModal,
+} from "./ServicePackageTypeModals";
 
 // Price Table Modals
 export { default as PriceTableModal } from "./PriceTableModals/PriceTableModal";
@@ -28,12 +34,12 @@ export { default as SupplierModal } from "./SupplierModal/SupplierModal";
 export {
   SupplierDetailModal,
   SupplierEditModal,
-  SupplierCreateModal
+  SupplierCreateModal,
 } from "./SupplierModal";
 export {
   BranchDetailModal,
   BranchEditModal,
-  BranchCreateModal
+  BranchCreateModal,
 } from "./BranchModal";
 export { default as CareProcessModal } from "./CarProcessModal/CareProcessModal";
 export { default as CareProcessDetailModal } from "./CarProcessModal/CareProcessDetailModal";
@@ -63,10 +69,10 @@ export { default as ProductDetailModal } from "./Product/ProductDetailModal";
 export { default as ProductModal } from "./Product/ProductModal";
 
 // Service Bay Modals
-export {
-  ServiceBayModal,
-  ServiceBayDetailModal
-} from "./ServiceBayModals";
+export { ServiceBayModal, ServiceBayDetailModal } from "./ServiceBayModals";
 
 export type { ConfirmationModalProps } from "./ConfirmationModal";
-export type { UseConfirmationModalReturn, ShowModalConfig } from "./useConfirmationModal";
+export type {
+  UseConfirmationModalReturn,
+  ShowModalConfig,
+} from "./useConfirmationModal";

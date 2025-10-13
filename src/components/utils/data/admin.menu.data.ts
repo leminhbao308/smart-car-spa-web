@@ -21,8 +21,10 @@ import {
   SettingOutlined,
   UndoOutlined,
   ClockCircleOutlined,
-  InboxOutlined, 
+  InboxOutlined,
   ImportOutlined,
+  TagsOutlined,
+  ShoppingOutlined,
 } from "@ant-design/icons";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -149,8 +151,20 @@ export const adminMenuItems: MenuItem[] = [
   },
   {
     key: "service-packages",
-    label: "Gói dịch vụ",
-    icon: React.createElement(ShoppingCartOutlined),
+    label: "Quản lý gói dịch vụ",
+    icon: React.createElement(ShoppingOutlined),
+    children: [
+      {
+        key: "service-package-types",
+        label: "Loại gói dịch vụ",
+        icon: React.createElement(TagsOutlined),
+      },
+      {
+        key: "service-packages-list",
+        label: "Gói dịch vụ",
+        icon: React.createElement(ShoppingOutlined),
+      },
+    ],
   },
   {
     key: "promotions",
@@ -274,7 +288,8 @@ export const menuKeyToPath: Record<string, string> = {
   "stock-inventory": "/dashboard/inventory/stock",
   "service-types": "/dashboard/service-categories/service-types",
   services: "/dashboard/service-categories/services",
-  "service-packages": "/dashboard/package-categories",
+  "service-package-types": "/dashboard/package-types",
+  "service-packages-list": "/dashboard/packages",
   promotions: "/dashboard/promotions",
   "promotions-list": "/dashboard/promotions",
   "promotion-types": "/dashboard/promotions/promotion-types",
