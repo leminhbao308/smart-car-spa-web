@@ -417,5 +417,59 @@ export const servicePackageService = {
       throw error;
     }
   },
+
+  /**
+   * Remove service from service package
+   */
+  removeServiceFromPackage: async (
+    packageId: string,
+    serviceId: string
+  ): Promise<void> => {
+    try {
+      console.log(`Removing service ${serviceId} from package ${packageId}`);
+
+      const response = await apiClient.post(
+        `/${packageId}/services/${serviceId}/remove`
+      );
+
+      console.log("Remove service from package API response:", response.data);
+
+      if (!response.data.success) {
+        throw new Error(
+          response.data.message || "Failed to remove service from package"
+        );
+      }
+    } catch (error: unknown) {
+      console.error("Remove service from package error:", error);
+
+      // Handle specific error cases
+      if (error && typeof error === "object" && "response" in error) {
+        const errorResponse = error as {
+          response?: { status?: number; data?: { message?: string } };
+        };
+        if (errorResponse.response?.status === 404) {
+          throw new Error("Không tìm thấy gói dịch vụ hoặc dịch vụ.");
+        } else if (errorResponse.response?.status === 400) {
+          const errorMessage =
+            errorResponse.response.data?.message ||
+            "Không thể xóa dịch vụ khỏi gói. Vui lòng kiểm tra lại.";
+          throw new Error(errorMessage);
+        } else if (errorResponse.response?.status === 403) {
+          throw new Error("Bạn không có quyền thực hiện thao tác này.");
+        } else if (errorResponse.response?.status === 500) {
+          throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
+        } else if (errorResponse.response?.status === 401) {
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
+        }
+      }
+      const errorMessage =
+        error && typeof error === "object" && "message" in error
+          ? (error as { message: string }).message
+          : "Không thể xóa dịch vụ khỏi gói. Vui lòng thử lại.";
+      throw new Error(errorMessage);
+    }
+  },
 };
 

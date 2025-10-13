@@ -130,10 +130,12 @@ export interface UpdateServicePackageRequest {
 // Update Service Package Service Request (snake_case for backend)
 export interface UpdateServicePackageServiceRequest {
   service_id: string;
+  service_package_service_id?: string; // For DELETE operations
   quantity: number;
   unit_price?: number;
   notes?: string;
   is_required?: boolean;
+  operation?: "CREATE" | "UPDATE" | "DELETE";
 }
 
 // Update Service Package Status Request
