@@ -78,19 +78,26 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
   const [serviceProcesses, setServiceProcesses] = useState<
     ServiceProcessInfoDto[]
   >([]);
-  const [selectedServiceProcess, setSelectedServiceProcess] = useState<ServiceProcessInfoDto | null>(null);
+  const [selectedServiceProcess, setSelectedServiceProcess] =
+    useState<ServiceProcessInfoDto | null>(null);
 
   // Calculate total price from process steps
-  const calculateProcessPrice = useCallback((process: ServiceProcessInfoDto | null) => {
-    if (!process || !process.process_steps) return 0;
-    
-    return process.process_steps.reduce((total, step) => {
-      if (!step.step_products) return total;
-      return total + step.step_products.reduce((stepTotal, product) => {
-        return stepTotal + (product.product_cost * product.quantity);
+  const calculateProcessPrice = useCallback(
+    (process: ServiceProcessInfoDto | null) => {
+      if (!process || !process.process_steps) return 0;
+
+      return process.process_steps.reduce((total, step) => {
+        if (!step.step_products) return total;
+        return (
+          total +
+          step.step_products.reduce((stepTotal, product) => {
+            return stepTotal + product.product_cost * product.quantity;
+          }, 0)
+        );
       }, 0);
-    }, 0);
-  }, []);
+    },
+    []
+  );
   const [services, setServices] = useState<Service[]>([]);
   const [loadingData, setLoadingData] = useState(false);
 
@@ -156,19 +163,21 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
 
     // Set selected service process for edit mode
     if (editData.service_process_id) {
-      const process = serviceProcesses.find(p => p.id === editData.service_process_id);
+      const process = serviceProcesses.find(
+        (p) => p.id === editData.service_process_id
+      );
       setSelectedServiceProcess(process || null);
     }
 
     // Set service items for combo type
     if (hasServices) {
-      console.log('EditData package_services:', editData.package_services);
+      console.log("EditData package_services:", editData.package_services);
       setServiceItems(editData.package_services);
       const serviceIds = editData.package_services
         .map((item) => item.service_id)
         .filter(Boolean);
-      console.log('Service IDs from editData:', serviceIds);
-      
+      console.log("Service IDs from editData:", serviceIds);
+
       // Only set selected services if services are loaded
       if (services.length > 0) {
         const selectedServicesData = services.filter((service) =>
@@ -206,7 +215,8 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
   // Handle services loading after editData is set
   useEffect(() => {
     if (visible && editData && mode === "edit" && services.length > 0) {
-      const hasServices = editData.package_services && editData.package_services.length > 0;
+      const hasServices =
+        editData.package_services && editData.package_services.length > 0;
       if (hasServices && selectedServices.length === 0) {
         const serviceIds = editData.package_services
           .map((item) => item.service_id)
@@ -233,11 +243,11 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
   };
 
   const handleServiceSelect = (serviceIds: string[]) => {
-    console.log('handleServiceSelect called with:', serviceIds);
+    console.log("handleServiceSelect called with:", serviceIds);
     const selectedServicesData = services.filter((service) =>
       serviceIds.includes(service.service_id)
     );
-    console.log('selectedServicesData:', selectedServicesData);
+    console.log("selectedServicesData:", selectedServicesData);
     setSelectedServices(selectedServicesData);
 
     // Get current service IDs in serviceItems
@@ -273,18 +283,18 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
     );
 
     const finalServiceItems = [...updatedServiceItems, ...newServiceItems];
-    console.log('Final serviceItems:', finalServiceItems);
+    console.log("Final serviceItems:", finalServiceItems);
     setServiceItems(finalServiceItems);
   };
 
   const updateServiceItem = (
-    serviceId: string,
+    servicePackageServiceId: string,
     field: keyof ServicePackageServiceItem,
     value: unknown
   ) => {
     setServiceItems((prev) =>
       prev.map((item) => {
-        if (item.service_id === serviceId) {
+        if (item.service_package_service_id === servicePackageServiceId) {
           const updated = { ...item, [field]: value };
           if (field === "quantity") {
             updated.total_price = updated.quantity * updated.unit_price;
@@ -296,30 +306,39 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
     );
   };
 
-  const removeServiceItem = (serviceId: string) => {
+  const removeServiceItem = (servicePackageServiceId: string) => {
     setServiceItems((prev) =>
-      prev.filter((item) => item.service_id && item.service_id !== serviceId)
-    );
-    setSelectedServices((prev) =>
-      prev.filter((service) => service.service_id !== serviceId)
+      prev.filter(
+        (item) =>
+          item.service_package_service_id &&
+          item.service_package_service_id !== servicePackageServiceId
+      )
     );
 
-    // Update form field to reflect the change
-    const currentSelectedIds = selectedServices
-      .filter((service) => service.service_id !== serviceId)
-      .map((service) => service.service_id);
-    form.setFieldValue("selected_services", currentSelectedIds);
+    // For existing packages, we don't need to update selectedServices
+    // as they might not have service_id
+    if (mode === "create") {
+      setSelectedServices((prev) =>
+        prev.filter((service) => service.service_id !== servicePackageServiceId)
+      );
+
+      // Update form field to reflect the change
+      const currentSelectedIds = selectedServices
+        .filter((service) => service.service_id !== servicePackageServiceId)
+        .map((service) => service.service_id);
+      form.setFieldValue("selected_services", currentSelectedIds);
+    }
   };
 
   const calculateTotalPrice = useMemo(() => {
     return serviceItems
-      .filter((item) => item.service_id)
+      .filter((item) => item.service_name) // Filter by service_name instead of service_id
       .reduce((total, item) => total + (item.total_price || 0), 0);
   }, [serviceItems]);
 
   const calculateTotalDuration = useMemo(() => {
     const total = serviceItems
-      .filter((item) => item.service_id)
+      .filter((item) => item.service_name) // Filter by service_name instead of service_id
       .reduce(
         (total, item) => total + (item.service_standard_duration || 0),
         0
@@ -330,8 +349,8 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
   // Update form fields when combo package changes
   const updateFormFields = useCallback(() => {
     if (packageType === "combo") {
-      form.setFieldValue('total_duration', calculateTotalDuration);
-      form.setFieldValue('package_price', calculateTotalPrice);
+      form.setFieldValue("total_duration", calculateTotalDuration);
+      form.setFieldValue("package_price", calculateTotalPrice);
     }
   }, [packageType, calculateTotalDuration, calculateTotalPrice, form]);
 
@@ -353,7 +372,8 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
         package_price:
           packageType === "combo"
             ? calculateTotalPrice
-            : calculateProcessPrice(selectedServiceProcess) || values.package_price,
+            : calculateProcessPrice(selectedServiceProcess) ||
+              values.package_price,
         package_services:
           packageType === "combo"
             ? serviceItems
@@ -446,29 +466,22 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
           }
           size="small"
         >
-          {/* Debug info */}
-          <div style={{ marginBottom: 16, padding: 8, backgroundColor: '#f0f0f0', borderRadius: 4 }}>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              Debug: serviceItems.length = {serviceItems.length}
-            </Text>
-            <br />
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              serviceItems: {JSON.stringify(serviceItems, null, 2)}
-            </Text>
-          </div>
           <Row gutter={[16, 16]}>
             {serviceItems.map((item, index) => {
               // Debug: Log item data
-              console.log('ServiceItem:', item);
-              
-              // Skip items without service_id or service_name
-              if (!item.service_id || !item.service_name) {
-                console.log('Skipping item:', item);
+              console.log("ServiceItem:", item);
+
+              // Skip items without service_name (service_id can be null for existing packages)
+              if (!item.service_name) {
+                console.log("Skipping item without service_name:", item);
                 return null;
               }
-              
+
               return (
-                <Col span={24} key={item.service_id || `service-${index}`}>
+                <Col
+                  span={24}
+                  key={item.service_package_service_id || `service-${index}`}
+                >
                   <Card size="small" style={{ backgroundColor: "#fafafa" }}>
                     <Row gutter={16} align="middle">
                       <Col span={8}>
@@ -485,7 +498,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                             value={item.quantity}
                             onChange={(value) =>
                               updateServiceItem(
-                                item.service_id!,
+                                item.service_package_service_id!,
                                 "quantity",
                                 value
                               )
@@ -525,7 +538,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                             checked={item.is_required}
                             onChange={(checked) =>
                               updateServiceItem(
-                                item.service_id!,
+                                item.service_package_service_id!,
                                 "is_required",
                                 checked
                               )
@@ -539,7 +552,9 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                           type="text"
                           danger
                           icon={<DeleteOutlined />}
-                          onClick={() => removeServiceItem(item.service_id!)}
+                          onClick={() =>
+                            removeServiceItem(item.service_package_service_id!)
+                          }
                           size="small"
                         />
                       </Col>
@@ -595,14 +610,14 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
           }
           labelInValue={false}
           onChange={(value) => {
-            const process = serviceProcesses.find(p => p.id === value);
+            const process = serviceProcesses.find((p) => p.id === value);
             setSelectedServiceProcess(process || null);
             // Update form fields with the process data
             if (process) {
-              form.setFieldValue('total_duration', process.estimated_duration);
+              form.setFieldValue("total_duration", process.estimated_duration);
               const processPrice = calculateProcessPrice(process);
               if (processPrice > 0) {
-                form.setFieldValue('package_price', processPrice);
+                form.setFieldValue("package_price", processPrice);
               }
             }
           }}
@@ -831,30 +846,37 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                   name="total_duration"
                 >
                   {packageType === "combo" ? (
-                    <div style={{ 
-                      padding: '4px 11px', 
-                      border: '1px solid #d9d9d9', 
-                      borderRadius: '6px',
-                      backgroundColor: '#f5f5f5',
-                      color: '#666',
-                      minHeight: '32px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      {calculateTotalDuration} phút (tự động tính từ các dịch vụ)
+                    <div
+                      style={{
+                        padding: "4px 11px",
+                        border: "1px solid #d9d9d9",
+                        borderRadius: "6px",
+                        backgroundColor: "#f5f5f5",
+                        color: "#666",
+                        minHeight: "32px",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {calculateTotalDuration} phút (tự động tính từ các dịch
+                      vụ)
                     </div>
                   ) : (
-                    <div style={{ 
-                      padding: '4px 11px', 
-                      border: '1px solid #d9d9d9', 
-                      borderRadius: '6px',
-                      backgroundColor: '#f5f5f5',
-                      color: '#666',
-                      minHeight: '32px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      {selectedServiceProcess ? `${selectedServiceProcess.estimated_duration} phút (từ quy trình)` : 'Chọn quy trình để hiển thị thời gian'}
+                    <div
+                      style={{
+                        padding: "4px 11px",
+                        border: "1px solid #d9d9d9",
+                        borderRadius: "6px",
+                        backgroundColor: "#f5f5f5",
+                        color: "#666",
+                        minHeight: "32px",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {selectedServiceProcess
+                        ? `${selectedServiceProcess.estimated_duration} phút (từ quy trình)`
+                        : "Chọn quy trình để hiển thị thời gian"}
                     </div>
                   )}
                 </Form.Item>
@@ -880,34 +902,47 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
                   name="package_price"
                   rules={[
                     { required: true, message: "Vui lòng nhập giá gói" },
-                    { type: "number", min: 0, message: "Giá gói phải lớn hơn 0" },
+                    {
+                      type: "number",
+                      min: 0,
+                      message: "Giá gói phải lớn hơn 0",
+                    },
                   ]}
                 >
                   {packageType === "combo" ? (
-                    <div style={{ 
-                      padding: '4px 11px', 
-                      border: '1px solid #d9d9d9', 
-                      borderRadius: '6px',
-                      backgroundColor: '#f5f5f5',
-                      color: '#666',
-                      minHeight: '32px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      {formatCurrency(calculateTotalPrice)} (tự động tính từ các dịch vụ)
+                    <div
+                      style={{
+                        padding: "4px 11px",
+                        border: "1px solid #d9d9d9",
+                        borderRadius: "6px",
+                        backgroundColor: "#f5f5f5",
+                        color: "#666",
+                        minHeight: "32px",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {formatCurrency(calculateTotalPrice)} (tự động tính từ các
+                      dịch vụ)
                     </div>
                   ) : (
-                    <div style={{ 
-                      padding: '4px 11px', 
-                      border: '1px solid #d9d9d9', 
-                      borderRadius: '6px',
-                      backgroundColor: '#f5f5f5',
-                      color: '#666',
-                      minHeight: '32px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      {selectedServiceProcess ? `${formatCurrency(calculateProcessPrice(selectedServiceProcess))} (từ quy trình)` : 'Chọn quy trình để hiển thị giá'}
+                    <div
+                      style={{
+                        padding: "4px 11px",
+                        border: "1px solid #d9d9d9",
+                        borderRadius: "6px",
+                        backgroundColor: "#f5f5f5",
+                        color: "#666",
+                        minHeight: "32px",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
+                    >
+                      {selectedServiceProcess
+                        ? `${formatCurrency(
+                            calculateProcessPrice(selectedServiceProcess)
+                          )} (từ quy trình)`
+                        : "Chọn quy trình để hiển thị giá"}
                     </div>
                   )}
                 </Form.Item>
