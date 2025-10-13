@@ -6,7 +6,6 @@ export {
   useConfirmationModalContext,
 } from "./ConfirmationModalProvider";
 export { default as BranchModal } from "./BranchModal/BranchModal";
-export { default as PricingModal } from "./PriceModal/PricingModal";
 
 // Service Modals
 export { default as ServiceDetailModal } from "./ServiceModals/ServiceDetailModal";
