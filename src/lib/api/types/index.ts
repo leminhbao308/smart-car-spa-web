@@ -70,3 +70,5 @@ export * from './service-process-tracking.types';
 export * from './media.types';
 // Product Attribute types
 export * from './product-attribute.types';
+// Payment types
+export * from './payment.types';

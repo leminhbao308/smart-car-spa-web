@@ -45,6 +45,7 @@ export * from './useServiceProcesses';
 export * from './usePromotions';
 export * from './useCategory';
 export * from './usePromotionType';
+export * from './usePayment';
 
 // React Query specific exports
 export { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

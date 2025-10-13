@@ -379,21 +379,9 @@ const PriceBookPage = () => {
       },
     },
     {
-      title: "Số lượng mục",
-      dataIndex: "items",
-      key: "items",
-      width: 120,
-      align: "center" as const,
-      render: (items: any[]) => (
-        <Tag color="blue" style={{fontSize: 14, fontWeight: 500}}>
-          {items?.length || 0}
-        </Tag>
-      ),
-    },
-    {
       title: "Trạng thái",
-      dataIndex: "active",
-      key: "active",
+      dataIndex: "is_active",
+      key: "is_active",
       width: 140,
       render: (is_active: boolean) => {
         const status = is_active ? "active" : "inactive";
@@ -719,8 +707,8 @@ const PriceBookPage = () => {
                     <Tag color="blue">{selectedPriceBook.currency}</Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Trạng thái">
-                    <Tag color={selectedPriceBook.active ? "success" : "default"}>
-                      {selectedPriceBook.active ? "Đang áp dụng" : "Ngừng áp dụng"}
+                    <Tag color={selectedPriceBook.is_active ? "success" : "default"}>
+                      {selectedPriceBook.is_active ? "Đang áp dụng" : "Ngừng áp dụng"}
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Ngày hiệu lực">
