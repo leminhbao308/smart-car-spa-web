@@ -1,170 +1,117 @@
 /**
- * Service Process Management Types
- * Type definitions for service process-related API requests and responses
- * Updated to match backend DTOs
+ * Service Process Types
+ * Type definitions for service process management
  */
-
-import { AuditDto } from "./common.types";
 
 export interface ServiceProcessInfoDto {
   id: string;
-  code: string;
   name: string;
   description?: string;
-  estimated_duration?: number;
-  is_default: boolean;
-  is_active: boolean;
-  step_count: number;
-  process_steps: ServiceProcessStepInfoDto[];
-  audit: AuditDto;
+  code: string;
+  isDefault: boolean;
+  estimatedDuration: number;
+  branchId?: string;
+  branchName?: string;
+  processSteps: ServiceProcessStepInfoDto[];
+  createdDate: string;
+  modifiedDate: string;
+  createdBy: string;
+  modifiedBy: string;
+  isActive: boolean;
+  isDeleted: boolean;
 }
 
 export interface ServiceProcessStepInfoDto {
   id: string;
-  process_id: string;
-  process_name: string;
-  step_order: number;
+  processId: string;
+  stepOrder: number;
   name: string;
   description?: string;
-  estimated_time?: number;
-  is_required: boolean;
-  is_first_step: boolean | null;
-  is_last_step: boolean | null;
-  total_product_count: number;
-  step_products: ServiceProcessStepProductInfoDto[];
-  audit: AuditDto;
+  estimatedTime: number;
+  isRequired: boolean;
+  stepProducts: ServiceProcessStepProductInfoDto[];
+  createdDate: string;
+  modifiedDate: string;
+  createdBy: string;
+  modifiedBy: string;
+  isActive: boolean;
+  isDeleted: boolean;
 }
 
 export interface ServiceProcessStepProductInfoDto {
   id: string;
-  step_id: string;
-  step_name: string;
-  product_id: string;
-  product_name: string;
-  product_code: string;
-  product_sku: string;
+  serviceProcessStepId: string;
+  productId: string;
+  productName: string;
+  productCode: string;
   quantity: number;
-  unit?: string;
-  product_cost: number;
-  audit: AuditDto;
+  unitOfMeasure: string;
+  notes?: string;
+  createdDate: string;
+  modifiedDate: string;
+  createdBy: string;
+  modifiedBy: string;
+  isActive: boolean;
+  isDeleted: boolean;
 }
 
 export interface ServiceProcessFilterParam {
-  name?: string;
-  code?: string;
-  is_active?: boolean;
-  is_default?: boolean;
+  page?: number;
+  size?: number;
   search?: string;
-  sort?: string;
-  direction?: "ASC" | "DESC";
+  branchId?: string;
+  isActive?: boolean;
+  isDefault?: boolean;
 }
 
 export interface CreateServiceProcessRequest {
-  code: string;
   name: string;
   description?: string;
-  estimated_duration?: number; // Backend now uses snake_case
-  is_default?: boolean;
-  is_active?: boolean;
-  process_steps?: CreateServiceProcessStepRequest[];
-}
-
-export interface UpdateServiceProcessRequest {
-  code?: string;
-  name?: string;
-  description?: string;
-  estimated_duration?: number; // Backend now uses snake_case
-  is_default?: boolean;
-  is_active?: boolean;
-  process_steps?: UpdateServiceProcessStepRequest[];
-}
-
-export interface UpdateServiceProcessStepRequest {
-  id?: string; // For existing steps
-  step_order?: number;
-  name?: string;
-  description?: string;
-  estimated_time?: number;
-  is_required?: boolean;
-  is_active?: boolean; // Add is_active field for AuditEntity
-  step_products?: UpdateServiceProcessStepProductRequest[];
-}
-
-export interface UpdateServiceProcessStepProductRequest {
-  id?: string; // For existing products
-  product_id?: string; // Backend expects product_id field name
-  quantity?: number;
-  unit?: string;
+  code: string;
+  isDefault?: boolean;
+  estimatedDuration: number;
+  branchId?: string;
+  processSteps: CreateServiceProcessStepRequest[];
 }
 
 export interface CreateServiceProcessStepRequest {
-  id?: string; // For existing steps
+  stepOrder: number;
   name: string;
   description?: string;
-  step_order: number;
-  estimated_time?: number;
-  is_required?: boolean;
-  is_first_step?: boolean;
-  is_last_step?: boolean;
-  step_products?: CreateServiceProcessStepProductRequest[];
-}
-
-export interface UpdateServiceProcessStepRequest {
-  name?: string;
-  description?: string;
-  step_order?: number;
-  estimated_time?: number;
-  is_required?: boolean;
-  is_first_step?: boolean;
-  is_last_step?: boolean;
+  estimatedTime: number;
+  isRequired?: boolean;
+  stepProducts?: CreateServiceProcessStepProductRequest[];
 }
 
 export interface CreateServiceProcessStepProductRequest {
-  id?: string; // For existing products
-  product_id: string; // Backend expects product_id (snake_case)
-  product_name?: string; // For display purposes
-  quantity: number; // Backend expects BigDecimal
-  unit?: string;
+  productId: string;
+  quantity: number;
+  notes?: string;
+}
+
+export interface UpdateServiceProcessRequest {
+  name?: string;
+  description?: string;
+  code?: string;
+  isDefault?: boolean;
+  estimatedDuration?: number;
+  branchId?: string;
+  processSteps?: UpdateServiceProcessStepRequest[];
+}
+
+export interface UpdateServiceProcessStepRequest {
+  id?: string;
+  stepOrder?: number;
+  name?: string;
+  description?: string;
+  estimatedTime?: number;
+  isRequired?: boolean;
+  stepProducts?: UpdateServiceProcessStepProductRequest[];
 }
 
 export interface UpdateServiceProcessStepProductRequest {
-  product_id?: string;
+  id?: string;
+  productId?: string;
   quantity?: number;
-  unit?: string;
-}
-
-export interface ServiceProcessResponse {
-  success: boolean;
-  message: string;
-  data: ServiceProcessInfoDto;
-}
-
-export interface ServiceProcessListResponse {
-  success: boolean;
-  message: string;
-  data: ServiceProcessInfoDto[];
-}
-
-export interface ServiceProcessStepResponse {
-  success: boolean;
-  message: string;
-  data: ServiceProcessStepInfoDto;
-}
-
-export interface ServiceProcessStepListResponse {
-  success: boolean;
-  message: string;
-  data: ServiceProcessStepInfoDto[];
-}
-
-export interface ServiceProcessStepProductResponse {
-  success: boolean;
-  message: string;
-  data: ServiceProcessStepProductInfoDto;
-}
-
-export interface ServiceProcessStepProductListResponse {
-  success: boolean;
-  message: string;
-  data: ServiceProcessStepProductInfoDto[];
+  notes?: string;
 }

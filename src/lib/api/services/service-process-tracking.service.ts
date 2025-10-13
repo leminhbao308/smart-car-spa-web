@@ -25,7 +25,7 @@ export class ServiceProcessTrackingService {
     try {
       console.log("Creating service process tracking with data:", trackingData);
 
-      const response = await apiClient.post("/service-process-tracking/create", trackingData);
+      const response = await apiClient.post("/service-process-trackings/create", trackingData);
       console.log("Create service process tracking API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -81,7 +81,7 @@ export class ServiceProcessTrackingService {
         }
       }
 
-      const url = `/service-process-tracking/get-all${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const url = `/service-process-trackings/get-all${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       const response = await apiClient.get(url);
 
       if (response.data.success) {
@@ -100,7 +100,7 @@ export class ServiceProcessTrackingService {
    */
   static async getTrackingById(trackingId: string): Promise<ServiceProcessTrackingInfoDto> {
     try {
-      const response = await apiClient.get(`/service-process-tracking/${trackingId}`);
+      const response = await apiClient.get(`/service-process-trackings/${trackingId}`);
 
       if (response.data.success && response.data.data) {
         return response.data.data;
@@ -123,7 +123,7 @@ export class ServiceProcessTrackingService {
     try {
       console.log("Updating service process tracking with data:", trackingData);
 
-      const response = await apiClient.post(`/service-process-tracking/${trackingId}/update`, trackingData);
+      const response = await apiClient.post(`/service-process-trackings/${trackingId}/update`, trackingData);
       console.log("Update service process tracking API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -144,7 +144,7 @@ export class ServiceProcessTrackingService {
     try {
       console.log("Deleting service process tracking with ID:", trackingId);
 
-      const response = await apiClient.post(`/service-process-tracking/${trackingId}/delete`);
+      const response = await apiClient.post(`/service-process-trackings/${trackingId}/delete`);
       console.log("Delete service process tracking API response:", response);
 
       if (!response.data.success) {
@@ -161,7 +161,7 @@ export class ServiceProcessTrackingService {
    */
   static async getTrackingsByBooking(bookingId: string): Promise<ServiceProcessTrackingInfoDto[]> {
     try {
-      const response = await apiClient.get(`/service-process-tracking/booking/${bookingId}`);
+      const response = await apiClient.get(`/service-process-trackings/booking/${bookingId}`);
 
       if (response.data.success && response.data.data) {
         return response.data.data;
@@ -179,7 +179,7 @@ export class ServiceProcessTrackingService {
    */
   static async getTrackingsByTechnician(technicianId: string): Promise<ServiceProcessTrackingInfoDto[]> {
     try {
-      const response = await apiClient.get(`/service-process-tracking/technician/${technicianId}`);
+      const response = await apiClient.get(`/service-process-trackings/technician/${technicianId}`);
 
       if (response.data.success && response.data.data) {
         return response.data.data;
@@ -197,7 +197,7 @@ export class ServiceProcessTrackingService {
    */
   static async getTrackingsByBay(bayId: string): Promise<ServiceProcessTrackingInfoDto[]> {
     try {
-      const response = await apiClient.get(`/service-process-tracking/bay/${bayId}`);
+      const response = await apiClient.get(`/service-process-trackings/bay/${bayId}`);
 
       if (response.data.success && response.data.data) {
         return response.data.data;
@@ -215,7 +215,7 @@ export class ServiceProcessTrackingService {
    */
   static async getInProgressTrackings(): Promise<ServiceProcessTrackingInfoDto[]> {
     try {
-      const response = await apiClient.get("/service-process-tracking/in-progress");
+      const response = await apiClient.get("/service-process-trackings/in-progress");
 
       if (response.data.success && response.data.data) {
         return response.data.data;
@@ -238,7 +238,7 @@ export class ServiceProcessTrackingService {
     try {
       console.log("Starting step for tracking with data:", stepData);
 
-      const response = await apiClient.post(`/service-process-tracking/${trackingId}/start-step`, stepData);
+      const response = await apiClient.post(`/service-process-trackings/${trackingId}/start`, stepData);
       console.log("Start step API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -262,7 +262,7 @@ export class ServiceProcessTrackingService {
     try {
       console.log("Updating progress for tracking with data:", progressData);
 
-      const response = await apiClient.post(`/service-process-tracking/${trackingId}/update-progress`, progressData);
+      const response = await apiClient.post(`/service-process-trackings/${trackingId}/progress/update`, progressData);
       console.log("Update progress API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -286,7 +286,7 @@ export class ServiceProcessTrackingService {
     try {
       console.log("Completing step for tracking with data:", stepData);
 
-      const response = await apiClient.post(`/service-process-tracking/${trackingId}/complete-step`, stepData);
+      const response = await apiClient.post(`/service-process-trackings/${trackingId}/complete`, stepData);
       console.log("Complete step API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -310,7 +310,7 @@ export class ServiceProcessTrackingService {
     try {
       console.log("Cancelling step for tracking with data:", stepData);
 
-      const response = await apiClient.post(`/service-process-tracking/${trackingId}/cancel-step`, stepData);
+      const response = await apiClient.post(`/service-process-trackings/${trackingId}/cancel`, stepData);
       console.log("Cancel step API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -334,7 +334,7 @@ export class ServiceProcessTrackingService {
     try {
       console.log("Adding note for tracking with data:", noteData);
 
-      const response = await apiClient.post(`/service-process-tracking/${trackingId}/add-note`, noteData);
+      const response = await apiClient.post(`/service-process-trackings/${trackingId}/notes`, noteData);
       console.log("Add note API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -358,8 +358,8 @@ export class ServiceProcessTrackingService {
     try {
       console.log("Adding evidence media for tracking:", trackingId);
 
-      const response = await apiClient.post(`/service-process-tracking/${trackingId}/add-evidence`, {
-        mediaUrl
+      const response = await apiClient.post(`/service-process-trackings/${trackingId}/evidence`, null, {
+        params: { mediaUrl }
       });
       console.log("Add evidence media API response:", response);
 

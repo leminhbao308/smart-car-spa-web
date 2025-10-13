@@ -3,20 +3,16 @@ import React, { useState, useEffect } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
 import BookingModal from "@/components/ui/Modal/BookingModal/BookingModal";
+import CreateTrackingModal from "@/components/ui/Modal/CreateTrackingModal";
 import { ColumnsType } from "antd/es/table";
-import {
-  Tag,
-  Modal,
-  Typography,
-  Button,
-  message,
-  Badge,
-} from "antd";
+import { Tag, Modal, Typography, Button, notification, Badge } from "antd";
 import {
   PhoneOutlined,
   EyeOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  LoginOutlined,
+  PlayCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
@@ -27,6 +23,8 @@ import {
   useConfirmBooking,
   useCancelBooking,
   useCompleteService,
+  useCheckInBooking,
+  useStartService,
 } from "@/lib/api/hooks/useBooking";
 import { useCustomersDropdown } from "@/lib/api/hooks/useUsers";
 import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
@@ -131,6 +129,7 @@ const BookingsPage = () => {
     null
   );
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [createTrackingModalOpen, setCreateTrackingModalOpen] = useState(false);
   const [filterParams, setFilterParams] = useState({
     page: 0,
     size: 10,
@@ -147,6 +146,8 @@ const BookingsPage = () => {
   const confirmBookingMutation = useConfirmBooking();
   const cancelBookingMutation = useCancelBooking();
   const completeServiceMutation = useCompleteService();
+  const checkInBookingMutation = useCheckInBooking();
+  const startServiceMutation = useStartService();
 
   // Fetch additional data for enrichment
   const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
@@ -227,7 +228,11 @@ const BookingsPage = () => {
   // Error handling
   useEffect(() => {
     if (error) {
-      message.error("Có lỗi xảy ra khi tải dữ liệu booking");
+      notification.error({
+        message: "Lỗi",
+        description: "Có lỗi xảy ra khi tải dữ liệu booking",
+        placement: "topRight",
+      });
     }
   }, [error]);
 
@@ -237,8 +242,9 @@ const BookingsPage = () => {
       title: "STT",
       key: "index",
       width: 60,
+      align: "center",
       render: (_, __, index: number) => (
-        <span style={{ fontSize: 12, color: "#666" }}>
+        <span style={{ fontSize: 14, color: "#666" }}>
           {index + 1 + filterParams.page * filterParams.size}
         </span>
       ),
@@ -250,7 +256,7 @@ const BookingsPage = () => {
       width: 120,
       render: (code: string) => (
         <span
-          style={{ fontFamily: "monospace", fontWeight: 500, color: "#1890ff" }}
+          style={{ fontFamily: "monospace", fontWeight: 500, color: "#1890ff", fontSize: 14 }}
         >
           {code}
         </span>
@@ -259,13 +265,13 @@ const BookingsPage = () => {
     {
       title: "Khách hàng",
       key: "customer",
-      width: 200,
+      width: 220,
       render: (_, record: EnrichedBookingInfoDto) => (
         <div>
           <div
             style={{
               fontWeight: 500,
-              fontSize: 14,
+              fontSize: 15,
               marginBottom: 4,
               display: "flex",
               alignItems: "center",
@@ -278,10 +284,10 @@ const BookingsPage = () => {
                 count="✓"
                 style={{
                   backgroundColor: "#52c41a",
-                  fontSize: 8,
-                  minWidth: 12,
-                  height: 12,
-                  lineHeight: "12px",
+                  fontSize: 10,
+                  minWidth: 14,
+                  height: 14,
+                  lineHeight: "14px",
                 }}
                 title="Dữ liệu đã được bổ sung từ hệ thống"
               />
@@ -289,20 +295,20 @@ const BookingsPage = () => {
           </div>
           <div
             style={{
-              fontSize: 12,
+              fontSize: 13,
               color: "#666",
               display: "flex",
               alignItems: "center",
               gap: 4,
             }}
           >
-            <PhoneOutlined style={{ fontSize: 10 }} />
+            <PhoneOutlined style={{ fontSize: 12 }} />
             {record.customerPhone || "N/A"}
           </div>
           {record.customerEmail && (
-            <div style={{ fontSize: 11, color: "#999" }}>
-              {record.customerEmail}
-            </div>
+          <div style={{ fontSize: 12, color: "#999" }}>
+            {record.customerEmail}
+          </div>
           )}
         </div>
       ),
@@ -310,13 +316,13 @@ const BookingsPage = () => {
     {
       title: "Xe",
       key: "vehicle",
-      width: 180,
+      width: 200,
       render: (_, record: EnrichedBookingInfoDto) => (
         <div>
           <div
             style={{
               fontWeight: 500,
-              fontSize: 14,
+              fontSize: 15,
               marginBottom: 2,
               display: "flex",
               alignItems: "center",
@@ -329,19 +335,19 @@ const BookingsPage = () => {
                 count="✓"
                 style={{
                   backgroundColor: "#52c41a",
-                  fontSize: 8,
-                  minWidth: 12,
-                  height: 12,
-                  lineHeight: "12px",
+                  fontSize: 10,
+                  minWidth: 14,
+                  height: 14,
+                  lineHeight: "14px",
                 }}
                 title="Dữ liệu đã được bổ sung từ hệ thống"
               />
             )}
           </div>
-          <div style={{ fontSize: 12, color: "#666" }}>
+          <div style={{ fontSize: 13, color: "#666" }}>
             {record.vehicleBrandName || "N/A"} {record.vehicleModelName || ""}
           </div>
-          <div style={{ fontSize: 11, color: "#999" }}>
+          <div style={{ fontSize: 12, color: "#999" }}>
             {record.vehicleYear || "N/A"} • {record.vehicleColor || "N/A"}
           </div>
         </div>
@@ -350,19 +356,19 @@ const BookingsPage = () => {
     {
       title: "Dịch vụ",
       key: "service",
-      width: 200,
+      width: 180,
       render: (_, record: BookingInfoDto) => (
-        <div>
-          <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>
+          <div>
+          <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
             {record.bookingItems?.length || 0} dịch vụ
-          </div>
-          <div style={{ fontSize: 11, color: "#666" }}>
+            </div>
+            <div style={{ fontSize: 12, color: "#666" }}>
             {formatDurationVer01(record.estimatedDurationMinutes || 0)}
-          </div>
-          <div style={{ fontSize: 11, color: "#52c41a", fontWeight: 500 }}>
+            </div>
+            <div style={{ fontSize: 12, color: "#52c41a", fontWeight: 500 }}>
             {formatCurrency(record.totalPrice || 0)} {record.currency || "VND"}
+            </div>
           </div>
-        </div>
       ),
     },
     {
@@ -380,30 +386,30 @@ const BookingsPage = () => {
           record.preferredStartAt ||
           record.createdAt;
         return (
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 500 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 500 }}>
               {dayjs(displayTime).format("DD/MM/YYYY")}
-            </div>
-            <div style={{ fontSize: 12, color: "#666" }}>
+          </div>
+          <div style={{ fontSize: 13, color: "#666" }}>
               {dayjs(displayTime).format("HH:mm")}
-            </div>
-            <div
-              style={{
-                fontSize: 10,
-                color:
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color:
                   record.status === BookingStatus.COMPLETED
-                    ? "#52c41a"
+                  ? "#52c41a"
                     : record.status === BookingStatus.CANCELLED
-                    ? "#ff4d4f"
-                    : "#1890ff",
-              }}
-            >
+                  ? "#ff4d4f"
+                  : "#1890ff",
+            }}
+          >
               {getTimeRemaining(
                 dayjs(displayTime).format("YYYY-MM-DD"),
                 dayjs(displayTime).format("HH:mm")
               )}
-            </div>
           </div>
+        </div>
         );
       },
     },
@@ -411,15 +417,15 @@ const BookingsPage = () => {
       title: "Chi nhánh",
       dataIndex: "branchName",
       key: "branchName",
-      width: 150,
+      width: 160,
       render: (name: string, record: BookingInfoDto) => (
         <div>
-          <div style={{ fontSize: 12, fontWeight: 500 }}>{name || "N/A"}</div>
-          <div style={{ fontSize: 10, color: "#666" }}>
+          <div style={{ fontSize: 13, fontWeight: 500 }}>{name || "N/A"}</div>
+          <div style={{ fontSize: 11, color: "#666" }}>
             {record.bayName || "Chưa chọn bay"}
           </div>
           {record.branchCode && (
-            <div style={{ fontSize: 9, color: "#999" }}>
+            <div style={{ fontSize: 10, color: "#999" }}>
               {record.branchCode}
             </div>
           )}
@@ -432,10 +438,11 @@ const BookingsPage = () => {
       dataIndex: "priority",
       key: "priority",
       width: 100,
+      align: "center",
       render: (priority: Priority) => {
         const priorityConfig = getPriorityConfig(priority);
         return (
-          <Tag color={priorityConfig.color} icon={priorityConfig.icon}>
+          <Tag color={priorityConfig.color} icon={priorityConfig.icon} style={{ fontSize: 12 }}>
             {priorityConfig.label}
           </Tag>
         );
@@ -451,10 +458,11 @@ const BookingsPage = () => {
       dataIndex: "status",
       key: "status",
       width: 120,
+      align: "center",
       render: (status: BookingStatus) => {
         const statusConfig = getStatusConfig(status);
         return (
-          <Tag color={statusConfig.color} icon={statusConfig.icon}>
+          <Tag color={statusConfig.color} icon={statusConfig.icon} style={{ fontSize: 12 }}>
             {statusConfig.label}
           </Tag>
         );
@@ -492,9 +500,17 @@ const BookingsPage = () => {
             reason: "Hủy bởi admin",
             cancelledBy: "admin",
           });
-          message.success("Hủy lịch đặt thành công");
+          notification.success({
+            message: "Thành công",
+            description: "Hủy lịch đặt thành công",
+            placement: "topRight",
+          });
         } catch {
-          message.error("Có lỗi xảy ra khi hủy lịch đặt");
+          notification.error({
+            message: "Lỗi",
+            description: "Có lỗi xảy ra khi hủy lịch đặt",
+            placement: "topRight",
+          });
         }
       },
     });
@@ -503,6 +519,64 @@ const BookingsPage = () => {
   const handleView = (record: BookingInfoDto) => {
     setSelectedBooking(record);
     setDetailModalOpen(true);
+  };
+
+  const handleViewDetail = (record: BookingInfoDto) => {
+    setSelectedBooking(record);
+    setDetailModalOpen(true);
+  };
+
+  const handleCheckIn = (record: BookingInfoDto) => {
+    showModal({
+      title: "Check-in lịch đặt",
+      content: `Xác nhận check-in cho lịch đặt ${record.bookingCode} của khách hàng ${record.customerName}?`,
+      type: "info",
+      onConfirm: async () => {
+        try {
+          await checkInBookingMutation.mutateAsync(record.bookingId);
+          notification.success({
+            message: "Thành công",
+            description: "Check-in thành công",
+            placement: "topRight",
+          });
+        } catch {
+          notification.error({
+            message: "Lỗi",
+            description: "Có lỗi xảy ra khi check-in",
+            placement: "topRight",
+          });
+        }
+      },
+    });
+  };
+
+  const handleStartService = (record: BookingInfoDto) => {
+    setSelectedBooking(record);
+    setCreateTrackingModalOpen(true);
+  };
+
+  const handleCompleteService = (record: BookingInfoDto) => {
+    showModal({
+      title: "Hoàn thành dịch vụ",
+      content: `Xác nhận hoàn thành dịch vụ cho lịch đặt ${record.bookingCode} của khách hàng ${record.customerName}?`,
+      type: "info",
+      onConfirm: async () => {
+        try {
+          await completeServiceMutation.mutateAsync(record.bookingId);
+          notification.success({
+            message: "Thành công",
+            description: "Hoàn thành dịch vụ thành công",
+            placement: "topRight",
+          });
+        } catch {
+          notification.error({
+            message: "Lỗi",
+            description: "Có lỗi xảy ra khi hoàn thành dịch vụ",
+            placement: "topRight",
+          });
+        }
+      },
+    });
   };
 
   const handleModalOk = async () => {
@@ -518,9 +592,17 @@ const BookingsPage = () => {
       onConfirm: async () => {
         try {
           await confirmBookingMutation.mutateAsync(record.bookingId);
-          message.success("Xác nhận lịch đặt thành công");
+          notification.success({
+            message: "Thành công",
+            description: "Xác nhận lịch đặt thành công",
+            placement: "topRight",
+          });
         } catch {
-          message.error("Có lỗi xảy ra khi xác nhận lịch đặt");
+          notification.error({
+            message: "Lỗi",
+            description: "Có lỗi xảy ra khi xác nhận lịch đặt",
+            placement: "topRight",
+          });
         }
       },
     });
@@ -534,12 +616,29 @@ const BookingsPage = () => {
       onConfirm: async () => {
         try {
           await completeServiceMutation.mutateAsync(record.bookingId);
-          message.success("Hoàn thành lịch đặt thành công");
+          notification.success({
+            message: "Thành công",
+            description: "Hoàn thành lịch đặt thành công",
+            placement: "topRight",
+          });
         } catch {
-          message.error("Có lỗi xảy ra khi hoàn thành lịch đặt");
+          notification.error({
+            message: "Lỗi",
+            description: "Có lỗi xảy ra khi hoàn thành lịch đặt",
+            placement: "topRight",
+          });
         }
       },
     });
+  };
+
+  const handleCreateTrackingSuccess = () => {
+    setCreateTrackingModalOpen(false);
+    setSelectedBooking(null);
+    // Optionally start the service after creating tracking
+    if (selectedBooking) {
+      startServiceMutation.mutate(selectedBooking.bookingId);
+    }
   };
 
   return (
@@ -548,17 +647,19 @@ const BookingsPage = () => {
         title="Quản lý đặt lịch"
         dataSource={data}
         columns={columns}
+        scroll={{ x: 1300 }}
         loading={
           isLoading ||
           isLoadingCustomers ||
           isLoadingVehicles ||
           confirmBookingMutation.isPending ||
           cancelBookingMutation.isPending ||
-          completeServiceMutation.isPending
+          completeServiceMutation.isPending ||
+          checkInBookingMutation.isPending ||
+          startServiceMutation.isPending
         }
         onAdd={handleAdd}
         onEdit={handleEdit}
-        onDelete={handleDelete}
         onView={handleView}
         addButtonText="Đặt lịch mới"
         searchable={true}
@@ -584,37 +685,41 @@ const BookingsPage = () => {
           {
             key: "confirm",
             label: "Xác nhận",
-            type: "primary",
+            type: "default",
             icon: <CheckCircleOutlined />,
             onClick: handleConfirm,
             condition: (record: BookingInfoDto) =>
               record.status === BookingStatus.PENDING,
           },
           {
-            key: "complete",
-            label: "Hoàn thành",
-            type: "primary",
-            icon: <CheckCircleOutlined />,
-            onClick: handleComplete,
+            key: "checkin",
+            label: "Check-in",
+            type: "default",
+            icon: <LoginOutlined />,
+            onClick: handleCheckIn,
             condition: (record: BookingInfoDto) =>
-              record.status === BookingStatus.CONFIRMED ||
-              record.status === BookingStatus.IN_PROGRESS ||
+              record.status === BookingStatus.CONFIRMED,
+          },
+          {
+            key: "start",
+            label: "Bắt đầu dịch vụ",
+            type: "default",
+            icon: <PlayCircleOutlined />,
+            onClick: handleStartService,
+            condition: (record: BookingInfoDto) =>
               record.status === BookingStatus.CHECKED_IN,
           },
           {
             key: "cancel",
-            label: "Hủy lịch",
+            label: "Hủy",
             type: "default",
             danger: true,
             icon: <CloseCircleOutlined />,
             onClick: handleDelete,
             condition: (record: BookingInfoDto) =>
-              record.status !== BookingStatus.COMPLETED &&
-              record.status !== BookingStatus.CANCELLED &&
-              record.status !== BookingStatus.NO_SHOW,
+              [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN].includes(record.status),
           },
         ]}
-        scroll={{ x: 1300 }}
       />
 
       {/* Modal đặt lịch */}
@@ -627,6 +732,16 @@ const BookingsPage = () => {
         loading={isLoading}
       />
 
+      {/* Modal tạo tracking */}
+      {selectedBooking && (
+        <CreateTrackingModal
+          open={createTrackingModalOpen}
+          onCancel={() => setCreateTrackingModalOpen(false)}
+          onSuccess={handleCreateTrackingSuccess}
+          booking={selectedBooking}
+        />
+      )}
+
       {/* Modal chi tiết */}
       <Modal
         title={
@@ -634,7 +749,7 @@ const BookingsPage = () => {
             <EyeOutlined style={{ color: "#1890ff" }} />
             <span>Chi tiết lịch đặt</span>
             {selectedBooking && (
-              <Tag 
+              <Tag
                 color={getStatusConfig(selectedBooking.status).color}
                 style={{ marginLeft: 8 }}
               >
@@ -656,39 +771,65 @@ const BookingsPage = () => {
         {selectedBooking && (
           <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
             {/* Header Info */}
-            <div style={{ 
-              marginBottom: 24, 
-              padding: 16, 
-              backgroundColor: "#f8f9fa", 
-              borderRadius: 8,
-              border: "1px solid #e9ecef"
-            }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div>
-                  <Text style={{ fontSize: 18, fontWeight: 600, color: "#1890ff" }}>
+            <div
+                style={{
+                marginBottom: 24,
+                padding: 16,
+                backgroundColor: "#f8f9fa",
+                borderRadius: 8,
+                border: "1px solid #e9ecef",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
+              >
+              <div>
+                  <Text
+                    style={{ fontSize: 18, fontWeight: 600, color: "#1890ff" }}
+                  >
                     {selectedBooking.bookingCode}
                   </Text>
                   <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
                     ID: {selectedBooking.bookingId}
-                  </div>
+                </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 14, fontWeight: 500 }}>
-                    {formatCurrency(selectedBooking.totalPrice || 0)} {selectedBooking.currency || "VND"}
-                  </div>
-                  <div style={{ fontSize: 12, color: "#666" }}>
-                    {formatDurationVer01(selectedBooking.estimatedDurationMinutes || 0)}
-                  </div>
+                    {formatCurrency(selectedBooking.totalPrice || 0)}{" "}
+                    {selectedBooking.currency || "VND"}
+                </div>
+                <div style={{ fontSize: 12, color: "#666" }}>
+                    {formatDurationVer01(
+                      selectedBooking.estimatedDurationMinutes || 0
+                    )}
                 </div>
               </div>
-              
+              </div>
+
               {/* Priority and Status */}
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <Tag 
-                  color={getPriorityConfig(selectedBooking.priority || Priority.NORMAL).color}
-                  icon={getPriorityConfig(selectedBooking.priority || Priority.NORMAL).icon}
+                <Tag
+                  color={
+                    getPriorityConfig(
+                      selectedBooking.priority || Priority.NORMAL
+                    ).color
+                  }
+                  icon={
+                    getPriorityConfig(
+                      selectedBooking.priority || Priority.NORMAL
+                    ).icon
+                  }
                 >
-                  {getPriorityConfig(selectedBooking.priority || Priority.NORMAL).label}
+                  {
+                    getPriorityConfig(
+                      selectedBooking.priority || Priority.NORMAL
+                    ).label
+                  }
                 </Tag>
                 {selectedBooking.paymentStatus && (
                   <Tag color="blue">
@@ -699,45 +840,71 @@ const BookingsPage = () => {
             </div>
 
             {/* Main Content */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 24,
+              }}
+            >
               {/* Left Column */}
               <div>
                 {/* Customer Info */}
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ 
-                    fontSize: 16, 
-                    fontWeight: 600, 
-                    marginBottom: 12, 
-                    color: "#262626",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      marginBottom: 12,
+                      color: "#262626",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
                     <PhoneOutlined style={{ color: "#1890ff" }} />
                     Thông tin khách hàng
-                    {(selectedBooking as EnrichedBookingInfoDto).isCustomerEnriched && (
-                      <Badge count="✓" style={{ backgroundColor: "#52c41a", fontSize: 8 }} />
+                    {(selectedBooking as EnrichedBookingInfoDto)
+                      .isCustomerEnriched && (
+                      <Badge
+                        count="✓"
+                        style={{ backgroundColor: "#52c41a", fontSize: 8 }}
+                      />
                     )}
-                  </div>
-                  <div style={{ 
-                    padding: 16, 
-                    backgroundColor: "#fff", 
-                    border: "1px solid #d9d9d9", 
-                    borderRadius: 6 
-                  }}>
-                    <div style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}>
+                </div>
+                  <div
+                    style={{
+                      padding: 16,
+                      backgroundColor: "#fff",
+                      border: "1px solid #d9d9d9",
+                      borderRadius: 6,
+                    }}
+                  >
+                    <div
+                      style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}
+                    >
                       {selectedBooking.customerName || "N/A"}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#666", marginBottom: 4 }}>
+                </div>
+                    <div
+                      style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
+                    >
                       📞 {selectedBooking.customerPhone || "N/A"}
-                    </div>
+                </div>
                     {selectedBooking.customerEmail && (
-                      <div style={{ fontSize: 13, color: "#666", marginBottom: 4 }}>
+                      <div
+                        style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
+                      >
                         📧 {selectedBooking.customerEmail}
-                      </div>
+              </div>
                     )}
                     {selectedBooking.customerId && (
-                      <div style={{ fontSize: 11, color: "#999", fontFamily: "monospace" }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#999",
+                          fontFamily: "monospace",
+                        }}
+                      >
                         ID: {selectedBooking.customerId.substring(0, 8)}...
                       </div>
                     )}
@@ -746,38 +913,61 @@ const BookingsPage = () => {
 
                 {/* Vehicle Info */}
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ 
-                    fontSize: 16, 
-                    fontWeight: 600, 
-                    marginBottom: 12, 
-                    color: "#262626",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      marginBottom: 12,
+                      color: "#262626",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
                     <span>🚗</span>
                     Thông tin xe
-                    {(selectedBooking as EnrichedBookingInfoDto).isVehicleEnriched && (
-                      <Badge count="✓" style={{ backgroundColor: "#52c41a", fontSize: 8 }} />
+                    {(selectedBooking as EnrichedBookingInfoDto)
+                      .isVehicleEnriched && (
+                      <Badge
+                        count="✓"
+                        style={{ backgroundColor: "#52c41a", fontSize: 8 }}
+                      />
                     )}
-                  </div>
-                  <div style={{ 
-                    padding: 16, 
-                    backgroundColor: "#fff", 
-                    border: "1px solid #d9d9d9", 
-                    borderRadius: 6 
-                  }}>
-                    <div style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}>
+                </div>
+                  <div
+                    style={{
+                      padding: 16,
+                      backgroundColor: "#fff",
+                      border: "1px solid #d9d9d9",
+                      borderRadius: 6,
+                    }}
+                  >
+                    <div
+                      style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}
+                    >
                       {selectedBooking.vehicleLicensePlate || "N/A"}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#666", marginBottom: 4 }}>
-                      {selectedBooking.vehicleBrandName || "N/A"} {selectedBooking.vehicleModelName || ""}
-                    </div>
-                    <div style={{ fontSize: 13, color: "#666", marginBottom: 4 }}>
-                      {selectedBooking.vehicleTypeName || "N/A"} • {selectedBooking.vehicleYear || "N/A"} • {selectedBooking.vehicleColor || "N/A"}
+                </div>
+                    <div
+                      style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
+                    >
+                      {selectedBooking.vehicleBrandName || "N/A"}{" "}
+                      {selectedBooking.vehicleModelName || ""}
+              </div>
+                    <div
+                      style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
+                    >
+                      {selectedBooking.vehicleTypeName || "N/A"} •{" "}
+                      {selectedBooking.vehicleYear || "N/A"} •{" "}
+                      {selectedBooking.vehicleColor || "N/A"}
                     </div>
                     {selectedBooking.vehicleId && (
-                      <div style={{ fontSize: 11, color: "#999", fontFamily: "monospace" }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#999",
+                          fontFamily: "monospace",
+                        }}
+                      >
                         ID: {selectedBooking.vehicleId.substring(0, 8)}...
                       </div>
                     )}
@@ -786,28 +976,36 @@ const BookingsPage = () => {
 
                 {/* Branch Info */}
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ 
-                    fontSize: 16, 
-                    fontWeight: 600, 
-                    marginBottom: 12, 
-                    color: "#262626",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      marginBottom: 12,
+                      color: "#262626",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
                     <span>🏢</span>
                     Chi nhánh & Bay
-                  </div>
-                  <div style={{ 
-                    padding: 16, 
-                    backgroundColor: "#fff", 
-                    border: "1px solid #d9d9d9", 
-                    borderRadius: 6 
-                  }}>
-                    <div style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}>
+                </div>
+                  <div
+                    style={{
+                      padding: 16,
+                      backgroundColor: "#fff",
+                      border: "1px solid #d9d9d9",
+                      borderRadius: 6,
+                    }}
+                  >
+                    <div
+                      style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}
+                    >
                       {selectedBooking.branchName || "N/A"}
                     </div>
-                    <div style={{ fontSize: 13, color: "#666", marginBottom: 4 }}>
+                    <div
+                      style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
+                    >
                       Bay: {selectedBooking.bayName || "Chưa chọn bay"}
                     </div>
                     {selectedBooking.branchCode && (
@@ -818,9 +1016,9 @@ const BookingsPage = () => {
                     {selectedBooking.bayType && (
                       <div style={{ fontSize: 12, color: "#999" }}>
                         Loại: {selectedBooking.bayType}
-                      </div>
+                </div>
                     )}
-                  </div>
+              </div>
                 </div>
               </div>
 
@@ -828,61 +1026,94 @@ const BookingsPage = () => {
               <div>
                 {/* Services */}
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ 
-                    fontSize: 16, 
-                    fontWeight: 600, 
-                    marginBottom: 12, 
-                    color: "#262626",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      marginBottom: 12,
+                      color: "#262626",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
                     <span>🔧</span>
                     Dịch vụ ({selectedBooking.bookingItems?.length || 0})
-                  </div>
-                  <div style={{ 
-                    padding: 16, 
-                    backgroundColor: "#fff", 
-                    border: "1px solid #d9d9d9", 
-                    borderRadius: 6 
-                  }}>
+                </div>
+                  <div
+                    style={{
+                      padding: 16,
+                      backgroundColor: "#fff",
+                      border: "1px solid #d9d9d9",
+                      borderRadius: 6,
+                    }}
+                  >
                     {selectedBooking.bookingItems?.length ? (
                       <div>
-                        {selectedBooking.bookingItems.map((item, index: number) => (
-                          <div key={index} style={{ 
-                            marginBottom: 8, 
-                            padding: 8, 
-                            backgroundColor: "#f0f8ff", 
-                            borderRadius: 4,
-                            border: "1px solid #d6e4ff"
-                          }}>
-                            <div style={{ fontWeight: 500, fontSize: 13 }}>
-                              {item.serviceName || `Service ${item.serviceId?.substring(0, 8)}...`}
-                            </div>
-                            <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>
-                              {formatCurrency(item.totalPrice || 0)} • Số lượng: {item.quantity || 1}
-                            </div>
-                            {item.notes && (
-                              <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>
-                                Ghi chú: {item.notes}
+                        {selectedBooking.bookingItems.map(
+                          (item, index: number) => (
+                            <div
+                              key={index}
+                              style={{
+                                marginBottom: 8,
+                                padding: 8,
+                                backgroundColor: "#f0f8ff",
+                                borderRadius: 4,
+                                border: "1px solid #d6e4ff",
+                              }}
+                            >
+                              <div style={{ fontWeight: 500, fontSize: 13 }}>
+                                {item.serviceName ||
+                                  `Service ${item.serviceId?.substring(
+                                    0,
+                                    8
+                                  )}...`}
                               </div>
-                            )}
-                          </div>
-                        ))}
-                        <div style={{ 
-                          marginTop: 12, 
-                          padding: 8, 
-                          backgroundColor: "#f6ffed", 
-                          borderRadius: 4,
-                          border: "1px solid #b7eb8f"
-                        }}>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "#666",
+                                  marginTop: 2,
+                                }}
+                              >
+                                {formatCurrency(item.totalPrice || 0)} • Số
+                                lượng: {item.quantity || 1}
+                              </div>
+                              {item.notes && (
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    color: "#999",
+                                    marginTop: 2,
+                                  }}
+                                >
+                                  Ghi chú: {item.notes}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        )}
+                        <div
+                          style={{
+                            marginTop: 12,
+                            padding: 8,
+                            backgroundColor: "#f6ffed",
+                            borderRadius: 4,
+                            border: "1px solid #b7eb8f",
+                          }}
+                        >
                           <div style={{ fontWeight: 600, color: "#52c41a" }}>
-                            Tổng: {formatCurrency(selectedBooking.totalPrice || 0)} {selectedBooking.currency || "VND"}
-                          </div>
-                          <div style={{ fontSize: 12, color: "#666" }}>
-                            Thời gian ước tính: {formatDurationVer01(selectedBooking.estimatedDurationMinutes || 0)}
-                          </div>
-                        </div>
+                            Tổng:{" "}
+                            {formatCurrency(selectedBooking.totalPrice || 0)}{" "}
+                            {selectedBooking.currency || "VND"}
+                </div>
+                <div style={{ fontSize: 12, color: "#666" }}>
+                            Thời gian ước tính:{" "}
+                            {formatDurationVer01(
+                              selectedBooking.estimatedDurationMinutes || 0
+                            )}
+                </div>
+              </div>
                       </div>
                     ) : (
                       <Text type="secondary">Không có dịch vụ</Text>
@@ -892,33 +1123,47 @@ const BookingsPage = () => {
 
                 {/* Staff Assignments */}
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ 
-                    fontSize: 16, 
-                    fontWeight: 600, 
-                    marginBottom: 12, 
-                    color: "#262626",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      marginBottom: 12,
+                      color: "#262626",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
                     <span>👥</span>
                     Nhân viên phân công
                   </div>
-                  <div style={{ 
-                    padding: 16, 
-                    backgroundColor: "#fff", 
-                    border: "1px solid #d9d9d9", 
-                    borderRadius: 6 
-                  }}>
+                  <div
+                    style={{
+                      padding: 16,
+                      backgroundColor: "#fff",
+                      border: "1px solid #d9d9d9",
+                      borderRadius: 6,
+                    }}
+                  >
                     {selectedBooking.assignments?.length ? (
-                      <div>
-                        {selectedBooking.assignments.map((assignment, index: number) => (
-                          <Tag key={index} color="green" style={{ marginBottom: 4, marginRight: 4 }}>
-                            {assignment.technicianName || `Tech ${assignment.technicianId?.substring(0, 8)}...`}
-                            {assignment.role && ` - ${assignment.role}`}
-                          </Tag>
-                        ))}
-                      </div>
+              <div>
+                        {selectedBooking.assignments.map(
+                          (assignment, index: number) => (
+                            <Tag
+                              key={index}
+                              color="green"
+                              style={{ marginBottom: 4, marginRight: 4 }}
+                            >
+                              {assignment.technicianName ||
+                                `Tech ${assignment.technicianId?.substring(
+                                  0,
+                                  8
+                                )}...`}
+                              {assignment.role && ` - ${assignment.role}`}
+                    </Tag>
+                  )
+                )}
+              </div>
                     ) : (
                       <Text type="secondary">Chưa phân công nhân viên</Text>
                     )}
@@ -927,51 +1172,77 @@ const BookingsPage = () => {
 
                 {/* Timeline */}
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ 
-                    fontSize: 16, 
-                    fontWeight: 600, 
-                    marginBottom: 12, 
-                    color: "#262626",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8
-                  }}>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      marginBottom: 12,
+                      color: "#262626",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
                     <span>⏰</span>
                     Thời gian
                   </div>
-                  <div style={{ 
-                    padding: 16, 
-                    backgroundColor: "#fff", 
-                    border: "1px solid #d9d9d9", 
-                    borderRadius: 6 
-                  }}>
+                  <div
+                    style={{
+                      padding: 16,
+                      backgroundColor: "#fff",
+                      border: "1px solid #d9d9d9",
+                      borderRadius: 6,
+                    }}
+                  >
                     <div style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, color: "#666" }}>Thời gian đặt lịch</div>
+                      <div style={{ fontSize: 12, color: "#666" }}>
+                        Thời gian đặt lịch
+                      </div>
                       <div style={{ fontWeight: 500 }}>
-                        {dayjs(selectedBooking.scheduledStartAt || selectedBooking.preferredStartAt || selectedBooking.createdAt).format("DD/MM/YYYY HH:mm")}
+                        {dayjs(
+                          selectedBooking.scheduledStartAt ||
+                            selectedBooking.preferredStartAt ||
+                            selectedBooking.createdAt
+                        ).format("DD/MM/YYYY HH:mm")}
                       </div>
                       <div style={{ fontSize: 11, color: "#1890ff" }}>
                         {getTimeRemaining(
-                          dayjs(selectedBooking.scheduledStartAt || selectedBooking.preferredStartAt || selectedBooking.createdAt).format("YYYY-MM-DD"),
-                          dayjs(selectedBooking.scheduledStartAt || selectedBooking.preferredStartAt || selectedBooking.createdAt).format("HH:mm")
+                          dayjs(
+                            selectedBooking.scheduledStartAt ||
+                              selectedBooking.preferredStartAt ||
+                              selectedBooking.createdAt
+                          ).format("YYYY-MM-DD"),
+                          dayjs(
+                            selectedBooking.scheduledStartAt ||
+                              selectedBooking.preferredStartAt ||
+                              selectedBooking.createdAt
+                          ).format("HH:mm")
                         )}
                       </div>
                     </div>
-                    
+
                     {selectedBooking.actualStartAt && (
                       <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, color: "#666" }}>Bắt đầu thực hiện</div>
+                        <div style={{ fontSize: 12, color: "#666" }}>
+                          Bắt đầu thực hiện
+                        </div>
                         <div style={{ fontWeight: 500, color: "#52c41a" }}>
-                          {dayjs(selectedBooking.actualStartAt).format("DD/MM/YYYY HH:mm")}
+                          {dayjs(selectedBooking.actualStartAt).format(
+                            "DD/MM/YYYY HH:mm"
+                          )}
                         </div>
                       </div>
                     )}
-                    
+
                     {selectedBooking.actualEndAt && (
                       <div style={{ marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, color: "#666" }}>Hoàn thành</div>
+                        <div style={{ fontSize: 12, color: "#666" }}>
+                          Hoàn thành
+                        </div>
                         <div style={{ fontWeight: 500, color: "#1890ff" }}>
-                          {dayjs(selectedBooking.actualEndAt).format("DD/MM/YYYY HH:mm")}
+                          {dayjs(selectedBooking.actualEndAt).format(
+                            "DD/MM/YYYY HH:mm"
+                          )}
                         </div>
                       </div>
                     )}
@@ -981,48 +1252,83 @@ const BookingsPage = () => {
             </div>
 
             {/* Additional Info */}
-            {(selectedBooking.notes || selectedBooking.specialRequests?.length || selectedBooking.depositAmount || selectedBooking.couponCode) && (
+            {(selectedBooking.notes ||
+              selectedBooking.specialRequests?.length ||
+              selectedBooking.depositAmount ||
+              selectedBooking.couponCode) && (
               <div style={{ marginTop: 24 }}>
-                <div style={{ 
-                  fontSize: 16, 
-                  fontWeight: 600, 
-                  marginBottom: 12, 
-                  color: "#262626"
-                }}>
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 600,
+                    marginBottom: 12,
+                    color: "#262626",
+                  }}
+                >
                   Thông tin bổ sung
                 </div>
-                <div style={{ 
-                  padding: 16, 
-                  backgroundColor: "#fff", 
-                  border: "1px solid #d9d9d9", 
-                  borderRadius: 6 
-                }}>
-                  {selectedBooking.notes && (
+                <div
+                  style={{
+                    padding: 16,
+                    backgroundColor: "#fff",
+                    border: "1px solid #d9d9d9",
+                    borderRadius: 6,
+                  }}
+                >
+            {selectedBooking.notes && (
                     <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Ghi chú</div>
-                      <div style={{ fontSize: 13 }}>{selectedBooking.notes}</div>
-                    </div>
-                  )}
-                  
-                  {selectedBooking.specialRequests && selectedBooking.specialRequests.length > 0 && (
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Yêu cầu đặc biệt</div>
-                      <div>
-                        {selectedBooking.specialRequests.map((request: string, index: number) => (
-                          <Tag key={index} color="purple" style={{ marginBottom: 4, marginRight: 4 }}>
-                            {request}
-                          </Tag>
-                        ))}
+                      <div
+                        style={{ fontSize: 12, color: "#666", marginBottom: 4 }}
+                      >
+                        Ghi chú
+                      </div>
+                      <div style={{ fontSize: 13 }}>
+                {selectedBooking.notes}
                       </div>
                     </div>
+            )}
+
+            {selectedBooking.specialRequests &&
+              selectedBooking.specialRequests.length > 0 && (
+                      <div style={{ marginBottom: 12 }}>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "#666",
+                            marginBottom: 4,
+                          }}
+                        >
+                          Yêu cầu đặc biệt
+                        </div>
+                        <div>
+                  {selectedBooking.specialRequests.map(
+                    (request: string, index: number) => (
+                      <Tag
+                        key={index}
+                        color="purple"
+                                style={{ marginBottom: 4, marginRight: 4 }}
+                      >
+                        {request}
+                      </Tag>
+                    )
                   )}
-                  
-                  {(selectedBooking.depositAmount || selectedBooking.couponCode) && (
+                        </div>
+                      </div>
+                    )}
+
+                  {(selectedBooking.depositAmount ||
+                    selectedBooking.couponCode) && (
                     <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>Thanh toán</div>
+                      <div
+                        style={{ fontSize: 12, color: "#666", marginBottom: 4 }}
+                      >
+                        Thanh toán
+                      </div>
                       {selectedBooking.depositAmount && (
                         <div style={{ fontSize: 13, marginBottom: 2 }}>
-                          Đặt cọc: {formatCurrency(selectedBooking.depositAmount)} {selectedBooking.currency || "VND"}
+                          Đặt cọc:{" "}
+                          {formatCurrency(selectedBooking.depositAmount)}{" "}
+                          {selectedBooking.currency || "VND"}
                         </div>
                       )}
                       {selectedBooking.couponCode && (
@@ -1037,15 +1343,44 @@ const BookingsPage = () => {
             )}
 
             {/* System Info */}
-            <div style={{ marginTop: 24, padding: 16, backgroundColor: "#fafafa", borderRadius: 6, border: "1px solid #e8e8e8" }}>
-              <div style={{ fontSize: 12, color: "#999", marginBottom: 8 }}>Thông tin hệ thống</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 11, color: "#666" }}>
-                <div>Tạo: {dayjs(selectedBooking.createdAt).format("DD/MM/YYYY HH:mm")}</div>
-                <div>Cập nhật: {dayjs(selectedBooking.updatedAt).format("DD/MM/YYYY HH:mm")}</div>
-                {selectedBooking.createdBy && <div>Người tạo: {selectedBooking.createdBy}</div>}
+            <div
+              style={{
+                marginTop: 24,
+                padding: 16,
+                backgroundColor: "#fafafa",
+                borderRadius: 6,
+                border: "1px solid #e8e8e8",
+              }}
+            >
+              <div style={{ fontSize: 12, color: "#999", marginBottom: 8 }}>
+                Thông tin hệ thống
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 8,
+                  fontSize: 11,
+                  color: "#666",
+                }}
+              >
+                <div>
+                  Tạo:{" "}
+                  {dayjs(selectedBooking.createdAt).format("DD/MM/YYYY HH:mm")}
+                </div>
+                <div>
+                  Cập nhật:{" "}
+                  {dayjs(selectedBooking.updatedAt).format("DD/MM/YYYY HH:mm")}
+                </div>
+                {selectedBooking.createdBy && (
+                  <div>Người tạo: {selectedBooking.createdBy}</div>
+                )}
                 {selectedBooking.cancelledAt && (
                   <div style={{ color: "#ff4d4f" }}>
-                    Hủy: {dayjs(selectedBooking.cancelledAt).format("DD/MM/YYYY HH:mm")}
+                    Hủy:{" "}
+                    {dayjs(selectedBooking.cancelledAt).format(
+                      "DD/MM/YYYY HH:mm"
+                    )}
                   </div>
                 )}
                 {selectedBooking.cancellationReason && (

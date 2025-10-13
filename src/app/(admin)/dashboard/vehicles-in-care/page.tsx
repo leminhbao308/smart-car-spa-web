@@ -15,7 +15,7 @@ import {
   Input,
   Radio,
   Space,
-  message,
+  notification,
 } from "antd";
 import {
   EyeOutlined,
@@ -93,7 +93,11 @@ const VehiclesInCarePage = () => {
   // Error handling
   useEffect(() => {
     if (bookingsError || trackingsError) {
-      message.error("Có lỗi xảy ra khi tải dữ liệu xe đang chăm sóc");
+      notification.error({
+        message: "Lỗi tải dữ liệu",
+        description: "Có lỗi xảy ra khi tải dữ liệu xe đang chăm sóc",
+        placement: "topRight",
+      });
     }
   }, [bookingsError, trackingsError]);
 
@@ -254,9 +258,17 @@ const VehiclesInCarePage = () => {
           onConfirm: async () => {
             try {
               await completeServiceMutation.mutateAsync(record.bookingId);
-              message.success("Hoàn thành chăm sóc xe thành công");
+              notification.success({
+                message: "Thành công",
+                description: "Hoàn thành chăm sóc xe thành công",
+                placement: "topRight",
+              });
             } catch {
-              message.error("Có lỗi xảy ra khi hoàn thành chăm sóc xe");
+              notification.error({
+                message: "Lỗi",
+                description: "Có lỗi xảy ra khi hoàn thành chăm sóc xe",
+                placement: "topRight",
+              });
             }
           },
         });

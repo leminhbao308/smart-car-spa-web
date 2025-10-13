@@ -235,6 +235,26 @@ export class BookingService {
     );
     return response.data;
   }
+
+  /**
+   * Check-in booking
+   */
+  static async checkInBooking(bookingId: string) {
+    const response = await apiClient.post(
+      `${this.BASE_URL}/${bookingId}/check-in`
+    );
+    return response.data;
+  }
+
+  /**
+   * Start service
+   */
+  static async startService(bookingId: string) {
+    const response = await apiClient.post(
+      `${this.BASE_URL}/${bookingId}/start`
+    );
+    return response.data;
+  }
 }
 
 export default BookingService;
