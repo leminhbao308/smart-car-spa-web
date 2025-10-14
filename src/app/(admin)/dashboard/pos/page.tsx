@@ -47,7 +47,7 @@ import {
   useCatalogForSale,
   usePricing,
   useInventoryLevels,
-  useCreateAndPay, useVerifyPayment,
+  useCreateAndPay, useVerifyPayment, useFulfillSalesOrder,
 } from "@/lib/api/hooks";
 import {Product, UserManagementInfo} from "@/lib/api";
 import {useCategories} from "@/lib/api/hooks/useCategory";
@@ -89,6 +89,7 @@ const POSPage = () => {
   const [customerSearchText, setCustomerSearchText] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
   // PayOS State
@@ -108,6 +109,7 @@ const POSPage = () => {
   const {previewBatch, loading: pricingLoading} = usePricing();
   const {levelsBatch, loading: inventoryLoading} = useInventoryLevels();
   const {mutateAsync: createAndPay, isPending: isCreatingOrder} = useCreateAndPay();
+  const {mutateAsync: fulfillOrder, isPending: isFulfilling} = useFulfillSalesOrder();
 
   // Payment verification with polling
   const {data: paymentStatus, isLoading: isVerifying} = useVerifyPayment(
@@ -339,9 +341,22 @@ const POSPage = () => {
   }, [customerSearchText, refreshUsers, searchUsers, users]);
 
   // Payment Success Handler
-  const handlePaymentSuccess = useCallback(() => {
+  const handlePaymentSuccess = useCallback(async () => {
     setIsPolling(false);
     message.success("Thanh toán thành công!");
+
+    if (currentOrderId) {
+      try {
+        const hide = message.loading("Đang hoàn thành đơn hàng...", 0);
+        await fulfillOrder(currentOrderId);
+        hide();
+        message.success("Thanh toán thành công và đã hoàn thành đơn hàng!");
+      } catch (error: any) {
+        message.error("Thanh toán thành công nhưng lỗi khi hoàn thành đơn hàng: " + (error?.message || ""));
+      }
+    } else {
+      message.success("Thanh toán thành công!");
+    }
 
     // Reset all states
     setCart([]);
@@ -428,9 +443,22 @@ const POSPage = () => {
 
       hide();
 
+      if (response.order?.id) {
+        setCurrentOrderId(response.order.id);
+      }
+
       // Handle CASH payment
       if (paymentMethod === "CASH") {
         message.success("Thanh toán tiền mặt thành công!");
+
+        if (response.order?.id) {
+          try {
+            await fulfillOrder(response.order.id);
+            message.success("Đã hoàn thành đơn hàng!");
+          } catch (error: any) {
+            message.error("Lỗi khi hoàn thành đơn hàng: " + (error?.message || ""));
+          }
+        }
 
         // Reset states
         setCart([]);
@@ -485,6 +513,7 @@ const POSPage = () => {
     setPaymentUrl(null);
     setOrderCode(null);
     setIsPolling(false);
+    setCurrentOrderId(null);
     message.info("Đã hủy thanh toán");
   }, []);
 
@@ -918,28 +947,28 @@ const POSPage = () => {
                   >
                     Thanh toán
                   </Button>
-                  <Row gutter={[8, 8]}>
-                    <Col span={12}>
-                      <Button
-                        size="large"
-                        icon={<SaveOutlined/>}
-                        style={{width: "100%"}}
-                        disabled
-                      >
-                        Lưu hóa đơn tạm
-                      </Button>
-                    </Col>
-                    <Col span={12}>
-                      <Button
-                        size="large"
-                        icon={<PrinterOutlined/>}
-                        style={{width: "100%"}}
-                        disabled
-                      >
-                        In hóa đơn
-                      </Button>
-                    </Col>
-                  </Row>
+                  {/*<Row gutter={[8, 8]}>*/}
+                  {/*  <Col span={12}>*/}
+                  {/*    <Button*/}
+                  {/*      size="large"*/}
+                  {/*      icon={<SaveOutlined/>}*/}
+                  {/*      style={{width: "100%"}}*/}
+                  {/*      disabled*/}
+                  {/*    >*/}
+                  {/*      Lưu hóa đơn tạm*/}
+                  {/*    </Button>*/}
+                  {/*  </Col>*/}
+                  {/*  <Col span={12}>*/}
+                  {/*    <Button*/}
+                  {/*      size="large"*/}
+                  {/*      icon={<PrinterOutlined/>}*/}
+                  {/*      style={{width: "100%"}}*/}
+                  {/*      disabled*/}
+                  {/*    >*/}
+                  {/*      In hóa đơn*/}
+                  {/*    </Button>*/}
+                  {/*  </Col>*/}
+                  {/*</Row>*/}
                 </Space>
               </>
             )}
@@ -1038,7 +1067,7 @@ const POSPage = () => {
             <Space>
               <Radio value="guest">Khách lẻ</Radio>
               <Radio value="existing">Khách hàng có sẵn</Radio>
-              <Radio value="new">Khách hàng mới</Radio>
+              {/*<Radio value="new">Khách hàng mới</Radio>*/}
             </Space>
           </Radio.Group>
         </div>
@@ -1112,11 +1141,11 @@ const POSPage = () => {
           </div>
         )}
 
-        {customerType === "new" && (
-          <div style={{textAlign: "center", padding: "40px"}}>
-            <Text type="secondary">Chức năng tạo khách hàng mới đang được phát triển</Text>
-          </div>
-        )}
+        {/*{customerType === "new" && (*/}
+        {/*  <div style={{textAlign: "center", padding: "40px"}}>*/}
+        {/*    <Text type="secondary">Chức năng tạo khách hàng mới đang được phát triển</Text>*/}
+        {/*  </div>*/}
+        {/*)}*/}
       </Modal>
 
       {/* Payment Modal */}

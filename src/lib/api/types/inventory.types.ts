@@ -21,6 +21,7 @@ export interface StockRequest {
   product_id: string;
   qty: number;
   unit_cost: number;
+  lot_code: string;
   refId: string;
   ref_type: "SALE_ORDER" | "SALE_RETURN" | "PURCHASE_ORDER" | "PURCHASE_RETURN" | "ADJUSTMENT";
 }

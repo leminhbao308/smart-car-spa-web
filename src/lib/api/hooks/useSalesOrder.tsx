@@ -1,7 +1,7 @@
 "use client";
-import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {SalesOrderService} from "../services/sales-order.service";
-import {CreateSORequest, SaleOrderResponse} from "../types/sale-order.types";
+import {CreateSORequest} from "../types/sale-order.types";
 import {message} from "antd";
 
 /**
@@ -16,8 +16,7 @@ export const useSalesOrders = () => {
   } = useQuery({
     queryKey: ["salesOrders", "list"],
     queryFn: async () => {
-      const response = await SalesOrderService.getAllSaleOrders();
-      return response;
+      return await SalesOrderService.getAllSaleOrders();
     },
     staleTime: 3 * 60 * 1000, // 3 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
@@ -25,6 +24,58 @@ export const useSalesOrders = () => {
 
   return {
     orders: orders || [],
+    loading,
+    error,
+    refetch,
+  };
+};
+
+/**
+ * Hook for managing returned orders
+ */
+export const useReturnedOrders = () => {
+  const {
+    data: returnedOrders,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["salesOrders", "listReturned"],
+    queryFn: async () => {
+      return await SalesOrderService.getAllReturnedOrders();
+    },
+    staleTime: 3 * 60 * 1000, // 3 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  return {
+    returnedOrders: returnedOrders || [],
+    loading,
+    error,
+    refetch,
+  };
+};
+
+/**
+ * Hook for managing fullfilled orders
+ */
+export const useFullfilledOrders = () => {
+  const {
+    data: fullfilledOrders,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["salesOrders", "listFullfilled"],
+    queryFn: async () => {
+      return await SalesOrderService.getAllFullfilledOrders();
+    },
+    staleTime: 3 * 60 * 1000, // 3 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+
+  return {
+    fullfilledOrders: fullfilledOrders || [],
     loading,
     error,
     refetch,

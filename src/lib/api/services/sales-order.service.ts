@@ -1,5 +1,5 @@
 import api from "../axios";
-import {CreateSORequest, SaleOrderResponse} from "@/lib/api/types/sale-order.types";
+import {CreateSORequest, SaleOrderResponse, SaleReturnResponse} from "@/lib/api/types/sale-order.types";
 
 export const SalesOrderService = {
 
@@ -30,6 +30,16 @@ export const SalesOrderService = {
 
   getAllSaleOrders: async (): Promise<SaleOrderResponse[]> => {
     const response = await api.get(`/so/get-all`);
+    return response.data.data;
+  },
+
+  getAllReturnedOrders: async (): Promise<SaleReturnResponse[]> => {
+    const response = await api.get(`/so/get-all-return`);
+    return response.data.data;
+  },
+
+  getAllFullfilledOrders: async (): Promise<SaleOrderResponse[]> => {
+    const response = await api.get(`/so/get-all-fullfilled`);
     return response.data.data;
   }
 }

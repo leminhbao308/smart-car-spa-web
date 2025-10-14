@@ -19,6 +19,7 @@ import {
   Tooltip,
   Spin,
   Empty,
+  Alert,
 } from "antd";
 import {
   SearchOutlined,
@@ -29,12 +30,14 @@ import {
   ReloadOutlined,
   FileTextOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
   UndoOutlined,
+  ExclamationCircleOutlined,
+  CreditCardOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {useConfirmSalesOrder, useCreateReturn, useFulfillSalesOrder, useSalesOrders} from "@/lib/api/hooks";
 import {SaleOrderLineResponse, SaleOrderResponse} from "@/lib/api";
+import {useGetPaymentLink} from "@/lib/api/hooks/usePayment";
 
 const {Title, Text} = Typography;
 const {RangePicker} = DatePicker;
@@ -48,9 +51,23 @@ const InvoicesPage = () => {
 
   const [selectedOrder, setSelectedOrder] = useState<SaleOrderResponse | null>(null);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [isReturnModalVisible, setIsReturnModalVisible] = useState(false);
+  const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState<any>(null);
+
+  // Get payment link
+  const {data: paymentLink, isLoading: isLoadingPaymentLink} = useGetPaymentLink(paymentOrderId);
+
+  // Open payment link in new tab when available
+  React.useEffect(() => {
+    if (paymentLink && paymentOrderId) {
+      window.open(paymentLink, '_blank');
+      setPaymentOrderId(null); // Reset after opening
+      message.success("Đã mở link thanh toán trong tab mới");
+    }
+  }, [paymentLink, paymentOrderId]);
 
   // Status utilities
   const getStatusColor = (status: string) => {
@@ -61,8 +78,6 @@ const InvoicesPage = () => {
         return "blue";
       case "DRAFT":
         return "orange";
-      case "PARTIALLY_RETURNED":
-        return "purple";
       case "RETURNED":
         return "volcano";
       case "CANCELLED":
@@ -77,11 +92,9 @@ const InvoicesPage = () => {
       case "FULFILLED":
         return "Hoàn thành";
       case "CONFIRMED":
-        return "Đã xác nhận";
+        return "Chờ thanh toán";
       case "DRAFT":
         return "Nháp";
-      case "PARTIALLY_RETURNED":
-        return "Hoàn trả một phần";
       case "RETURNED":
         return "Đã hoàn trả";
       case "CANCELLED":
@@ -125,7 +138,7 @@ const InvoicesPage = () => {
   const handleConfirmOrder = async (order: SaleOrderResponse) => {
     try {
       await confirmMutation.mutateAsync(order.id);
-      message.success(`Xác nhận đơn hàng ${order.id} thành công`);
+      message.success(`Xác nhận đơn hàng ${order.id.substring(0, 8)}... thành công`);
     } catch (error) {
       // Error handled by mutation
     }
@@ -134,38 +147,45 @@ const InvoicesPage = () => {
   const handleFulfillOrder = async (order: SaleOrderResponse) => {
     try {
       await fulfillMutation.mutateAsync(order.id);
-      message.success(`Hoàn thành đơn hàng ${order.id} thành công`);
+      message.success(`Hoàn thành đơn hàng ${order.id.substring(0, 8)}... thành công`);
     } catch (error) {
       // Error handled by mutation
     }
   };
 
-  const handleCreateReturn = async (order: SaleOrderResponse) => {
-    Modal.confirm({
-      title: "Xác nhận hoàn trả",
-      content: `Bạn có chắc chắn muốn tạo yêu cầu hoàn trả cho đơn hàng ${order.id}?`,
-      onOk: async () => {
-        try {
-          const items = order.lines.map(line => ({
-            product_id: line.product.product_id,
-            qty: line.quantity,
-            unit_cost: line.unit_price,
-          }));
-          await returnMutation.mutateAsync({orderId: order.id, items});
-        } catch (error) {
-          // Error handled by mutation
-        }
-      },
-    });
+  const handleOpenReturnModal = (order: SaleOrderResponse) => {
+    setSelectedOrder(order);
+    setIsReturnModalVisible(true);
+  };
+
+  const handleConfirmReturn = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      await returnMutation.mutateAsync({
+        orderId: selectedOrder.id,
+        items: []
+      });
+      setIsReturnModalVisible(false);
+      setSelectedOrder(null);
+      message.success(`Tạo yêu cầu hoàn trả đơn hàng ${selectedOrder.id.substring(0, 8)}... thành công`);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  const handlePayment = (order: SaleOrderResponse) => {
+    setPaymentOrderId(order.id);
+    message.loading(`Đang tạo link thanh toán cho đơn hàng ${order.id.substring(0, 8)}...`);
   };
 
   const handlePrint = (order: SaleOrderResponse) => {
-    message.success(`In hóa đơn ${order.id}`);
+    message.success(`In hóa đơn ${order.id.substring(0, 8)}...`);
     // Implement print logic
   };
 
   const handleExport = (order: SaleOrderResponse) => {
-    message.success(`Xuất hóa đơn ${order.id}`);
+    message.success(`Xuất hóa đơn ${order.id.substring(0, 8)}...`);
     // Implement export logic
   };
 
@@ -247,7 +267,7 @@ const InvoicesPage = () => {
     {
       title: "Thao tác",
       key: "action",
-      width: 200,
+      width: 100,
       fixed: "right" as const,
       render: (_: any, record: SaleOrderResponse) => (
         <Space size="small">
@@ -273,25 +293,38 @@ const InvoicesPage = () => {
           )}
 
           {record.status === "CONFIRMED" && (
-            <Tooltip title="Hoàn thành">
-              <Button
-                type="text"
-                size="small"
-                icon={<CheckCircleOutlined/>}
-                style={{color: "#52c41a"}}
-                onClick={() => handleFulfillOrder(record)}
-                loading={fulfillMutation.isPending}
-              />
-            </Tooltip>
+            <>
+              <Tooltip title="Thanh toán">
+                <Button
+                  type="text"
+                  size="middle"
+                  icon={<CreditCardOutlined/>}
+                  style={{color: "#1890ff"}}
+                  onClick={() => handlePayment(record)}
+                  loading={isLoadingPaymentLink && paymentOrderId === record.id}
+                />
+              </Tooltip>
+              <Tooltip title="Hoàn thành">
+                <Button
+                  type="text"
+                  size="middle"
+                  icon={<CheckCircleOutlined/>}
+                  style={{color: "#52c41a"}}
+                  onClick={() => handleFulfillOrder(record)}
+                  loading={fulfillMutation.isPending}
+                />
+              </Tooltip>
+            </>
           )}
 
           {record.status === "FULFILLED" && (
-            <Tooltip title="Hoàn trả">
+            <Tooltip title="Hoàn trả toàn bộ">
               <Button
                 type="text"
-                size="small"
+                size="middle"
                 icon={<UndoOutlined/>}
-                onClick={() => handleCreateReturn(record)}
+                danger
+                onClick={() => handleOpenReturnModal(record)}
                 loading={returnMutation.isPending}
               />
             </Tooltip>
@@ -300,18 +333,9 @@ const InvoicesPage = () => {
           <Tooltip title="In hóa đơn">
             <Button
               type="text"
-              size="small"
+              size="middle"
               icon={<PrinterOutlined/>}
               onClick={() => handlePrint(record)}
-            />
-          </Tooltip>
-
-          <Tooltip title="Xuất file">
-            <Button
-              type="text"
-              size="small"
-              icon={<DownloadOutlined/>}
-              onClick={() => handleExport(record)}
             />
           </Tooltip>
         </Space>
@@ -353,7 +377,6 @@ const InvoicesPage = () => {
               <Option value="DRAFT">Nháp</Option>
               <Option value="CONFIRMED">Đã xác nhận</Option>
               <Option value="FULFILLED">Hoàn thành</Option>
-              <Option value="PARTIALLY_RETURNED">Hoàn trả một phần</Option>
               <Option value="RETURNED">Đã hoàn trả</Option>
               <Option value="CANCELLED">Đã hủy</Option>
             </Select>
@@ -411,6 +434,7 @@ const InvoicesPage = () => {
                 />
               ),
             }}
+            size={"middle"}
           />
         </Spin>
       </Card>
@@ -532,6 +556,104 @@ const InvoicesPage = () => {
               pagination={false}
               rowKey="id"
               size="small"
+            />
+          </div>
+        )}
+      </Modal>
+
+      {/* Return Confirmation Modal */}
+      <Modal
+        title={
+          <Space>
+            <ExclamationCircleOutlined style={{color: "#faad14"}}/>
+            <span>Xác nhận hoàn trả đơn hàng</span>
+          </Space>
+        }
+        open={isReturnModalVisible}
+        onCancel={() => {
+          setIsReturnModalVisible(false);
+          setSelectedOrder(null);
+        }}
+        onOk={handleConfirmReturn}
+        confirmLoading={returnMutation.isPending}
+        okText="Xác nhận hoàn trả"
+        cancelText="Hủy"
+        okButtonProps={{danger: true}}
+        width={700}
+      >
+        {selectedOrder && (
+          <div>
+            <Alert
+              message="Cảnh báo"
+              description="Bạn sắp hoàn trả TOÀN BỘ đơn hàng này. Tất cả sản phẩm sẽ được trả về kho và không thể hoàn tác."
+              type="warning"
+              showIcon
+              style={{marginBottom: 16}}
+            />
+
+            <Descriptions column={1} bordered size="small">
+              <Descriptions.Item label="Mã đơn hàng">
+                <Text strong code>{selectedOrder.id}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Khách hàng">
+                {selectedOrder.customer?.full_name || "Khách lẻ"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số điện thoại">
+                {selectedOrder.customer?.phone_number || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tổng tiền hoàn trả">
+                <Text strong style={{fontSize: "16px", color: "#ff4d4f"}}>
+                  ₫{calculateTotal(selectedOrder).toLocaleString()}
+                </Text>
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Divider/>
+
+            <Title level={5}>Danh sách sản phẩm sẽ được hoàn trả</Title>
+            <Table
+              dataSource={selectedOrder.lines}
+              columns={[
+                {
+                  title: "Sản phẩm",
+                  dataIndex: ["product", "product_name"],
+                  key: "product_name",
+                },
+                {
+                  title: "Mã SP",
+                  dataIndex: ["product", "sku"],
+                  key: "sku",
+                  width: 100,
+                },
+                {
+                  title: "Số lượng",
+                  dataIndex: "quantity",
+                  key: "quantity",
+                  width: 100,
+                  align: "center" as const,
+                },
+                {
+                  title: "Đơn giá",
+                  dataIndex: "unit_price",
+                  key: "unit_price",
+                  width: 120,
+                  render: (price: number) => `₫${price.toLocaleString()}`
+                },
+                {
+                  title: "Thành tiền",
+                  key: "total",
+                  width: 130,
+                  render: (_: any, record: SaleOrderLineResponse) => (
+                    <Text strong style={{color: "#ff4d4f"}}>
+                      ₫{(record.quantity * record.unit_price).toLocaleString()}
+                    </Text>
+                  )
+                },
+              ]}
+              pagination={false}
+              rowKey="id"
+              size="small"
+              scroll={{y: 200}}
             />
           </div>
         )}
