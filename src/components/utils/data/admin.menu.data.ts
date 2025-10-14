@@ -208,11 +208,11 @@ export const adminMenuItems: MenuItem[] = [
         label: "Hóa đơn",
         icon: React.createElement(FileTextOutlined),
       },
-      {
-        key: "draft-invoices",
-        label: "Hóa đơn tạm",
-        icon: React.createElement(ClockCircleOutlined),
-      },
+      // {
+      //   key: "draft-invoices",
+      //   label: "Hóa đơn tạm",
+      //   icon: React.createElement(ClockCircleOutlined),
+      // },
       {
         key: "returns",
         label: "Hoàn trả hàng",
@@ -298,7 +298,7 @@ export const menuKeyToPath: Record<string, string> = {
   suppliers: "/dashboard/supplier",
   pos: "/dashboard/pos",
   invoices: "/dashboard/sales-management/invoices",
-  "draft-invoices": "/dashboard/sales-management/draft-invoices",
+  // "draft-invoices": "/dashboard/sales-management/draft-invoices",
   returns: "/dashboard/sales-management/returns",
   "general-info": "/dashboard/general-information",
   branches: "/dashboard/branches",

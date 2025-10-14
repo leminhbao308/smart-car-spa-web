@@ -50,5 +50,10 @@ export const PaymentService = {
   async createAndPay(request: CreateAndPayRequest): Promise<CreateAndPayResponse> {
     const response = await api.post('/so/create-and-pay', request);
     return response.data.data;
+  },
+
+  async getPaymentLink(saleOrderId: string): Promise<string> {
+    const response = await api.get(`/payment/payment-link/${saleOrderId}`);
+    return response.data.data;
   }
 };

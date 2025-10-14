@@ -150,3 +150,19 @@ export const useCreateAndPay = () => {
     },
   });
 };
+
+/**
+ * Hook for getting payment link by sales order ID
+ */
+export const useGetPaymentLink = (saleOrderId: string | null) => {
+  return useQuery({
+    queryKey: ["payment", "paymentLink", saleOrderId],
+    queryFn: async () => {
+      if (!saleOrderId) return null;
+      return await PaymentService.getPaymentLink(saleOrderId);
+    },
+    enabled: !!saleOrderId,
+    retry: 2,
+    retryDelay: 1000,
+  });
+};

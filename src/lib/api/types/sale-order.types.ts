@@ -68,3 +68,16 @@ export interface SaleOrderLineResponse extends BaseAuditEntity {
   quantity: number;
   unit_price: number;
 }
+
+export interface SaleReturnResponse extends BaseAuditEntity {
+  id: string;
+  sales_order: SaleOrderResponse;
+  warehouse: Warehouse;
+  lines: SaleReturnItemResponse[];
+}
+
+export interface SaleReturnItemResponse extends BaseAuditEntity {
+  id: string;
+  product: Product;
+  quantity: number;
+}
