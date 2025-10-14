@@ -287,7 +287,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           vehicle_year: selectedVehicle.model_year || new Date().getFullYear(),
           vehicle_color: selectedVehicle.color || "",
           branch_id: selectedBranch.branch_id,
-          preferred_start_at: values.bookingDate.format("YYYY-MM-DDTHH:mm:ss"),
+          preferred_start_at: `${values.bookingDate.format("YYYY-MM-DD")}T${values.bookingTime.format("HH:mm:ss")}`,
           estimated_duration_minutes: totalDuration,
           buffer_minutes: 15, // Default buffer time
           total_price: totalPrice,
@@ -346,7 +346,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           vehicle_year: selectedVehicle?.model_year || initialData.vehicleYear,
           vehicle_color: selectedVehicle?.color || initialData.vehicleColor,
           branch_id: selectedBranch?.branch_id || initialData.branchId,
-          preferred_start_at: values.bookingDate.format("YYYY-MM-DDTHH:mm:ss"),
+          preferred_start_at: `${values.bookingDate.format("YYYY-MM-DD")}T${values.bookingTime.format("HH:mm:ss")}`,
           estimated_duration_minutes: totalDuration,
           total_price: totalPrice,
           priority: values.priority as Priority,
@@ -426,6 +426,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         layout="vertical"
         initialValues={{
           priority: "NORMAL",
+          status: "pending",
         }}
       >
         <Row gutter={16}>
@@ -494,14 +495,29 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 8,
+                      justifyContent: "space-between",
                       marginBottom: 4,
                     }}
                   >
-                    <UserOutlined style={{ color: "#52c41a" }} />
-                    <Text strong style={{ color: "#52c41a" }}>
-                      Khách hàng đã chọn:
-                    </Text>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <UserOutlined style={{ color: "#52c41a" }} />
+                      <Text strong style={{ color: "#52c41a" }}>
+                        Khách hàng đã chọn:
+                      </Text>
+                    </div>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => {
+                        setSelectedCustomer(null);
+                        setSelectedVehicle(null);
+                        form.setFieldValue("customerId", undefined);
+                        form.setFieldValue("vehicleId", undefined);
+                      }}
+                      style={{ padding: 0, height: "auto", fontSize: 12 }}
+                    >
+                      Thay đổi
+                    </Button>
                   </div>
                   <div style={{ fontSize: 13, color: "#666" }}>
                     <div>
@@ -594,14 +610,27 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 8,
+                      justifyContent: "space-between",
                       marginBottom: 4,
                     }}
                   >
-                    <CarOutlined style={{ color: "#1890ff" }} />
-                    <Text strong style={{ color: "#1890ff" }}>
-                      Xe đã chọn:
-                    </Text>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <CarOutlined style={{ color: "#1890ff" }} />
+                      <Text strong style={{ color: "#1890ff" }}>
+                        Xe đã chọn:
+                      </Text>
+                    </div>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => {
+                        setSelectedVehicle(null);
+                        form.setFieldValue("vehicleId", undefined);
+                      }}
+                      style={{ padding: 0, height: "auto", fontSize: 12 }}
+                    >
+                      Thay đổi
+                    </Button>
                   </div>
                   <div style={{ fontSize: 13, color: "#666" }}>
                     <div>
@@ -900,6 +929,17 @@ const BookingModal: React.FC<BookingModalProps> = ({
                         Chi nhánh đã chọn:
                       </Text>
                     </div>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => {
+                        setSelectedBranch(null);
+                        form.setFieldValue("branchId", undefined);
+                      }}
+                      style={{ padding: 0, height: "auto", fontSize: 12 }}
+                    >
+                      Thay đổi
+                    </Button>
                   </div>
                   <div style={{ fontSize: 13, color: "#666" }}>
                     <div style={{ fontWeight: 500, marginBottom: 2 }}>
@@ -966,7 +1006,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       { required: true, message: "Vui lòng chọn trạng thái" },
                     ]}
                   >
-                    <Select placeholder="Chọn trạng thái">
+                    <Select placeholder="Chọn trạng thái" defaultValue="pending">
                       <Option value="pending">Chờ xác nhận</Option>
                       <Option value="confirmed">Đã xác nhận</Option>
                       <Option value="in_progress">Đang thực hiện</Option>

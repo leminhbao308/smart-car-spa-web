@@ -5,7 +5,6 @@ import {
   Form,
   Input,
   Button,
-  Space,
   Typography,
   App,
 } from "antd";
@@ -56,7 +55,7 @@ const UpdateTrackingModal: React.FC<UpdateTrackingModalProps> = ({
         request: {
           notes: values.notes || undefined,
           media_url: values.evidence_media_urls || undefined,
-          progress_percent: 100.0,
+          progress_percent: 90.0,
         },
       });
 

@@ -184,7 +184,7 @@ export interface StartStepRequest {
 }
 
 export interface ProgressUpdateRequest {
-  progress_percent: 100.0;
+  progress_percent?: number;
   media_url?: string;
   notes?: string;
 }

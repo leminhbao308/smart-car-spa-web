@@ -18,12 +18,15 @@ import {
   UserOutlined,
   CarOutlined,
   CheckCircleOutlined,
-  PlayCircleOutlined, 
+  PlayCircleOutlined,
   ExclamationCircleOutlined,
   EnvironmentOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
-import { ServiceProcessTrackingInfoDto, TrackingStatus } from "@/lib/api/types/service-process-tracking.types";
+import {
+  ServiceProcessTrackingInfoDto,
+  TrackingStatus,
+} from "@/lib/api/types/service-process-tracking.types";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 
 const { Text } = Typography;
@@ -43,32 +46,34 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
 
   const getStatusConfig = (status: TrackingStatus) => {
     const statusConfigs = {
-      [TrackingStatus.PENDING]: { 
-        label: "Chờ thực hiện", 
-        color: "default", 
-        icon: <ClockCircleOutlined /> 
+      [TrackingStatus.PENDING]: {
+        label: "Chờ thực hiện",
+        color: "default",
+        icon: <ClockCircleOutlined />,
       },
-      [TrackingStatus.IN_PROGRESS]: { 
-        label: "Đang thực hiện", 
-        color: "blue", 
-        icon: <PlayCircleOutlined /> 
+      [TrackingStatus.IN_PROGRESS]: {
+        label: "Đang thực hiện",
+        color: "blue",
+        icon: <PlayCircleOutlined />,
       },
-      [TrackingStatus.COMPLETED]: { 
-        label: "Hoàn thành", 
-        color: "green", 
-        icon: <CheckCircleOutlined /> 
+      [TrackingStatus.COMPLETED]: {
+        label: "Hoàn thành",
+        color: "green",
+        icon: <CheckCircleOutlined />,
       },
-      [TrackingStatus.CANCELLED]: { 
-        label: "Đã hủy", 
-        color: "red", 
-        icon: <ExclamationCircleOutlined /> 
+      [TrackingStatus.CANCELLED]: {
+        label: "Đã hủy",
+        color: "red",
+        icon: <ExclamationCircleOutlined />,
       },
     };
-    return statusConfigs[status] || { 
-      label: "Unknown", 
-      color: "default", 
-      icon: <ClockCircleOutlined /> 
-    };
+    return (
+      statusConfigs[status] || {
+        label: "Unknown",
+        color: "default",
+        icon: <ClockCircleOutlined />,
+      }
+    );
   };
 
   const statusConfig = getStatusConfig(tracking.status);
@@ -109,7 +114,13 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
         <Card size="small">
           <Row gutter={[16, 16]}>
             <Col span={12}>
-              <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
                 <CarOutlined style={{ marginRight: 8, color: "#1890ff" }} />
                 <Text strong>Thông tin xe</Text>
               </div>
@@ -129,23 +140,34 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
               </div>
             </Col>
             <Col span={12}>
-              <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
                 <ToolOutlined style={{ marginRight: 8, color: "#52c41a" }} />
                 <Text strong>Thông tin bước dịch vụ</Text>
               </div>
               <div style={{ marginLeft: 24 }}>
                 <div>
-                  <Text strong>Bước {tracking.serviceStepOrder}:</Text> {tracking.serviceStepName}
+                  <Text strong>Bước {tracking.serviceStepOrder}:</Text>{" "}
+                  {tracking.serviceStepName}
                 </div>
                 <div>
                   <Text strong>Mô tả:</Text> {tracking.serviceStepDescription}
                 </div>
                 <div>
-                  <Text strong>Thời gian ước tính:</Text> {tracking.estimatedTime} phút
+                  <Text strong>Thời gian ước tính:</Text>{" "}
+                  {tracking.estimatedTime} phút
                 </div>
                 <div>
-                  <Text strong>Bắt buộc:</Text> 
-                  <Tag color={tracking.isRequired ? "red" : "blue"} style={{ marginLeft: 4 }}>
+                  <Text strong>Bắt buộc:</Text>
+                  <Tag
+                    color={tracking.isRequired ? "red" : "blue"}
+                    style={{ marginLeft: 4 }}
+                  >
                     {tracking.isRequired ? "Có" : "Không"}
                   </Tag>
                 </div>
@@ -157,7 +179,7 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
         {/* Progress and Status */}
         <Card size="small" title="Tiến độ và trạng thái">
           <Row gutter={[16, 16]}>
-            <Col span={8}>
+            <Col span={12}>
               <Statistic
                 title="Tiến độ"
                 value={tracking.progressPercent || 0}
@@ -168,22 +190,15 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
               <Progress
                 percent={tracking.progressPercent || 0}
                 size="small"
-                status={tracking.status === TrackingStatus.COMPLETED ? "success" : "active"}
+                status={
+                  tracking.status === TrackingStatus.COMPLETED
+                    ? "success"
+                    : "active"
+                }
               />
             </Col>
-            <Col span={8}>
-              <Statistic
-                title="Hiệu quả"
-                value={tracking.efficiency || 0}
-                precision={2}
-                valueStyle={{ color: getEfficiencyColor(tracking.efficiency || 0) }}
-                suffix="x"
-              />
-              <Text style={{ color: getEfficiencyColor(tracking.efficiency || 0), fontSize: 12 }}>
-                {getEfficiencyLabel(tracking.efficiency || 0)}
-              </Text>
-            </Col>
-            <Col span={8}>
+            
+            <Col span={12}>
               <Statistic
                 title="Thời gian thực tế"
                 value={tracking.actualDuration || 0}
@@ -201,13 +216,29 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
         <Card size="small" title="Thông tin nhân viên và khu vực">
           <Row gutter={[16, 16]}>
             <Col span={12}>
-              <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
                 <UserOutlined style={{ marginRight: 8, color: "#1890ff" }} />
                 <Text strong>Kỹ thuật viên</Text>
               </div>
               <div style={{ marginLeft: 24 }}>
-                <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
-                  <Avatar size="small" icon={<UserOutlined />} style={{ marginRight: 8 }} />
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: 4,
+                  }}
+                >
+                  <Avatar
+                    size="small"
+                    icon={<UserOutlined />}
+                    style={{ marginRight: 8 }}
+                  />
                   <div>
                     <div>
                       <Text strong>{tracking.technicianName}</Text>
@@ -222,8 +253,16 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
               </div>
             </Col>
             <Col span={12}>
-              <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-                <EnvironmentOutlined style={{ marginRight: 8, color: "#52c41a" }} />
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <EnvironmentOutlined
+                  style={{ marginRight: 8, color: "#52c41a" }}
+                />
                 <Text strong>Khu vực dịch vụ</Text>
               </div>
               <div style={{ marginLeft: 24 }}>
@@ -258,34 +297,44 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
                 ),
                 color: "blue",
               },
-              ...(tracking.startTime ? [{
-                children: (
-                  <div>
-                    <Text strong>Bắt đầu thực hiện</Text>
-                    <div style={{ fontSize: 12, color: "#666" }}>
-                      {formatDate(tracking.startTime)}
-                    </div>
-                  </div>
-                ),
-                color: "green",
-              }] : []),
-              ...(tracking.endTime ? [{
-                children: (
-                  <div>
-                    <Text strong>Hoàn thành</Text>
-                    <div style={{ fontSize: 12, color: "#666" }}>
-                      {formatDate(tracking.endTime)}
-                    </div>
-                  </div>
-                ),
-                color: "green",
-              }] : []),
+              ...(tracking.startTime
+                ? [
+                    {
+                      children: (
+                        <div>
+                          <Text strong>Bắt đầu thực hiện</Text>
+                          <div style={{ fontSize: 12, color: "#666" }}>
+                            {formatDate(tracking.startTime)}
+                          </div>
+                        </div>
+                      ),
+                      color: "green",
+                    },
+                  ]
+                : []),
+              ...(tracking.endTime
+                ? [
+                    {
+                      children: (
+                        <div>
+                          <Text strong>Hoàn thành</Text>
+                          <div style={{ fontSize: 12, color: "#666" }}>
+                            {formatDate(tracking.endTime)}
+                          </div>
+                        </div>
+                      ),
+                      color: "green",
+                    },
+                  ]
+                : []),
               {
                 children: (
                   <div>
                     <Text strong>Cập nhật cuối</Text>
                     <div style={{ fontSize: 12, color: "#666" }}>
-                      {tracking.lastUpdatedAt ? formatDate(tracking.lastUpdatedAt) : "Chưa có"}
+                      {tracking.lastUpdatedAt
+                        ? formatDate(tracking.lastUpdatedAt)
+                        : "Chưa có"}
                     </div>
                     <div style={{ fontSize: 12, color: "#666" }}>
                       Bởi: {tracking.lastUpdatedByName || "N/A"}
