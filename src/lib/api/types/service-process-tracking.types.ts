@@ -105,58 +105,96 @@ export enum StepStatus {
 }
 
 export interface ServiceProcessTrackingFilterParam {
+  // Filter by booking
   bookingId?: string;
+  bookingCode?: string;
+  
+  // Filter by technician
   technicianId?: string;
-  bayId?: string;
+  technicianName?: string;
+  
+  // Filter by slot
+  slotId?: string;
+  slotName?: string;
+  
+  // Filter by service step
+  serviceStepId?: string;
+  serviceStepName?: string;
+  isRequired?: boolean;
+  
+  // Filter by status
   status?: TrackingStatus;
-  dateFrom?: string;
-  dateTo?: string;
-  search?: string;
-  sort?: string;
-  direction?: "ASC" | "DESC";
+  
+  // Filter by time range
+  startDateFrom?: string;
+  startDateTo?: string;
+  endDateFrom?: string;
+  endDateTo?: string;
+  
+  // Filter by progress
+  progressFrom?: number;
+  progressTo?: number;
+  
+  // Filter by duration
+  estimatedDurationFrom?: number;
+  estimatedDurationTo?: number;
+  actualDurationFrom?: number;
+  actualDurationTo?: number;
+  
+  // Filter by branch (through booking)
+  branchId?: string;
+  branchName?: string;
+  
+  // Filter by customer (through booking)
+  customerId?: string;
+  customerName?: string;
+  customerPhone?: string;
+  
+  // Filter by vehicle (through booking)
+  vehicleId?: string;
+  vehicleLicensePlate?: string;
+  
+  // Search text
+  searchText?: string;
 }
 
 export interface CreateServiceProcessTrackingRequest {
-  bookingId: string;
-  serviceStepId: string;
-  technicianId: string;
-  bayId: string;
+  booking_id: string;
+  service_step_id: string;
+  technician_id?: string;
+  bay_id?: string;
+  estimated_duration?: number;
+  status?: TrackingStatus;
+  progress_percent?: number;
   notes?: string;
+  evidence_media_urls?: string;
 }
 
 export interface UpdateServiceProcessTrackingRequest {
-  technicianId?: string;
-  bayId?: string;
+  estimated_duration?: number;
   status?: TrackingStatus;
+  progress_percent?: number;
   notes?: string;
+  evidence_media_urls?: string;
 }
 
 export interface StartStepRequest {
-  stepId: string;
+  technician_id: string;
   notes?: string;
 }
 
 export interface ProgressUpdateRequest {
-  progress?: number;
+  progress_percent: number;
   notes?: string;
-  evidenceMedia?: string[];
 }
 
 export interface CompleteStepRequest {
-  stepId: string;
   notes?: string;
-  evidenceMedia?: string[];
-  products?: {
-    productId: string;
-    usedQuantity: number;
-    notes?: string;
-  }[];
+  evidence_media_urls?: string;
 }
 
 export interface CancelStepRequest {
-  stepId: string;
   reason: string;
-  notes?: string;
 }
 
 export interface ServiceProcessTrackingResponse {

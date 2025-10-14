@@ -15,7 +15,10 @@ export class BranchService {
   /**
    * Parse JSON string safely
    */
-  private static parseJsonSafely<T>(jsonString: string, defaultValue: T): T {
+  private static parseJsonSafely<T>(jsonString: string | undefined | null, defaultValue: T): T {
+    if (!jsonString || jsonString === 'undefined' || jsonString === 'null') {
+      return defaultValue;
+    }
     try {
       return JSON.parse(jsonString);
     } catch (error) {
@@ -50,7 +53,7 @@ export class BranchService {
    */
   static async getAllBranches(): Promise<{
     branches: BranchDisplay[];
-    pagination: {
+    pagination: {z
       page: number;
       size: number;
       total_elements: number;

@@ -4,8 +4,9 @@ import { AdminTable } from "@/components/ui/Table";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
 import BookingModal from "@/components/ui/Modal/BookingModal/BookingModal";
 import CreateTrackingModal from "@/components/ui/Modal/CreateTrackingModal";
+import ServiceTrackingModal from "@/components/ui/Modal/ServiceTrackingModal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Modal, Typography, Button, notification, Badge } from "antd";
+import { Tag, Modal, Typography, Button, Badge, App } from "antd";
 import {
   PhoneOutlined,
   EyeOutlined,
@@ -13,6 +14,7 @@ import {
   CloseCircleOutlined,
   LoginOutlined,
   PlayCircleOutlined,
+  MonitorOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
@@ -130,12 +132,14 @@ const BookingsPage = () => {
   );
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [createTrackingModalOpen, setCreateTrackingModalOpen] = useState(false);
+  const [serviceTrackingModalOpen, setServiceTrackingModalOpen] = useState(false);
   const [filterParams, setFilterParams] = useState({
     page: 0,
     size: 10,
   });
 
   const { showModal } = useConfirmationModalContext();
+  const { notification } = App.useApp();
 
   // API hooks
   const {
@@ -234,7 +238,7 @@ const BookingsPage = () => {
         placement: "topRight",
       });
     }
-  }, [error]);
+  }, [error, notification]);
 
   // Định nghĩa columns
   const columns: ColumnsType<BookingInfoDto> = [
@@ -551,8 +555,28 @@ const BookingsPage = () => {
   };
 
   const handleStartService = (record: BookingInfoDto) => {
-    setSelectedBooking(record);
-    setCreateTrackingModalOpen(true);
+    showModal({
+      title: "Bắt đầu dịch vụ",
+      content: `Xác nhận bắt đầu dịch vụ cho lịch đặt ${record.bookingCode} của khách hàng ${record.customerName}?`,
+      type: "info",
+      onConfirm: async () => {
+        try {
+          await startServiceMutation.mutateAsync(record.bookingId);
+          notification.success({
+            message: "Thành công",
+            description: "Bắt đầu dịch vụ thành công",
+            placement: "topRight",
+          });
+        } catch (error) {
+          console.error("Start service error:", error);
+          notification.error({
+            message: "Lỗi",
+            description: "Có lỗi xảy ra khi bắt đầu dịch vụ",
+            placement: "topRight",
+          });
+        }
+      },
+    });
   };
 
   const handleCompleteService = (record: BookingInfoDto) => {
@@ -635,14 +659,15 @@ const BookingsPage = () => {
   const handleCreateTrackingSuccess = () => {
     setCreateTrackingModalOpen(false);
     setSelectedBooking(null);
-    // Optionally start the service after creating tracking
-    if (selectedBooking) {
-      startServiceMutation.mutate(selectedBooking.bookingId);
-    }
+  };
+
+  const handleServiceTracking = (record: BookingInfoDto) => {
+    setSelectedBooking(record);
+    setServiceTrackingModalOpen(true);
   };
 
   return (
-    <>
+    <App>
       <AdminTable
         title="Quản lý đặt lịch"
         dataSource={data}
@@ -660,6 +685,10 @@ const BookingsPage = () => {
         }
         onAdd={handleAdd}
         onEdit={handleEdit}
+        onEditCondition={(record: BookingInfoDto) => {
+          // Chỉ cho phép chỉnh sửa khi booking ở trạng thái PENDING hoặc CONFIRMED
+          return record.status === BookingStatus.PENDING || record.status === BookingStatus.CONFIRMED;
+        }}
         onView={handleView}
         addButtonText="Đặt lịch mới"
         searchable={true}
@@ -710,6 +739,15 @@ const BookingsPage = () => {
               record.status === BookingStatus.CHECKED_IN,
           },
           {
+            key: "tracking",
+            label: "Theo dõi quá trình chăm sóc xe",
+            type: "primary",
+            icon: <MonitorOutlined />,
+            onClick: handleServiceTracking,
+            condition: (record: BookingInfoDto) =>
+              [BookingStatus.IN_PROGRESS, BookingStatus.PAUSED].includes(record.status),
+          },
+          {
             key: "cancel",
             label: "Hủy",
             type: "default",
@@ -738,6 +776,15 @@ const BookingsPage = () => {
           open={createTrackingModalOpen}
           onCancel={() => setCreateTrackingModalOpen(false)}
           onSuccess={handleCreateTrackingSuccess}
+          booking={selectedBooking}
+        />
+      )}
+
+      {/* Modal theo dõi quá trình chăm sóc xe */}
+      {selectedBooking && (
+        <ServiceTrackingModal
+          open={serviceTrackingModalOpen}
+          onCancel={() => setServiceTrackingModalOpen(false)}
           booking={selectedBooking}
         />
       )}
@@ -1393,7 +1440,7 @@ const BookingsPage = () => {
           </div>
         )}
       </Modal>
-    </>
+    </App>
   );
 };
 

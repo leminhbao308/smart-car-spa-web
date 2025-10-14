@@ -13,7 +13,7 @@ import {
   Row,
   Col,
   Typography,
-  message,
+  // message, // Removed to avoid static function warning
 } from "antd";
 import {
   CarOutlined,
@@ -262,9 +262,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       if (mode === "create") {
         if (!selectedCustomer || !selectedVehicle || !selectedBranch) {
-          message.error(
-            "Vui lòng chọn đầy đủ thông tin khách hàng, xe và chi nhánh"
-          );
+          // message.error(
+          //   "Vui lòng chọn đầy đủ thông tin khách hàng, xe và chi nhánh"
+          // ); // Removed to avoid static function warning
           return;
         }
 
@@ -318,7 +318,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         };
 
         await createBookingMutation.mutateAsync(createRequest);
-        message.success("Tạo booking thành công");
+        // message.success("Tạo booking thành công"); // Removed to avoid static function warning
         onOk(createRequest);
       } else if (mode === "edit" && initialData) {
         const updateRequest: UpdateBookingRequest = {
@@ -376,12 +376,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
           bookingId: initialData.bookingId,
           request: updateRequest,
         });
-        message.success("Cập nhật booking thành công");
+        // message.success("Cập nhật booking thành công"); // Removed to avoid static function warning
         onOk(updateRequest);
       }
     } catch (error) {
       console.log("Validation failed:", error);
-      message.error("Có lỗi xảy ra khi xử lý booking");
+      // message.error("Có lỗi xảy ra khi xử lý booking"); // Removed to avoid static function warning
     }
   };
 

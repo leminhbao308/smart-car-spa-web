@@ -68,6 +68,11 @@ export const adminMenuItems: MenuItem[] = [
     icon: React.createElement(TeamOutlined),
   },
   {
+    key: "vehicles-in-care",
+    label: "Xe đang chăm sóc",
+    icon: React.createElement(CarOutlined),
+  },
+  {
     key: "category-management",
     label: "Quản lý danh mục",
     icon: React.createElement(AppstoreOutlined),
@@ -77,11 +82,7 @@ export const adminMenuItems: MenuItem[] = [
     label: "Quy trình chăm sóc",
     icon: React.createElement(CarOutlined),
   },
-  {
-    key: "vehicles-in-care",
-    label: "Xe đang chăm sóc",
-    icon: React.createElement(CarOutlined),
-  },
+
   {
     key: "vehicle-records",
     label: "Hồ sơ xe",

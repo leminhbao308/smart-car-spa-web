@@ -8,17 +8,18 @@ export interface ServiceProcessInfoDto {
   name: string;
   description?: string;
   code: string;
-  isDefault: boolean;
-  estimatedDuration: number;
+  isDefault?: boolean;
+  estimatedDuration?: number;
   branchId?: string;
   branchName?: string;
-  processSteps: ServiceProcessStepInfoDto[];
-  createdDate: string;
-  modifiedDate: string;
-  createdBy: string;
-  modifiedBy: string;
-  isActive: boolean;
-  isDeleted: boolean;
+  processSteps?: ServiceProcessStepInfoDto[]; // Backend might return process_steps
+  process_steps?: ServiceProcessStepInfoDto[]; // Backend snake_case
+  createdDate?: string;
+  modifiedDate?: string;
+  createdBy?: string;
+  modifiedBy?: string;
+  isActive?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface ServiceProcessStepInfoDto {

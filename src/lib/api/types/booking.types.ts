@@ -125,12 +125,36 @@ export interface BookingFilterParam {
 // Related DTOs
 export interface BookingItemInfoDto {
   bookingItemId: string;
-  serviceId: string;
-  serviceName: string;
-  servicePrice: number;
+  bookingId?: string;
+  itemType?: string;
+  itemId: string;
+  itemName: string;
+  itemUrl?: string;
+  itemDescription?: string;
+  unitPrice: number;
   quantity: number;
-  totalPrice: number;
+  subtotalAmount: number;
+  discountAmount?: number;
+  taxAmount?: number;
+  totalAmount: number;
+  durationMinutes?: number;
+  actualDurationMinutes?: number;
+  itemStatus?: string;
+  actualStartAt?: string;
+  actualEndAt?: string;
   notes?: string;
+  displayOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: string;
+  modifiedBy?: string;
+  isCompleted?: boolean;
+  isInProgress?: boolean;
+  // Legacy fields for backward compatibility
+  serviceId?: string;
+  serviceName?: string;
+  servicePrice?: number;
+  totalPrice?: number;
 }
 
 export interface BookingAssignmentInfoDto {
