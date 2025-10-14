@@ -84,8 +84,8 @@ export class ServiceProcessTrackingService {
       const url = `/service-process-trackings/get-all${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
       const response = await apiClient.get(url);
 
-      if (response.data.success) {
-        return response.data.data || response.data;
+      if (response.data.success && response.data.data) {
+        return response.data.data;
       } else {
         throw new Error(response.data.message || "Failed to fetch service process trackings");
       }

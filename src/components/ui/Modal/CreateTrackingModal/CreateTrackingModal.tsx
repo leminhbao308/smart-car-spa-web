@@ -1,9 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Modal, Form, Select, Input, Button, message, Spin } from "antd";
+import { Modal, Form, Select, Input, Button, message } from "antd";
 import { useCreateTracking } from "@/lib/api/hooks/useTracking";
 import { useServiceProcessByServiceId } from "@/lib/api/hooks/useServiceProcess";
 import { useEmployeesDropdown } from "@/lib/api/hooks/useEmployees";
+import { useServiceBaysByBranch } from "@/lib/api/hooks/useServiceBays";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
 import { CreateServiceProcessTrackingRequest, TrackingStatus } from "@/lib/api/types/service-process-tracking.types";
 import { ServiceProcessStepInfoDto } from "@/lib/api/types/service-process.types";
@@ -26,37 +27,49 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [selectedServiceId, setSelectedServiceId] = useState<string>("");
-  const [selectedProcessId, setSelectedProcessId] = useState<string>("");
+  // const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null); // Not used anymore
 
   const createTrackingMutation = useCreateTracking();
-  const { data: serviceProcess, isLoading: isLoadingProcess } = useServiceProcessByServiceId(selectedServiceId);
+  const { data: serviceProcess, isLoading: isLoadingProcess } = useServiceProcessByServiceId(selectedServiceId || "");
   const { data: employees, isLoading: isLoadingEmployees } = useEmployeesDropdown();
+  const { data: serviceBays, isLoading: isLoadingServiceBays } = useServiceBaysByBranch(booking.branchId);
 
   // Reset form when modal opens
   useEffect(() => {
     if (open) {
       form.resetFields();
       setSelectedServiceId("");
-      setSelectedProcessId("");
+      // setSelectedProcessId(null); // Not used anymore
       
-      // Set default values
+      // Set default values - auto-select first service from booking
       if (booking.bookingItems && booking.bookingItems.length > 0) {
         const firstService = booking.bookingItems[0];
         if (firstService.serviceId) {
           setSelectedServiceId(firstService.serviceId);
+          form.setFieldValue("serviceId", firstService.serviceId);
         }
       }
     }
   }, [open, booking, form]);
 
-  // Update process when service changes
+  // Update process when service changes and auto-select first step
   useEffect(() => {
-    if (serviceProcess?.data) {
-      setSelectedProcessId(serviceProcess.data.id);
+    if (serviceProcess) {
+      // Auto-select first step of the process
+      const firstStep = serviceProcess.processSteps?.[0];
+      if (firstStep) {
+        form.setFieldValue("serviceStepId", firstStep.id);
+      }
     }
-  }, [serviceProcess]);
+  }, [serviceProcess, form]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: {
+    serviceId: string;
+    serviceStepId: string;
+    technicianId: string;
+    bayId: string;
+    notes?: string;
+  }) => {
     try {
       const request: CreateServiceProcessTrackingRequest = {
         booking_id: booking.bookingId,
@@ -64,7 +77,7 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
         technician_id: values.technicianId,
         bay_id: values.bayId,
         status: TrackingStatus.PENDING,
-        estimated_duration: values.estimatedDuration,
+        estimated_duration: 60, // Default estimated duration
         notes: values.notes,
       };
 
@@ -82,7 +95,7 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
     onCancel();
   };
 
-  const serviceSteps = serviceProcess?.data?.processSteps || [];
+  const serviceSteps = serviceProcess?.processSteps || [];
 
   return (
     <Modal
@@ -91,15 +104,13 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
       onCancel={handleCancel}
       footer={null}
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        initialValues={{
-          estimatedDuration: 60,
-        }}
+        initialValues={{}}
       >
         <Form.Item
           label="Dịch vụ"
@@ -111,10 +122,16 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
             value={selectedServiceId}
             onChange={setSelectedServiceId}
             loading={isLoadingProcess}
+            allowClear
           >
             {booking.bookingItems?.map((item) => (
               <Option key={item.serviceId} value={item.serviceId}>
-                {item.serviceName || `Service ${item.serviceId?.substring(0, 8)}...`}
+                <div>
+                  <div style={{ fontWeight: 500 }}>{item.serviceName || `Service ${item.serviceId?.substring(0, 8)}...`}</div>
+                  <div style={{ fontSize: 11, color: "#999" }}>
+                    Số lượng: {item.quantity} • Giá: {item.servicePrice ? `${item.servicePrice.toLocaleString()} VNĐ` : 'N/A'}
+                  </div>
+                </div>
               </Option>
             ))}
           </Select>
@@ -129,6 +146,7 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
             placeholder="Chọn bước dịch vụ"
             loading={isLoadingProcess}
             disabled={!selectedServiceId}
+            allowClear
           >
             {serviceSteps.map((step: ServiceProcessStepInfoDto) => (
               <Option key={step.id} value={step.id}>
@@ -157,11 +175,13 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
             placeholder="Chọn kỹ thuật viên"
             loading={isLoadingEmployees}
             showSearch
-            filterOption={(input, option) =>
-              (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
-            }
+            allowClear
+            filterOption={(input, option) => {
+              const text = option?.children?.toString() || '';
+              return text.toLowerCase().includes(input.toLowerCase());
+            }}
           >
-            {employees?.map((employee: any) => (
+            {employees?.map((employee) => (
               <Option key={employee.user_id} value={employee.user_id}>
                 <div>
                   <div style={{ fontWeight: 500 }}>{employee.full_name}</div>
@@ -175,24 +195,31 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
         </Form.Item>
 
         <Form.Item
-          label="Bay"
+          label="Khu vực dịch vụ"
           name="bayId"
-          rules={[{ required: true, message: "Vui lòng chọn bay" }]}
+          rules={[{ required: true, message: "Vui lòng chọn khu vực dịch vụ" }]}
         >
-          <Select placeholder="Chọn bay">
-            {/* TODO: Implement bay selection */}
-            <Option value="bay-1">Bay 1</Option>
-            <Option value="bay-2">Bay 2</Option>
-            <Option value="bay-3">Bay 3</Option>
+          <Select 
+            placeholder="Chọn khu vực dịch vụ"
+            loading={isLoadingServiceBays}
+            allowClear
+          >
+            {serviceBays?.map((bay) => (
+              <Option key={bay.bay_id} value={bay.bay_id}>
+                <div>
+                  <div style={{ fontWeight: 500 }}>{bay.bay_name}</div>
+                  <div style={{ fontSize: 12, color: "#666" }}>
+                    {bay.bay_code} • {bay.bay_type} • Sức chứa: {bay.capacity}
+                  </div>
+                  {bay.description && (
+                    <div style={{ fontSize: 11, color: "#999" }}>
+                      {bay.description}
+                    </div>
+                  )}
+                </div>
+              </Option>
+            ))}
           </Select>
-        </Form.Item>
-
-        <Form.Item
-          label="Thời gian ước tính (phút)"
-          name="estimatedDuration"
-          rules={[{ required: true, message: "Vui lòng nhập thời gian ước tính" }]}
-        >
-          <Input type="number" min={1} placeholder="Nhập thời gian ước tính" />
         </Form.Item>
 
         <Form.Item label="Ghi chú" name="notes">

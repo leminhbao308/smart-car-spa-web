@@ -17,24 +17,32 @@ import {
 } from '../types/service-process-tracking.types';
 
 export class TrackingService {
-  private static readonly BASE_URL = '/service-process-tracking';
+  private static readonly BASE_URL = '/service-process-trackings';
 
   /**
    * Create new tracking
    */
   static async createTracking(request: CreateServiceProcessTrackingRequest) {
     const response = await apiClient.post(`${this.BASE_URL}/create`, request);
-    return response.data;
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to create tracking");
+    }
   }
 
   /**
    * Get all trackings with pagination
    */
   static async getAllTrackings(filterParam?: ServiceProcessTrackingFilterParam, pageable?: any) {
-    const response = await apiClient.get(this.BASE_URL, {
+    const response = await apiClient.get(`${this.BASE_URL}/get-all`, {
       params: { ...filterParam, ...pageable }
     });
-    return response.data;
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to fetch trackings");
+    }
   }
 
   /**
@@ -42,7 +50,11 @@ export class TrackingService {
    */
   static async getTrackingById(trackingId: string) {
     const response = await apiClient.get(`${this.BASE_URL}/${trackingId}`);
-    return response.data;
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to fetch tracking");
+    }
   }
 
   /**
@@ -50,7 +62,11 @@ export class TrackingService {
    */
   static async updateTracking(trackingId: string, request: UpdateServiceProcessTrackingRequest) {
     const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/update`, request);
-    return response.data;
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to update tracking");
+    }
   }
 
   /**
@@ -58,7 +74,9 @@ export class TrackingService {
    */
   static async deleteTracking(trackingId: string) {
     const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/delete`);
-    return response.data;
+    if (!response.data.success) {
+      throw new Error(response.data.message || "Failed to delete tracking");
+    }
   }
 
   /**
@@ -66,7 +84,11 @@ export class TrackingService {
    */
   static async getTrackingsByBooking(bookingId: string) {
     const response = await apiClient.get(`${this.BASE_URL}/booking/${bookingId}`);
-    return response.data;
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to fetch trackings by booking");
+    }
   }
 
   /**
@@ -74,7 +96,11 @@ export class TrackingService {
    */
   static async getTrackingsByTechnician(technicianId: string) {
     const response = await apiClient.get(`${this.BASE_URL}/technician/${technicianId}`);
-    return response.data;
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to fetch trackings by technician");
+    }
   }
 
   /**
@@ -82,7 +108,11 @@ export class TrackingService {
    */
   static async getTrackingsByBay(bayId: string) {
     const response = await apiClient.get(`${this.BASE_URL}/bay/${bayId}`);
-    return response.data;
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to fetch trackings by bay");
+    }
   }
 
   /**
@@ -90,57 +120,85 @@ export class TrackingService {
    */
   static async getInProgressTrackings() {
     const response = await apiClient.get(`${this.BASE_URL}/in-progress`);
-    return response.data;
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to fetch in-progress trackings");
+    }
   }
 
   /**
    * Start step
    */
   static async startStep(trackingId: string, request: StartStepRequest) {
-    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/start-step`, request);
-    return response.data;
+    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/start`, request);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to start step");
+    }
   }
 
   /**
    * Update progress
    */
   static async updateProgress(trackingId: string, request: ProgressUpdateRequest) {
-    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/update-progress`, request);
-    return response.data;
+    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/progress/update`, request);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to update progress");
+    }
   }
 
   /**
    * Complete step
    */
   static async completeStep(trackingId: string, request: CompleteStepRequest) {
-    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/complete-step`, request);
-    return response.data;
+    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/complete`, request);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to complete step");
+    }
   }
 
   /**
    * Cancel step
    */
   static async cancelStep(trackingId: string, request: CancelStepRequest) {
-    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/cancel-step`, request);
-    return response.data;
+    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/cancel`, request);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to cancel step");
+    }
   }
 
   /**
    * Add note
    */
   static async addNote(trackingId: string, request: ProgressUpdateRequest) {
-    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/add-note`, request);
-    return response.data;
+    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/notes`, request);
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to add note");
+    }
   }
 
   /**
    * Add evidence media
    */
   static async addEvidenceMedia(trackingId: string, mediaUrl: string) {
-    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/add-evidence`, null, {
+    const response = await apiClient.post(`${this.BASE_URL}/${trackingId}/evidence`, null, {
       params: { mediaUrl }
     });
-    return response.data;
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Failed to add evidence media");
+    }
   }
 }
 

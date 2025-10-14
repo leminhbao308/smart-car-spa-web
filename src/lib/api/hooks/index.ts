@@ -42,6 +42,8 @@ export * from './useServiceBays';
 export * from './useServices';
 export * from './useServiceTypes';
 export * from './useServiceProcesses';
+export * from './useTracking';
+export * from './useServiceProcessTracking';
 export * from './usePromotions';
 export * from './useCategory';
 export * from './usePromotionType';
