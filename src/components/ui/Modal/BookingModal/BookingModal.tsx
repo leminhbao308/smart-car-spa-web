@@ -43,6 +43,8 @@ import { UserManagementInfo } from "@/lib/api/types/user.types";
 import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
 import { BranchDisplay } from "@/lib/api/types/branch.types";
 import { PriceBookItem } from "@/lib/api/types/price-book.types";
+import { ServiceProcessStepProductInfoDto } from "@/lib/api/types/service-process.types";
+import { useWarehouseByBranch } from "@/lib/api/hooks/useWarehouseByBranch";
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -90,6 +92,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
   } | null>(null);
   const [bookingDate, setBookingDate] = useState<string>("");
   const [bookingTime, setBookingTime] = useState<string>("");
+  const [requiredProducts, setRequiredProducts] = useState<
+    ServiceProcessStepProductInfoDto[]
+  >([]);
 
   // API hooks
   const createBookingMutation = useCreateBooking();
@@ -103,6 +108,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const { data: priceBooksData, isLoading: isLoadingPriceBooks } =
     useActivePriceBooks();
 
+  // Warehouse hook - lấy warehouse từ branch đã chọn
+  const { warehouse, loading: isLoadingWarehouse } = useWarehouseByBranch(
+    selectedBranch?.branch_id || null
+  );
+
   // Filter vehicles by selected customer
   const vehicles = React.useMemo(() => {
     if (!selectedCustomer?.user_id) return [];
@@ -112,20 +122,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
   }, [allVehicles, selectedCustomer?.user_id]);
 
   // Debug: Log để kiểm tra việc lọc xe
-  useEffect(() => {
-    console.log("=== Vehicle Filtering Debug ===");
-    console.log("Selected customer:", selectedCustomer);
-    console.log("All vehicles count:", allVehicles.length);
-    console.log("Filtered vehicles for customer:", vehicles);
-    console.log("Is loading vehicles:", isLoadingVehicles);
-    if (selectedCustomer) {
-      console.log("Customer ID:", selectedCustomer.user_id);
-      console.log(
-        "Vehicles with matching owner_id:",
-        allVehicles.filter((v) => v.owner_id === selectedCustomer.user_id)
-      );
-    }
-  }, [selectedCustomer, vehicles, allVehicles, isLoadingVehicles]);
+  useEffect(() => {}, [
+    selectedCustomer,
+    vehicles,
+    allVehicles,
+    isLoadingVehicles,
+  ]);
 
   // Get services and packages from price books
   const availableServices = React.useMemo(() => {
@@ -190,7 +192,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         setBookingTime("");
       }
     }
-  }, [open, mode, initialData, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mode, initialData]);
 
   const calculateTotals = React.useCallback((items: PriceBookItem[]) => {
     const price = items.reduce((sum, item) => sum + (item.fixed_price || 0), 0);
@@ -206,6 +209,186 @@ const BookingModal: React.FC<BookingModalProps> = ({
     setTotalDuration(duration);
   }, []);
 
+  // Function để lấy danh sách sản phẩm cần thiết cho các service và reserve inventory
+  const fetchRequiredProductsAndReserve = async (
+    services: { item_type: string; item_id: string }[],
+    bookingId: string
+  ) => {
+    try {
+      const allProducts: ServiceProcessStepProductInfoDto[] = [];
+
+      for (const service of services) {
+        if (service.item_type === "SERVICE") {
+          // Gọi trực tiếp service thay vì sử dụng hook
+          const { ServiceProcessService } = await import(
+            "@/lib/api/services/service-process.service"
+          );
+
+          // Lấy service process từ serviceId
+          const serviceProcess =
+            await ServiceProcessService.getServiceProcessByServiceId(
+              service.item_id
+            );
+
+          if (serviceProcess?.id) {
+            // Lấy products từ processId
+            const products =
+              await ServiceProcessService.getServiceProcessProducts(
+                serviceProcess.id
+              );
+            console.log(`Products for service ${service.item_id}:`, products);
+            if (products && products.length > 0) {
+              allProducts.push(...products);
+            }
+          } else {
+            console.log(
+              `No service process found for service ${service.item_id}`
+            );
+          }
+        }
+      }
+
+      // Gộp các sản phẩm trùng lặp và tính tổng số lượng
+      const productMap = new Map();
+      allProducts.forEach((product) => {
+        const key = product.productId;
+        if (productMap.has(key)) {
+          const existingProduct = productMap.get(key);
+          existingProduct.quantity += product.quantity;
+        } else {
+          productMap.set(key, {
+            productId: product.productId,
+            productName: product.productName,
+            productCode: product.productCode,
+            quantity: product.quantity,
+            unitOfMeasure: product.unitOfMeasure,
+            notes: product.notes,
+          });
+        }
+      });
+
+      const uniqueProducts = Array.from(productMap.values());
+      setRequiredProducts(uniqueProducts);
+
+      console.log("All products before grouping:", allProducts);
+      console.log("Unique products after grouping:", uniqueProducts);
+      console.log("Required products for booking:", uniqueProducts);
+
+      // Reserve inventory nếu có warehouse và products
+      if (warehouse?.id && uniqueProducts.length > 0) {
+        try {
+          // Validate products có productId
+          const validProducts = uniqueProducts.filter(
+            (product) => product.productId
+          );
+          if (validProducts.length === 0) {
+            console.error(
+              "No valid products with productId found:",
+              uniqueProducts
+            );
+            return uniqueProducts;
+          }
+
+          const { InventoryService } = await import(
+            "@/lib/api/services/inventory.service"
+          );
+
+          const productsToReserve = validProducts.map((product) => ({
+            productId: product.productId,
+            quantity: product.quantity,
+          }));
+
+          console.log("Valid products to reserve:", productsToReserve);
+          console.log("Warehouse ID:", warehouse.id);
+          console.log("Booking ID:", bookingId);
+
+          await InventoryService.reserveMultipleForBooking(
+            warehouse.id,
+            productsToReserve,
+            bookingId
+          );
+
+          console.log(
+            "Successfully reserved inventory for booking:",
+            bookingId
+          );
+        } catch (inventoryError) {
+          console.error("Error reserving inventory:", inventoryError);
+          // Không throw error để không làm fail booking
+        }
+      }
+
+      return uniqueProducts;
+    } catch (error) {
+      console.error("Error fetching required products:", error);
+      return [];
+    }
+  };
+
+  // Function để release inventory khi booking bị cancel
+  const releaseInventoryForBooking = async (bookingId: string) => {
+    try {
+      if (!warehouse?.id || requiredProducts.length === 0) {
+        console.log(
+          "No warehouse or products to release for booking:",
+          bookingId
+        );
+        return;
+      }
+
+      const { InventoryService } = await import(
+        "@/lib/api/services/inventory.service"
+      );
+
+      const productsToRelease = requiredProducts.map((product) => ({
+        productId: product.productId,
+        quantity: product.quantity,
+      }));
+
+      await InventoryService.releaseMultipleForBooking(
+        warehouse.id,
+        productsToRelease,
+        bookingId
+      );
+
+      console.log("Successfully released inventory for booking:", bookingId);
+    } catch (error) {
+      console.error("Error releasing inventory:", error);
+    }
+  };
+
+  // Function để fulfill inventory khi booking chuyển sang IN_PROGRESS
+  const fulfillInventoryForBooking = async (bookingId: string) => {
+    try {
+      if (!warehouse?.id || requiredProducts.length === 0) {
+        console.log(
+          "No warehouse or products to fulfill for booking:",
+          bookingId
+        );
+        return;
+      }
+
+      const { InventoryService } = await import(
+        "@/lib/api/services/inventory.service"
+      );
+
+      const productsToFulfill = requiredProducts.map((product) => ({
+        productId: product.productId,
+        quantity: product.quantity,
+      }));
+
+      await InventoryService.fulfillMultipleForBooking(
+        warehouse.id,
+        productsToFulfill,
+        bookingId
+      );
+
+      console.log("Successfully fulfilled inventory for booking:", bookingId);
+    } catch (error) {
+      console.error("Error fulfilling inventory:", error);
+    }
+  };
+
   const handleCustomerChange = React.useCallback(
     (customerId: string) => {
       const customer = customers.find((c) => c.user_id === customerId);
@@ -216,10 +399,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
       setTimeout(() => {
         form.setFieldValue("vehicleId", undefined);
       }, 0);
-
-      console.log("Customer changed to:", customer);
     },
-    [customers, form]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [customers]
   );
 
   const handleVehicleChange = React.useCallback(
@@ -251,7 +433,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       setSelectedItems(items);
       calculateTotals(items);
     },
-    [availableServices, calculateTotals]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [availableServices]
   );
 
   const handleOpenSlotSelection = () => {
@@ -287,7 +470,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
           vehicle_year: selectedVehicle.model_year || new Date().getFullYear(),
           vehicle_color: selectedVehicle.color || "",
           branch_id: selectedBranch.branch_id,
-          preferred_start_at: `${values.bookingDate.format("YYYY-MM-DD")}T${values.bookingTime.format("HH:mm:ss")}`,
+          preferred_start_at: `${values.bookingDate.format(
+            "YYYY-MM-DD"
+          )}T${values.bookingTime.format("HH:mm:ss")}`,
           estimated_duration_minutes: totalDuration,
           buffer_minutes: 15, // Default buffer time
           total_price: totalPrice,
@@ -322,7 +507,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
           payments: [],
         };
 
-        await createBookingMutation.mutateAsync(createRequest);
+        const createResponse = await createBookingMutation.mutateAsync(
+          createRequest
+        );
+
+        // Nếu booking thành công và trạng thái là PENDING, lấy danh sách sản phẩm cần thiết và reserve inventory
+        if (values.status === "pending" && createResponse?.data?.bookingId) {
+          console.log(
+            "Creating booking with ID:",
+            createResponse.data.bookingId
+          );
+          await fetchRequiredProductsAndReserve(
+            createRequest.booking_items,
+            createResponse.data.bookingId
+          );
+        }
+
         // message.success("Tạo booking thành công"); // Removed to avoid static function warning
         onOk(createRequest);
       } else if (mode === "edit" && initialData) {
@@ -346,7 +546,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
           vehicle_year: selectedVehicle?.model_year || initialData.vehicleYear,
           vehicle_color: selectedVehicle?.color || initialData.vehicleColor,
           branch_id: selectedBranch?.branch_id || initialData.branchId,
-          preferred_start_at: `${values.bookingDate.format("YYYY-MM-DD")}T${values.bookingTime.format("HH:mm:ss")}`,
+          preferred_start_at: `${values.bookingDate.format(
+            "YYYY-MM-DD"
+          )}T${values.bookingTime.format("HH:mm:ss")}`,
           estimated_duration_minutes: totalDuration,
           total_price: totalPrice,
           priority: values.priority as Priority,
@@ -381,6 +583,30 @@ const BookingModal: React.FC<BookingModalProps> = ({
           bookingId: initialData.bookingId,
           request: updateRequest,
         });
+
+        // Xử lý inventory theo trạng thái booking
+        if (initialData.bookingId) {
+          const oldStatus = initialData.status;
+          const newStatus = values.status;
+
+          if (newStatus === "pending" && updateRequest.booking_items) {
+            // Nếu chuyển sang PENDING, reserve inventory
+            await fetchRequiredProductsAndReserve(
+              updateRequest.booking_items,
+              initialData.bookingId
+            );
+          } else if (newStatus === "cancelled" && oldStatus !== "CANCELLED") {
+            // Nếu chuyển sang CANCELLED, release inventory
+            await releaseInventoryForBooking(initialData.bookingId);
+          } else if (
+            newStatus === "in_progress" &&
+            oldStatus !== "IN_PROGRESS"
+          ) {
+            // Nếu chuyển sang IN_PROGRESS, fulfill inventory
+            await fulfillInventoryForBooking(initialData.bookingId);
+          }
+        }
+
         // message.success("Cập nhật booking thành công"); // Removed to avoid static function warning
         onOk(updateRequest);
       }
@@ -451,10 +677,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   onChange={handleCustomerChange}
                   filterOption={(input, option) => {
                     const label = option?.label?.toString() || "";
-                    const customer = customers.find(c => c.user_id === option?.value);
+                    const customer = customers.find(
+                      (c) => c.user_id === option?.value
+                    );
                     const phoneNumber = customer?.phone_number || "";
                     const searchText = input.toLowerCase();
-                    
+
                     return (
                       label.toLowerCase().includes(searchText) ||
                       phoneNumber.includes(searchText)
@@ -499,7 +727,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       marginBottom: 4,
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
                       <UserOutlined style={{ color: "#52c41a" }} />
                       <Text strong style={{ color: "#52c41a" }}>
                         Khách hàng đã chọn:
@@ -614,7 +844,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       marginBottom: 4,
                     }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
                       <CarOutlined style={{ color: "#1890ff" }} />
                       <Text strong style={{ color: "#1890ff" }}>
                         Xe đã chọn:
@@ -1006,11 +1238,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       { required: true, message: "Vui lòng chọn trạng thái" },
                     ]}
                   >
-                    <Select placeholder="Chọn trạng thái" defaultValue="pending">
+                    <Select placeholder="Chọn trạng thái">
                       <Option value="pending">Chờ xác nhận</Option>
                       <Option value="confirmed">Đã xác nhận</Option>
                       <Option value="in_progress">Đang thực hiện</Option>
                       <Option value="completed">Hoàn thành</Option>
+                      <Option value="cancelled">Đã hủy</Option>
                     </Select>
                   </Form.Item>
                 </Col>
@@ -1082,6 +1315,46 @@ const BookingModal: React.FC<BookingModalProps> = ({
             />
           </Form.Item>
         </Card>
+
+        {/* Hiển thị danh sách sản phẩm cần thiết */}
+        {requiredProducts.length > 0 && (
+          <Card
+            size="small"
+            title="Sản phẩm cần thiết"
+            style={{ marginTop: 16 }}
+          >
+            <div style={{ maxHeight: 200, overflowY: "auto" }}>
+              {requiredProducts.map((product, index) => (
+                <div
+                  key={product.productId}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px 0",
+                    borderBottom:
+                      index < requiredProducts.length - 1
+                        ? "1px solid #f0f0f0"
+                        : "none",
+                  }}
+                >
+                  <div>
+                    <Text strong>{product.productName}</Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {product.productCode}
+                    </Text>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <Tag color="blue">
+                      {product.quantity} {product.unitOfMeasure}
+                    </Tag>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
       </Form>
     </Modal>
   );

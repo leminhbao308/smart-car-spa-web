@@ -166,7 +166,7 @@ const BookingsPage = () => {
     let enrichedBooking = { ...booking };
     let isCustomerEnriched = false;
     let isVehicleEnriched = false;
-
+    console.log("Đây là booking:", booking);
     // Enrich customer info if missing
     if (
       booking.customerId &&
@@ -563,6 +563,86 @@ const BookingsPage = () => {
     });
   };
 
+  // Function để fulfill inventory khi start service
+  const fulfillInventoryForBooking = async (bookingId: string, branchId: string) => {
+    try {
+      // Lấy warehouse từ branch
+      const { WarehouseService } = await import('@/lib/api/services/warehouse.service');
+      const warehouse = await WarehouseService.getWarehouseByBranchId(branchId);
+      
+      if (!warehouse?.id) {
+        console.log('No warehouse found for branch:', branchId);
+        return;
+      }
+
+      // Lấy booking details để lấy booking items
+      const { BookingService } = await import('@/lib/api/services/bookingService');
+      const booking = await BookingService.getBookingById(bookingId);
+      
+      if (!booking?.booking_items || booking.booking_items.length === 0) {
+        console.log('No booking items found for booking:', bookingId);
+        return;
+      }
+
+      // Lấy sản phẩm cần thiết cho các service
+      const allProducts: { productId: string; quantity: number; productName: string; productCode: string; unitOfMeasure: string }[] = [];
+      
+      for (const item of booking.booking_items) {
+        if (item.item_type === 'SERVICE') {
+          const { ServiceProcessService } = await import('@/lib/api/services/service-process.service');
+          
+          // Lấy service process từ serviceId
+          const serviceProcess = await ServiceProcessService.getServiceProcessByServiceId(item.item_id);
+          
+          if (serviceProcess?.id) {
+            // Lấy products từ processId
+            const products = await ServiceProcessService.getServiceProcessProducts(serviceProcess.id);
+            if (products && products.length > 0) {
+              allProducts.push(...products);
+            }
+          }
+        }
+      }
+      
+      if (allProducts.length === 0) {
+        console.log('No products found for booking:', bookingId);
+        return;
+      }
+
+      // Gộp các sản phẩm trùng lặp và tính tổng số lượng
+      const productMap = new Map();
+      allProducts.forEach(product => {
+        const key = product.productId;
+        if (productMap.has(key)) {
+          productMap.get(key).quantity += product.quantity;
+        } else {
+          productMap.set(key, { ...product });
+        }
+      });
+      
+      const uniqueProducts = Array.from(productMap.values());
+      
+      // Fulfill inventory
+      const { InventoryService } = await import('@/lib/api/services/inventory.service');
+      
+      const productsToFulfill = uniqueProducts.map(product => ({
+        productId: product.productId,
+        quantity: product.quantity,
+      }));
+      
+      await InventoryService.fulfillMultipleForBooking(
+        warehouse.id,
+        productsToFulfill,
+        bookingId
+      );
+      
+      console.log('Successfully fulfilled inventory for booking:', bookingId);
+    } catch (error) {
+      console.error('Error fulfilling inventory for booking:', bookingId, error);
+      // Không throw error để không làm fail start service
+    }
+  };
+
   const handleStartService = (record: BookingInfoDto) => {
     showModal({
       title: "Bắt đầu dịch vụ",
@@ -571,6 +651,12 @@ const BookingsPage = () => {
       onConfirm: async () => {
         try {
           await startServiceMutation.mutateAsync(record.bookingId);
+          
+          // Fulfill inventory sau khi start service thành công
+          if (record.branchId) {
+            await fulfillInventoryForBooking(record.bookingId, record.branchId);
+          }
+          
           notification.success({
             message: "Thành công",
             description: "Bắt đầu dịch vụ thành công",

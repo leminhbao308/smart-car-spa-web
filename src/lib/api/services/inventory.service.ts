@@ -1,5 +1,5 @@
 import api from "../axios";
-import {InventoryLevel, InventoryLevelsBatchRequest, InventoryLevelsBatchResponse, StockRequest} from "@/lib/api/types/inventory.types";
+import {InventoryLevel, InventoryLevelsBatchRequest, InventoryLevelsBatchResponse, StockRequest, BookingInventoryRequest, BookingInventoryResponse} from "@/lib/api/types/inventory.types";
 
 export const InventoryService = {
   getInvLevel: async (productId: string, warehouseId: string): Promise<InventoryLevel> => {
@@ -69,6 +69,95 @@ export const InventoryService = {
     // Clean up and remove the link
     link.parentNode?.removeChild(link);
     window.URL.revokeObjectURL(url);
+  },
+
+  // ========== BOOKING INVENTORY OPERATIONS ==========
+
+  /**
+   * Reserve inventory for booking
+   */
+  reserveForBooking: async (data: BookingInventoryRequest): Promise<BookingInventoryResponse> => {
+    const response = await api.post(`/inv/reserve`, data);
+    return response.data;
+  },
+
+  /**
+   * Release inventory for booking
+   */
+  releaseForBooking: async (data: BookingInventoryRequest): Promise<BookingInventoryResponse> => {
+    const response = await api.post(`/inv/release`, data);
+    return response.data;
+  },
+
+  /**
+   * Fulfill inventory for booking
+   */
+  fulfillForBooking: async (data: BookingInventoryRequest): Promise<BookingInventoryResponse> => {
+    const response = await api.post(`/inv/fulfill`, data);
+    return response.data;
+  },
+
+  /**
+   * Reserve multiple products for booking
+   */
+  reserveMultipleForBooking: async (
+    warehouseId: string,
+    products: { productId: string; quantity: number }[],
+    bookingId: string
+  ): Promise<BookingInventoryResponse[]> => {
+    const promises = products.map(product => 
+      InventoryService.reserveForBooking({
+        warehouse_id: warehouseId,
+        product_id: product.productId,
+        qty: product.quantity,
+        ref_id: bookingId,
+        ref_type: "SALE_ORDER"
+      })
+    );
+    
+    return Promise.all(promises);
+  },
+
+  /**
+   * Release multiple products for booking
+   */
+  releaseMultipleForBooking: async (
+    warehouseId: string,
+    products: { productId: string; quantity: number }[],
+    bookingId: string
+  ): Promise<BookingInventoryResponse[]> => {
+    const promises = products.map(product => 
+      InventoryService.releaseForBooking({
+        warehouse_id: warehouseId,
+        product_id: product.productId,
+        qty: product.quantity,
+        ref_id: bookingId,
+        ref_type: "SALE_ORDER"
+      })
+    );
+    
+    return Promise.all(promises);
+  },
+
+  /**
+   * Fulfill multiple products for booking
+   */
+  fulfillMultipleForBooking: async (
+    warehouseId: string,
+    products: { productId: string; quantity: number }[],
+    bookingId: string
+  ): Promise<BookingInventoryResponse[]> => {
+    const promises = products.map(product => 
+      InventoryService.fulfillForBooking({
+        warehouse_id: warehouseId,
+        product_id: product.productId,
+        qty: product.quantity,
+        ref_id: bookingId,
+        ref_type: "SALE_ORDER"
+      })
+    );
+    
+    return Promise.all(promises);
   }
 
 }

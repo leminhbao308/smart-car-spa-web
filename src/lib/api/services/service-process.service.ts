@@ -390,6 +390,25 @@ export class ServiceProcessService {
   }
 
   /**
+   * Get all products for service process
+   */
+  static async getServiceProcessProducts(processId: string): Promise<ServiceProcessStepProductInfoDto[]> {
+    try {
+      const response = await apiClient.get(`/service-processes/${processId}/products`);
+
+      // Backend returns List<ServiceProcessStepProductInfoDto> directly
+      if (response.data && Array.isArray(response.data)) {
+        return response.data;
+      } else {
+        throw new Error("Failed to fetch service process products");
+      }
+    } catch (error) {
+      console.error("Get service process products error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Get service process step product by ID
    */
   static async getServiceProcessStepProductById(productId: string): Promise<ServiceProcessStepProductInfoDto> {
