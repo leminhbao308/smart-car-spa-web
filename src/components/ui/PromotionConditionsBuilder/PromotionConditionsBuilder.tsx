@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useCallback } from "react";
+import React, {useState, useCallback, useMemo} from "react";
 import {
   Card,
   Form,
@@ -16,235 +16,247 @@ import {
   Alert,
   Tooltip,
   Switch,
+  DatePicker,
+  Spin,
 } from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
   InfoCircleOutlined,
   ExclamationCircleOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
+import {MemoizedInput, MemoizedInputNumber} from "@/components/ui/MemoizedComponents";
 import {
-  PromotionCondition,
-  ConditionType,
-  CONDITION_TYPE_OPTIONS,
+  PromotionLine,
+  CreatePromotionLineRequest,
+  LineType,
+  DiscountType,
+  LINE_TYPE_OPTIONS,
+  DISCOUNT_TYPE_OPTIONS,
+  getLineTypeLabel,
+  getDiscountTypeLabel,
+  getDiscountTypeIcon,
+  formatDiscountValue,
 } from "@/lib/api/types/promotion.types";
-import { MemoizedInput, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
+import {useBranches} from "@/lib/api/hooks/useBranches";
+import {useProducts} from "@/lib/api/hooks/useProducts";
+import {useServices} from "@/lib/api/hooks/useServices";
+import dayjs from "dayjs";
 
-const { Title, Text } = Typography;
-const { Option } = Select;
+const {Title, Text} = Typography;
+const {Option} = Select;
 
 interface PromotionConditionsBuilderProps {
-  value?: PromotionCondition[];
-  onChange?: (conditions: PromotionCondition[]) => void;
+  value?: PromotionLine[];
+  onChange?: (lines: PromotionLine[]) => void;
   disabled?: boolean;
   showPreview?: boolean;
 }
 
-interface ConditionFormData {
-  type: ConditionType;
-  description: string;
-  value?: number;
-  target?: string[];
-  operator?: string;
-  isRequired: boolean;
-}
-
 const PromotionConditionsBuilder: React.FC<PromotionConditionsBuilderProps> = ({
-  value = [],
-  onChange,
-  disabled = false,
-  showPreview = true,
-}) => {
+                                                                                 value = [],
+                                                                                 onChange,
+                                                                                 disabled = false,
+                                                                                 showPreview = true,
+                                                                               }) => {
   const [form] = Form.useForm();
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [selectedLineType, setSelectedLineType] = useState<LineType | null>(null);
 
-  // Mock data for dropdowns (in real app, these would come from API)
-  const serviceOptions = [
-    { value: "wash", label: "Rửa xe" },
-    { value: "polish", label: "Đánh bóng" },
-    { value: "ceramic", label: "Phủ ceramic" },
-    { value: "combo", label: "Gói chăm sóc toàn diện" },
-  ];
+  // Fetch data from APIs
+  const {branches, loading: branchesLoading} = useBranches();
+  const {products, isLoading: productsLoading} = useProducts({size: 1000});
+  const {data: servicesData, isLoading: servicesLoading} = useServices({size: 1000});
 
-  const productOptions = [
-    { value: "shampoo", label: "Shampoo" },
-    { value: "wax", label: "Wax" },
-    { value: "ceramic", label: "Ceramic" },
-    { value: "care_products", label: "Sản phẩm chăm sóc" },
-  ];
+  const services = useMemo(() => {
+    const data = servicesData?.data;
+    return Array.isArray(data) ? data : (data?.content ?? []);
+  }, [servicesData?.data]);
 
-  const customerTypeOptions = [
-    { value: "new_customer", label: "Khách hàng mới" },
-    { value: "vip", label: "Khách hàng VIP" },
-    { value: "regular", label: "Khách hàng thường" },
-    { value: "premium", label: "Khách hàng Premium" },
-  ];
+  // Transform data to options format
+  const branchOptions = useMemo(() =>
+      branches.map(branch => ({
+        value: branch.branch_id,
+        label: branch.branch_name,
+      })),
+    [branches]
+  );
 
-  const branchOptions = [
-    { value: "branch_1", label: "Chi nhánh 1" },
-    { value: "branch_2", label: "Chi nhánh 2" },
-    { value: "branch_3", label: "Chi nhánh 3" },
-  ];
+  const productOptions = useMemo(() =>
+      products.map(product => ({
+        value: product.product_id,
+        label: `${product.product_name} - ${product.product_type_name}`,
+        disabled: !product.is_active,
+      })),
+    [products]
+  );
 
-  const dayOfWeekOptions = [
-    { value: "monday", label: "Thứ 2" },
-    { value: "tuesday", label: "Thứ 3" },
-    { value: "wednesday", label: "Thứ 4" },
-    { value: "thursday", label: "Thứ 5" },
-    { value: "friday", label: "Thứ 6" },
-    { value: "saturday", label: "Thứ 7" },
-    { value: "sunday", label: "Chủ nhật" },
-  ];
+  const serviceOptions = useMemo(() =>
+      services.map(service => ({
+        value: service.service_id,
+        label: `${service.service_name} - ${service.service_type_name}`,
+        disabled: !service.is_active,
+      })),
+    [services]
+  );
 
-  const paymentMethodOptions = [
-    { value: "cash", label: "Tiền mặt" },
-    { value: "card", label: "Thẻ" },
-    { value: "bank_transfer", label: "Chuyển khoản" },
-    { value: "wallet", label: "Ví điện tử" },
-  ];
+  // Free product options (only active products)
+  const freeProductOptions = useMemo(() =>
+      products
+        .filter(product => product.is_active)
+        .map(product => ({
+          value: product.product_id,
+          label: product.product_name,
+        })),
+    [products]
+  );
 
-  const getConditionOptions = (type: ConditionType) => {
-    switch (type) {
-      case "specific_service":
+  const getTargetOptions = useCallback((lineType: LineType) => {
+    switch (lineType) {
+      case LineType.SERVICE:
         return serviceOptions;
-      case "specific_product":
+      case LineType.PRODUCT:
         return productOptions;
-      case "customer_type":
-        return customerTypeOptions;
-      case "branch_location":
-        return branchOptions;
-      case "day_of_week":
-        return dayOfWeekOptions;
-      case "payment_method":
-        return paymentMethodOptions;
+      case LineType.CATEGORY:
+        // TODO: Implement category options when available
+        return [];
       default:
         return [];
     }
-  };
+  }, [serviceOptions, productOptions]);
 
-  const getOperatorOptions = (type: ConditionType) => {
-    switch (type) {
-      case "min_amount":
-      case "min_quantity":
-        return [
-          { value: "greater_equal", label: "Lớn hơn hoặc bằng" },
-          { value: "greater_than", label: "Lớn hơn" },
-          { value: "equals", label: "Bằng" },
-        ];
-      case "specific_service":
-      case "specific_product":
-      case "customer_type":
-      case "branch_location":
-      case "day_of_week":
-      case "payment_method":
-        return [
-          { value: "in", label: "Trong danh sách" },
-          { value: "not_in", label: "Không trong danh sách" },
-          { value: "equals", label: "Bằng" },
-        ];
+  const getTargetName = useCallback((lineType: LineType, targetId?: string) => {
+    if (!targetId) return null;
+
+    switch (lineType) {
+      case LineType.SERVICE:
+        return services.find(s => s.service_id === targetId)?.service_name;
+      case LineType.PRODUCT:
+        return products.find(p => p.product_id === targetId)?.product_name;
+      case LineType.CATEGORY:
+        // TODO: Get category name
+        return targetId;
       default:
-        return [{ value: "equals", label: "Bằng" }];
+        return targetId;
     }
-  };
+  }, [services, products]);
 
-  const generateConditionDescription = (condition: ConditionFormData): string => {
-    const typeLabel = CONDITION_TYPE_OPTIONS.find(opt => opt.value === condition.type)?.label || condition.type;
-    
-    switch (condition.type) {
-      case "min_amount":
-        return `Đơn hàng ${condition.operator === "greater_equal" ? "tối thiểu" : condition.operator === "greater_than" ? "lớn hơn" : "bằng"} ${condition.value?.toLocaleString()} ₫`;
-      case "min_quantity":
-        return `Số lượng ${condition.operator === "greater_equal" ? "tối thiểu" : condition.operator === "greater_than" ? "lớn hơn" : "bằng"} ${condition.value}`;
-      case "specific_service":
-        const serviceLabels = condition.target?.map(t => serviceOptions.find(s => s.value === t)?.label).filter(Boolean);
-        return `Dịch vụ: ${serviceLabels?.join(", ") || "Chưa chọn"}`;
-      case "specific_product":
-        const productLabels = condition.target?.map(t => productOptions.find(p => p.value === t)?.label).filter(Boolean);
-        return `Sản phẩm: ${productLabels?.join(", ") || "Chưa chọn"}`;
-      case "customer_type":
-        const customerLabels = condition.target?.map(t => customerTypeOptions.find(c => c.value === t)?.label).filter(Boolean);
-        return `Loại khách hàng: ${customerLabels?.join(", ") || "Chưa chọn"}`;
-      case "branch_location":
-        const branchLabels = condition.target?.map(t => branchOptions.find(b => b.value === t)?.label).filter(Boolean);
-        return `Chi nhánh: ${branchLabels?.join(", ") || "Chưa chọn"}`;
-      case "day_of_week":
-        const dayLabels = condition.target?.map(t => dayOfWeekOptions.find(d => d.value === t)?.label).filter(Boolean);
-        return `Ngày trong tuần: ${dayLabels?.join(", ") || "Chưa chọn"}`;
-      case "payment_method":
-        const paymentLabels = condition.target?.map(t => paymentMethodOptions.find(p => p.value === t)?.label).filter(Boolean);
-        return `Phương thức thanh toán: ${paymentLabels?.join(", ") || "Chưa chọn"}`;
-      default:
-        return condition.description || typeLabel;
-    }
-  };
-
-  const handleAddCondition = useCallback(async () => {
+  const handleAddLine = useCallback(async () => {
     try {
       const values = await form.validateFields();
-      const newCondition: PromotionCondition = {
-        id: `condition_${Date.now()}`,
-        type: values.type,
-        description: generateConditionDescription(values),
-        value: values.value,
-        target: values.target,
-        operator: values.operator || "equals",
-        isRequired: values.isRequired || false,
+
+      const newLine: PromotionLine = {
+        promotion_line_id: `temp_${Date.now()}`,
+        line_type: values.lineType,
+        target_id: values.targetId,
+        branch: values.branchId ? {
+          branchId: values.branchId,
+          branchName: branches.find(b => b.branch_id === values.branchId)?.branch_name || ''
+        } : undefined,
+        discount_type: values.discountType,
+        discount_value: values.discountValue,
+        max_discount_amount: values.maxDiscountAmount,
+        min_order_value: values.minOrderValue,
+        min_quantity: values.minQuantity,
+        buy_qty: values.buyQty,
+        get_qty: values.getQty,
+        free_product: values.freeProductId ? {
+          productId: values.freeProductId,
+          productName: products.find(p => p.product_id === values.freeProductId)?.product_name || ''
+        } : undefined,
+        free_quantity: values.freeQuantity,
+        start_at: values.startAt?.format('YYYY-MM-DD'),
+        end_at: values.endAt?.format('YYYY-MM-DD'),
+        line_priority: values.linePriority || 0,
+        is_active: values.isActive !== false,
+        created_at: new Date().toISOString(),
       };
 
-      const newConditions = [...value, newCondition];
-      onChange?.(newConditions);
-      
+      const newLines = [...value, newLine];
+      onChange?.(newLines);
+
       form.resetFields();
       setShowForm(false);
       setEditingIndex(null);
+      setSelectedLineType(null);
     } catch (error) {
       console.log("Validation failed:", error);
     }
-  }, [form, value, onChange]);
+  }, [form, value, onChange, branches, products]);
 
-  const handleEditCondition = useCallback(async () => {
+  const handleEditLine = useCallback(async () => {
     if (editingIndex === null) return;
 
     try {
       const values = await form.validateFields();
-      const updatedCondition: PromotionCondition = {
+
+      const updatedLine: PromotionLine = {
         ...value[editingIndex],
-        type: values.type,
-        description: generateConditionDescription(values),
-        value: values.value,
-        target: values.target,
-        operator: values.operator || "equals",
-        isRequired: values.isRequired || false,
+        line_type: values.lineType,
+        target_id: values.targetId,
+        branch: values.branchId ? {
+          branchId: values.branchId,
+          branchName: branches.find(b => b.branch_id === values.branchId)?.branch_name || ''
+        } : undefined,
+        discount_type: values.discountType,
+        discount_value: values.discountValue,
+        max_discount_amount: values.maxDiscountAmount,
+        min_order_value: values.minOrderValue,
+        min_quantity: values.minQuantity,
+        buy_qty: values.buyQty,
+        get_qty: values.getQty,
+        free_product: values.freeProductId ? {
+          productId: values.freeProductId,
+          productName: products.find(p => p.product_id === values.freeProductId)?.product_name || ''
+        } : undefined,
+        free_quantity: values.freeQuantity,
+        start_at: values.startAt?.format('YYYY-MM-DD'),
+        end_at: values.endAt?.format('YYYY-MM-DD'),
+        line_priority: values.linePriority || 0,
+        is_active: values.isActive !== false,
       };
 
-      const newConditions = [...value];
-      newConditions[editingIndex] = updatedCondition;
-      onChange?.(newConditions);
-      
+      const newLines = [...value];
+      newLines[editingIndex] = updatedLine;
+      onChange?.(newLines);
+
       form.resetFields();
       setShowForm(false);
       setEditingIndex(null);
+      setSelectedLineType(null);
     } catch (error) {
       console.log("Validation failed:", error);
     }
-  }, [form, value, onChange, editingIndex]);
+  }, [form, value, onChange, editingIndex, branches, products]);
 
-  const handleDeleteCondition = useCallback((index: number) => {
-    const newConditions = value.filter((_, i) => i !== index);
-    onChange?.(newConditions);
+  const handleDeleteLine = useCallback((index: number) => {
+    const newLines = value.filter((_, i) => i !== index);
+    onChange?.(newLines);
   }, [value, onChange]);
 
   const handleEditStart = useCallback((index: number) => {
-    const condition = value[index];
+    const line = value[index];
     form.setFieldsValue({
-      type: condition.type,
-      description: condition.description,
-      value: condition.value,
-      target: condition.target,
-      operator: condition.operator,
-      isRequired: condition.isRequired,
+      lineType: line.line_type,
+      targetId: line.target_id,
+      branchId: line.branch?.branchId,
+      discountType: line.discount_type,
+      discountValue: line.discount_value,
+      maxDiscountAmount: line.max_discount_amount,
+      minOrderValue: line.min_order_value,
+      minQuantity: line.min_quantity,
+      buyQty: line.buy_qty,
+      getQty: line.get_qty,
+      freeProductId: line.free_product?.productId,
+      freeQuantity: line.free_quantity,
+      startAt: line.start_at ? dayjs(line.start_at) : undefined,
+      endAt: line.end_at ? dayjs(line.end_at) : undefined,
+      linePriority: line.line_priority,
+      isActive: line.is_active,
     });
+    setSelectedLineType(line.line_type);
     setEditingIndex(index);
     setShowForm(true);
   }, [form, value]);
@@ -253,169 +265,457 @@ const PromotionConditionsBuilder: React.FC<PromotionConditionsBuilderProps> = ({
     form.resetFields();
     setShowForm(false);
     setEditingIndex(null);
+    setSelectedLineType(null);
   }, [form]);
 
-  const renderConditionForm = () => (
+  const handleLineTypeChange = (lineType: LineType) => {
+    setSelectedLineType(lineType);
+    form.setFieldsValue({targetId: undefined});
+  };
+
+  const isLoading = branchesLoading || productsLoading || servicesLoading;
+
+  const renderLineForm = () => (
     <Card
       title={
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <InfoCircleOutlined style={{ color: "#1890ff" }} />
+        <div style={{display: "flex", alignItems: "center", gap: 8}}>
+          <InfoCircleOutlined style={{color: "#1890ff"}}/>
           <span>{editingIndex !== null ? "Chỉnh sửa điều kiện" : "Thêm điều kiện mới"}</span>
         </div>
       }
       size="small"
-      style={{ marginBottom: 16 }}
+      style={{marginBottom: 16}}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          isRequired: false,
-          operator: "equals",
-        }}
-      >
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item
-              name="type"
-              label="Loại điều kiện"
-              rules={[{ required: true, message: "Vui lòng chọn loại điều kiện!" }]}
-            >
-              <Select
-                placeholder="Chọn loại điều kiện"
-                disabled={disabled}
-                onChange={() => {
-                  form.setFieldsValue({ target: undefined, value: undefined });
-                }}
-              >
-                {CONDITION_TYPE_OPTIONS.map((option) => (
-                  <Option key={option.value} value={option.value}>
-                    <div>
-                      <div>{option.label}</div>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {option.description}
-                      </Text>
-                    </div>
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item
-              name="operator"
-              label="Toán tử"
-              rules={[{ required: true, message: "Vui lòng chọn toán tử!" }]}
-            >
-              <Select placeholder="Chọn toán tử" disabled={disabled}>
-                {getOperatorOptions(form.getFieldValue("type")).map((option) => (
-                  <Option key={option.value} value={option.value}>
-                    {option.label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item
-              name="isRequired"
-              label="Bắt buộc"
-              valuePropName="checked"
-            >
-              <Switch
-                disabled={disabled}
-                checkedChildren="Có"
-                unCheckedChildren="Không"
-              />
-            </Form.Item>
-          </Col>
-        </Row>
+      <Spin spinning={isLoading} tip="Đang tải dữ liệu...">
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            isActive: true,
+            linePriority: 0,
+          }}
+        >
+          <Alert
+            message="Thông tin cơ bản"
+            description="Chọn loại áp dụng và cách thức giảm giá cho điều kiện này"
+            type="info"
+            showIcon
+            style={{marginBottom: 16}}
+          />
 
-        <Form.Item shouldUpdate={(prevValues, currentValues) => prevValues.type !== currentValues.type}>
-          {({ getFieldValue }) => {
-            const type = getFieldValue("type");
-            
-            if (type === "min_amount" || type === "min_quantity") {
-              return (
-                <Form.Item
-                  name="value"
-                  label={type === "min_amount" ? "Số tiền" : "Số lượng"}
-                  rules={[{ required: true, message: `Vui lòng nhập ${type === "min_amount" ? "số tiền" : "số lượng"}!` }]}
-                >
-                  <MemoizedInputNumber
-                    min={0}
-                    placeholder={`Nhập ${type === "min_amount" ? "số tiền" : "số lượng"}`}
-                    disabled={disabled}
-                    style={{ width: "100%" }}
-                    formatter={type === "min_amount" ? (value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",") : undefined}
-                    parser={type === "min_amount" ? (value) => value!.replace(/\$\s?|(,*)/g, "") : undefined}
-                    addonAfter={type === "min_amount" ? "₫" : undefined}
-                  />
-                </Form.Item>
-              );
-            }
-
-            if (["specific_service", "specific_product", "customer_type", "branch_location", "day_of_week", "payment_method"].includes(type)) {
-              return (
-                <Form.Item
-                  name="target"
-                  label="Đối tượng áp dụng"
-                  rules={[{ required: true, message: "Vui lòng chọn đối tượng áp dụng!" }]}
-                >
-                  <Select
-                    mode="multiple"
-                    placeholder="Chọn đối tượng áp dụng"
-                    disabled={disabled}
-                    allowClear
-                  >
-                    {getConditionOptions(type).map((option) => (
-                      <Option key={option.value} value={option.value}>
-                        {option.label}
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              );
-            }
-
-            return (
+          <Row gutter={16}>
+            <Col span={12}>
               <Form.Item
-                name="description"
-                label="Mô tả"
-                rules={[{ required: true, message: "Vui lòng nhập mô tả!" }]}
+                name="lineType"
+                label="Áp dụng cho"
+                rules={[{required: true, message: "Vui lòng chọn loại áp dụng!"}]}
+                tooltip="Chọn đối tượng áp dụng khuyến mãi"
               >
-                <MemoizedInput
-                  placeholder="Nhập mô tả điều kiện"
+                <Select
+                  placeholder="Chọn loại áp dụng"
                   disabled={disabled}
+                  onChange={handleLineTypeChange}
+                >
+                  {LINE_TYPE_OPTIONS.map((option) => (
+                    <Option key={option.value} value={option.value}>
+                      <div>
+                        <div><strong>{option.label}</strong></div>
+                        <Text type="secondary" style={{fontSize: 11}}>
+                          {option.description}
+                        </Text>
+                      </div>
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item
+                name="discountType"
+                label="Loại giảm giá"
+                rules={[{required: true, message: "Vui lòng chọn loại giảm giá!"}]}
+                tooltip="Chọn cách thức giảm giá"
+              >
+                <Select
+                  placeholder="Chọn loại giảm giá"
+                  disabled={disabled}
+                >
+                  {DISCOUNT_TYPE_OPTIONS.map((option) => (
+                    <Option key={option.value} value={option.value}>
+                      <div>
+                        <div>
+                          <span style={{marginRight: 8}}>{option.icon}</span>
+                          <strong>{option.label}</strong>
+                        </div>
+                        <Text type="secondary" style={{fontSize: 11}}>
+                          {option.description}
+                        </Text>
+                      </div>
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item shouldUpdate={(prev, curr) => prev.lineType !== curr.lineType}>
+            {({getFieldValue}) => {
+              const lineType = getFieldValue("lineType");
+              if (lineType && lineType !== LineType.ALL) {
+                const options = getTargetOptions(lineType);
+                const isLoadingOptions =
+                  (lineType === LineType.SERVICE && servicesLoading) ||
+                  (lineType === LineType.PRODUCT && productsLoading);
+
+                return (
+                  <Form.Item
+                    name="targetId"
+                    label={
+                      lineType === LineType.SERVICE
+                        ? "Dịch vụ"
+                        : lineType === LineType.PRODUCT
+                          ? "Sản phẩm"
+                          : "Danh mục"
+                    }
+                    rules={[{required: true, message: "Vui lòng chọn đối tượng!"}]}
+                  >
+                    <Select
+                      placeholder={`Chọn ${
+                        lineType === LineType.SERVICE
+                          ? "dịch vụ"
+                          : lineType === LineType.PRODUCT
+                            ? "sản phẩm"
+                            : "danh mục"
+                      }`}
+                      disabled={disabled || isLoadingOptions}
+                      showSearch
+                      optionFilterProp="children"
+                      loading={isLoadingOptions}
+                      filterOption={(input, option) =>
+                        String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {options.map((option) => (
+                        <Option
+                          key={option.value}
+                          value={option.value}
+                          label={option.label}
+                          disabled={option.disabled}
+                        >
+                          <div>
+                            <span>{option.label}</span>
+                            {option.disabled && (
+                              <Tag color="default" style={{marginLeft: 8, fontSize: 10}}>
+                                Ngừng hoạt động
+                              </Tag>
+                            )}
+                          </div>
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                );
+              }
+              return null;
+            }}
+          </Form.Item>
+
+          <Form.Item
+            name="branchId"
+            label="Chi nhánh áp dụng"
+            tooltip="Để trống nếu áp dụng cho tất cả chi nhánh"
+          >
+            <Select
+              placeholder="Tất cả chi nhánh"
+              disabled={disabled || branchesLoading}
+              allowClear
+              loading={branchesLoading}
+              showSearch
+              optionFilterProp="children"
+            >
+              {branchOptions.map((option) => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Divider orientation="left">Giá trị giảm giá</Divider>
+
+          <Form.Item shouldUpdate={(prev, curr) => prev.discountType !== curr.discountType}>
+            {({getFieldValue}) => {
+              const discountType = getFieldValue("discountType");
+
+              if (discountType === DiscountType.PERCENT) {
+                return (
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item
+                        name="discountValue"
+                        label="Phần trăm giảm"
+                        rules={[
+                          {required: true, message: "Vui lòng nhập phần trăm giảm!"},
+                          {type: 'number', min: 0, max: 100, message: "Giá trị từ 0-100%"}
+                        ]}
+                      >
+                        <MemoizedInputNumber
+                          min={0}
+                          max={100}
+                          placeholder="Nhập % giảm"
+                          disabled={disabled}
+                          style={{width: "100%"}}
+                          addonAfter="%"
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item
+                        name="maxDiscountAmount"
+                        label="Giảm tối đa"
+                        tooltip="Số tiền giảm tối đa cho phần trăm"
+                      >
+                        <MemoizedInputNumber
+                          min={0}
+                          placeholder="Không giới hạn"
+                          disabled={disabled}
+                          style={{width: "100%"}}
+                          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                          parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
+                          addonAfter="₫"
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                );
+              }
+
+              if (discountType === DiscountType.AMOUNT) {
+                return (
+                  <Form.Item
+                    name="discountValue"
+                    label="Số tiền giảm"
+                    rules={[{required: true, message: "Vui lòng nhập số tiền giảm!"}]}
+                  >
+                    <MemoizedInputNumber
+                      min={0}
+                      placeholder="Nhập số tiền giảm"
+                      disabled={disabled}
+                      style={{width: "100%"}}
+                      formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                      parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
+                      addonAfter="₫"
+                    />
+                  </Form.Item>
+                );
+              }
+
+              if (discountType === DiscountType.FREE_PRODUCT) {
+                return (
+                  <Row gutter={16}>
+                    <Col span={16}>
+                      <Form.Item
+                        name="freeProductId"
+                        label="Sản phẩm tặng"
+                        rules={[{required: true, message: "Vui lòng chọn sản phẩm tặng!"}]}
+                      >
+                        <Select
+                          placeholder="Chọn sản phẩm tặng"
+                          disabled={disabled || productsLoading}
+                          showSearch
+                          loading={productsLoading}
+                          optionFilterProp="children"
+                        >
+                          {freeProductOptions.map((option) => (
+                            <Option key={option.value} value={option.value}>
+                              {option.label}
+                            </Option>
+                          ))}
+                        </Select>
+                      </Form.Item>
+                    </Col>
+                    <Col span={8}>
+                      <Form.Item
+                        name="freeQuantity"
+                        label="Số lượng"
+                        rules={[{required: true, message: "Nhập số lượng!"}]}
+                      >
+                        <MemoizedInputNumber
+                          min={1}
+                          placeholder="SL"
+                          disabled={disabled}
+                          style={{width: "100%"}}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                );
+              }
+
+              if (discountType === DiscountType.BUY_X_GET_Y) {
+                return (
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Form.Item
+                        name="buyQty"
+                        label="Mua số lượng"
+                        rules={[{required: true, message: "Nhập số lượng mua!"}]}
+                      >
+                        <MemoizedInputNumber
+                          min={1}
+                          placeholder="Mua X"
+                          disabled={disabled}
+                          style={{width: "100%"}}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item
+                        name="getQty"
+                        label="Tặng số lượng"
+                        rules={[{required: true, message: "Nhập số lượng tặng!"}]}
+                      >
+                        <MemoizedInputNumber
+                          min={1}
+                          placeholder="Tặng Y"
+                          disabled={disabled}
+                          style={{width: "100%"}}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                );
+              }
+
+              return null;
+            }}
+          </Form.Item>
+
+          <Divider orientation="left">Điều kiện áp dụng</Divider>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="minOrderValue"
+                label="Giá trị đơn tối thiểu"
+                tooltip="Để trống nếu không giới hạn"
+              >
+                <MemoizedInputNumber
+                  min={0}
+                  placeholder="Không giới hạn"
+                  disabled={disabled}
+                  style={{width: "100%"}}
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                  parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
+                  addonAfter="₫"
                 />
               </Form.Item>
-            );
-          }}
-        </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="minQuantity"
+                label="Số lượng tối thiểu"
+                tooltip="Để trống nếu không giới hạn"
+              >
+                <MemoizedInputNumber
+                  min={0}
+                  placeholder="Không giới hạn"
+                  disabled={disabled}
+                  style={{width: "100%"}}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Form.Item>
-          <Space>
-            <Button
-              type="primary"
-              onClick={editingIndex !== null ? handleEditCondition : handleAddCondition}
-              disabled={disabled}
-            >
-              {editingIndex !== null ? "Cập nhật" : "Thêm điều kiện"}
-            </Button>
-            <Button onClick={handleCancel} disabled={disabled}>
-              Hủy
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
+          <Divider orientation="left">Cài đặt nâng cao</Divider>
+
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item
+                name="linePriority"
+                label="Độ ưu tiên"
+                tooltip="Số càng cao, ưu tiên càng cao (0-100)"
+              >
+                <MemoizedInputNumber
+                  min={0}
+                  max={100}
+                  placeholder="0"
+                  disabled={disabled}
+                  style={{width: "100%"}}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="startAt"
+                label="Bắt đầu"
+                tooltip="Để trống nếu áp dụng theo khuyến mãi chính"
+              >
+                <DatePicker
+                  placeholder="Chọn ngày"
+                  disabled={disabled}
+                  style={{width: "100%"}}
+                  format="DD/MM/YYYY"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item
+                name="endAt"
+                label="Kết thúc"
+                tooltip="Để trống nếu áp dụng theo khuyến mãi chính"
+              >
+                <DatePicker
+                  placeholder="Chọn ngày"
+                  disabled={disabled}
+                  style={{width: "100%"}}
+                  format="DD/MM/YYYY"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                name="isActive"
+                label="Trạng thái"
+                valuePropName="checked"
+              >
+                <Switch
+                  disabled={disabled}
+                  checkedChildren="Kích hoạt"
+                  unCheckedChildren="Tạm dừng"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item>
+            <Space>
+              <Button
+                type="primary"
+                onClick={editingIndex !== null ? handleEditLine : handleAddLine}
+                disabled={disabled}
+              >
+                {editingIndex !== null ? "Cập nhật" : "Thêm điều kiện"}
+              </Button>
+              <Button onClick={handleCancel} disabled={disabled}>
+                Hủy
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Spin>
     </Card>
   );
 
-  const renderConditionPreview = () => (
+  const renderLinePreview = () => (
     <Card
       title={
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <ExclamationCircleOutlined style={{ color: "#fa8c16" }} />
+        <div style={{display: "flex", alignItems: "center", gap: 8}}>
+          <ExclamationCircleOutlined style={{color: "#fa8c16"}}/>
           <span>Điều kiện áp dụng ({value.length})</span>
         </div>
       }
@@ -430,30 +730,93 @@ const PromotionConditionsBuilder: React.FC<PromotionConditionsBuilderProps> = ({
         />
       ) : (
         <div>
-          {value.map((condition, index) => (
-            <div key={condition.id} style={{ marginBottom: 8 }}>
-              <Tag
-                color={condition.isRequired ? "red" : "blue"}
-                style={{ marginBottom: 4 }}
-              >
-                {condition.isRequired ? "Bắt buộc" : "Tùy chọn"}
-              </Tag>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Text>{condition.description}</Text>
+          {value.map((line, index) => (
+            <div key={line.promotion_line_id || index} style={{marginBottom: 12}}>
+              <div style={{display: "flex", justifyContent: "space-between", alignItems: "flex-start"}}>
+                <div style={{flex: 1}}>
+                  <Space size={4} wrap>
+                    <Tag color={line.is_active ? "success" : "default"}>
+                      {line.is_active ? "Hoạt động" : "Tạm dừng"}
+                    </Tag>
+                    <Tag color="blue">
+                      {getDiscountTypeIcon(line.discount_type)} {getLineTypeLabel(line.line_type)}
+                    </Tag>
+                    {line.line_priority > 0 && (
+                      <Tag color="orange">Ưu tiên: {line.line_priority}</Tag>
+                    )}
+                  </Space>
+
+                  <div style={{marginTop: 8}}>
+                    <Text strong style={{fontSize: 13}}>
+                      {getDiscountTypeLabel(line.discount_type)}: {formatDiscountValue(line.discount_type, line.discount_value)}
+                    </Text>
+                  </div>
+
+                  {line.target_id && line.line_type !== LineType.ALL && (
+                    <div style={{marginTop: 4}}>
+                      <Text type="secondary" style={{fontSize: 12}}>
+                        Đối tượng: {getTargetName(line.line_type, line.target_id) || line.target_id}
+                      </Text>
+                    </div>
+                  )}
+
+                  {line.min_order_value && (
+                    <div style={{marginTop: 4}}>
+                      <Text type="secondary" style={{fontSize: 12}}>
+                        Đơn tối thiểu: {line.min_order_value.toLocaleString()}₫
+                      </Text>
+                    </div>
+                  )}
+
+                  {line.min_quantity && (
+                    <div style={{marginTop: 4}}>
+                      <Text type="secondary" style={{fontSize: 12}}>
+                        Số lượng tối thiểu: {line.min_quantity}
+                      </Text>
+                    </div>
+                  )}
+
+                  {line.max_discount_amount && (
+                    <div style={{marginTop: 4}}>
+                      <Text type="secondary" style={{fontSize: 12}}>
+                        Giảm tối đa: {line.max_discount_amount.toLocaleString()}₫
+                      </Text>
+                    </div>
+                  )}
+
+                  {line.branch && (
+                    <div style={{marginTop: 4}}>
+                      <Tag color="cyan" style={{fontSize: 11}}>
+                        {line.branch.branchName}
+                      </Tag>
+                    </div>
+                  )}
+
+                  {(line.start_at || line.end_at) && (
+                    <div style={{marginTop: 4}}>
+                      <Text type="secondary" style={{fontSize: 11}}>
+                        {line.start_at && `Từ ${dayjs(line.start_at).format('DD/MM/YYYY')}`}
+                        {line.start_at && line.end_at && ' - '}
+                        {line.end_at && `đến ${dayjs(line.end_at).format('DD/MM/YYYY')}`}
+                      </Text>
+                    </div>
+                  )}
+                </div>
+
                 {!disabled && (
                   <Space size="small">
                     <Tooltip title="Chỉnh sửa">
                       <Button
                         type="text"
                         size="small"
-                        icon={<PlusOutlined />}
+                        icon={<EditOutlined/>}
                         onClick={() => handleEditStart(index)}
                       />
                     </Tooltip>
                     <Popconfirm
                       title="Xác nhận xóa"
                       description="Bạn có chắc chắn muốn xóa điều kiện này?"
-                      onConfirm={() => handleDeleteCondition(index)}
+                      onConfirm={() => handleDeleteLine(index)}
                       okText="Xóa"
                       cancelText="Hủy"
                     >
@@ -462,14 +825,14 @@ const PromotionConditionsBuilder: React.FC<PromotionConditionsBuilderProps> = ({
                           type="text"
                           size="small"
                           danger
-                          icon={<DeleteOutlined />}
+                          icon={<DeleteOutlined/>}
                         />
                       </Tooltip>
                     </Popconfirm>
                   </Space>
                 )}
               </div>
-              {index < value.length - 1 && <Divider style={{ margin: "8px 0" }} />}
+              {index < value.length - 1 && <Divider style={{margin: "12px 0"}}/>}
             </div>
           ))}
         </div>
@@ -479,21 +842,22 @@ const PromotionConditionsBuilder: React.FC<PromotionConditionsBuilderProps> = ({
 
   return (
     <div>
-      {showPreview && renderConditionPreview()}
-      
+      {showPreview && renderLinePreview()}
+
       {!disabled && (
-        <div style={{ marginTop: 16 }}>
+        <div style={{marginTop: 16}}>
           {!showForm ? (
             <Button
               type="dashed"
-              icon={<PlusOutlined />}
+              icon={<PlusOutlined/>}
               onClick={() => setShowForm(true)}
-              style={{ width: "100%" }}
+              style={{width: "100%"}}
+              loading={isLoading}
             >
               Thêm điều kiện
             </Button>
           ) : (
-            renderConditionForm()
+            renderLineForm()
           )}
         </div>
       )}
