@@ -2,6 +2,7 @@ import {BaseAuditEntity, Product, ProductRef, Service, ServicePackage,} from "@/
 
 export interface PriceBook extends BaseAuditEntity{
   id: string;
+  branch_id: string | null;
   code: string;
   name: string;
   currency: "VND" | string;
@@ -55,7 +56,15 @@ export interface CreatePriceBookRequest {
 
 export interface CreatePriceBookItemRequest {
   product_id: string;
+  service_id: string;
+  service_package_id: string;
   policy_type: "FIXED" | "MARKUP_ON_PEAK";
   price: number | null;
   markup_percent: number | null;
+}
+
+export interface PriceTableUI extends PriceBook {
+  branchId: string | null;
+  effectiveDate: string;
+  isDefault: boolean;
 }

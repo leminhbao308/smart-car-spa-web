@@ -53,6 +53,7 @@ import {Product, UserManagementInfo} from "@/lib/api";
 import {useCategories} from "@/lib/api/hooks/useCategory";
 import type {BranchDisplay} from "@/lib/api/types/branch.types";
 import type {CatalogItem} from "@/lib/api/types/catalog.types";
+import {PaymentModal} from "@/components/ui/Modal/PaymentModal";
 
 const {Title, Text} = Typography;
 const {Option} = Select;
@@ -1119,251 +1120,23 @@ const POSPage = () => {
       </Modal>
 
       {/* Payment Modal */}
-      <Modal
-        title={
-          <Space>
-            <DollarOutlined/>
-            <span>Thanh toán</span>
-          </Space>
-        }
-        open={isPaymentModalVisible}
+      <PaymentModal
+        isVisible={isPaymentModalVisible}
+        isCreatingOrder={isCreatingOrder}
+        paymentMethod={paymentMethod}
+        receivedAmount={receivedAmount}
+        totalAmount={getTotalAmount()}
+        totalItems={getTotalItems()}
+        selectedCustomer={selectedCustomer}
+        paymentQRCode={paymentQRCode}
+        paymentUrl={paymentUrl}
+        orderCode={orderCode}
         onCancel={handleCancelPayment}
-        footer={
-          paymentQRCode || paymentUrl ? (
-            <Space>
-              <Button onClick={handleCancelPayment}>
-                Đóng
-              </Button>
-              {paymentUrl && (
-                <Button type="primary" onClick={handleOpenPaymentLink}>
-                  Mở link thanh toán
-                </Button>
-              )}
-            </Space>
-          ) : (
-            <Space>
-              <Button onClick={handleCancelPayment}>
-                Hủy
-              </Button>
-              <Button
-                type="primary"
-                onClick={handlePayment}
-                loading={isCreatingOrder}
-                disabled={paymentMethod === "CASH" && receivedAmount < getTotalAmount()}
-              >
-                Xác nhận thanh toán
-              </Button>
-            </Space>
-          )
-        }
-        width={600}
-      >
-        {/* Show QR Code if available (Bank payment initiated) */}
-        {paymentQRCode || paymentUrl ? (
-          <div style={{textAlign: "center"}}>
-            <Title level={4}>Quét mã QR để thanh toán</Title>
-
-            {paymentQRCode && (
-              <div style={{
-                display: "flex",
-                justifyContent: "center",
-                marginBottom: "24px",
-                padding: "20px",
-                backgroundColor: "#f5f5f5",
-                borderRadius: "8px"
-              }}>
-                <QRCode value={paymentQRCode} size={280}/>
-              </div>
-            )}
-
-            <Card size="small" style={{backgroundColor: "#e6f7ff", marginBottom: "16px"}}>
-              <Space direction="vertical" style={{width: "100%"}}>
-                <Row justify="space-between">
-                  <Text strong>Mã đơn hàng:</Text>
-                  <Text>{orderCode}</Text>
-                </Row>
-                <Row justify="space-between">
-                  <Text strong>Số tiền:</Text>
-                  <Text style={{fontSize: "18px", color: "#1890ff", fontWeight: "bold"}}>
-                    ₫{getTotalAmount().toLocaleString()}
-                  </Text>
-                </Row>
-              </Space>
-            </Card>
-
-            <Text type="secondary" style={{display: "block", marginBottom: "16px"}}>
-              Sau khi thanh toán thành công, bạn sẽ được chuyển hướng tự động
-            </Text>
-
-            {paymentUrl && (
-              <Button
-                type="primary"
-                size="large"
-                icon={<BankOutlined/>}
-                onClick={handleOpenPaymentLink}
-                style={{width: "100%"}}
-              >
-                Mở link thanh toán trong tab mới
-              </Button>
-            )}
-          </div>
-        ) : (
-          <Space direction="vertical" style={{width: "100%"}} size="large">
-            {/* Order Summary */}
-            <Card size="small" style={{backgroundColor: "#f5f5f5"}}>
-              <Row gutter={[16, 16]}>
-                <Col span={12}>
-                  <Statistic
-                    title="Tổng sản phẩm"
-                    value={getTotalItems()}
-                    prefix={<ShoppingCartOutlined/>}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic
-                    title="Tổng tiền"
-                    value={getTotalAmount()}
-                    prefix="₫"
-                    valueStyle={{color: "#1890ff"}}
-                  />
-                </Col>
-              </Row>
-            </Card>
-
-            {/* Customer Info */}
-            <div>
-              <Text strong style={{display: "block", marginBottom: "8px"}}>
-                Thông tin khách hàng:
-              </Text>
-              <Card size="small">
-                <Row gutter={[8, 8]}>
-                  <Col span={8}>
-                    <Text type="secondary">Tên:</Text>
-                  </Col>
-                  <Col span={16}>
-                    <Text strong>{selectedCustomer?.full_name || "Khách lẻ"}</Text>
-                  </Col>
-                  <Col span={8}>
-                    <Text type="secondary">SĐT:</Text>
-                  </Col>
-                  <Col span={16}>
-                    <Text>{selectedCustomer?.phone_number || "N/A"}</Text>
-                  </Col>
-                </Row>
-              </Card>
-            </div>
-
-            {/* Payment Method */}
-            <div>
-              <Text strong style={{display: "block", marginBottom: "8px"}}>
-                Phương thức thanh toán:
-              </Text>
-              <Radio.Group
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                style={{width: "100%"}}
-              >
-                <Space direction="vertical" style={{width: "100%"}}>
-                  <Radio value="CASH">
-                    <Space>
-                      <DollarOutlined/>
-                      <span>Tiền mặt</span>
-                    </Space>
-                  </Radio>
-                  <Radio value="BANK">
-                    <Space>
-                      <BankOutlined/>
-                      <span>Chuyển khoản ngân hàng (PayOS)</span>
-                    </Space>
-                  </Radio>
-                </Space>
-              </Radio.Group>
-            </div>
-
-            {/* Cash Payment Details */}
-            {paymentMethod === "CASH" && (
-              <div>
-                <Text strong style={{display: "block", marginBottom: "8px"}}>
-                  Số tiền nhận:
-                </Text>
-                <InputNumber
-                  value={receivedAmount}
-                  onChange={(value) => setReceivedAmount(value || 0)}
-                  style={{width: "100%"}}
-                  size="large"
-                  formatter={(value) =>
-                    `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => Number(value!.replace(/₫\s?|(,*)/g, ""))}
-                  min={0}
-                />
-
-                {receivedAmount >= getTotalAmount() && receivedAmount > 0 && (
-                  <Card
-                    size="small"
-                    style={{
-                      marginTop: "12px",
-                      backgroundColor: "#f6ffed",
-                      borderColor: "#b7eb8f",
-                    }}
-                  >
-                    <Row justify="space-between" align="middle">
-                      <Col>
-                        <Text strong style={{color: "#52c41a"}}>
-                          Tiền thừa:
-                        </Text>
-                      </Col>
-                      <Col>
-                        <Text strong style={{color: "#52c41a", fontSize: "18px"}}>
-                          ₫{getChange().toLocaleString()}
-                        </Text>
-                      </Col>
-                    </Row>
-                  </Card>
-                )}
-
-                {receivedAmount < getTotalAmount() && receivedAmount > 0 && (
-                  <Card
-                    size="small"
-                    style={{
-                      marginTop: "12px",
-                      backgroundColor: "#fff2e8",
-                      borderColor: "#ffbb96",
-                    }}
-                  >
-                    <Row justify="space-between" align="middle">
-                      <Col>
-                        <Text strong style={{color: "#fa8c16"}}>
-                          Còn thiếu:
-                        </Text>
-                      </Col>
-                      <Col>
-                        <Text strong style={{color: "#fa8c16", fontSize: "18px"}}>
-                          ₫{(getTotalAmount() - receivedAmount).toLocaleString()}
-                        </Text>
-                      </Col>
-                    </Row>
-                  </Card>
-                )}
-              </div>
-            )}
-
-            {/* Bank Payment Info */}
-            {paymentMethod === "BANK" && (
-              <Card size="small" style={{backgroundColor: "#e6f7ff"}}>
-                <Space direction="vertical" style={{width: "100%"}}>
-                  <Text strong>
-                    <BankOutlined/> Thanh toán qua PayOS
-                  </Text>
-                  <Text type="secondary">
-                    {`Sau khi nhấn "Xác nhận thanh toán", bạn sẽ nhận được mã QR để quét thanh toán`}
-                  </Text>
-                </Space>
-              </Card>
-            )}
-          </Space>
-        )}
-      </Modal>
+        onPayment={handlePayment}
+        onPaymentMethodChange={setPaymentMethod}
+        onReceivedAmountChange={setReceivedAmount}
+        onOpenPaymentLink={handleOpenPaymentLink}
+      />
     </div>
   );
 };

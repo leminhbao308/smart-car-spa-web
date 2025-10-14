@@ -27,33 +27,34 @@ export interface AdminTableAction {
 }
 
 export interface AdminTableProps {
-  title?: string;
-  dataSource: any[];
-  columns: ColumnsType<any>;
-  loading?: boolean;
-  pagination?: boolean | object;
-  actions?: AdminTableAction[];
-  showAddButton?: boolean;
-  addButtonText?: string;
-  onAdd?: () => void;
-  onEdit?: (record: any) => void;
-  onEditCondition?: (record: any) => boolean;
-  onDelete?: (record: any) => void;
-  onView?: (record: any) => void;
-  rowKey?: string;
-  scroll?: { x?: number; y?: number };
-  size?: "small" | "middle" | "large";
-  bordered?: boolean;
-  className?: string;
-  searchable?: boolean;
-  searchPlaceholder?: string;
-  searchFields?: string[];
-  onSearch?: (query: string) => void;
-  useServerSearch?: boolean;
-  showDateRangeFilter?: boolean;
-  dateField?: string;
-  onDateRangeChange?: (dates: [string, string] | null) => void;
-  useServerDateFilter?: boolean;
+  title?: string,
+  dataSource: any[],
+  columns: ColumnsType<any>,
+  loading?: boolean,
+  pagination?: boolean | object,
+  actions?: AdminTableAction[],
+  showAddButton?: boolean,
+  addButtonText?: string,
+  onAdd?: () => void,
+  onEdit?: (record: any) => void,
+  onEditCondition?: (record: any) => boolean,
+  onDelete?: (record: any) => void,
+  onView?: (record: any) => void,
+  rowKey?: string,
+  scroll?: { x?: number; y?: number },
+  size?: "small" | "middle" | "large",
+  bordered?: boolean,
+  className?: string,
+  searchable?: boolean,
+  searchPlaceholder?: string,
+  searchFields?: string[],
+  onSearch?: (query: string) => void,
+  useServerSearch?: boolean,
+  showDateRangeFilter?: boolean,
+  dateField?: string,
+  onDateRangeChange?: (dates: [string, string] | null) => void,
+  useServerDateFilter?: boolean,
+  extraButtons?: React.JSX.Element[]
 }
 
 const AdminTable: React.FC<AdminTableProps> = ({
@@ -84,6 +85,7 @@ const AdminTable: React.FC<AdminTableProps> = ({
                                                  dateField = "created_date",
                                                  onDateRangeChange,
                                                  useServerDateFilter = false,
+                                                 extraButtons
                                                }) => {
   const [searchText, setSearchText] = useState("");
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
@@ -289,7 +291,7 @@ const AdminTable: React.FC<AdminTableProps> = ({
   return (
     <Card className={className}>
       {/* Header với title và button thêm mới */}
-      {(title || showAddButton) && (
+      {(title || showAddButton || extraButtons) && (
         <div style={{marginBottom: 16}}>
           <div
             style={{
@@ -303,10 +305,15 @@ const AdminTable: React.FC<AdminTableProps> = ({
                 {title}
               </Title>
             )}
-            {showAddButton && onAdd && (
-              <Button type="primary" icon={<PlusOutlined/>} onClick={onAdd}>
-                {addButtonText}
-              </Button>
+            {(showAddButton && onAdd || extraButtons) && (
+              <div style={{display: "flex", gap: '8px', alignItems: 'center'}}>
+                {showAddButton && onAdd && (
+                  <Button type="primary" icon={<PlusOutlined/>} onClick={onAdd}>
+                    {addButtonText}
+                  </Button>
+                )}
+                {extraButtons}
+              </div>
             )}
           </div>
         </div>
