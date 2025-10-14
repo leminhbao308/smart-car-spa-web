@@ -1,13 +1,11 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { Modal, Form, Select, Input, Button, message } from "antd";
 import { useCreateTracking } from "@/lib/api/hooks/useTracking";
-import { useServiceProcessByServiceId } from "@/lib/api/hooks/useServiceProcess";
 import { useEmployeesDropdown } from "@/lib/api/hooks/useEmployees";
 import { useServiceBaysByBranch } from "@/lib/api/hooks/useServiceBays";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
 import { CreateServiceProcessTrackingRequest, TrackingStatus } from "@/lib/api/types/service-process-tracking.types";
-import { ServiceProcessStepInfoDto } from "@/lib/api/types/service-process.types";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -17,6 +15,8 @@ interface CreateTrackingModalProps {
   onCancel: () => void;
   onSuccess: () => void;
   booking: BookingInfoDto;
+  preSelectedStepId?: string;
+  preSelectedStepName?: string;
 }
 
 const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
@@ -24,13 +24,12 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
   onCancel,
   onSuccess,
   booking,
+  preSelectedStepId,
+  preSelectedStepName,
 }) => {
   const [form] = Form.useForm();
-  const [selectedServiceId, setSelectedServiceId] = useState<string>("");
-  // const [selectedProcessId, setSelectedProcessId] = useState<string | null>(null); // Not used anymore
 
   const createTrackingMutation = useCreateTracking();
-  const { data: serviceProcess, isLoading: isLoadingProcess } = useServiceProcessByServiceId(selectedServiceId || "");
   const { data: employees, isLoading: isLoadingEmployees } = useEmployeesDropdown();
   const { data: serviceBays, isLoading: isLoadingServiceBays } = useServiceBaysByBranch(booking.branchId);
 
@@ -38,34 +37,16 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
   useEffect(() => {
     if (open) {
       form.resetFields();
-      setSelectedServiceId("");
-      // setSelectedProcessId(null); // Not used anymore
       
-      // Set default values - auto-select first service from booking
-      if (booking.bookingItems && booking.bookingItems.length > 0) {
-        const firstService = booking.bookingItems[0];
-        if (firstService.serviceId) {
-          setSelectedServiceId(firstService.serviceId);
-          form.setFieldValue("serviceId", firstService.serviceId);
-        }
+      // Set pre-selected step if provided
+      if (preSelectedStepId) {
+        form.setFieldValue("serviceStepId", preSelectedStepId);
       }
     }
-  }, [open, booking, form]);
+  }, [open, form, preSelectedStepId]);
 
-  // Update process when service changes and auto-select first step
-  useEffect(() => {
-    if (serviceProcess) {
-      // Auto-select first step of the process
-      const firstStep = serviceProcess.processSteps?.[0];
-      if (firstStep) {
-        form.setFieldValue("serviceStepId", firstStep.id);
-      }
-    }
-  }, [serviceProcess, form]);
 
   const handleSubmit = async (values: {
-    serviceId: string;
-    serviceStepId: string;
     technicianId: string;
     bayId: string;
     notes?: string;
@@ -73,7 +54,7 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
     try {
       const request: CreateServiceProcessTrackingRequest = {
         booking_id: booking.bookingId,
-        service_step_id: values.serviceStepId,
+        service_step_id: preSelectedStepId || "",
         technician_id: values.technicianId,
         bay_id: values.bayId,
         status: TrackingStatus.PENDING,
@@ -95,11 +76,19 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
     onCancel();
   };
 
-  const serviceSteps = serviceProcess?.processSteps || [];
 
   return (
     <Modal
-      title="Tạo Tracking Dịch vụ"
+      title={
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span>Tạo Tracking Dịch vụ</span>
+          {preSelectedStepName && (
+            <span style={{ fontSize: 12, color: "#666" }}>
+              - {preSelectedStepName}
+            </span>
+          )}
+        </div>
+      }
       open={open}
       onCancel={handleCancel}
       footer={null}
@@ -112,59 +101,26 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
         onFinish={handleSubmit}
         initialValues={{}}
       >
-        <Form.Item
-          label="Dịch vụ"
-          name="serviceId"
-          rules={[{ required: true, message: "Vui lòng chọn dịch vụ" }]}
-        >
-          <Select
-            placeholder="Chọn dịch vụ"
-            value={selectedServiceId}
-            onChange={setSelectedServiceId}
-            loading={isLoadingProcess}
-            allowClear
-          >
-            {booking.bookingItems?.map((item) => (
-              <Option key={item.serviceId} value={item.serviceId}>
-                <div>
-                  <div style={{ fontWeight: 500 }}>{item.serviceName || `Service ${item.serviceId?.substring(0, 8)}...`}</div>
-                  <div style={{ fontSize: 11, color: "#999" }}>
-                    Số lượng: {item.quantity} • Giá: {item.servicePrice ? `${item.servicePrice.toLocaleString()} VNĐ` : 'N/A'}
-                  </div>
-                </div>
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item
-          label="Bước dịch vụ"
-          name="serviceStepId"
-          rules={[{ required: true, message: "Vui lòng chọn bước dịch vụ" }]}
-        >
-          <Select
-            placeholder="Chọn bước dịch vụ"
-            loading={isLoadingProcess}
-            disabled={!selectedServiceId}
-            allowClear
-          >
-            {serviceSteps.map((step: ServiceProcessStepInfoDto) => (
-              <Option key={step.id} value={step.id}>
-                <div>
-                  <div style={{ fontWeight: 500 }}>{step.name}</div>
-                  <div style={{ fontSize: 12, color: "#666" }}>
-                    Bước {step.stepOrder} • {step.estimatedTime} phút
-                  </div>
-                  {step.description && (
-                    <div style={{ fontSize: 11, color: "#999" }}>
-                      {step.description}
-                    </div>
-                  )}
-                </div>
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
+        {/* Display selected step information */}
+        {preSelectedStepName && (
+          <Form.Item label="Bước dịch vụ">
+            <div
+              style={{
+                padding: 12,
+                backgroundColor: "#f6ffed",
+                border: "1px solid #b7eb8f",
+                borderRadius: 4,
+              }}
+            >
+              <div style={{ fontWeight: 500, color: "#52c41a" }}>
+                {preSelectedStepName}
+              </div>
+              <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                Bước đã được chọn từ quy trình dịch vụ
+              </div>
+            </div>
+          </Form.Item>
+        )}
 
         <Form.Item
           label="Kỹ thuật viên"
