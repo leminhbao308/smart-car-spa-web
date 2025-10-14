@@ -752,7 +752,7 @@ const BookingsPage = () => {
           },
           {
             key: "tracking",
-            label: "Theo dõi quá trình chăm sóc xe",
+            label: "Chăm sóc xe",
             type: "primary",
             icon: <MonitorOutlined />,
             onClick: handleServiceTracking,

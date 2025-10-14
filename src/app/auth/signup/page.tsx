@@ -126,13 +126,13 @@ const SignupPage = () => {
       const signupData: SignupRequest = {
         email: emailOrPhone,
         password: values.password,
-        googleId: null,
-        fullName: values.fullName,
-        phoneNumber: values.phoneNumber,
-        dateOfBirth: new Date(values.dateOfBirth).toISOString(),
+        google_id: null,
+        full_name: values.fullName,
+        phone_number: values.phoneNumber,
+        date_of_birth: new Date(values.dateOfBirth).toISOString(),
         gender: values.gender,
         address: values.address,
-        avatarUrl: null,
+        avatar_url: null,
       };
 
       // Call backend API to create account
