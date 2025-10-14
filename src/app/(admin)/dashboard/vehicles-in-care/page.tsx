@@ -23,7 +23,8 @@ import {
   StarOutlined,
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
-import ServiceTrackingModal from "@/components/ui/Modal/ServiceTrackingModal";
+import VehicleTrackingModal from "@/components/ui/Modal/VehicleTrackingModal";
+import { useVehicleTracking } from "@/lib/api/hooks/useVehicleTracking";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 import { formatTime } from "@/components/utils/helper/duration.format.helper";
 import { 
@@ -55,23 +56,29 @@ const VehiclesInCarePage = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<BookingInfoDto | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   
-  // API hooks
-  const { data: inProgressBookings, isLoading: isLoadingBookings, error: bookingsError } = useBookingsByStatus(BookingStatus.IN_PROGRESS);
+  // API hooks - Load both IN_PROGRESS and COMPLETED bookings
+  const { data: inProgressBookings, isLoading: isLoadingInProgress, error: inProgressError } = useBookingsByStatus(BookingStatus.IN_PROGRESS);
+  const { data: completedBookings, isLoading: isLoadingCompleted, error: completedError } = useBookingsByStatus(BookingStatus.COMPLETED);
+  
+  // Load tracking data for selected vehicle
+  const { data: trackingData } = useVehicleTracking(selectedVehicle?.bookingId || "");
   
   
   // Combine bookings with their trackings
-  const data = inProgressBookings?.data || [];
+  const inProgressData = inProgressBookings?.data || [];
+  const completedData = completedBookings?.data || [];
+  const data = [...inProgressData, ...completedData];
   
   // Error handling
   useEffect(() => {
-    if (bookingsError) {
+    if (inProgressError || completedError) {
       notification.error({
         message: "Lỗi tải dữ liệu",
         description: "Có lỗi xảy ra khi tải dữ liệu xe đang chăm sóc",
         placement: "topRight",
       });
     }
-  }, [bookingsError]);
+  }, [inProgressError, completedError]);
 
   const getStatusIcon = (status: BookingStatus) => {
     switch (status) {
@@ -247,7 +254,7 @@ const VehiclesInCarePage = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Tổng xe đang chăm sóc"
+              title="Tổng xe đang chăm sóc và đã hoàn thành"
               value={totalVehicles}
               valueStyle={{ color: "#1890ff" }}
               prefix={<CarOutlined />}
@@ -338,11 +345,11 @@ const VehiclesInCarePage = () => {
       </Row>
 
       <AdminTable
-        title="Danh sách xe đang chăm sóc"
+        title="Danh sách xe đang chăm sóc và đã hoàn thành"
         dataSource={data}
         columns={columns}
         actions={actions}
-        loading={isLoadingBookings}
+        loading={isLoadingInProgress || isLoadingCompleted}
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
@@ -354,13 +361,14 @@ const VehiclesInCarePage = () => {
 
       {/* Modal theo dõi quá trình chăm sóc xe */}
       {selectedVehicle && (
-        <ServiceTrackingModal
+        <VehicleTrackingModal
           open={detailModalOpen}
           onCancel={() => {
             setDetailModalOpen(false);
             setSelectedVehicle(null);
           }}
           booking={selectedVehicle}
+          trackings={trackingData || []}
         />
       )}
     </div>

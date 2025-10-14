@@ -26,6 +26,20 @@ export interface StockRequest {
   ref_type: "SALE_ORDER" | "SALE_RETURN" | "PURCHASE_ORDER" | "PURCHASE_RETURN" | "ADJUSTMENT";
 }
 
+// New types for booking inventory operations
+export interface BookingInventoryRequest {
+  warehouse_id: string;
+  product_id: string;
+  qty: number;
+  ref_id: string;
+  ref_type: "SALE_ORDER";
+}
+
+export interface BookingInventoryResponse {
+  success: boolean;
+  message?: string;
+}
+
 export interface InventoryLevelsBatchRequest {
   warehouse_id: string;
   product_ids: string[];

@@ -15,6 +15,7 @@ export const serviceProcessKeys = {
   detail: (id: string) => [...serviceProcessKeys.details(), id] as const,
   byService: (serviceId: string) => [...serviceProcessKeys.all, 'service', serviceId] as const,
   steps: (processId: string) => [...serviceProcessKeys.all, 'steps', processId] as const,
+  products: (processId: string) => [...serviceProcessKeys.all, 'products', processId] as const,
 };
 
 // Hooks
@@ -50,4 +51,54 @@ export const useServiceProcessSteps = (processId: string) => {
     enabled: !!processId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+};
+
+export const useServiceProcessProducts = (processId: string) => {
+  return useQuery({
+    queryKey: serviceProcessKeys.products(processId),
+    queryFn: () => ServiceProcessService.getServiceProcessProducts(processId),
+    enabled: !!processId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+/**
+ * Composite hook để lấy products từ serviceId
+ * Flow: serviceId -> serviceProcess -> products
+ */
+export const useServiceProductsByServiceId = (serviceId: string) => {
+  // Bước 1: Lấy service process từ serviceId
+  const serviceProcessQuery = useServiceProcessByServiceId(serviceId);
+  
+  // Bước 2: Lấy products từ processId (nếu có)
+  const productsQuery = useServiceProcessProducts(
+    serviceProcessQuery.data?.processId || ""
+  );
+
+  return {
+    // Data
+    serviceProcess: serviceProcessQuery.data,
+    products: productsQuery.data || [],
+    
+    // Loading states
+    isLoadingServiceProcess: serviceProcessQuery.isLoading,
+    isLoadingProducts: productsQuery.isLoading,
+    isLoading: serviceProcessQuery.isLoading || productsQuery.isLoading,
+    
+    // Error states
+    serviceProcessError: serviceProcessQuery.error,
+    productsError: productsQuery.error,
+    error: serviceProcessQuery.error || productsQuery.error,
+    
+    // Refetch functions
+    refetchServiceProcess: serviceProcessQuery.refetch,
+    refetchProducts: productsQuery.refetch,
+    refetch: () => {
+      serviceProcessQuery.refetch();
+      productsQuery.refetch();
+    },
+    
+    // Success states
+    isSuccess: serviceProcessQuery.isSuccess && productsQuery.isSuccess,
+  };
 };

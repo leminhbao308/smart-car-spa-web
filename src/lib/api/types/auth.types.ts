@@ -124,13 +124,13 @@ export interface ChangePasswordRequest {
 export interface SignupRequest {
   email: string;
   password: string;
-  googleId?: string | null;
-  fullName: string;
-  phoneNumber: string;
-  dateOfBirth: string; // ISO date string
+  google_id?: string | null;
+  full_name: string;
+  phone_number: string;
+  date_of_birth: string; // ISO date string
   gender: "MALE" | "FEMALE" | "OTHER";
   address: string;
-  avatarUrl?: string | null;
+  avatar_url?: string | null;
 }
 
 // Signup Response
