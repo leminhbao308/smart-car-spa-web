@@ -28,7 +28,10 @@ import {
   EnvironmentOutlined,
 } from "@ant-design/icons";
 import TrackingDetailModal from "../TrackingDetailModal";
-import { ServiceProcessTrackingInfoDto, TrackingStatus } from "@/lib/api/types/service-process-tracking.types";
+import {
+  ServiceProcessTrackingInfoDto,
+  TrackingStatus,
+} from "@/lib/api/types/service-process-tracking.types";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 import { formatTime } from "@/components/utils/helper/duration.format.helper";
@@ -48,37 +51,40 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
   booking,
   trackings,
 }) => {
-  const [selectedTracking, setSelectedTracking] = useState<ServiceProcessTrackingInfoDto | null>(null);
+  const [selectedTracking, setSelectedTracking] =
+    useState<ServiceProcessTrackingInfoDto | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   const getStatusConfig = (status: TrackingStatus) => {
     const statusConfigs = {
-      [TrackingStatus.PENDING]: { 
-        label: "Chờ thực hiện", 
-        color: "default", 
-        icon: <ClockCircleOutlined /> 
+      [TrackingStatus.PENDING]: {
+        label: "Chờ thực hiện",
+        color: "default",
+        icon: <ClockCircleOutlined />,
       },
-      [TrackingStatus.IN_PROGRESS]: { 
-        label: "Đang thực hiện", 
-        color: "blue", 
-        icon: <PlayCircleOutlined /> 
+      [TrackingStatus.IN_PROGRESS]: {
+        label: "Đang thực hiện",
+        color: "blue",
+        icon: <PlayCircleOutlined />,
       },
-      [TrackingStatus.COMPLETED]: { 
-        label: "Hoàn thành", 
-        color: "green", 
-        icon: <CheckCircleOutlined /> 
+      [TrackingStatus.COMPLETED]: {
+        label: "Hoàn thành",
+        color: "green",
+        icon: <CheckCircleOutlined />,
       },
-      [TrackingStatus.CANCELLED]: { 
-        label: "Đã hủy", 
-        color: "red", 
-        icon: <ExclamationCircleOutlined /> 
+      [TrackingStatus.CANCELLED]: {
+        label: "Đã hủy",
+        color: "red",
+        icon: <ExclamationCircleOutlined />,
       },
     };
-    return statusConfigs[status] || { 
-      label: "Unknown", 
-      color: "default", 
-      icon: <ClockCircleOutlined /> 
-    };
+    return (
+      statusConfigs[status] || {
+        label: "Unknown",
+        color: "default",
+        icon: <ClockCircleOutlined />,
+      }
+    );
   };
 
   const getEfficiencyColor = (efficiency: number) => {
@@ -97,16 +103,31 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
 
   // Calculate overall statistics
   const totalSteps = trackings.length;
-  const completedSteps = trackings.filter(t => t.status === TrackingStatus.COMPLETED).length;
-  const inProgressSteps = trackings.filter(t => t.status === TrackingStatus.IN_PROGRESS).length;
-  const pendingSteps = trackings.filter(t => t.status === TrackingStatus.PENDING).length;
-  const overallProgress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
-  
-  const totalEstimatedTime = trackings.reduce((sum, t) => sum + (t.estimatedTime || 0), 0);
-  const totalActualTime = trackings.reduce((sum, t) => sum + (t.actualDuration || 0), 0);
-  const averageEfficiency = trackings.length > 0 
-    ? trackings.reduce((sum, t) => sum + (t.efficiency || 0), 0) / trackings.length 
-    : 0;
+  const completedSteps = trackings.filter(
+    (t) => t.status === TrackingStatus.COMPLETED
+  ).length;
+  const inProgressSteps = trackings.filter(
+    (t) => t.status === TrackingStatus.IN_PROGRESS
+  ).length;
+  const pendingSteps = trackings.filter(
+    (t) => t.status === TrackingStatus.PENDING
+  ).length;
+  const overallProgress =
+    totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
+  const totalEstimatedTime = trackings.reduce(
+    (sum, t) => sum + (t.estimatedTime || 0),
+    0
+  );
+  const totalActualTime = trackings.reduce(
+    (sum, t) => sum + (t.actualDuration || 0),
+    0
+  );
+  const averageEfficiency =
+    trackings.length > 0
+      ? trackings.reduce((sum, t) => sum + (t.efficiency || 0), 0) /
+        trackings.length
+      : 0;
 
   const handleViewDetail = (tracking: ServiceProcessTrackingInfoDto) => {
     setSelectedTracking(tracking);
@@ -119,22 +140,26 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
       key: "stepOrder",
       width: 60,
       align: "center" as const,
-      render: (_: ServiceProcessTrackingInfoDto, __: ServiceProcessTrackingInfoDto, index: number) => index + 1,
+      render: (
+        _: ServiceProcessTrackingInfoDto,
+        __: ServiceProcessTrackingInfoDto,
+        index: number
+      ) => index + 1,
     },
     {
       title: "Bước dịch vụ",
       key: "serviceStep",
       width: 200,
-      render: (_: ServiceProcessTrackingInfoDto, tracking: ServiceProcessTrackingInfoDto) => (
+      render: (
+        _: ServiceProcessTrackingInfoDto,
+        tracking: ServiceProcessTrackingInfoDto
+      ) => (
         <div>
           <div style={{ fontWeight: 500, fontSize: 14 }}>
             Bước {tracking.serviceStepOrder}: {tracking.serviceStepName}
           </div>
-          <div style={{ fontSize: 12, color: "#666" }}>
-            {tracking.serviceStepDescription}
-          </div>
           <div style={{ marginTop: 4 }}>
-            <Tag color={tracking.isRequired ? "red" : "blue"} size="small">
+            <Tag color={tracking.isRequired ? "red" : "blue"}>
               {tracking.isRequired ? "Bắt buộc" : "Tùy chọn"}
             </Tag>
             <Text style={{ fontSize: 11, color: "#666", marginLeft: 8 }}>
@@ -145,35 +170,18 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
       ),
     },
     {
-      title: "Kỹ thuật viên",
-      key: "technician",
-      width: 120,
-      render: (_: ServiceProcessTrackingInfoDto, tracking: ServiceProcessTrackingInfoDto) => (
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <Avatar size="small" icon={<UserOutlined />} style={{ marginRight: 8 }} />
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 500 }}>
-              {tracking.technicianName}
-            </div>
-            <div style={{ fontSize: 10, color: "#666" }}>
-              {tracking.technicianCode}
-            </div>
-          </div>
-        </div>
-      ),
-    },
-    {
       title: "Khu vực",
       key: "bay",
       width: 120,
-      render: (_: ServiceProcessTrackingInfoDto, tracking: ServiceProcessTrackingInfoDto) => (
+      render: (
+        _: ServiceProcessTrackingInfoDto,
+        tracking: ServiceProcessTrackingInfoDto
+      ) => (
         <div>
           <div style={{ fontSize: 12, fontWeight: 500 }}>
             {tracking.bayName}
           </div>
-          <div style={{ fontSize: 10, color: "#666" }}>
-            {tracking.bayCode}
-          </div>
+          <div style={{ fontSize: 10, color: "#666" }}>{tracking.bayCode}</div>
         </div>
       ),
     },
@@ -182,7 +190,10 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
       key: "status",
       width: 120,
       align: "center" as const,
-      render: (_: ServiceProcessTrackingInfoDto, tracking: ServiceProcessTrackingInfoDto) => {
+      render: (
+        _: ServiceProcessTrackingInfoDto,
+        tracking: ServiceProcessTrackingInfoDto
+      ) => {
         const statusConfig = getStatusConfig(tracking.status);
         return (
           <Tag color={statusConfig.color} icon={statusConfig.icon}>
@@ -191,42 +202,20 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
         );
       },
     },
-    {
-      title: "Tiến độ",
-      key: "progress",
-      width: 100,
-      align: "center" as const,
-      render: (_: ServiceProcessTrackingInfoDto, tracking: ServiceProcessTrackingInfoDto) => (
-        <div>
-          <Progress
-            percent={tracking.progressPercent || 0}
-            size="small"
-            status={tracking.status === TrackingStatus.COMPLETED ? "success" : "active"}
-          />
-          <div style={{ fontSize: 10, color: "#666", marginTop: 2 }}>
-            {tracking.progressPercent || 0}%
-          </div>
-        </div>
-      ),
-    },
+
     {
       title: "Thời gian",
       key: "duration",
       width: 100,
       align: "center" as const,
-      render: (_: ServiceProcessTrackingInfoDto, tracking: ServiceProcessTrackingInfoDto) => (
+      render: (
+        _: ServiceProcessTrackingInfoDto,
+        tracking: ServiceProcessTrackingInfoDto
+      ) => (
         <div>
           <div style={{ fontSize: 12, fontWeight: 500 }}>
             {tracking.actualDuration || 0} phút
           </div>
-          <div style={{ fontSize: 10, color: "#666" }}>
-            Ước tính: {tracking.estimatedDuration} phút
-          </div>
-          {tracking.efficiency && tracking.efficiency > 0 && (
-            <div style={{ fontSize: 10, color: getEfficiencyColor(tracking.efficiency) }}>
-              {tracking.efficiency.toFixed(1)}x hiệu quả
-            </div>
-          )}
         </div>
       ),
     },
@@ -235,7 +224,10 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
       key: "actions",
       width: 80,
       align: "center" as const,
-      render: (_: ServiceProcessTrackingInfoDto, tracking: ServiceProcessTrackingInfoDto) => (
+      render: (
+        _: ServiceProcessTrackingInfoDto,
+        tracking: ServiceProcessTrackingInfoDto
+      ) => (
         <Button
           type="primary"
           size="small"
@@ -269,7 +261,13 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
           <Card size="small">
             <Row gutter={[16, 16]}>
               <Col span={8}>
-                <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
                   <CarOutlined style={{ marginRight: 8, color: "#1890ff" }} />
                   <Text strong>Thông tin xe</Text>
                 </div>
@@ -286,7 +284,13 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
                 </div>
               </Col>
               <Col span={8}>
-                <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
                   <ToolOutlined style={{ marginRight: 8, color: "#52c41a" }} />
                   <Text strong>Thông tin dịch vụ</Text>
                 </div>
@@ -295,16 +299,26 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
                     <Text strong>Số bước:</Text> {totalSteps} bước
                   </div>
                   <div>
-                    <Text strong>Thời gian ước tính:</Text> {totalEstimatedTime} phút
+                    <Text strong>Thời gian ước tính:</Text> {totalEstimatedTime}{" "}
+                    phút
                   </div>
                   <div>
-                    <Text strong>Thời gian thực tế:</Text> {totalActualTime} phút
+                    <Text strong>Thời gian thực tế:</Text> {totalActualTime}{" "}
+                    phút
                   </div>
                 </div>
               </Col>
               <Col span={8}>
-                <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-                  <EnvironmentOutlined style={{ marginRight: 8, color: "#fa8c16" }} />
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  <EnvironmentOutlined
+                    style={{ marginRight: 8, color: "#fa8c16" }}
+                  />
                   <Text strong>Chi nhánh</Text>
                 </div>
                 <div style={{ marginLeft: 24 }}>
@@ -324,45 +338,20 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
           {/* Overall Statistics */}
           <Card size="small" title="Thống kê tổng quan">
             <Row gutter={[16, 16]}>
-              <Col span={6}>
-                <Statistic
-                  title="Tiến độ tổng thể"
-                  value={overallProgress}
-                  suffix="%"
-                  valueStyle={{ color: "#1890ff" }}
-                />
-                <Progress
-                  percent={overallProgress}
-                  size="small"
-                  status={overallProgress === 100 ? "success" : "active"}
-                />
-              </Col>
-              <Col span={6}>
-                <Statistic
-                  title="Đã hoàn thành"
-                  value={completedSteps}
-                  suffix={`/ ${totalSteps}`}
-                  valueStyle={{ color: "#52c41a" }}
-                />
-              </Col>
-              <Col span={6}>
+              <Col span={12}>
                 <Statistic
                   title="Đang thực hiện"
                   value={inProgressSteps}
                   valueStyle={{ color: "#1890ff" }}
                 />
               </Col>
-              <Col span={6}>
+              <Col span={12}>
                 <Statistic
-                  title="Hiệu quả TB"
-                  value={averageEfficiency}
-                  precision={2}
-                  suffix="x"
-                  valueStyle={{ color: getEfficiencyColor(averageEfficiency) }}
+                  title="Đã hoàn thành"
+                  value={completedSteps}
+                  suffix={`/ ${totalSteps}`}
+                  valueStyle={{ color: "#52c41a" }}
                 />
-                <Text style={{ color: getEfficiencyColor(averageEfficiency), fontSize: 12 }}>
-                  {getEfficiencyLabel(averageEfficiency)}
-                </Text>
               </Col>
             </Row>
           </Card>

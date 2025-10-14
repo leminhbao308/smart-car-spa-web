@@ -9,7 +9,6 @@ import {
   Typography,
   Timeline,
   Progress,
-  Divider,
   Space,
   Avatar,
   Statistic,
@@ -19,17 +18,15 @@ import {
   UserOutlined,
   CarOutlined,
   CheckCircleOutlined,
-  PlayCircleOutlined,
-  PauseCircleOutlined,
+  PlayCircleOutlined, 
   ExclamationCircleOutlined,
   EnvironmentOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
 import { ServiceProcessTrackingInfoDto, TrackingStatus } from "@/lib/api/types/service-process-tracking.types";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
-import { formatTime } from "@/components/utils/helper/duration.format.helper";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface TrackingDetailModalProps {
   open: boolean;
