@@ -10,8 +10,8 @@ import {
   Row,
   Col,
   Progress,
-  message,
   Spin,
+  App,
 } from "antd";
 import {
   PlayCircleOutlined,
@@ -56,6 +56,7 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
   onCancel,
   booking,
 }) => {
+  const { message } = App.useApp();
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
     type: string;
