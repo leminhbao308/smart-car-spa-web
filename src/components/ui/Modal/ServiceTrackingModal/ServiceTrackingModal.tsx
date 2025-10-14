@@ -7,7 +7,6 @@ import {
   Button,
   Tag,
   Typography,
-  Space,
   Row,
   Col,
   Progress,
@@ -26,17 +25,12 @@ import {
   useServiceProcessByServiceId,
   useServiceProcess,
 } from "@/lib/api/hooks/useServiceProcess";
-import { useServiceProcessTrackings } from "@/lib/api/hooks/useServiceProcessTracking";
+import { useServiceProcessTrackingsByBooking } from "@/lib/api/hooks/useServiceProcessTracking";
 import { useEmployeesDropdown } from "@/lib/api/hooks/useEmployees";
-import { useServiceBaysByBranch } from "@/lib/api/hooks/useServiceBays";
 import { useServicePackage } from "@/lib/api/hooks/useServicePackage";
-import {
-  useCreateTracking,
-  useStartStep,
-  useUpdateProgress,
-  useCompleteStep,
-  useCancelStep,
-} from "@/lib/api/hooks/useTracking";
+import { useStartStep, useCompleteStep } from "@/lib/api/hooks/useTracking";
+import CreateTrackingModal from "../CreateTrackingModal";
+import UpdateTrackingModal from "../UpdateTrackingModal";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
 import {
   ServiceProcessInfoDto,
@@ -72,6 +66,12 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
     []
   );
   const [loading, setLoading] = useState(false);
+  const [createTrackingModalOpen, setCreateTrackingModalOpen] = useState(false);
+  const [updateTrackingModalOpen, setUpdateTrackingModalOpen] = useState(false);
+  const [selectedStepForCreate, setSelectedStepForCreate] =
+    useState<ServiceProcessStepInfoDto | null>(null);
+  const [selectedTrackingForUpdate, setSelectedTrackingForUpdate] =
+    useState<ServiceProcessTrackingInfoDto | null>(null);
 
   // Initialize data when modal opens
   useEffect(() => {
@@ -103,11 +103,9 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
   );
 
   // For SERVICE_PACKAGE: get package first, then get service process
-  const {
-    data: servicePackageData,
-    isLoading: isLoadingServicePackage,
-    error: servicePackageError,
-  } = useServicePackage(shouldCallServicePackageAPI ? selectedItem.id : "");
+  const { data: servicePackageData } = useServicePackage(
+    shouldCallServicePackageAPI ? selectedItem.id : ""
+  );
 
   // Get service process for package
   const packageServiceProcessId = servicePackageData?.service_process_id;
@@ -125,28 +123,17 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
     ? isLoadingServiceProcess
     : isLoadingPackageProcess;
 
-  const { data: trackingsData } = useServiceProcessTrackings({
-    bookingId: booking.bookingId,
-  });
+  const { data: trackingsData, refetch: refetchTrackings } =
+    useServiceProcessTrackingsByBooking(booking.bookingId);
   const { data: employees } = useEmployeesDropdown();
-  const { data: serviceBays } = useServiceBaysByBranch(booking.branchId);
 
   // Mutations
-  const createTrackingMutation = useCreateTracking();
   const startStepMutation = useStartStep();
-  const updateProgressMutation = useUpdateProgress();
   const completeStepMutation = useCompleteStep();
-  const cancelStepMutation = useCancelStep();
 
   // Set service process when data is available
   useEffect(() => {
     if (finalServiceProcessData) {
-      console.log("Service process data:", finalServiceProcessData);
-      console.log("Process steps:", finalServiceProcessData.processSteps);
-      console.log(
-        "Process steps length:",
-        finalServiceProcessData.processSteps?.length
-      );
       setServiceProcess(finalServiceProcessData);
     }
   }, [finalServiceProcessData]);
@@ -154,9 +141,6 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
   // Set trackings when data is available
   useEffect(() => {
     if (trackingsData) {
-      console.log("Trackings data:", trackingsData);
-      console.log("Trackings data type:", typeof trackingsData);
-      console.log("Is array:", Array.isArray(trackingsData));
       // Ensure trackingsData is an array
       const trackingsArray = Array.isArray(trackingsData) ? trackingsData : [];
       setTrackings(trackingsArray);
@@ -185,6 +169,11 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
   // Helper function to get process steps (handle both camelCase and snake_case)
   const getProcessSteps = (): ServiceProcessStepInfoDto[] => {
     if (!serviceProcess) return [];
+    console.log(
+      "Đang lấy serviceProcess và booking: ",
+      serviceProcess,
+      booking
+    );
     return serviceProcess.processSteps || serviceProcess.process_steps || [];
   };
 
@@ -210,23 +199,21 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
   };
 
   // Handle create tracking
-  const handleCreateTracking = async (step: ServiceProcessStepInfoDto) => {
+  const handleCreateTracking = (step: ServiceProcessStepInfoDto) => {
+    setSelectedStepForCreate(step);
+    setCreateTrackingModalOpen(true);
+  };
+
+  const handleCreateTrackingSuccess = async () => {
+    setCreateTrackingModalOpen(false);
+    setSelectedStepForCreate(null);
+    message.success("Tạo tracking thành công");
+
+    // Refresh trackings data to update UI
     try {
-      setLoading(true);
-      await createTrackingMutation.mutateAsync({
-        booking_id: booking.bookingId,
-        service_step_id: step.id,
-        technician_id: employees?.[0]?.user_id || "",
-        bay_id: serviceBays?.[0]?.bay_id || "",
-        estimated_duration: step.estimatedTime || 60,
-        notes: `Tạo tracking cho bước: ${step.name}`,
-      });
-      message.success("Tạo tracking thành công");
+      await refetchTrackings();
     } catch (error) {
-      console.error("Create tracking error:", error);
-      message.error("Có lỗi xảy ra khi tạo tracking");
-    } finally {
-      setLoading(false);
+      console.error("Error refetching trackings:", error);
     }
   };
 
@@ -240,42 +227,40 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
       await startStepMutation.mutateAsync({
         trackingId: tracking.trackingId,
         request: {
-          technician_id: employees?.[0]?.user_id || "",
-          notes: `Bắt đầu thực hiện: ${step.name}`,
+          technician_id: tracking.technicianId || employees?.[0]?.user_id || "",
         },
       });
-      message.success("Bắt đầu bước thành công");
+      message.success("Bắt đầu tracking thành công");
+
+      // Refresh trackings data to update UI
+      await refetchTrackings();
     } catch (error) {
       console.error("Start step error:", error);
-      message.error("Có lỗi xảy ra khi bắt đầu bước");
+      message.error("Có lỗi xảy ra khi bắt đầu tracking");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle update progress
-  const handleUpdateProgress = async (
-    step: ServiceProcessStepInfoDto,
-    progress: number
-  ) => {
+  // Handle update tracking
+  const handleUpdateTracking = (step: ServiceProcessStepInfoDto) => {
     const tracking = getTrackingForStep(step.id);
     if (!tracking) return;
 
+    setSelectedTrackingForUpdate(tracking);
+    setUpdateTrackingModalOpen(true);
+  };
+
+  const handleUpdateTrackingSuccess = async () => {
+    setUpdateTrackingModalOpen(false);
+    setSelectedTrackingForUpdate(null);
+    message.success("Cập nhật tracking thành công");
+
+    // Refresh trackings data to update UI
     try {
-      setLoading(true);
-      await updateProgressMutation.mutateAsync({
-        trackingId: tracking.trackingId,
-        request: {
-          progress_percent: progress,
-          notes: `Cập nhật tiến độ: ${progress}%`,
-        },
-      });
-      message.success("Cập nhật tiến độ thành công");
+      await refetchTrackings();
     } catch (error) {
-      console.error("Update progress error:", error);
-      message.error("Có lỗi xảy ra khi cập nhật tiến độ");
-    } finally {
-      setLoading(false);
+      console.error("Error refetching trackings:", error);
     }
   };
 
@@ -292,129 +277,142 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
           notes: `Hoàn thành: ${step.name}`,
         },
       });
-      message.success("Hoàn thành bước thành công");
+      message.success("Hoàn thành tracking thành công");
+
+      // Refresh trackings data to update UI
+      await refetchTrackings();
     } catch (error) {
       console.error("Complete step error:", error);
-      message.error("Có lỗi xảy ra khi hoàn thành bước");
+      message.error("Có lỗi xảy ra khi hoàn thành tracking");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle cancel step
-  const handleCancelStep = async (step: ServiceProcessStepInfoDto) => {
+  // Render create tracking button
+  const renderCreateTracking = (step: ServiceProcessStepInfoDto) => {
     const tracking = getTrackingForStep(step.id);
-    if (!tracking) return;
 
-    try {
-      setLoading(true);
-      await cancelStepMutation.mutateAsync({
-        trackingId: tracking.trackingId,
-        request: {
-          reason: "Hủy bởi admin",
-        },
-      });
-      message.success("Hủy bước thành công");
-    } catch (error) {
-      console.error("Cancel step error:", error);
-      message.error("Có lỗi xảy ra khi hủy bước");
-    } finally {
-      setLoading(false);
+    if (tracking) {
+      return <Tag color="green">Đã tạo</Tag>;
     }
+
+    return (
+      <Button
+        type="primary"
+        size="small"
+        icon={<PlusOutlined />}
+        onClick={() => handleCreateTracking(step)}
+        loading={loading}
+      >
+        Tạo
+      </Button>
+    );
   };
 
-  // Render action buttons for each step
-  const renderStepActions = (step: ServiceProcessStepInfoDto) => {
+  // Render start tracking button
+  const renderStartTracking = (step: ServiceProcessStepInfoDto) => {
     const tracking = getTrackingForStep(step.id);
     const status = getStepStatus(step);
 
     if (!tracking) {
+      return <Text type="secondary">Chưa tạo</Text>;
+    }
+
+    if (status === TrackingStatus.PENDING) {
       return (
         <Button
           type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => handleCreateTracking(step)}
+          size="small"
+          icon={<PlayCircleOutlined />}
+          onClick={() => handleStartStep(step)}
           loading={loading}
         >
-          Tạo Tracking
+          Bắt đầu
         </Button>
       );
     }
 
-    switch (status) {
-      case TrackingStatus.PENDING:
-        return (
-          <Space>
-            <Button
-              type="primary"
-              icon={<PlayCircleOutlined />}
-              onClick={() => handleStartStep(step)}
-              loading={loading}
-            >
-              Bắt đầu
-            </Button>
-            <Button
-              danger
-              icon={<CloseCircleOutlined />}
-              onClick={() => handleCancelStep(step)}
-              loading={loading}
-            >
-              Hủy
-            </Button>
-          </Space>
-        );
-      case TrackingStatus.IN_PROGRESS:
-        return (
-          <Space>
-            <Button
-              type="default"
-              icon={<EditOutlined />}
-              onClick={() => handleUpdateProgress(step, 50)}
-              loading={loading}
-            >
-              Cập nhật 50%
-            </Button>
-            <Button
-              type="default"
-              icon={<EditOutlined />}
-              onClick={() => handleUpdateProgress(step, 100)}
-              loading={loading}
-            >
-              Cập nhật 100%
-            </Button>
-            <Button
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              onClick={() => handleCompleteStep(step)}
-              loading={loading}
-            >
-              Hoàn thành
-            </Button>
-            <Button
-              danger
-              icon={<CloseCircleOutlined />}
-              onClick={() => handleCancelStep(step)}
-              loading={loading}
-            >
-              Hủy
-            </Button>
-          </Space>
-        );
-      case TrackingStatus.COMPLETED:
-        return (
-          <Tag color="green" icon={<CheckCircleOutlined />}>
-            Đã hoàn thành
-          </Tag>
-        );
-      case TrackingStatus.CANCELLED:
-        return (
-          <Tag color="red" icon={<CloseCircleOutlined />}>
-            Đã hủy
-          </Tag>
-        );
-      default:
-        return null;
+    if (
+      status === TrackingStatus.IN_PROGRESS ||
+      status === TrackingStatus.COMPLETED
+    ) {
+      return <Tag color="blue">Đã bắt đầu</Tag>;
     }
+
+    return <Text type="secondary">-</Text>;
+  };
+
+  // Render update tracking button
+  const renderUpdateTracking = (step: ServiceProcessStepInfoDto) => {
+    const tracking = getTrackingForStep(step.id);
+    const status = getStepStatus(step);
+
+    if (!tracking) {
+      return <Text type="secondary">Chưa tạo</Text>;
+    }
+
+    if (status === TrackingStatus.IN_PROGRESS) {
+      return (
+        <Button
+          type="default"
+          size="small"
+          icon={<EditOutlined />}
+          onClick={() => handleUpdateTracking(step)}
+          loading={loading}
+        >
+          Cập nhật
+        </Button>
+      );
+    }
+
+    if (status === TrackingStatus.COMPLETED) {
+      return <Tag color="green">Đã cập nhật</Tag>;
+    }
+
+    return <Text type="secondary">-</Text>;
+  };
+
+  // Render complete tracking button
+  const renderCompleteTracking = (step: ServiceProcessStepInfoDto) => {
+    const tracking = getTrackingForStep(step.id);
+    const status = getStepStatus(step);
+
+    if (!tracking) {
+      return <Text type="secondary">Chưa tạo</Text>;
+    }
+
+    if (status === TrackingStatus.IN_PROGRESS) {
+      return (
+        <Button
+          type="primary"
+          size="small"
+          icon={<CheckCircleOutlined />}
+          onClick={() => handleCompleteStep(step)}
+          loading={loading}
+        >
+          Hoàn thành
+        </Button>
+      );
+    }
+
+    if (status === TrackingStatus.COMPLETED) {
+      return (
+        <Tag color="green" icon={<CheckCircleOutlined />}>
+          Hoàn thành
+        </Tag>
+      );
+    }
+
+    if (status === TrackingStatus.CANCELLED) {
+      return (
+        <Tag color="red" icon={<CloseCircleOutlined />}>
+          Đã hủy
+        </Tag>
+      );
+    }
+
+    return <Text type="secondary">-</Text>;
   };
 
   // Render progress for each step
@@ -452,23 +450,6 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
     return <Tag color={config.color}>{config.label}</Tag>;
   };
 
-  // Render step products
-  const renderStepProducts = (step: ServiceProcessStepInfoDto) => {
-    if (!step.stepProducts?.length)
-      return <Text type="secondary">Không có sản phẩm</Text>;
-
-    return (
-      <div>
-        {step.stepProducts.map((product, index) => (
-          <div key={index} style={{ fontSize: 12, marginBottom: 2 }}>
-            • {product.productName} ({product.quantity}{" "}
-            {(product as { unit?: string }).unit || "cái"})
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   // Define columns for steps table
   const stepColumns = [
     {
@@ -487,7 +468,7 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
       dataIndex: "name",
       key: "name",
       width: 200,
-      render: (name: string, step: ServiceProcessStepInfoDto) => (
+      render: (name: string) => (
         <div>
           <div style={{ fontWeight: 500, fontSize: 14 }}>{name}</div>
         </div>
@@ -502,7 +483,6 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
         <Text style={{ fontSize: 13 }}>{description || "Không có mô tả"}</Text>
       ),
     },
-
     {
       title: "Trạng thái",
       key: "status",
@@ -512,20 +492,36 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
         renderStepStatus(step),
     },
     {
-      title: "Tiến độ",
-      key: "progress",
+      title: "Tạo Tracking",
+      key: "create",
       width: 120,
       align: "center" as const,
       render: (_: ServiceProcessStepInfoDto, step: ServiceProcessStepInfoDto) =>
-        renderStepProgress(step),
+        renderCreateTracking(step),
     },
     {
-      title: "Thao tác",
-      key: "actions",
-      width: 200,
+      title: "Bắt đầu",
+      key: "start",
+      width: 100,
       align: "center" as const,
       render: (_: ServiceProcessStepInfoDto, step: ServiceProcessStepInfoDto) =>
-        renderStepActions(step),
+        renderStartTracking(step),
+    },
+    {
+      title: "Cập nhật",
+      key: "update",
+      width: 100,
+      align: "center" as const,
+      render: (_: ServiceProcessStepInfoDto, step: ServiceProcessStepInfoDto) =>
+        renderUpdateTracking(step),
+    },
+    {
+      title: "Hoàn thành",
+      key: "complete",
+      width: 100,
+      align: "center" as const,
+      render: (_: ServiceProcessStepInfoDto, step: ServiceProcessStepInfoDto) =>
+        renderCompleteTracking(step),
     },
   ];
 
@@ -663,7 +659,7 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
               rowKey="id"
               pagination={false}
               size="small"
-              scroll={{ x: 1200 }}
+              scroll={{ x: 1400 }}
             />
           </Card>
         ) : (
@@ -794,6 +790,41 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
           )}
         </Card> */}
       </Spin>
+
+      {/* Create Tracking Modal */}
+      {selectedStepForCreate && (
+        <CreateTrackingModal
+          open={createTrackingModalOpen}
+          onCancel={() => {
+            setCreateTrackingModalOpen(false);
+            setSelectedStepForCreate(null);
+          }}
+          onSuccess={handleCreateTrackingSuccess}
+          booking={booking}
+          preSelectedStepId={selectedStepForCreate.id}
+          preSelectedStepName={selectedStepForCreate.name}
+        />
+      )}
+
+      {/* Update Tracking Modal */}
+      {selectedTrackingForUpdate && (
+        <UpdateTrackingModal
+          open={updateTrackingModalOpen}
+          onCancel={() => {
+            setUpdateTrackingModalOpen(false);
+            setSelectedTrackingForUpdate(null);
+          }}
+          onSuccess={handleUpdateTrackingSuccess}
+          tracking={selectedTrackingForUpdate}
+          stepName={
+            getProcessSteps().find(
+              (step) =>
+                getTrackingForStep(step.id)?.trackingId ===
+                selectedTrackingForUpdate.trackingId
+            )?.name
+          }
+        />
+      )}
     </Modal>
   );
 };

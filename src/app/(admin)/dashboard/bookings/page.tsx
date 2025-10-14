@@ -132,7 +132,8 @@ const BookingsPage = () => {
   );
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [createTrackingModalOpen, setCreateTrackingModalOpen] = useState(false);
-  const [serviceTrackingModalOpen, setServiceTrackingModalOpen] = useState(false);
+  const [serviceTrackingModalOpen, setServiceTrackingModalOpen] =
+    useState(false);
   const [filterParams, setFilterParams] = useState({
     page: 0,
     size: 10,
@@ -260,7 +261,12 @@ const BookingsPage = () => {
       width: 120,
       render: (code: string) => (
         <span
-          style={{ fontFamily: "monospace", fontWeight: 500, color: "#1890ff", fontSize: 14 }}
+          style={{
+            fontFamily: "monospace",
+            fontWeight: 500,
+            color: "#1890ff",
+            fontSize: 14,
+          }}
         >
           {code}
         </span>
@@ -310,9 +316,9 @@ const BookingsPage = () => {
             {record.customerPhone || "N/A"}
           </div>
           {record.customerEmail && (
-          <div style={{ fontSize: 12, color: "#999" }}>
-            {record.customerEmail}
-          </div>
+            <div style={{ fontSize: 12, color: "#999" }}>
+              {record.customerEmail}
+            </div>
           )}
         </div>
       ),
@@ -362,17 +368,17 @@ const BookingsPage = () => {
       key: "service",
       width: 180,
       render: (_, record: BookingInfoDto) => (
-          <div>
+        <div>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
             {record.bookingItems?.length || 0} dịch vụ
-            </div>
-            <div style={{ fontSize: 12, color: "#666" }}>
-            {formatDurationVer01(record.estimatedDurationMinutes || 0)}
-            </div>
-            <div style={{ fontSize: 12, color: "#52c41a", fontWeight: 500 }}>
-            {formatCurrency(record.totalPrice || 0)} {record.currency || "VND"}
-            </div>
           </div>
+          <div style={{ fontSize: 12, color: "#666" }}>
+            {formatDurationVer01(record.estimatedDurationMinutes || 0)}
+          </div>
+          <div style={{ fontSize: 12, color: "#52c41a", fontWeight: 500 }}>
+            {formatCurrency(record.totalPrice || 0)} {record.currency || "VND"}
+          </div>
+        </div>
       ),
     },
     {
@@ -390,30 +396,30 @@ const BookingsPage = () => {
           record.preferredStartAt ||
           record.createdAt;
         return (
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 500 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>
               {dayjs(displayTime).format("DD/MM/YYYY")}
-          </div>
-          <div style={{ fontSize: 13, color: "#666" }}>
+            </div>
+            <div style={{ fontSize: 13, color: "#666" }}>
               {dayjs(displayTime).format("HH:mm")}
-          </div>
-          <div
-            style={{
-              fontSize: 11,
-              color:
+            </div>
+            <div
+              style={{
+                fontSize: 11,
+                color:
                   record.status === BookingStatus.COMPLETED
-                  ? "#52c41a"
+                    ? "#52c41a"
                     : record.status === BookingStatus.CANCELLED
-                  ? "#ff4d4f"
-                  : "#1890ff",
-            }}
-          >
+                    ? "#ff4d4f"
+                    : "#1890ff",
+              }}
+            >
               {getTimeRemaining(
                 dayjs(displayTime).format("YYYY-MM-DD"),
                 dayjs(displayTime).format("HH:mm")
               )}
+            </div>
           </div>
-        </div>
         );
       },
     },
@@ -446,7 +452,11 @@ const BookingsPage = () => {
       render: (priority: Priority) => {
         const priorityConfig = getPriorityConfig(priority);
         return (
-          <Tag color={priorityConfig.color} icon={priorityConfig.icon} style={{ fontSize: 12 }}>
+          <Tag
+            color={priorityConfig.color}
+            icon={priorityConfig.icon}
+            style={{ fontSize: 12 }}
+          >
             {priorityConfig.label}
           </Tag>
         );
@@ -466,7 +476,11 @@ const BookingsPage = () => {
       render: (status: BookingStatus) => {
         const statusConfig = getStatusConfig(status);
         return (
-          <Tag color={statusConfig.color} icon={statusConfig.icon} style={{ fontSize: 12 }}>
+          <Tag
+            color={statusConfig.color}
+            icon={statusConfig.icon}
+            style={{ fontSize: 12 }}
+          >
             {statusConfig.label}
           </Tag>
         );
@@ -521,11 +535,6 @@ const BookingsPage = () => {
   };
 
   const handleView = (record: BookingInfoDto) => {
-    setSelectedBooking(record);
-    setDetailModalOpen(true);
-  };
-
-  const handleViewDetail = (record: BookingInfoDto) => {
     setSelectedBooking(record);
     setDetailModalOpen(true);
   };
@@ -687,7 +696,10 @@ const BookingsPage = () => {
         onEdit={handleEdit}
         onEditCondition={(record: BookingInfoDto) => {
           // Chỉ cho phép chỉnh sửa khi booking ở trạng thái PENDING hoặc CONFIRMED
-          return record.status === BookingStatus.PENDING || record.status === BookingStatus.CONFIRMED;
+          return (
+            record.status === BookingStatus.PENDING ||
+            record.status === BookingStatus.CONFIRMED
+          );
         }}
         onView={handleView}
         addButtonText="Đặt lịch mới"
@@ -745,7 +757,9 @@ const BookingsPage = () => {
             icon: <MonitorOutlined />,
             onClick: handleServiceTracking,
             condition: (record: BookingInfoDto) =>
-              [BookingStatus.IN_PROGRESS, BookingStatus.PAUSED].includes(record.status),
+              [BookingStatus.IN_PROGRESS, BookingStatus.PAUSED].includes(
+                record.status
+              ),
           },
           {
             key: "cancel",
@@ -755,7 +769,11 @@ const BookingsPage = () => {
             icon: <CloseCircleOutlined />,
             onClick: handleDelete,
             condition: (record: BookingInfoDto) =>
-              [BookingStatus.PENDING, BookingStatus.CONFIRMED, BookingStatus.CHECKED_IN].includes(record.status),
+              [
+                BookingStatus.PENDING,
+                BookingStatus.CONFIRMED,
+                BookingStatus.CHECKED_IN,
+              ].includes(record.status),
           },
         ]}
       />
@@ -819,7 +837,7 @@ const BookingsPage = () => {
           <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
             {/* Header Info */}
             <div
-                style={{
+              style={{
                 marginBottom: 24,
                 padding: 16,
                 backgroundColor: "#f8f9fa",
@@ -835,7 +853,7 @@ const BookingsPage = () => {
                   marginBottom: 12,
                 }}
               >
-              <div>
+                <div>
                   <Text
                     style={{ fontSize: 18, fontWeight: 600, color: "#1890ff" }}
                   >
@@ -843,19 +861,19 @@ const BookingsPage = () => {
                   </Text>
                   <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
                     ID: {selectedBooking.bookingId}
-                </div>
+                  </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 14, fontWeight: 500 }}>
                     {formatCurrency(selectedBooking.totalPrice || 0)}{" "}
                     {selectedBooking.currency || "VND"}
-                </div>
-                <div style={{ fontSize: 12, color: "#666" }}>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#666" }}>
                     {formatDurationVer01(
                       selectedBooking.estimatedDurationMinutes || 0
                     )}
+                  </div>
                 </div>
-              </div>
               </div>
 
               {/* Priority and Status */}
@@ -918,7 +936,7 @@ const BookingsPage = () => {
                         style={{ backgroundColor: "#52c41a", fontSize: 8 }}
                       />
                     )}
-                </div>
+                  </div>
                   <div
                     style={{
                       padding: 16,
@@ -931,28 +949,17 @@ const BookingsPage = () => {
                       style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}
                     >
                       {selectedBooking.customerName || "N/A"}
-                </div>
+                    </div>
                     <div
                       style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
                     >
                       📞 {selectedBooking.customerPhone || "N/A"}
-                </div>
+                    </div>
                     {selectedBooking.customerEmail && (
                       <div
                         style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
                       >
                         📧 {selectedBooking.customerEmail}
-              </div>
-                    )}
-                    {selectedBooking.customerId && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "#999",
-                          fontFamily: "monospace",
-                        }}
-                      >
-                        ID: {selectedBooking.customerId.substring(0, 8)}...
                       </div>
                     )}
                   </div>
@@ -980,7 +987,7 @@ const BookingsPage = () => {
                         style={{ backgroundColor: "#52c41a", fontSize: 8 }}
                       />
                     )}
-                </div>
+                  </div>
                   <div
                     style={{
                       padding: 16,
@@ -993,13 +1000,13 @@ const BookingsPage = () => {
                       style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}
                     >
                       {selectedBooking.vehicleLicensePlate || "N/A"}
-                </div>
+                    </div>
                     <div
                       style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
                     >
                       {selectedBooking.vehicleBrandName || "N/A"}{" "}
                       {selectedBooking.vehicleModelName || ""}
-              </div>
+                    </div>
                     <div
                       style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
                     >
@@ -1007,17 +1014,6 @@ const BookingsPage = () => {
                       {selectedBooking.vehicleYear || "N/A"} •{" "}
                       {selectedBooking.vehicleColor || "N/A"}
                     </div>
-                    {selectedBooking.vehicleId && (
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "#999",
-                          fontFamily: "monospace",
-                        }}
-                      >
-                        ID: {selectedBooking.vehicleId.substring(0, 8)}...
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -1035,8 +1031,8 @@ const BookingsPage = () => {
                     }}
                   >
                     <span>🏢</span>
-                    Chi nhánh & Bay
-                </div>
+                    Chi nhánh
+                  </div>
                   <div
                     style={{
                       padding: 16,
@@ -1063,9 +1059,9 @@ const BookingsPage = () => {
                     {selectedBooking.bayType && (
                       <div style={{ fontSize: 12, color: "#999" }}>
                         Loại: {selectedBooking.bayType}
-                </div>
+                      </div>
                     )}
-              </div>
+                  </div>
                 </div>
               </div>
 
@@ -1086,7 +1082,7 @@ const BookingsPage = () => {
                   >
                     <span>🔧</span>
                     Dịch vụ ({selectedBooking.bookingItems?.length || 0})
-                </div>
+                  </div>
                   <div
                     style={{
                       padding: 16,
@@ -1110,11 +1106,8 @@ const BookingsPage = () => {
                               }}
                             >
                               <div style={{ fontWeight: 500, fontSize: 13 }}>
-                                {item.serviceName ||
-                                  `Service ${item.serviceId?.substring(
-                                    0,
-                                    8
-                                  )}...`}
+                                {item.itemName ||
+                                  `Service ${item.itemId?.substring(0, 8)}...`}
                               </div>
                               <div
                                 style={{
@@ -1123,7 +1116,7 @@ const BookingsPage = () => {
                                   marginTop: 2,
                                 }}
                               >
-                                {formatCurrency(item.totalPrice || 0)} • Số
+                                {formatCurrency(item.unitPrice || 0)} • Số
                                 lượng: {item.quantity || 1}
                               </div>
                               {item.notes && (
@@ -1153,66 +1146,17 @@ const BookingsPage = () => {
                             Tổng:{" "}
                             {formatCurrency(selectedBooking.totalPrice || 0)}{" "}
                             {selectedBooking.currency || "VND"}
-                </div>
-                <div style={{ fontSize: 12, color: "#666" }}>
+                          </div>
+                          <div style={{ fontSize: 12, color: "#666" }}>
                             Thời gian ước tính:{" "}
                             {formatDurationVer01(
                               selectedBooking.estimatedDurationMinutes || 0
                             )}
-                </div>
-              </div>
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <Text type="secondary">Không có dịch vụ</Text>
-                    )}
-                  </div>
-                </div>
-
-                {/* Staff Assignments */}
-                <div style={{ marginBottom: 20 }}>
-                  <div
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 600,
-                      marginBottom: 12,
-                      color: "#262626",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <span>👥</span>
-                    Nhân viên phân công
-                  </div>
-                  <div
-                    style={{
-                      padding: 16,
-                      backgroundColor: "#fff",
-                      border: "1px solid #d9d9d9",
-                      borderRadius: 6,
-                    }}
-                  >
-                    {selectedBooking.assignments?.length ? (
-              <div>
-                        {selectedBooking.assignments.map(
-                          (assignment, index: number) => (
-                            <Tag
-                              key={index}
-                              color="green"
-                              style={{ marginBottom: 4, marginRight: 4 }}
-                            >
-                              {assignment.technicianName ||
-                                `Tech ${assignment.technicianId?.substring(
-                                  0,
-                                  8
-                                )}...`}
-                              {assignment.role && ` - ${assignment.role}`}
-                    </Tag>
-                  )
-                )}
-              </div>
-                    ) : (
-                      <Text type="secondary">Chưa phân công nhân viên</Text>
                     )}
                   </div>
                 </div>
@@ -1322,7 +1266,7 @@ const BookingsPage = () => {
                     borderRadius: 6,
                   }}
                 >
-            {selectedBooking.notes && (
+                  {selectedBooking.notes && (
                     <div style={{ marginBottom: 12 }}>
                       <div
                         style={{ fontSize: 12, color: "#666", marginBottom: 4 }}
@@ -1330,13 +1274,13 @@ const BookingsPage = () => {
                         Ghi chú
                       </div>
                       <div style={{ fontSize: 13 }}>
-                {selectedBooking.notes}
+                        {selectedBooking.notes}
                       </div>
                     </div>
-            )}
+                  )}
 
-            {selectedBooking.specialRequests &&
-              selectedBooking.specialRequests.length > 0 && (
+                  {selectedBooking.specialRequests &&
+                    selectedBooking.specialRequests.length > 0 && (
                       <div style={{ marginBottom: 12 }}>
                         <div
                           style={{
@@ -1348,17 +1292,17 @@ const BookingsPage = () => {
                           Yêu cầu đặc biệt
                         </div>
                         <div>
-                  {selectedBooking.specialRequests.map(
-                    (request: string, index: number) => (
-                      <Tag
-                        key={index}
-                        color="purple"
+                          {selectedBooking.specialRequests.map(
+                            (request: string, index: number) => (
+                              <Tag
+                                key={index}
+                                color="purple"
                                 style={{ marginBottom: 4, marginRight: 4 }}
-                      >
-                        {request}
-                      </Tag>
-                    )
-                  )}
+                              >
+                                {request}
+                              </Tag>
+                            )
+                          )}
                         </div>
                       </div>
                     )}

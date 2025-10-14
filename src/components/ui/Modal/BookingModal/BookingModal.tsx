@@ -224,10 +224,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleVehicleChange = React.useCallback(
     (vehicleId: string) => {
-      const vehicle = vehicles.find((v) => v.vehicle_id === vehicleId);
+      if (!vehicleId) {
+        setSelectedVehicle(null);
+        return;
+      }
+      // Use allVehicles directly to avoid circular reference
+      const vehicle = allVehicles.find((v) => v.vehicle_id === vehicleId);
       setSelectedVehicle(vehicle || null);
     },
-    [vehicles]
+    [allVehicles]
   );
 
   const handleBranchChange = React.useCallback(
@@ -439,13 +444,20 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 ]}
               >
                 <Select
-                  placeholder="Tìm kiếm khách hàng"
+                  placeholder="Tìm kiếm theo tên hoặc số điện thoại"
                   showSearch
                   loading={isLoadingCustomers}
                   onChange={handleCustomerChange}
                   filterOption={(input, option) => {
                     const label = option?.label?.toString() || "";
-                    return label.toLowerCase().includes(input.toLowerCase());
+                    const customer = customers.find(c => c.user_id === option?.value);
+                    const phoneNumber = customer?.phone_number || "";
+                    const searchText = input.toLowerCase();
+                    
+                    return (
+                      label.toLowerCase().includes(searchText) ||
+                      phoneNumber.includes(searchText)
+                    );
                   }}
                   optionLabelProp="label"
                 >
