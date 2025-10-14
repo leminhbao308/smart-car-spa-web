@@ -53,7 +53,7 @@ export class BranchService {
    */
   static async getAllBranches(): Promise<{
     branches: BranchDisplay[];
-    pagination: {z
+    pagination: {
       page: number;
       size: number;
       total_elements: number;
