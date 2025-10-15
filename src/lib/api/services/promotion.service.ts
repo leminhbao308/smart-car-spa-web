@@ -3,24 +3,27 @@ import {
   Promotion,
   CreatePromotionRequest,
   UpdatePromotionRequest,
-  PromotionListResponse,
-  PromotionSearchParams,
-  PromotionUsage,
   PromotionAnalytics,
-  PromotionValidationResponse,
+  PromotionFilterParam,
 } from "../types/promotion.types";
 
 export const promotionService = {
   // Get all promotions with pagination and filters
   getAllPromotions: async (
-    params: PromotionSearchParams = {}
-  ): Promise<PromotionListResponse> => {
+    params: PromotionFilterParam = {}
+  ): Promise<{
+    content: Promotion[];
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  }> => {
     const {
       page = 0,
       size = 10,
       sort = "createdDate",
       direction = "DESC",
-      filters = {},
+      ...filters
     } = params;
 
     const queryParams = new URLSearchParams({
@@ -34,7 +37,7 @@ export const promotionService = {
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
         if (Array.isArray(value)) {
-          value.forEach(v => queryParams.append(key, v.toString()));
+          value.forEach((v) => queryParams.append(key, v.toString()));
         } else {
           queryParams.append(key, value.toString());
         }
@@ -44,12 +47,18 @@ export const promotionService = {
     const response = await api.get(
       `/promotions/get-all?${queryParams.toString()}`
     );
-    return response.data;
+    return response.data.data;
   },
 
   // Get promotion by ID
   getPromotionById: async (promotionId: string): Promise<Promotion> => {
     const response = await api.get(`/promotions/${promotionId}`);
+    return response.data.data;
+  },
+
+  // Get promotion by code
+  getPromotionByCode: async (promotionCode: string): Promise<Promotion> => {
+    const response = await api.get(`/promotions/code/${promotionCode}`);
     return response.data.data;
   },
 
@@ -68,15 +77,14 @@ export const promotionService = {
     return response.data.data;
   },
 
-  // Update promotion status
+  // Update promotion status (activate/deactivate)
   updatePromotionStatus: async (
     promotionId: string,
-    status: string
-  ): Promise<Promotion> => {
-    const response = await api.post(`/promotions/${promotionId}/status`, {
-      status: status,
+    isActive: boolean
+  ): Promise<void> => {
+    await api.post(`/promotions/${promotionId}/status`, {
+      isActive: isActive,
     });
-    return response.data.data;
   },
 
   // Delete promotion (soft delete)
@@ -84,20 +92,236 @@ export const promotionService = {
     await api.post(`/promotions/${promotionId}/delete`);
   },
 
-  // Toggle promotion status
-  togglePromotionStatus: async (
-    promotionId: string,
-    isActive: boolean
-  ): Promise<Promotion> => {
-    const response = await api.post(`/promotions/${promotionId}/toggle-status`, {
-      is_active: isActive,
-    });
-    return response.data.data;
+  // Restore promotion (undo soft delete)
+  restorePromotion: async (promotionId: string): Promise<void> => {
+    await api.post(`/promotions/${promotionId}/restore`);
+  },
+
+  // Make promotion visible to customers
+  makePromotionVisible: async (promotionId: string): Promise<void> => {
+    await api.post(`/promotions/${promotionId}/make-visible`);
+  },
+
+  // Make promotion invisible to customers
+  makePromotionInvisible: async (promotionId: string): Promise<void> => {
+    await api.post(`/promotions/${promotionId}/make-invisible`);
   },
 
   // Get active promotions
-  getActivePromotions: async (): Promise<Promotion[]> => {
-    const response = await api.get("/promotions/active");
+  getActivePromotions: async (
+    params: PromotionFilterParam = {}
+  ): Promise<{
+    content: Promotion[];
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  }> => {
+    const {
+      page = 0,
+      size = 10,
+      sort = "createdDate",
+      direction = "DESC",
+      ...filters
+    } = params;
+
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sort: sort,
+      direction: direction,
+    });
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => queryParams.append(key, v.toString()));
+        } else {
+          queryParams.append(key, value.toString());
+        }
+      }
+    });
+
+    const response = await api.get(
+      `/promotions/active?${queryParams.toString()}`
+    );
+    return response.data.data;
+  },
+
+  // Get visible promotions
+  getVisiblePromotions: async (
+    params: PromotionFilterParam = {}
+  ): Promise<{
+    content: Promotion[];
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  }> => {
+    const {
+      page = 0,
+      size = 10,
+      sort = "createdDate",
+      direction = "DESC",
+      ...filters
+    } = params;
+
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sort: sort,
+      direction: direction,
+    });
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => queryParams.append(key, v.toString()));
+        } else {
+          queryParams.append(key, value.toString());
+        }
+      }
+    });
+
+    const response = await api.get(
+      `/promotions/visible?${queryParams.toString()}`
+    );
+    return response.data.data;
+  },
+
+  // Get expired promotions
+  getExpiredPromotions: async (
+    params: PromotionFilterParam = {}
+  ): Promise<{
+    content: Promotion[];
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  }> => {
+    const {
+      page = 0,
+      size = 10,
+      sort = "createdDate",
+      direction = "DESC",
+      ...filters
+    } = params;
+
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sort: sort,
+      direction: direction,
+    });
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => queryParams.append(key, v.toString()));
+        } else {
+          queryParams.append(key, value.toString());
+        }
+      }
+    });
+
+    const response = await api.get(
+      `/promotions/expired?${queryParams.toString()}`
+    );
+    return response.data.data;
+  },
+
+  // Get promotions starting soon
+  getPromotionsStartingSoon: async (
+    params: PromotionFilterParam = {}
+  ): Promise<{
+    content: Promotion[];
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  }> => {
+    const {
+      page = 0,
+      size = 10,
+      sort = "createdDate",
+      direction = "DESC",
+      ...filters
+    } = params;
+
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sort: sort,
+      direction: direction,
+    });
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => queryParams.append(key, v.toString()));
+        } else {
+          queryParams.append(key, value.toString());
+        }
+      }
+    });
+
+    const response = await api.get(
+      `/promotions/starting-soon?${queryParams.toString()}`
+    );
+    return response.data.data;
+  },
+
+  // Get promotions ending soon
+  getPromotionsEndingSoon: async (
+    params: PromotionFilterParam = {}
+  ): Promise<{
+    content: Promotion[];
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  }> => {
+    const {
+      page = 0,
+      size = 10,
+      sort = "createdDate",
+      direction = "DESC",
+      ...filters
+    } = params;
+
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sort: sort,
+      direction: direction,
+    });
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => queryParams.append(key, v.toString()));
+        } else {
+          queryParams.append(key, value.toString());
+        }
+      }
+    });
+
+    const response = await api.get(
+      `/promotions/ending-soon?${queryParams.toString()}`
+    );
+    return response.data.data;
+  },
+
+  // Get promotion statistics
+  getPromotionStatistics: async (): Promise<{
+    totalPromotions: number;
+    activePromotions: number;
+    expiredPromotions: number;
+    upcomingPromotions: number;
+    totalUsage: number;
+    totalDiscountGiven: number;
+  }> => {
+    const response = await api.get("/promotions/statistics");
     return response.data.data;
   },
 
@@ -118,9 +342,12 @@ export const promotionService = {
     promotionId: string,
     customerId?: string
   ): Promise<{ available: boolean; message?: string }> => {
-    const response = await api.post(`/promotions/${promotionId}/check-availability`, {
-      customerId,
-    });
+    const response = await api.post(
+      `/promotions/${promotionId}/check-availability`,
+      {
+        customerId,
+      }
+    );
     return response.data.data;
   },
 
@@ -142,7 +369,10 @@ export const promotionService = {
     finalAmount: number;
     appliedConditions: string[];
   }> => {
-    const response = await api.post(`/promotions/${promotionId}/apply`, orderData);
+    const response = await api.post(
+      `/promotions/${promotionId}/apply`,
+      orderData
+    );
     return response.data.data;
   },
 
@@ -152,7 +382,13 @@ export const promotionService = {
     page: number = 0,
     size: number = 20
   ): Promise<{
-    content: PromotionUsage[];
+    content: Array<{
+      usageId: string;
+      customerId: string;
+      orderId: string;
+      discountAmount: number;
+      usedAt: string;
+    }>;
     totalElements: number;
     totalPages: number;
     currentPage: number;
@@ -189,9 +425,7 @@ export const promotionService = {
     if (fromDate) params.append("fromDate", fromDate);
     if (toDate) params.append("toDate", toDate);
 
-    const response = await api.get(
-      `/promotions/analytics?${params.toString()}`
-    );
+    const response = await api.get(`/promotions/analytics?${params.toString()}`);
     return response.data.data;
   },
 
@@ -229,7 +463,9 @@ export const promotionService = {
   },
 
   // Import promotions
-  importPromotions: async (file: File): Promise<{
+  importPromotions: async (
+    file: File
+  ): Promise<{
     success: number;
     failed: number;
     errors: string[];
@@ -246,7 +482,13 @@ export const promotionService = {
   },
 
   // Validate promotion code
-  validatePromotionCode: async (code: string): Promise<PromotionValidationResponse> => {
+  validatePromotionCode: async (
+    code: string
+  ): Promise<{
+    valid: boolean;
+    promotion?: Promotion;
+    message?: string;
+  }> => {
     const response = await api.post("/promotions/validate-code", { code });
     return response.data.data;
   },

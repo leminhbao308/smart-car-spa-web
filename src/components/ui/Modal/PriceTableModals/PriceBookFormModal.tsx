@@ -134,8 +134,16 @@ const PriceBookFormModal: React.FC<PriceBookFormModalProps> = ({
         itemName = pkg?.package_name || "";
       }
 
+      // Tìm item trùng lặp (ngoại trừ item đang chỉnh sửa)
+      const existingItem = items.find(
+        (item) =>
+          item.item_id === values.item_id &&
+          item.item_type === values.item_type &&
+          item.id !== editingItem?.id
+      );
+
       const newItem: PriceBookItem = {
-        id: editingItem?.id || `temp-${Date.now()}`,
+        id: existingItem?.id || editingItem?.id || `temp-${Date.now()}`,
         item_type: values.item_type,
         item_id: values.item_id,
         item_name: itemName,
@@ -144,19 +152,12 @@ const PriceBookFormModal: React.FC<PriceBookFormModalProps> = ({
         markup_percent: values.policy_type === "MARKUP_ON_PEAK" ? values.markup_percent || null : null,
       };
 
-      if (editingItem) {
-        // Update existing item
-        setItems(items.map((item) => (item.id === editingItem.id ? newItem : item)));
+      if (editingItem || existingItem) {
+        // Update existing item (từ chỉnh sửa hoặc từ duplicate)
+        const targetId = existingItem?.id || editingItem?.id;
+        setItems(items.map((item) => (item.id === targetId ? newItem : item)));
         message.success("Đã cập nhật mục giá");
       } else {
-        // Check duplicate
-        const isDuplicate = items.some(
-          (item) => item.item_id === values.item_id && item.item_type === values.item_type
-        );
-        if (isDuplicate) {
-          message.error("Mục này đã tồn tại trong bảng giá");
-          return;
-        }
         // Add new item
         setItems([...items, newItem]);
         message.success("Đã thêm mục giá");
