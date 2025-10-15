@@ -21,6 +21,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   StarOutlined,
+  CreditCardOutlined,
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
 import VehicleTrackingModal from "@/components/ui/Modal/VehicleTrackingModal";
@@ -212,7 +213,46 @@ const VehiclesInCarePage = () => {
         );
       },
     },
+    {
+      title: "Thanh toán",
+      dataIndex: "paymentStatus",
+      key: "paymentStatus",
+      width: 120,
+      align: "center" as const,
+      render: (paymentStatus: string) => {
+        const paymentConfig = {
+          PENDING: { label: "Chờ thanh toán", color: "orange" },
+          PAID: { label: "Đã thanh toán", color: "green" },
+          FAILED: { label: "Thanh toán thất bại", color: "red" },
+          REFUNDED: { label: "Đã hoàn tiền", color: "blue" },
+        };
+        const config = paymentConfig[paymentStatus as keyof typeof paymentConfig] || {
+          label: "Chưa xác định",
+          color: "default",
+        };
+        return (
+          <Tag color={config.color} style={{ fontSize: 12 }}>
+            {config.label}
+          </Tag>
+        );
+      },
+    },
   ];
+
+  const handlePayment = (record: BookingInfoDto) => {
+    const bookingId = record.bookingId;
+    const totalPrice = record.totalPrice || 0;
+    
+    // TODO: Implement payment processing logic
+    console.log("Booking ID:", bookingId);
+    console.log("Total Price:", totalPrice);
+    
+    notification.success({
+      message: "Thành công",
+      description: "Xử lý thanh toán thành công",
+      placement: "topRight",
+    });
+  };
 
   const actions = [
     {
@@ -224,6 +264,16 @@ const VehiclesInCarePage = () => {
         setSelectedVehicle(record);
         setDetailModalOpen(true);
       },
+    },
+    {
+      key: "payment",
+      label: "Thanh toán",
+      icon: <CreditCardOutlined />,
+      type: "default" as const,
+      onClick: handlePayment,
+      condition: (record: BookingInfoDto) =>
+        record.status === BookingStatus.COMPLETED &&
+        record.paymentStatus === "PENDING",
     },
   ];
 

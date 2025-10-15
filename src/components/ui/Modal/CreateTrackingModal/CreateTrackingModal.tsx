@@ -5,7 +5,10 @@ import { useCreateTracking } from "@/lib/api/hooks/useTracking";
 import { useEmployeesDropdown } from "@/lib/api/hooks/useEmployees";
 import { useServiceBaysByBranch } from "@/lib/api/hooks/useServiceBays";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
-import { CreateServiceProcessTrackingRequest, TrackingStatus } from "@/lib/api/types/service-process-tracking.types";
+import {
+  CreateServiceProcessTrackingRequest,
+  TrackingStatus,
+} from "@/lib/api/types/service-process-tracking.types";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -30,21 +33,22 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
   const [form] = Form.useForm();
 
   const createTrackingMutation = useCreateTracking();
-  const { data: employees, isLoading: isLoadingEmployees } = useEmployeesDropdown();
-  const { data: serviceBays, isLoading: isLoadingServiceBays } = useServiceBaysByBranch(booking.branchId);
+  const { data: employees, isLoading: isLoadingEmployees } =
+    useEmployeesDropdown();
+  const { data: serviceBays, isLoading: isLoadingServiceBays } =
+    useServiceBaysByBranch(booking.branchId);
 
   // Reset form when modal opens
   useEffect(() => {
     if (open) {
       form.resetFields();
-      
+
       // Set pre-selected step if provided
       if (preSelectedStepId) {
         form.setFieldValue("serviceStepId", preSelectedStepId);
       }
     }
   }, [open, form, preSelectedStepId]);
-
 
   const handleSubmit = async (values: {
     technicianId: string;
@@ -75,7 +79,6 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
     form.resetFields();
     onCancel();
   };
-
 
   return (
     <Modal
@@ -133,16 +136,16 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
             showSearch
             allowClear
             filterOption={(input, option) => {
-              const text = option?.children?.toString() || '';
+              const text = option?.children?.toString() || "";
               return text.toLowerCase().includes(input.toLowerCase());
             }}
           >
             {employees?.map((employee) => (
               <Option key={employee.user_id} value={employee.user_id}>
                 <div>
-                  <div style={{ fontWeight: 500 }}>{employee.full_name}</div>
-                  <div style={{ fontSize: 12, color: "#666" }}>
-                    {employee.phone_number} • {employee.email}
+                  <div style={{ fontWeight: 500 }}>
+                    {employee.full_name} • {employee.phone_number} •{" "}
+                    {employee.email}
                   </div>
                 </div>
               </Option>
@@ -155,7 +158,7 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
           name="bayId"
           rules={[{ required: true, message: "Vui lòng chọn khu vực dịch vụ" }]}
         >
-          <Select 
+          <Select
             placeholder="Chọn khu vực dịch vụ"
             loading={isLoadingServiceBays}
             allowClear
@@ -164,14 +167,6 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
               <Option key={bay.bay_id} value={bay.bay_id}>
                 <div>
                   <div style={{ fontWeight: 500 }}>{bay.bay_name}</div>
-                  <div style={{ fontSize: 12, color: "#666" }}>
-                    {bay.bay_code} • {bay.bay_type} • Sức chứa: {bay.capacity}
-                  </div>
-                  {bay.description && (
-                    <div style={{ fontSize: 11, color: "#999" }}>
-                      {bay.description}
-                    </div>
-                  )}
                 </div>
               </Option>
             ))}

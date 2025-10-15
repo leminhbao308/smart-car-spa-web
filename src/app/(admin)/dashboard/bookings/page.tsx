@@ -15,6 +15,7 @@ import {
   LoginOutlined,
   PlayCircleOutlined,
   MonitorOutlined,
+  CreditCardOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
@@ -491,6 +492,39 @@ const BookingsPage = () => {
       })),
       onFilter: (value, record) => record.status === value,
     },
+    {
+      title: "Thanh toán",
+      dataIndex: "paymentStatus",
+      key: "paymentStatus",
+      width: 120,
+      align: "center",
+      render: (paymentStatus: string) => {
+        const paymentConfig = {
+          PENDING: { label: "Chờ thanh toán", color: "orange" },
+          PAID: { label: "Đã thanh toán", color: "green" },
+          FAILED: { label: "Thanh toán thất bại", color: "red" },
+          REFUNDED: { label: "Đã hoàn tiền", color: "blue" },
+        };
+        const config = paymentConfig[
+          paymentStatus as keyof typeof paymentConfig
+        ] || {
+          label: "Chưa xác định",
+          color: "default",
+        };
+        return (
+          <Tag color={config.color} style={{ fontSize: 12 }}>
+            {config.label}
+          </Tag>
+        );
+      },
+      filters: [
+        { text: "Chờ thanh toán", value: "PENDING" },
+        { text: "Đã thanh toán", value: "PAID" },
+        { text: "Thanh toán thất bại", value: "FAILED" },
+        { text: "Đã hoàn tiền", value: "REFUNDED" },
+      ],
+      onFilter: (value, record) => record.paymentStatus === value,
+    },
   ];
 
   // Handlers
@@ -564,54 +598,75 @@ const BookingsPage = () => {
   };
 
   // Function để fulfill inventory khi start service
-  const fulfillInventoryForBooking = async (bookingId: string, branchId: string) => {
+  const fulfillInventoryForBooking = async (
+    bookingId: string,
+    branchId: string
+  ) => {
     try {
       // Lấy warehouse từ branch
-      const { WarehouseService } = await import('@/lib/api/services/warehouse.service');
+      const { WarehouseService } = await import(
+        "@/lib/api/services/warehouse.service"
+      );
       const warehouse = await WarehouseService.getWarehouseByBranchId(branchId);
-      
+
       if (!warehouse?.id) {
-        console.log('No warehouse found for branch:', branchId);
+        console.log("No warehouse found for branch:", branchId);
         return;
       }
 
       // Lấy booking details để lấy booking items
-      const { BookingService } = await import('@/lib/api/services/bookingService');
+      const { BookingService } = await import(
+        "@/lib/api/services/bookingService"
+      );
       const booking = await BookingService.getBookingById(bookingId);
-      
+
       if (!booking?.booking_items || booking.booking_items.length === 0) {
-        console.log('No booking items found for booking:', bookingId);
+        console.log("No booking items found for booking:", bookingId);
         return;
       }
 
       // Lấy sản phẩm cần thiết cho các service
-      const allProducts: { productId: string; quantity: number; productName: string; productCode: string; unitOfMeasure: string }[] = [];
-      
+      const allProducts: {
+        productId: string;
+        quantity: number;
+        productName: string;
+        productCode: string;
+        unitOfMeasure: string;
+      }[] = [];
+
       for (const item of booking.booking_items) {
-        if (item.item_type === 'SERVICE') {
-          const { ServiceProcessService } = await import('@/lib/api/services/service-process.service');
-          
+        if (item.item_type === "SERVICE") {
+          const { ServiceProcessService } = await import(
+            "@/lib/api/services/service-process.service"
+          );
+
           // Lấy service process từ serviceId
-          const serviceProcess = await ServiceProcessService.getServiceProcessByServiceId(item.item_id);
-          
+          const serviceProcess =
+            await ServiceProcessService.getServiceProcessByServiceId(
+              item.item_id
+            );
+
           if (serviceProcess?.id) {
             // Lấy products từ processId
-            const products = await ServiceProcessService.getServiceProcessProducts(serviceProcess.id);
+            const products =
+              await ServiceProcessService.getServiceProcessProducts(
+                serviceProcess.id
+              );
             if (products && products.length > 0) {
               allProducts.push(...products);
             }
           }
         }
       }
-      
+
       if (allProducts.length === 0) {
-        console.log('No products found for booking:', bookingId);
+        console.log("No products found for booking:", bookingId);
         return;
       }
 
       // Gộp các sản phẩm trùng lặp và tính tổng số lượng
       const productMap = new Map();
-      allProducts.forEach(product => {
+      allProducts.forEach((product) => {
         const key = product.productId;
         if (productMap.has(key)) {
           productMap.get(key).quantity += product.quantity;
@@ -619,26 +674,32 @@ const BookingsPage = () => {
           productMap.set(key, { ...product });
         }
       });
-      
+
       const uniqueProducts = Array.from(productMap.values());
-      
+
       // Fulfill inventory
-      const { InventoryService } = await import('@/lib/api/services/inventory.service');
-      
-      const productsToFulfill = uniqueProducts.map(product => ({
+      const { InventoryService } = await import(
+        "@/lib/api/services/inventory.service"
+      );
+
+      const productsToFulfill = uniqueProducts.map((product) => ({
         productId: product.productId,
         quantity: product.quantity,
       }));
-      
+
       await InventoryService.fulfillMultipleForBooking(
         warehouse.id,
         productsToFulfill,
         bookingId
       );
-      
-      console.log('Successfully fulfilled inventory for booking:', bookingId);
+
+      console.log("Successfully fulfilled inventory for booking:", bookingId);
     } catch (error) {
-      console.error('Error fulfilling inventory for booking:', bookingId, error);
+      console.error(
+        "Error fulfilling inventory for booking:",
+        bookingId,
+        error
+      );
       // Không throw error để không làm fail start service
     }
   };
@@ -651,12 +712,12 @@ const BookingsPage = () => {
       onConfirm: async () => {
         try {
           await startServiceMutation.mutateAsync(record.bookingId);
-          
+
           // Fulfill inventory sau khi start service thành công
           if (record.branchId) {
             await fulfillInventoryForBooking(record.bookingId, record.branchId);
           }
-          
+
           notification.success({
             message: "Thành công",
             description: "Bắt đầu dịch vụ thành công",
@@ -761,13 +822,46 @@ const BookingsPage = () => {
     setServiceTrackingModalOpen(true);
   };
 
+  const handlePayment = (record: BookingInfoDto) => {
+    const bookingId = record.bookingId;
+    const totalPrice = record.totalPrice || 0;
+    console.log("Booking ID:", bookingId);
+    console.log("Total Price:", totalPrice);
+
+    showModal({
+      title: "Xử lý thanh toán",
+      content: `Xác nhận xử lý thanh toán cho lịch đặt ${record.bookingCode}?`,
+      type: "info",
+      onConfirm: async () => {
+        try {
+          // TODO: Implement payment processing logic
+          console.log("Booking ID:", bookingId);
+          console.log("Total Price:", totalPrice);
+
+          notification.success({
+            message: "Thành công",
+            description: "Xử lý thanh toán thành công",
+            placement: "topRight",
+          });
+        } catch (error) {
+          console.error("Payment processing error:", error);
+          notification.error({
+            message: "Lỗi",
+            description: "Có lỗi xảy ra khi xử lý thanh toán",
+            placement: "topRight",
+          });
+        }
+      },
+    });
+  };
+
   return (
     <App>
       <AdminTable
         title="Quản lý đặt lịch"
         dataSource={data}
         columns={columns}
-        scroll={{ x: 1300 }}
+        scroll={{ x: 1420 }}
         loading={
           isLoading ||
           isLoadingCustomers ||
@@ -846,6 +940,16 @@ const BookingsPage = () => {
               [BookingStatus.IN_PROGRESS, BookingStatus.PAUSED].includes(
                 record.status
               ),
+          },
+          {
+            key: "payment",
+            label: "Thanh toán",
+            type: "primary",
+            icon: <CreditCardOutlined />,
+            onClick: handlePayment,
+            condition: (record: BookingInfoDto) =>
+              record.status === BookingStatus.COMPLETED &&
+              record.paymentStatus === "PENDING",
           },
           {
             key: "cancel",

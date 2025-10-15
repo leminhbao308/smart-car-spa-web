@@ -1,5 +1,5 @@
 "use client";
-import React, {useCallback, useEffect, useState, useMemo} from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
 import {
   Card,
   Row,
@@ -47,16 +47,18 @@ import {
   useCatalogForSale,
   usePricing,
   useInventoryLevels,
-  useCreateAndPay, useVerifyPayment, useFulfillSalesOrder,
+  useCreateAndPay,
+  useVerifyPayment,
+  useFulfillSalesOrder,
 } from "@/lib/api/hooks";
-import {Product, UserManagementInfo} from "@/lib/api";
-import {useCategories} from "@/lib/api/hooks/useCategory";
-import type {BranchDisplay} from "@/lib/api/types/branch.types";
-import type {CatalogItem} from "@/lib/api/types/catalog.types";
-import {PaymentModal} from "@/components/ui/Modal/PaymentModal";
+import { Product, UserManagementInfo } from "@/lib/api";
+import { useCategories } from "@/lib/api/hooks/useCategory";
+import type { BranchDisplay } from "@/lib/api/types/branch.types";
+import type { CatalogItem } from "@/lib/api/types/catalog.types";
+import { PaymentModal } from "@/components/ui/Modal/PaymentModal";
 
-const {Title, Text} = Typography;
-const {Option} = Select;
+const { Title, Text } = Typography;
+const { Option } = Select;
 
 interface CartItem {
   productId: string;
@@ -78,8 +80,11 @@ const POSPage = () => {
   // State Management
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchText, setSearchText] = useState("");
-  const [selectedCustomer, setSelectedCustomer] = useState<UserManagementInfo | null>(null);
-  const [selectedBranch, setSelectedBranch] = useState<BranchDisplay | null>(null);
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<UserManagementInfo | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<BranchDisplay | null>(
+    null
+  );
   const [isCustomerModalVisible, setIsCustomerModalVisible] = useState(false);
   const [isBranchModalVisible, setIsBranchModalVisible] = useState(false);
   const [isPaymentModalVisible, setIsPaymentModalVisible] = useState(false);
@@ -99,20 +104,26 @@ const POSPage = () => {
   const [isPolling, setIsPolling] = useState(false);
 
   // API Hooks
-  const {branches, loading: branchesLoading} = useBranches({});
-  const {warehouse, loading: warehouseLoading, refresh: refreshWarehouse} = useWarehouseByBranch(
-    selectedBranch?.branch_id || null
-  );
-  const {catalog, loading: catalogLoading, refresh: refreshCatalog} = useCatalogForSale(
-    warehouse?.id || ""
-  );
-  const {previewBatch, loading: pricingLoading} = usePricing();
-  const {levelsBatch, loading: inventoryLoading} = useInventoryLevels();
-  const {mutateAsync: createAndPay, isPending: isCreatingOrder} = useCreateAndPay();
-  const {mutateAsync: fulfillOrder, isPending: isFulfilling} = useFulfillSalesOrder();
+  const { branches, loading: branchesLoading } = useBranches({});
+  const {
+    warehouse,
+    loading: warehouseLoading,
+    refresh: refreshWarehouse,
+  } = useWarehouseByBranch(selectedBranch?.branch_id || null);
+  const {
+    catalog,
+    loading: catalogLoading,
+    refresh: refreshCatalog,
+  } = useCatalogForSale(warehouse?.id || "");
+  const { previewBatch, loading: pricingLoading } = usePricing();
+  const { levelsBatch, loading: inventoryLoading } = useInventoryLevels();
+  const { mutateAsync: createAndPay, isPending: isCreatingOrder } =
+    useCreateAndPay();
+  const { mutateAsync: fulfillOrder, isPending: isFulfilling } =
+    useFulfillSalesOrder();
 
   // Payment verification with polling
-  const {data: paymentStatus, isLoading: isVerifying} = useVerifyPayment(
+  const { data: paymentStatus, isLoading: isVerifying } = useVerifyPayment(
     orderCode,
     {
       enabled: isPolling && !!orderCode,
@@ -199,11 +210,15 @@ const POSPage = () => {
     }
 
     setCart((prevCart) => {
-      const existingItem = prevCart.find((item) => item.productId === product.product_id);
+      const existingItem = prevCart.find(
+        (item) => item.productId === product.product_id
+      );
       const currentQty = existingItem ? existingItem.quantity : 0;
 
       if (currentQty + 1 > product.availableStock) {
-        message.warning(`Chỉ còn ${product.availableStock} sản phẩm trong kho!`);
+        message.warning(
+          `Chỉ còn ${product.availableStock} sản phẩm trong kho!`
+        );
         return prevCart;
       }
 
@@ -211,10 +226,10 @@ const POSPage = () => {
         return prevCart.map((item) =>
           item.productId === product.product_id
             ? {
-              ...item,
-              quantity: item.quantity + 1,
-              total: (item.quantity + 1) * item.price,
-            }
+                ...item,
+                quantity: item.quantity + 1,
+                total: (item.quantity + 1) * item.price,
+              }
             : item
         );
       } else {
@@ -249,14 +264,16 @@ const POSPage = () => {
 
       return prevCart.map((item) =>
         item.productId === productId
-          ? {...item, quantity, total: quantity * item.price}
+          ? { ...item, quantity, total: quantity * item.price }
           : item
       );
     });
   }, []);
 
   const removeFromCart = useCallback((productId: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.productId !== productId));
+    setCart((prevCart) =>
+      prevCart.filter((item) => item.productId !== productId)
+    );
     message.info("Đã xóa sản phẩm khỏi giỏ hàng");
   }, []);
 
@@ -266,7 +283,7 @@ const POSPage = () => {
       content: "Bạn có chắc chắn muốn xóa tất cả sản phẩm trong giỏ hàng?",
       okText: "Xóa",
       cancelText: "Hủy",
-      okButtonProps: {danger: true},
+      okButtonProps: { danger: true },
       onOk: () => {
         setCart([]);
         message.success("Đã xóa toàn bộ giỏ hàng");
@@ -352,7 +369,10 @@ const POSPage = () => {
         hide();
         message.success("Thanh toán thành công và đã hoàn thành đơn hàng!");
       } catch (error: any) {
-        message.error("Thanh toán thành công nhưng lỗi khi hoàn thành đơn hàng: " + (error?.message || ""));
+        message.error(
+          "Thanh toán thành công nhưng lỗi khi hoàn thành đơn hàng: " +
+            (error?.message || "")
+        );
       }
     } else {
       message.success("Thanh toán thành công!");
@@ -456,7 +476,9 @@ const POSPage = () => {
             await fulfillOrder(response.order.id);
             message.success("Đã hoàn thành đơn hàng!");
           } catch (error: any) {
-            message.error("Lỗi khi hoàn thành đơn hàng: " + (error?.message || ""));
+            message.error(
+              "Lỗi khi hoàn thành đơn hàng: " + (error?.message || "")
+            );
           }
         }
 
@@ -479,7 +501,9 @@ const POSPage = () => {
           setOrderCode(response.payment.order_code || null);
           setIsPolling(true); // Start polling
 
-          message.success("Đã tạo đơn hàng! Vui lòng quét mã QR hoặc truy cập link thanh toán");
+          message.success(
+            "Đã tạo đơn hàng! Vui lòng quét mã QR hoặc truy cập link thanh toán"
+          );
         } else {
           throw new Error("Không nhận được link thanh toán");
         }
@@ -503,7 +527,7 @@ const POSPage = () => {
 
   const handleOpenPaymentLink = useCallback(() => {
     if (paymentUrl) {
-      window.open(paymentUrl, '_blank');
+      window.open(paymentUrl, "_blank");
     }
   }, [paymentUrl]);
 
@@ -531,7 +555,7 @@ const POSPage = () => {
       key: "price",
       width: 120,
       render: (price: number) => (
-        <Text strong style={{color: "#1890ff"}}>
+        <Text strong style={{ color: "#1890ff" }}>
           ₫{price.toLocaleString()}
         </Text>
       ),
@@ -545,7 +569,7 @@ const POSPage = () => {
         <Space>
           <Button
             size="small"
-            icon={<MinusOutlined/>}
+            icon={<MinusOutlined />}
             onClick={() => updateQuantity(record.productId, quantity - 1)}
             disabled={quantity <= 1}
           />
@@ -554,12 +578,12 @@ const POSPage = () => {
             value={quantity}
             min={1}
             max={record.maxQuantity}
-            style={{width: 60}}
+            style={{ width: 60 }}
             onChange={(value) => updateQuantity(record.productId, value || 1)}
           />
           <Button
             size="small"
-            icon={<PlusOutlined/>}
+            icon={<PlusOutlined />}
             onClick={() => updateQuantity(record.productId, quantity + 1)}
             disabled={quantity >= record.maxQuantity}
           />
@@ -571,9 +595,7 @@ const POSPage = () => {
       dataIndex: "total",
       key: "total",
       width: 120,
-      render: (total: number) => (
-        <Text strong>₫{total.toLocaleString()}</Text>
-      ),
+      render: (total: number) => <Text strong>₫{total.toLocaleString()}</Text>,
     },
     {
       title: "",
@@ -583,14 +605,15 @@ const POSPage = () => {
         <Button
           type="text"
           danger
-          icon={<DeleteOutlined/>}
+          icon={<DeleteOutlined />}
           onClick={() => removeFromCart(record.productId)}
         />
       ),
     },
   ];
 
-  const isLoading = catalogLoading || warehouseLoading || pricingLoading || inventoryLoading;
+  const isLoading =
+    catalogLoading || warehouseLoading || pricingLoading || inventoryLoading;
 
   return (
     <div
@@ -600,13 +623,13 @@ const POSPage = () => {
         overflow: "hidden",
       }}
     >
-      <Row gutter={[24, 24]} style={{height: "100%"}}>
+      <Row gutter={[24, 24]} style={{ height: "100%" }}>
         {/* Products Section */}
-        <Col xs={24} lg={14} style={{height: "100%"}}>
+        <Col xs={24} lg={14} style={{ height: "100%" }}>
           <Card
             title={
               <Space>
-                <ShopOutlined/>
+                <ShopOutlined />
                 <span>Sản phẩm</span>
                 {selectedBranch && (
                   <Tag color="blue">{selectedBranch.branch_name}</Tag>
@@ -615,7 +638,7 @@ const POSPage = () => {
             }
             extra={
               <Button
-                icon={<ReloadOutlined/>}
+                icon={<ReloadOutlined />}
                 onClick={() => {
                   refreshCatalog();
                   refreshWarehouse();
@@ -625,16 +648,16 @@ const POSPage = () => {
                 Làm mới
               </Button>
             }
-            style={{height: "100%", borderRadius: "12px"}}
+            style={{ height: "100%", borderRadius: "12px" }}
             styles={{
-              body: {height: "calc(100% - 57px)", overflow: "auto"},
+              body: { height: "calc(100% - 57px)", overflow: "auto" },
             }}
           >
-            <Row gutter={[16, 16]} style={{marginBottom: "16px"}}>
+            <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
               <Col span={8}>
                 <Input
                   placeholder="Tìm kiếm sản phẩm, mã SKU..."
-                  prefix={<SearchOutlined/>}
+                  prefix={<SearchOutlined />}
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   size="large"
@@ -646,7 +669,7 @@ const POSPage = () => {
                   placeholder="Danh mục"
                   value={categoryFilter}
                   onChange={setCategoryFilter}
-                  style={{width: "100%"}}
+                  style={{ width: "100%" }}
                   size="large"
                 >
                   <Option value="all">Tất cả</Option>
@@ -662,7 +685,7 @@ const POSPage = () => {
                   placeholder="Tồn kho"
                   value={stockFilter}
                   onChange={setStockFilter}
-                  style={{width: "100%"}}
+                  style={{ width: "100%" }}
                   size="large"
                 >
                   <Option value="all">Tất cả</Option>
@@ -674,13 +697,16 @@ const POSPage = () => {
               <Col span={4}>
                 <Button
                   size="large"
-                  icon={<ShopOutlined/>}
+                  icon={<ShopOutlined />}
                   onClick={() => setIsBranchModalVisible(true)}
-                  style={{width: "100%"}}
+                  style={{ width: "100%" }}
                   type={selectedBranch ? "primary" : "default"}
                 >
                   {selectedBranch ? (
-                    <Text ellipsis={{tooltip: true}} style={{color: "white"}}>
+                    <Text
+                      ellipsis={{ tooltip: true }}
+                      style={{ color: "white" }}
+                    >
                       {selectedBranch.branch_name}
                     </Text>
                   ) : (
@@ -691,12 +717,14 @@ const POSPage = () => {
               <Col span={4}>
                 <Button
                   size="large"
-                  icon={<UserOutlined/>}
+                  icon={<UserOutlined />}
                   onClick={() => setIsCustomerModalVisible(true)}
-                  style={{width: "100%"}}
+                  style={{ width: "100%" }}
                 >
-                  <Text ellipsis={{tooltip: true}}>
-                    {selectedCustomer ? selectedCustomer.full_name : "Khách hàng"}
+                  <Text ellipsis={{ tooltip: true }}>
+                    {selectedCustomer
+                      ? selectedCustomer.full_name
+                      : "Khách hàng"}
                   </Text>
                 </Button>
               </Col>
@@ -704,33 +732,46 @@ const POSPage = () => {
 
             {!selectedBranch ? (
               <Empty
-                style={{marginTop: "100px"}}
+                style={{ marginTop: "100px" }}
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
                   <Space direction="vertical">
-                    <Text type="secondary">Vui lòng chọn chi nhánh để xem sản phẩm</Text>
+                    <Text type="secondary">
+                      Vui lòng chọn chi nhánh để xem sản phẩm
+                    </Text>
                   </Space>
                 }
               />
             ) : isLoading ? (
-              <div style={{textAlign: "center", padding: "80px 20px"}}>
-                <Spin size="large"/>
-                <div style={{marginTop: "16px"}}>Đang tải sản phẩm...</div>
+              <div style={{ textAlign: "center", padding: "80px 20px" }}>
+                <Spin size="large" />
+                <div style={{ marginTop: "16px" }}>Đang tải sản phẩm...</div>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <Empty description="Không tìm thấy sản phẩm"/>
+              <Empty description="Không tìm thấy sản phẩm" />
             ) : (
               <Row gutter={[16, 16]}>
                 {filteredProducts.map((product) => (
-                  <Col xs={12} sm={8} md={6} lg={6} xl={6} key={product.product_id}>
+                  <Col
+                    xs={12}
+                    sm={8}
+                    md={6}
+                    lg={6}
+                    xl={6}
+                    key={product.product_id}
+                  >
                     <Badge.Ribbon
-                      text={product.availableStock === 0 ? "Hết hàng" : `Còn ${product.availableStock}`}
+                      text={
+                        product.availableStock === 0
+                          ? "Hết hàng"
+                          : `Còn ${product.availableStock}`
+                      }
                       color={
                         product.availableStock === 0
                           ? "red"
                           : product.availableStock <= 10
-                            ? "orange"
-                            : "green"
+                          ? "orange"
+                          : "green"
                       }
                     >
                       <Card
@@ -738,7 +779,10 @@ const POSPage = () => {
                         style={{
                           borderRadius: "8px",
                           opacity: product.availableStock === 0 ? 0.5 : 1,
-                          cursor: product.availableStock === 0 ? "not-allowed" : "pointer",
+                          cursor:
+                            product.availableStock === 0
+                              ? "not-allowed"
+                              : "pointer",
                           height: "100%",
                           display: "flex",
                           flexDirection: "column",
@@ -749,19 +793,21 @@ const POSPage = () => {
                             flex: 1,
                             display: "flex",
                             flexDirection: "column",
-                            height: "100%"
+                            height: "100%",
                           },
                         }}
                         onClick={() =>
                           product.availableStock > 0 && addToCart(product)
                         }
                       >
-                        <div style={{
-                          textAlign: "center",
-                          display: "flex",
-                          flexDirection: "column",
-                          height: "100%",
-                        }}>
+                        <div
+                          style={{
+                            textAlign: "center",
+                            display: "flex",
+                            flexDirection: "column",
+                            height: "100%",
+                          }}
+                        >
                           <div
                             style={{
                               height: "80px",
@@ -774,10 +820,16 @@ const POSPage = () => {
                             }}
                           >
                             <BarcodeOutlined
-                              style={{fontSize: "32px", color: "#999"}}
+                              style={{ fontSize: "32px", color: "#999" }}
                             />
                           </div>
-                          <div style={{flex: 1, display: "flex", flexDirection: "column"}}>
+                          <div
+                            style={{
+                              flex: 1,
+                              display: "flex",
+                              flexDirection: "column",
+                            }}
+                          >
                             <Text
                               strong
                               style={{
@@ -788,7 +840,7 @@ const POSPage = () => {
                                 lineHeight: "1.4",
                               }}
                               ellipsis={{
-                                tooltip: product.product_name
+                                tooltip: product.product_name,
                               }}
                             >
                               {product.product_name}
@@ -804,39 +856,48 @@ const POSPage = () => {
                             >
                               ₫{product.sellingPrice?.toLocaleString()}
                             </Text>
-                            <div style={{
-                              marginTop: "auto",
-                              marginBottom: "8px",
-                              display: "flex",
-                              flexWrap: "wrap",
-                              justifyContent: "center"
-                            }}>
+                            <div
+                              style={{
+                                marginTop: "auto",
+                                marginBottom: "8px",
+                                display: "flex",
+                                flexWrap: "wrap",
+                                justifyContent: "center",
+                              }}
+                            >
                               {product.brand && (
-                                <Tag color="purple" style={{
-                                  fontSize: "10px",
-                                  margin: 0,
-                                  display: "flex",
-                                  flexWrap: "wrap",
-                                  gap: "4px",
-                                  justifyContent: "center"
-                                }}>
-                                  <Text ellipsis={{tooltip: product.brand}}>
+                                <Tag
+                                  color="purple"
+                                  style={{
+                                    fontSize: "10px",
+                                    margin: 0,
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    gap: "4px",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  <Text ellipsis={{ tooltip: product.brand }}>
                                     {product.brand}
                                   </Text>
                                 </Tag>
                               )}
                             </div>
-                            <div style={{
-                              marginTop: "auto",
-                              marginBottom: "8px",
-                              display: "flex",
-                              flexWrap: "wrap",
-                              justifyContent: "center"
-                            }}>
+                            <div
+                              style={{
+                                marginTop: "auto",
+                                marginBottom: "8px",
+                                display: "flex",
+                                flexWrap: "wrap",
+                                justifyContent: "center",
+                              }}
+                            >
                               {product.sku && (
-                                <Tag color="blue" style={{fontSize: "10px", margin: 0}}>
-                                  <Text
-                                    ellipsis={{tooltip: product.sku}}>
+                                <Tag
+                                  color="blue"
+                                  style={{ fontSize: "10px", margin: 0 }}
+                                >
+                                  <Text ellipsis={{ tooltip: product.sku }}>
                                     {product.sku}
                                   </Text>
                                 </Tag>
@@ -854,13 +915,13 @@ const POSPage = () => {
         </Col>
 
         {/* Cart Section */}
-        <Col xs={24} lg={10} style={{height: "100%"}}>
+        <Col xs={24} lg={10} style={{ height: "100%" }}>
           <Card
             title={
               <Space>
-                <ShoppingCartOutlined/>
+                <ShoppingCartOutlined />
                 <span>Giỏ hàng</span>
-                <Badge count={getTotalItems()} showZero color="#1890ff"/>
+                <Badge count={getTotalItems()} showZero color="#1890ff" />
               </Space>
             }
             extra={
@@ -868,14 +929,14 @@ const POSPage = () => {
                 <Button
                   size="small"
                   danger
-                  icon={<ClearOutlined/>}
+                  icon={<ClearOutlined />}
                   onClick={clearCart}
                 >
                   Xóa tất cả
                 </Button>
               )
             }
-            style={{height: "100%", borderRadius: "12px"}}
+            style={{ height: "100%", borderRadius: "12px" }}
             styles={{
               body: {
                 height: "calc(100% - 57px)",
@@ -888,11 +949,18 @@ const POSPage = () => {
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description="Giỏ hàng trống"
-                style={{flex: 1, display: "flex", flexDirection: "column", justifyContent: "center"}}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                }}
               />
             ) : (
               <>
-                <div style={{flex: 1, overflow: "auto", marginBottom: "16px"}}>
+                <div
+                  style={{ flex: 1, overflow: "auto", marginBottom: "16px" }}
+                >
                   <Table
                     dataSource={cart}
                     columns={cartColumns}
@@ -902,48 +970,48 @@ const POSPage = () => {
                   />
                 </div>
 
-                <Divider style={{margin: "12px 0"}}/>
+                <Divider style={{ margin: "12px 0" }} />
 
-                <div style={{marginBottom: "16px"}}>
-                  <Row justify="space-between" style={{marginBottom: "8px"}}>
+                <div style={{ marginBottom: "16px" }}>
+                  <Row justify="space-between" style={{ marginBottom: "8px" }}>
                     <Text>Tổng sản phẩm:</Text>
                     <Text strong>{getTotalItems()}</Text>
                   </Row>
-                  <Row justify="space-between" style={{marginBottom: "8px"}}>
+                  <Row justify="space-between" style={{ marginBottom: "8px" }}>
                     <Text>Khách hàng:</Text>
                     <Text>{selectedCustomer?.full_name || "Khách lẻ"}</Text>
                   </Row>
-                  <Row justify="space-between" style={{marginBottom: "8px"}}>
+                  <Row justify="space-between" style={{ marginBottom: "8px" }}>
                     <Text>Chi nhánh:</Text>
                     <Text>{selectedBranch?.branch_name || "Chưa chọn"}</Text>
                   </Row>
 
-                  <Divider style={{margin: "8px 0"}}/>
+                  <Divider style={{ margin: "8px 0" }} />
 
-                  <Row justify="space-between" style={{marginBottom: "4px"}}>
+                  <Row justify="space-between" style={{ marginBottom: "4px" }}>
                     <Text>Tạm tính:</Text>
                     <Text>₫{getSubtotal().toLocaleString()}</Text>
                   </Row>
 
                   <Row justify="space-between">
-                    <Title level={4} style={{margin: 0}}>
+                    <Title level={4} style={{ margin: 0 }}>
                       Tổng cộng:
                     </Title>
-                    <Title level={4} style={{margin: 0, color: "#1890ff"}}>
+                    <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
                       ₫{getTotalAmount().toLocaleString()}
                     </Title>
                   </Row>
                 </div>
 
-                <Space direction="vertical" style={{width: "100%"}}>
+                <Space direction="vertical" style={{ width: "100%" }}>
                   <Button
                     type="primary"
                     size="large"
-                    icon={<ShoppingCartOutlined/>}
+                    icon={<ShoppingCartOutlined />}
                     onClick={handleCheckout}
                     disabled={cart.length === 0 || !selectedBranch}
                     loading={isCreatingOrder}
-                    style={{width: "100%"}}
+                    style={{ width: "100%" }}
                   >
                     Thanh toán
                   </Button>
@@ -986,8 +1054,8 @@ const POSPage = () => {
       >
         <Input
           placeholder="Tìm kiếm chi nhánh..."
-          prefix={<SearchOutlined/>}
-          style={{marginBottom: "16px"}}
+          prefix={<SearchOutlined />}
+          style={{ marginBottom: "16px" }}
         />
         <Row gutter={[16, 16]}>
           {branches.map((branch) => (
@@ -1004,7 +1072,7 @@ const POSPage = () => {
                     selectedBranch?.branch_id === branch.branch_id ? 2 : 1,
                 }}
               >
-                <Space direction="vertical" style={{width: "100%"}}>
+                <Space direction="vertical" style={{ width: "100%" }}>
                   <div
                     style={{
                       display: "flex",
@@ -1014,17 +1082,19 @@ const POSPage = () => {
                   >
                     <Text strong>{branch.branch_name}</Text>
                     {selectedBranch?.branch_id === branch.branch_id && (
-                      <CheckCircleOutlined style={{color: "#1890ff"}}/>
+                      <CheckCircleOutlined style={{ color: "#1890ff" }} />
                     )}
                   </div>
-                  <Text type="secondary" style={{fontSize: "12px"}}>
+                  <Text type="secondary" style={{ fontSize: "12px" }}>
                     {branch.address}
                   </Text>
                   <div>
                     <Tag color="blue">{branch.branch_code}</Tag>
                     <Tag
                       color={
-                        branch.operating_status === "ACTIVE" ? "green" : "orange"
+                        branch.operating_status === "ACTIVE"
+                          ? "green"
+                          : "orange"
                       }
                     >
                       {branch.operating_status}
@@ -1062,7 +1132,7 @@ const POSPage = () => {
           <Radio.Group
             value={customerType}
             onChange={(e) => handleCustomerTypeChange(e.target.value)}
-            style={{marginTop: "8px"}}
+            style={{ marginTop: "8px" }}
           >
             <Space>
               <Radio value="guest">Khách lẻ</Radio>
@@ -1073,9 +1143,9 @@ const POSPage = () => {
         </div>
 
         {customerType === "guest" && (
-          <div style={{textAlign: "center", padding: "40px"}}>
-            <UserOutlined style={{fontSize: "48px", color: "#d9d9d9"}}/>
-            <div style={{marginTop: "16px"}}>
+          <div style={{ textAlign: "center", padding: "40px" }}>
+            <UserOutlined style={{ fontSize: "48px", color: "#d9d9d9" }} />
+            <div style={{ marginTop: "16px" }}>
               <Text type="secondary">Sử dụng thông tin khách lẻ mặc định</Text>
             </div>
             <Button
@@ -1084,7 +1154,7 @@ const POSPage = () => {
                 handleCustomerTypeChange("guest");
                 setIsCustomerModalVisible(false);
               }}
-              style={{marginTop: "16px"}}
+              style={{ marginTop: "16px" }}
             >
               Xác nhận
             </Button>
@@ -1093,16 +1163,16 @@ const POSPage = () => {
 
         {customerType === "existing" && (
           <div>
-            <Space.Compact style={{width: "100%", marginBottom: "16px"}}>
+            <Space.Compact style={{ width: "100%", marginBottom: "16px" }}>
               <Input
                 placeholder="Tìm kiếm theo tên, SĐT hoặc email"
-                prefix={<SearchOutlined/>}
+                prefix={<SearchOutlined />}
                 value={customerSearchText}
                 onChange={(e) => setCustomerSearchText(e.target.value)}
                 onPressEnter={handleSearchCustomer}
               />
               <Button type="primary" onClick={handleSearchCustomer}>
-                <SearchOutlined/>
+                <SearchOutlined />
               </Button>
             </Space.Compact>
 
@@ -1110,9 +1180,13 @@ const POSPage = () => {
               loading={isUsersLoading}
               dataSource={users}
               columns={[
-                {title: "Tên", dataIndex: "full_name", key: "full_name"},
-                {title: "SĐT", dataIndex: "phone_number", key: "phone_number"},
-                {title: "Email", dataIndex: "email", key: "email"},
+                { title: "Tên", dataIndex: "full_name", key: "full_name" },
+                {
+                  title: "SĐT",
+                  dataIndex: "phone_number",
+                  key: "phone_number",
+                },
+                { title: "Email", dataIndex: "email", key: "email" },
                 {
                   title: "Thao tác",
                   key: "action",
@@ -1123,7 +1197,9 @@ const POSPage = () => {
                       onClick={() => {
                         setSelectedCustomer(record);
                         setIsCustomerModalVisible(false);
-                        message.success(`Đã chọn khách hàng: ${record.full_name}`);
+                        message.success(
+                          `Đã chọn khách hàng: ${record.full_name}`
+                        );
                       }}
                     >
                       Chọn
