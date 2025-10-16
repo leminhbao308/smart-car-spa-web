@@ -29,6 +29,7 @@ import { useServiceProcessTrackingsByBooking } from "@/lib/api/hooks/useServiceP
 import { useEmployeesDropdown } from "@/lib/api/hooks/useEmployees";
 import { useServicePackage } from "@/lib/api/hooks/useServicePackage";
 import { useStartStep, useCompleteStep } from "@/lib/api/hooks/useTracking";
+import { useCompleteService } from "@/lib/api/hooks/useBooking";
 import CreateTrackingModal from "../CreateTrackingModal";
 import UpdateTrackingModal from "../UpdateTrackingModal";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
@@ -131,6 +132,7 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
   // Mutations
   const startStepMutation = useStartStep();
   const completeStepMutation = useCompleteStep();
+  const completeServiceMutation = useCompleteService();
 
   // Set service process when data is available
   useEffect(() => {
@@ -285,6 +287,28 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
     } catch (error) {
       console.error("Complete step error:", error);
       message.error("Có lỗi xảy ra khi hoàn thành tracking");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle complete service
+  const handleCompleteService = async () => {
+    try {
+      setLoading(true);
+      await completeServiceMutation.mutateAsync(booking.bookingId);
+      message.success("Hoàn thành dịch vụ thành công");
+
+      // Refresh trackings data to update UI
+      await refetchTrackings();
+      
+      // Close modal after successful completion
+      setTimeout(() => {
+        onCancel();
+      }, 1500);
+    } catch (error) {
+      console.error("Complete service error:", error);
+      message.error("Có lỗi xảy ra khi hoàn thành dịch vụ");
     } finally {
       setLoading(false);
     }
@@ -643,6 +667,8 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
                     type="primary"
                     size="large"
                     icon={<CheckCircleOutlined />}
+                    onClick={handleCompleteService}
+                    loading={loading}
                   >
                     Hoàn thành dịch vụ
                   </Button>

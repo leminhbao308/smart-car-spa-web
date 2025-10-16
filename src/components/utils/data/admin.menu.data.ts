@@ -2,7 +2,6 @@ import React from "react";
 import { MenuProps } from "antd";
 import {
   UserOutlined,
-  TeamOutlined,
   CustomerServiceOutlined,
   CarOutlined,
   ToolOutlined,
@@ -21,10 +20,12 @@ import {
   SettingOutlined,
   UndoOutlined,
   ClockCircleOutlined,
-  InboxOutlined,
   ImportOutlined,
-  TagsOutlined,
-  ShoppingOutlined,
+  ContainerOutlined,
+  HomeOutlined,
+  DatabaseOutlined,
+  IdcardOutlined,
+  ThunderboltOutlined,
 } from "@ant-design/icons";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -36,232 +37,211 @@ export const adminMenuItems: MenuItem[] = [
     icon: React.createElement(DashboardOutlined),
   },
   {
-    key: "pos",
-    label: "Bán hàng (POS)",
-    icon: React.createElement(BarcodeOutlined),
-  },
-  {
-    key: "user-management",
-    label: "Người dùng & quyền",
-    icon: React.createElement(UserOutlined),
+    key: "transactions",
+    label: "Quản Lý Transactions",
+    icon: React.createElement(ThunderboltOutlined),
     children: [
       {
-        key: "permissions",
-        label: "Phân quyền",
-        icon: React.createElement(SafetyOutlined),
-      },
-      {
-        key: "employees",
-        label: "Nhân viên",
-        icon: React.createElement(TeamOutlined),
-      },
-      {
-        key: "customers",
-        label: "Khách hàng",
-        icon: React.createElement(CustomerServiceOutlined),
-      },
-    ],
-  },
-  {
-    key: "bookings",
-    label: "Đặt lịch",
-    icon: React.createElement(TeamOutlined),
-  },
-  {
-    key: "vehicles-in-care",
-    label: "Xe đang chăm sóc",
-    icon: React.createElement(CarOutlined),
-  },
-  {
-    key: "category-management",
-    label: "Quản lý danh mục",
-    icon: React.createElement(AppstoreOutlined),
-  },
-  {
-    key: "care-processes",
-    label: "Quy trình chăm sóc",
-    icon: React.createElement(CarOutlined),
-  },
-
-  {
-    key: "vehicle-records",
-    label: "Hồ sơ xe",
-    icon: React.createElement(FileTextOutlined),
-  },
-  {
-    key: "vehicle-info",
-    label: "Thông tin phương tiện",
-    icon: React.createElement(CarOutlined),
-    children: [
-      {
-        key: "brands",
-        label: "Hãng xe",
+        key: "car-service-management",
+        label: "Chăm sóc xe",
         icon: React.createElement(CarOutlined),
+        children: [
+          {
+            key: "bookings",
+            label: "Quản Lý Đặt Lịch Chăm Sóc Xe",
+            icon: React.createElement(ContainerOutlined),
+          },
+          {
+            key: "vehicles-in-care",
+            label: "Quản Lý Xe Đang Chăm Sóc",
+            icon: React.createElement(CarOutlined),
+          },
+        ],
       },
       {
-        key: "types",
-        label: "Loại xe",
-        icon: React.createElement(CarOutlined),
+        key: "sales-management",
+        label: "Quản lý bán hàng",
+        icon: React.createElement(ShoppingCartOutlined),
+        children: [
+          {
+            key: "pos",
+            label: "Bán hàng (POS)",
+            icon: React.createElement(BarcodeOutlined),
+          },
+          {
+            key: "invoices",
+            label: "Hóa đơn",
+            icon: React.createElement(FileTextOutlined),
+          },
+          {
+            key: "returns",
+            label: "Hoàn trả hàng",
+            icon: React.createElement(UndoOutlined),
+          },
+        ],
       },
       {
-        key: "models",
-        label: "Model xe",
-        icon: React.createElement(CarOutlined),
-      },
-    ],
-  },
-  {
-    key: "product-management",
-    label: "Quản lý sản phẩm",
-    icon: React.createElement(BarcodeOutlined),
-    children: [
-      {
-        key: "product-types",
-        label: "Loại sản phẩm",
-        icon: React.createElement(AppstoreOutlined),
-      },
-      {
-        key: "products",
-        label: "Sản phẩm",
-        icon: React.createElement(BarcodeOutlined),
-      },
-      {
-        key: "product-attributes",
-        label: "Thuộc tính sản phẩm",
-        icon: React.createElement(SettingOutlined),
+        key: "inventory-management",
+        label: "Quản lý kho",
+        icon: React.createElement(DatabaseOutlined),
+        children: [
+          {
+            key: "import-inventory",
+            label: "Nhập kho",
+            icon: React.createElement(ImportOutlined),
+          },
+          {
+            key: "stock-inventory",
+            label: "Tồn kho",
+            icon: React.createElement(HomeOutlined),
+          },
+        ],
       },
     ],
   },
 
   {
-    key: "service-management",
-    label: "Quản lý dịch vụ",
-    icon: React.createElement(ToolOutlined),
+    key: "masterdata",
+    label: "Quản Lý Masterdata",
+    icon: React.createElement(SettingOutlined),
     children: [
       {
-        key: "service-types",
-        label: "Loại dịch vụ",
+        key: "user-management",
+        label: "Quản Lý Người Dùng & Quyền",
+        icon: React.createElement(UserOutlined),
+        children: [
+          {
+            key: "permissions",
+            label: "Quản Lý Phân Quyền",
+            icon: React.createElement(SafetyOutlined),
+          },
+          {
+            key: "employees",
+            label: "Quản Lý Nhân Viên",
+            icon: React.createElement(IdcardOutlined),
+          },
+          {
+            key: "customers",
+            label: "Quản Lý Khách Hàng Và Xe",
+            icon: React.createElement(CustomerServiceOutlined),
+          },
+        ],
+      },
+      {
+        key: "category-management",
+        label: "Quản Lý Danh Mục",
         icon: React.createElement(AppstoreOutlined),
       },
       {
-        key: "services",
-        label: "Dịch vụ",
-        icon: React.createElement(ToolOutlined),
-      },
-    ],
-  },
-  {
-    key: "service-packages",
-    label: "Quản lý gói dịch vụ",
-    icon: React.createElement(ShoppingOutlined),
-    children: [
-      {
-        key: "service-package-types",
-        label: "Loại gói dịch vụ",
-        icon: React.createElement(TagsOutlined),
+        key: "pricing",
+        label: "Quản Lý Bảng Giá",
+        icon: React.createElement(DollarOutlined),
       },
       {
-        key: "service-packages-list",
-        label: "Gói dịch vụ",
-        icon: React.createElement(ShoppingOutlined),
-      },
-    ],
-  },
-  {
-    key: "promotions",
-    label: "Quản lý chương trình khuyến mãi",
-    icon: React.createElement(GiftOutlined),
-    children: [
-      {
-        key: "promotions-list",
-        label: "Danh sách khuyến mãi",
+        key: "promotions",
+        label: "Quản Lý Chương Trình Khuyến Mãi",
         icon: React.createElement(GiftOutlined),
+        children: [
+          {
+            key: "promotions-list",
+            label: "Danh Sách Khuyến Mãi",
+            icon: React.createElement(GiftOutlined),
+          },
+          {
+            key: "promotions-history",
+            label: "Lịch Sử Sử Dụng Khuyến Mãi",
+            icon: React.createElement(ClockCircleOutlined),
+          },
+        ],
       },
       {
-        key: "promotion-types",
-        label: "Loại khuyến mãi",
+        key: "product-management",
+        label: "Quản lý sản phẩm",
         icon: React.createElement(BarcodeOutlined),
+        children: [
+          {
+            key: "products",
+            label: "Sản Phẩm",
+            icon: React.createElement(BarcodeOutlined),
+          },
+          {
+            key: "product-types",
+            label: "Loại Sản Phẩm",
+            icon: React.createElement(AppstoreOutlined),
+          },
+          {
+            key: "product-attributes",
+            label: "Thuộc Tính Sản Phẩm",
+            icon: React.createElement(SettingOutlined),
+          },
+        ],
       },
       {
-        key: "promotions-history",
-        label: "Lịch sử sử dụng khuyến mãi",
-        icon: React.createElement(ClockCircleOutlined),
-      },
-    ],
-  },
-  {
-    key: "pricing",
-    label: "Bảng giá",
-    icon: React.createElement(DollarOutlined),
-  },
-  {
-    key: "suppliers",
-    label: "Nhà cung cấp",
-    icon: React.createElement(ShopOutlined),
-  },
-  {
-    key: "sales-management",
-    label: "Quản lý bán hàng",
-    icon: React.createElement(ShoppingCartOutlined),
-    children: [
-      {
-        key: "invoices",
-        label: "Hóa đơn",
-        icon: React.createElement(FileTextOutlined),
-      },
-      // {
-      //   key: "draft-invoices",
-      //   label: "Hóa đơn tạm",
-      //   icon: React.createElement(ClockCircleOutlined),
-      // },
-      {
-        key: "returns",
-        label: "Hoàn trả hàng",
-        icon: React.createElement(UndoOutlined),
-      },
-    ],
-  },
-  {
-    key: "inventory-management",
-    label: "Quản lý kho",
-    icon: React.createElement(InboxOutlined),
-    children: [
-      {
-        key: "import-inventory",
-        label: "Nhập kho",
-        icon: React.createElement(ImportOutlined),
-      },
-      // {
-      //     key: "export-inventory",
-      //     label: "Xuất kho",
-      //     icon: React.createElement(ExportOutlined),
-      // },
-      {
-        key: "stock-inventory",
-        label: "Tồn kho",
-        icon: React.createElement(InboxOutlined),
-      },
-    ],
-  },
-  {
-    key: "centers",
-    label: "Trung tâm",
-    icon: React.createElement(BankOutlined),
-    children: [
-      {
-        key: "general-info",
-        label: "Thông tin chung",
-        icon: React.createElement(InfoCircleOutlined),
+        key: "suppliers",
+        label: "Quản Lý Nhà Cung Cấp",
+        icon: React.createElement(ShopOutlined),
       },
       {
-        key: "branches",
-        label: "Các chi nhánh",
-        icon: React.createElement(BranchesOutlined),
-      },
-      {
-        key: "service-bays",
-        label: "Khu vực dịch vụ",
+        key: "service-management",
+        label: "Quản Lý Dịch Vụ",
         icon: React.createElement(ToolOutlined),
+        children: [
+          {
+            key: "service-types",
+            label: "Quản Lý Loại Dịch Vụ",
+            icon: React.createElement(AppstoreOutlined),
+          },
+          {
+            key: "services",
+            label: "Danh Sách Dịch Vụ",
+            icon: React.createElement(ToolOutlined),
+          },
+        ],
+      },
+
+      {
+        key: "vehicle-info",
+        label: "Quản Lý Thông Tin Phương Tiện",
+        icon: React.createElement(CarOutlined),
+        children: [
+          {
+            key: "models",
+            label: "Quản Lý Model Xe",
+            icon: React.createElement(CarOutlined),
+          },
+          {
+            key: "brands",
+            label: "Quản Lý Hãng Xe",
+            icon: React.createElement(CarOutlined),
+          },
+          {
+            key: "types",
+            label: "Quản Lý Loại Xe",
+            icon: React.createElement(CarOutlined),
+          },
+        ],
+      },
+      {
+        key: "centers",
+        label: "Quản Lý Trung Tâm",
+        icon: React.createElement(BankOutlined),
+        children: [
+          {
+            key: "general-info",
+            label: "Quản Lý Thông Tin Chung Của Trung Tâm",
+            icon: React.createElement(InfoCircleOutlined),
+          },
+          {
+            key: "branches",
+            label: "Quản Lý Chi Nhánh",
+            icon: React.createElement(BranchesOutlined),
+          },
+          {
+            key: "service-bays",
+            label: "Quản Lý Khu Vực Dịch Vụ",
+            icon: React.createElement(ToolOutlined),
+          },
+        ],
       },
     ],
   },
@@ -272,12 +252,9 @@ export const menuKeyToPath: Record<string, string> = {
   dashboard: "/dashboard",
   bookings: "/dashboard/bookings",
   "category-management": "/dashboard/category-management",
-  "care-processes": "/dashboard/care-processes",
-  "vehicles-in-care": "/dashboard/vehicles-in-care",
   permissions: "/dashboard/permissions",
   employees: "/dashboard/staff",
   customers: "/dashboard/members",
-  "vehicle-records": "/dashboard/car-profiles",
   brands: "/dashboard/vehicle-brands",
   types: "/dashboard/vehicle-types",
   models: "/dashboard/vehicle-models",
@@ -285,21 +262,16 @@ export const menuKeyToPath: Record<string, string> = {
   products: "/dashboard/products",
   "product-attributes": "/dashboard/product-attributes",
   "import-inventory": "/dashboard/inventory/import",
-  "export-inventory": "/dashboard/inventory/export",
   "stock-inventory": "/dashboard/inventory/stock",
   "service-types": "/dashboard/service-categories/service-types",
   services: "/dashboard/service-categories/services",
-  "service-package-types": "/dashboard/package-types",
-  "service-packages-list": "/dashboard/packages",
   promotions: "/dashboard/promotions",
   "promotions-list": "/dashboard/promotions",
-  "promotion-types": "/dashboard/promotions/promotion-types",
   "promotions-history": "/dashboard/promotions/history",
   pricing: "/dashboard/price-table",
   suppliers: "/dashboard/supplier",
   pos: "/dashboard/pos",
   invoices: "/dashboard/sales-management/invoices",
-  // "draft-invoices": "/dashboard/sales-management/draft-invoices",
   returns: "/dashboard/sales-management/returns",
   "general-info": "/dashboard/general-information",
   branches: "/dashboard/branches",

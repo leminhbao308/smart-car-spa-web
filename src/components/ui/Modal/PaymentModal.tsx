@@ -17,9 +17,9 @@ import {
   ShoppingCartOutlined,
   BankOutlined,
 } from "@ant-design/icons";
-import type {UserManagementInfo} from "@/lib/api";
+import type { UserManagementInfo } from "@/lib/api";
 
-const {Text, Title} = Typography;
+const { Text, Title } = Typography;
 
 interface PaymentModalProps {
   isVisible: boolean;
@@ -40,28 +40,28 @@ interface PaymentModalProps {
 }
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
-                                                            isVisible,
-                                                            isCreatingOrder,
-                                                            paymentMethod,
-                                                            receivedAmount,
-                                                            totalAmount,
-                                                            totalItems,
-                                                            selectedCustomer,
-                                                            paymentQRCode,
-                                                            paymentUrl,
-                                                            orderCode,
-                                                            onCancel,
-                                                            onPayment,
-                                                            onPaymentMethodChange,
-                                                            onReceivedAmountChange,
-                                                            onOpenPaymentLink,
-                                                          }) => {
+  isVisible,
+  isCreatingOrder,
+  paymentMethod,
+  receivedAmount,
+  totalAmount,
+  totalItems,
+  selectedCustomer,
+  paymentQRCode,
+  paymentUrl,
+  orderCode,
+  onCancel,
+  onPayment,
+  onPaymentMethodChange,
+  onReceivedAmountChange,
+  onOpenPaymentLink,
+}) => {
   const getChange = () => {
     return Math.max(0, receivedAmount - totalAmount);
   };
 
   const renderQRCodeView = () => (
-    <div style={{textAlign: "center"}}>
+    <div style={{ textAlign: "center" }}>
       <Title level={4}>Quét mã QR để thanh toán</Title>
 
       {paymentQRCode && (
@@ -75,15 +75,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             borderRadius: "8px",
           }}
         >
-          <QRCode value={paymentQRCode} size={280}/>
+          <QRCode value={paymentQRCode} size={280} />
         </div>
       )}
 
       <Card
         size="small"
-        style={{backgroundColor: "#e6f7ff", marginBottom: "16px"}}
+        style={{ backgroundColor: "#e6f7ff", marginBottom: "16px" }}
       >
-        <Space direction="vertical" style={{width: "100%"}}>
+        <Space direction="vertical" style={{ width: "100%" }}>
           <Row justify="space-between">
             <Text strong>Mã đơn hàng:</Text>
             <Text>{orderCode}</Text>
@@ -91,7 +91,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <Row justify="space-between">
             <Text strong>Số tiền:</Text>
             <Text
-              style={{fontSize: "18px", color: "#1890ff", fontWeight: "bold"}}
+              style={{ fontSize: "18px", color: "#1890ff", fontWeight: "bold" }}
             >
               ₫{totalAmount.toLocaleString()}
             </Text>
@@ -99,10 +99,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         </Space>
       </Card>
 
-      <Text
-        type="secondary"
-        style={{display: "block", marginBottom: "16px"}}
-      >
+      <Text type="secondary" style={{ display: "block", marginBottom: "16px" }}>
         Sau khi thanh toán thành công, bạn sẽ được chuyển hướng tự động
       </Text>
 
@@ -110,9 +107,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         <Button
           type="primary"
           size="large"
-          icon={<BankOutlined/>}
+          icon={<BankOutlined />}
           onClick={onOpenPaymentLink}
-          style={{width: "100%"}}
+          style={{ width: "100%" }}
         >
           Mở link thanh toán trong tab mới
         </Button>
@@ -121,15 +118,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   );
 
   const renderPaymentForm = () => (
-    <Space direction="vertical" style={{width: "100%"}} size="large">
+    <Space direction="vertical" style={{ width: "100%" }} size="large">
       {/* Order Summary */}
-      <Card size="small" style={{backgroundColor: "#f5f5f5"}}>
+      <Card size="small" style={{ backgroundColor: "#f5f5f5" }}>
         <Row gutter={[16, 16]}>
           <Col span={12}>
             <Statistic
               title="Tổng sản phẩm"
               value={totalItems}
-              prefix={<ShoppingCartOutlined/>}
+              prefix={<ShoppingCartOutlined />}
             />
           </Col>
           <Col span={12}>
@@ -137,7 +134,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               title="Tổng tiền"
               value={totalAmount}
               prefix="₫"
-              valueStyle={{color: "#1890ff"}}
+              valueStyle={{ color: "#1890ff" }}
             />
           </Col>
         </Row>
@@ -145,7 +142,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
       {/* Customer Info */}
       <div>
-        <Text strong style={{display: "block", marginBottom: "8px"}}>
+        <Text strong style={{ display: "block", marginBottom: "8px" }}>
           Thông tin khách hàng:
         </Text>
         <Card size="small">
@@ -168,24 +165,24 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
       {/* Payment Method */}
       <div>
-        <Text strong style={{display: "block", marginBottom: "8px"}}>
+        <Text strong style={{ display: "block", marginBottom: "8px" }}>
           Phương thức thanh toán:
         </Text>
         <Radio.Group
           value={paymentMethod}
           onChange={(e) => onPaymentMethodChange(e.target.value)}
-          style={{width: "100%"}}
+          style={{ width: "100%" }}
         >
-          <Space direction="vertical" style={{width: "100%"}}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             <Radio value="CASH">
               <Space>
-                <DollarOutlined/>
+                <DollarOutlined />
                 <span>Tiền mặt</span>
               </Space>
             </Radio>
             <Radio value="BANK">
               <Space>
-                <BankOutlined/>
+                <BankOutlined />
                 <span>Chuyển khoản ngân hàng</span>
               </Space>
             </Radio>
@@ -196,13 +193,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       {/* Cash Payment Details */}
       {paymentMethod === "CASH" && (
         <div>
-          <Text strong style={{display: "block", marginBottom: "8px"}}>
+          <Text strong style={{ display: "block", marginBottom: "8px" }}>
             Số tiền nhận:
           </Text>
           <InputNumber
             value={receivedAmount}
             onChange={(value) => onReceivedAmountChange(value || 0)}
-            style={{width: "100%"}}
+            style={{ width: "100%" }}
             size="large"
             formatter={(value) =>
               `₫ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
@@ -222,15 +219,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             >
               <Row justify="space-between" align="middle">
                 <Col>
-                  <Text strong style={{color: "#52c41a"}}>
+                  <Text strong style={{ color: "#52c41a" }}>
                     Tiền thừa:
                   </Text>
                 </Col>
                 <Col>
-                  <Text
-                    strong
-                    style={{color: "#52c41a", fontSize: "18px"}}
-                  >
+                  <Text strong style={{ color: "#52c41a", fontSize: "18px" }}>
                     ₫{getChange().toLocaleString()}
                   </Text>
                 </Col>
@@ -249,15 +243,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             >
               <Row justify="space-between" align="middle">
                 <Col>
-                  <Text strong style={{color: "#fa8c16"}}>
+                  <Text strong style={{ color: "#fa8c16" }}>
                     Còn thiếu:
                   </Text>
                 </Col>
                 <Col>
-                  <Text
-                    strong
-                    style={{color: "#fa8c16", fontSize: "18px"}}
-                  >
+                  <Text strong style={{ color: "#fa8c16", fontSize: "18px" }}>
                     ₫{(totalAmount - receivedAmount).toLocaleString()}
                   </Text>
                 </Col>
@@ -269,10 +260,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
       {/* Bank Payment Info */}
       {paymentMethod === "BANK" && (
-        <Card size="small" style={{backgroundColor: "#e6f7ff"}}>
-          <Space direction="vertical" style={{width: "100%"}}>
+        <Card size="small" style={{ backgroundColor: "#e6f7ff" }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             <Text strong>
-              <BankOutlined/> Thanh toán qua ngân hàng
+              <BankOutlined /> Thanh toán qua ngân hàng
             </Text>
             <Text type="secondary">
               {`Sau khi nhấn "Xác nhận thanh toán", bạn sẽ nhận được mã QR để quét
@@ -317,7 +308,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     <Modal
       title={
         <Space>
-          <DollarOutlined/>
+          <DollarOutlined />
           <span>Thanh toán</span>
         </Space>
       }
