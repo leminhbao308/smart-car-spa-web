@@ -45,7 +45,6 @@ export * from './useTracking';
 export * from './useServiceProcessTracking';
 export * from './usePromotions';
 export * from './useCategory';
-export * from './usePromotionType';
 export * from './usePayment';
 
 // React Query specific exports
