@@ -24,7 +24,6 @@ import {
   SaveOutlined,
   PlusOutlined,
   InfoCircleOutlined,
-  InboxOutlined,
 } from "@ant-design/icons";
 import {
   Product,
@@ -37,7 +36,6 @@ import {
   useUpdateProduct,
 } from "@/lib/api/hooks/useProducts";
 import { useProductTypes } from "@/lib/api/hooks/useProductTypes";
-import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { productAttributeValueService } from "@/lib/api/services/productAttributeValue.service";
 
 const { Option } = Select;
@@ -69,8 +67,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
       is_active: true,
     },
   });
-  const { data: suppliersData } = useSuppliers({});
-  const suppliers = suppliersData?.data?.content || [];
 
   const productTypes = productTypesData?.data?.content || [];
 
@@ -88,7 +84,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
         sku: editData.sku,
         barcode: editData.barcode,
         isFeatured: editData.is_featured,
-        supplierId: editData.supplier_id,
         description: editData.description,
         unitOfMeasure: editData.unit_of_measure,
         is_active: editData.is_active,
@@ -144,7 +139,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           model: values.model,
           sku: values.sku,
           barcode: values.barcode,
-          supplier_id: values.supplierId,
           is_featured: values.isFeatured,
           is_active: values.is_active,
         };
@@ -202,7 +196,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           model: values.model,
           sku: values.sku,
           barcode: values.barcode,
-          supplier_id: values.supplierId,
           is_featured: values.isFeatured,
           is_active: values.is_active,
         };
@@ -358,59 +351,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           </Row>
         </Card>
 
-        {/* Thông tin nhà cung cấp */}
-        <Card
-          title={
-            <Space>
-              <InboxOutlined style={{ color: "#fa8c16" }} />
-              <span>Thông tin nhà cung cấp</span>
-            </Space>
-          }
-          size="small"
-          style={{
-            marginBottom: 16,
-            border: "1px solid #f0f0f0",
-            borderRadius: 8,
-          }}
-        >
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Nhà cung cấp"
-                name="supplierId"
-                rules={[
-                  { required: true, message: "Vui lòng chọn nhà cung cấp!" },
-                ]}
-              >
-                <Select
-                  placeholder="Tìm kiếm và chọn nhà cung cấp"
-                  showSearch
-                  optionFilterProp="children"
-                  filterOption={(input, option) =>
-                    String(option?.children || "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                  style={{ width: "100%" }}
-                >
-                  {suppliers?.map(
-                    (supplier: {
-                      supplier_id: string;
-                      supplier_name: string;
-                    }) => (
-                      <Option
-                        key={supplier.supplier_id}
-                        value={supplier.supplier_id}
-                      >
-                        {supplier.supplier_name}
-                      </Option>
-                    )
-                  )}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-        </Card>
         {/* Thông tin cơ bản */}
         <Card
           title={

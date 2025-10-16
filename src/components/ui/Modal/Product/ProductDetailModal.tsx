@@ -10,11 +10,9 @@ import {
   Badge,
   Typography,
   Space,
-  Statistic,
   Image,
   Tooltip,
   Avatar,
-  Button,
 } from "antd";
 import {
   ShoppingOutlined,
@@ -27,8 +25,6 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { Product } from "@/lib/api/types/product.types";
-import { SupplierDetailModal } from "../SupplierModal";
-import { useSupplier } from "@/lib/api/hooks/useSuppliers";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -43,12 +39,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onCancel,
   data,
 }) => {
-  const [supplierModalVisible, setSupplierModalVisible] = React.useState(false);
-
-  const { data: supplier } = useSupplier(
-    supplierModalVisible && data ? data.supplier_id : null
-  );
-
   if (!data) return null;
 
   const image =
@@ -256,16 +246,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <Descriptions.Item label="Model">
                   <Text strong>{data.model}</Text>
                 </Descriptions.Item>
-                <Descriptions.Item label="Nhà cung cấp">
-                  <Button
-                    type="link"
-                    size="small"
-                    onClick={() => setSupplierModalVisible(true)}
-                    style={{ padding: 0, height: "auto" }}
-                  >
-                    <Text code>Xem chi tiết</Text>
-                  </Button>
-                </Descriptions.Item>
                 <Descriptions.Item label="Mô tả">
                   <Paragraph
                     ellipsis={{ rows: 3, expandable: true, symbol: "Xem thêm" }}
@@ -318,16 +298,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </Col>
         </Row>
       </div>
-
-      {/* Supplier Detail Modal */}
-      <SupplierDetailModal
-        visible={supplierModalVisible}
-        onCancel={() => setSupplierModalVisible(false)}
-        onEdit={() => {}} // Empty function since we don't need edit functionality
-        supplier={supplier || null}
-        loading={false}
-        showEditButton={false}
-      />
     </Modal>
   );
 };
