@@ -8,7 +8,6 @@ import {
   Col,
   Button,
   Space,
-  Divider,
   Typography,
   message,
   Card,
@@ -18,74 +17,37 @@ import {
   Tag,
   Alert,
   Tooltip,
-  Input,
-  Spin,
+  Table, App,
 } from "antd";
 import {
   GiftOutlined,
   PercentageOutlined,
-  DollarOutlined,
-  CalendarOutlined,
   UserOutlined,
-  ShoppingCartOutlined,
-  StarOutlined,
   PlusOutlined,
   DeleteOutlined,
   InfoCircleOutlined,
-  ExclamationCircleOutlined,
+  EditOutlined, CopyOutlined, EyeOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   Promotion,
   CreatePromotionRequest,
   UpdatePromotionRequest,
-  CUSTOMER_TYPE_OPTIONS,
-} from "@/lib/api/types/promotion.types";
+  CreatePromotionLineRequest,
+  LineType,
+  DiscountType,
+  LINE_TYPE_OPTIONS,
+  DISCOUNT_TYPE_OPTIONS,
+} from "@/lib/api";
 import {MemoizedInput, MemoizedTextArea, MemoizedInputNumber} from "@/components/ui/MemoizedComponents";
-import {PromotionConditionsBuilder} from "@/components/ui/PromotionConditionsBuilder";
 import {useBranches} from "@/lib/api/hooks/useBranches";
 import {useServices} from "@/lib/api/hooks/useServices";
 import {useProducts} from "@/lib/api/hooks/useProducts";
-import {usePromotionType} from "@/lib/api/hooks/usePromotionType";
-import {PromotionType} from "@/components/utils/data/promotion-types.data";
-import {PromotionTypeInfo} from "@/lib/api";
+import {useCategories} from "@/lib/api/hooks";
+import {Service} from "@/lib/api";
 
-const {Title, Text} = Typography;
 const {Option} = Select;
-
-// Promotion status options
-const PROMOTION_STATUS_OPTIONS = [
-  {
-    value: "draft",
-    label: "Nháp",
-    color: "default",
-    description: "Chưa kích hoạt",
-  },
-  {
-    value: "scheduled",
-    label: "Đã lên lịch",
-    color: "blue",
-    description: "Chờ đến ngày bắt đầu",
-  },
-  {
-    value: "active",
-    label: "Đang hoạt động",
-    color: "green",
-    description: "Đang áp dụng",
-  },
-  {
-    value: "paused",
-    label: "Tạm dừng",
-    color: "orange",
-    description: "Tạm thời không áp dụng",
-  },
-  {
-    value: "expired",
-    label: "Hết hạn",
-    color: "red",
-    description: "Đã kết thúc",
-  },
-];
+const {Text} = Typography;
 
 interface PromotionModalProps {
   open: boolean;
@@ -94,6 +56,7 @@ interface PromotionModalProps {
   initialData?: Promotion | null;
   title?: string;
   loading?: boolean;
+  isViewMode?: boolean;
 }
 
 const PromotionModal: React.FC<PromotionModalProps> = ({
@@ -103,16 +66,20 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
                                                          initialData,
                                                          title = "Thêm chương trình khuyến mãi mới",
                                                          loading = false,
+                                                         isViewMode = false,
                                                        }) => {
+  // Ant Design Message
+  const {message} = App.useApp();
   const [form] = Form.useForm();
-  const [isViewMode, setIsViewMode] = useState(false);
-  const [selectedType, setSelectedType] = useState<PromotionTypeInfo | undefined>();
+  const [promotionLines, setPromotionLines] = useState<CreatePromotionLineRequest[]>([]);
+  const [editingLineIndex, setEditingLineIndex] = useState<number | null>(null);
+  const [lineForm] = Form.useForm();
 
   // Fetch data from APIs
   const {branches, loading: branchesLoading} = useBranches();
   const {data: servicesData, isLoading: servicesLoading} = useServices({size: 100});
   const {products, isLoading: productsLoading} = useProducts({size: 100});
-  const {activePromotionTypes = [], isLoadingActive: promotionTypesLoading} = usePromotionType();
+  const {data: categories, isLoading: categoriesLoading} = useCategories(0, 999);
 
   const services = useMemo(() => {
     const data = servicesData?.data;
@@ -122,35 +89,50 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
   useEffect(() => {
     if (open) {
       if (initialData) {
-        setIsViewMode(title.includes("Chi tiết"));
-        setSelectedType(initialData.promotion_type);
+        // Convert promotion_lines to editable format
+        const lines = initialData.promotion_lines?.map(line => ({
+          line_type: line.line_type,
+          target_id: line.target_id,
+          branch_id: line.branch?.branch_id,
+          discount_type: line.discount_type,
+          discount_value: line.discount_value,
+          max_discount_amount: line.max_discount_amount,
+          min_order_value: line.min_order_value,
+          min_quantity: line.min_quantity,
+          buy_qty: line.buy_qty,
+          get_qty: line.get_qty,
+          free_product_id: line.free_product?.product_id,
+          free_quantity: line.free_quantity,
+          start_at: line.start_at,
+          end_at: line.end_at,
+          line_priority: line.line_priority,
+          is_active: line.is_active,
+        })) || [];
+
+        setPromotionLines(lines);
+
         form.setFieldsValue({
-          ...initialData,
-          type: initialData.promotion_type?.promotionTypeId, // Use ID instead of object
-          startDate: dayjs(initialData.start_at),
-          endDate: dayjs(initialData.end_at),
+          promotion_code: initialData.promotion_code,
+          name: initialData.name,
+          description: initialData.description,
+          start_at: initialData.start_at ? dayjs(initialData.start_at) : undefined,
+          end_at: initialData.end_at ? dayjs(initialData.end_at) : undefined,
+          usage_limit: initialData.usage_limit,
+          per_customer_limit: initialData.per_customer_limit,
+          priority: initialData.priority,
+          is_stackable: initialData.is_stackable,
+          coupon_redeem_once: initialData.coupon_redeem_once,
+          branch_id: initialData.branch?.branch_id,
+          is_active: initialData.is_active,
         });
       } else {
-        setIsViewMode(false);
-        setSelectedType(undefined);
+        setPromotionLines([]);
         form.resetFields();
         form.setFieldsValue({
-          status: "draft",
-          type: undefined, // Clear type
-          value: 0,
-          isPublic: true,
           priority: 5,
-          benefits: [],
-          terms: [],
-          conditions: [],
-          targetAudience: {
-            customerTypes: ["all"],
-            customerTiers: [],
-            branches: ["all"],
-            services: ["all"],
-            products: ["all"],
-            servicePackages: [],
-          },
+          is_stackable: false,
+          coupon_redeem_once: false,
+          is_active: true,
         });
       }
     }
@@ -166,15 +148,31 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
       const values = await form.validateFields();
 
       // Validate dates
-      if (values.endDate.isBefore(values.startDate)) {
+      if (values.end_at && values.start_at && values.end_at.isBefore(values.start_at)) {
         message.error("Ngày kết thúc phải sau ngày bắt đầu!");
         return;
       }
 
-      const formattedData = {
-        ...values,
-        startDate: values.startDate.format("YYYY-MM-DD"),
-        endDate: values.endDate.format("YYYY-MM-DD"),
+      // Validate promotion lines
+      if (promotionLines.length === 0) {
+        message.error("Vui lòng thêm ít nhất một dòng khuyến mãi!");
+        return;
+      }
+
+      const formattedData: CreatePromotionRequest | UpdatePromotionRequest = {
+        promotion_code: values.promotion_code,
+        name: values.name,
+        description: values.description,
+        start_at: values.start_at?.startOf('day').toISOString(),
+        end_at: values.end_at?.startOf('day').toISOString(),
+        usage_limit: values.usage_limit,
+        per_customer_limit: values.per_customer_limit,
+        priority: values.priority,
+        is_stackable: values.is_stackable,
+        coupon_redeem_once: values.coupon_redeem_once,
+        branch_id: values.branch_id,
+        promotion_lines: promotionLines,
+        is_active: values.is_active ?? true,
       };
 
       onOk(formattedData);
@@ -184,13 +182,196 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
     }
   };
 
+  const handleAddLine = async () => {
+    try {
+      const values = await lineForm.validateFields();
+
+      if (editingLineIndex !== null) {
+        // Update existing line
+        const newLines = [...promotionLines];
+        newLines[editingLineIndex] = {
+          ...values,
+          start_at: values.start_at?.startOf('day').toISOString(),
+          end_at: values.end_at?.startOf('day').toISOString(),
+        };
+        setPromotionLines(newLines);
+        setEditingLineIndex(null);
+        message.success("Cập nhật dòng khuyến mãi thành công!");
+      } else {
+        // Add new line
+        const newLine: CreatePromotionLineRequest = {
+          ...values,
+          start_at: values.start_at?.startOf('day').toISOString(),
+          end_at: values.end_at?.startOf('day').toISOString(),
+          line_priority: promotionLines.length + 1,
+          is_active: true,
+        };
+        setPromotionLines([...promotionLines, newLine]);
+        message.success("Thêm dòng khuyến mãi thành công!");
+      }
+
+      lineForm.resetFields();
+    } catch (error) {
+      console.log("Line validation failed:", error);
+    }
+  };
+
+  const handleEditLine = (index: number) => {
+    const line = promotionLines[index];
+    setEditingLineIndex(index);
+    lineForm.setFieldsValue({
+      ...line,
+      start_at: line.start_at ? dayjs(line.start_at) : undefined,
+      end_at: line.end_at ? dayjs(line.end_at) : undefined,
+    });
+  };
+
+  const handleCopyLine = (index: number) => {
+    const lineToCopy = promotionLines[index];
+    const newLine = {
+      ...lineToCopy,
+      line_priority: promotionLines.length + 1,
+    };
+    setPromotionLines([...promotionLines, newLine]);
+    message.success('Sao chép dòng khuyến mãi thành công!');
+  };
+
+  const handleDeleteLine = (index: number) => {
+    const newLines = promotionLines.filter((_, i) => i !== index);
+    setPromotionLines(newLines);
+    message.success("Xóa dòng khuyến mãi thành công!");
+  };
+
+  const lineColumns = [
+    {
+      title: "Loại áp dụng",
+      dataIndex: "line_type",
+      key: "line_type",
+      render: (type: LineType) => {
+        const option = LINE_TYPE_OPTIONS.find(o => o.value === type);
+        return <Tag color="blue">{option?.label}</Tag>;
+      },
+    },
+    {
+      title: "Đối tượng",
+      dataIndex: "target_id",
+      key: "target_id",
+      render: (targetId: string, record: CreatePromotionLineRequest) => {
+        if (record.line_type === LineType.ALL) return <Text type="secondary">Tất cả</Text>;
+        if (record.line_type === LineType.PRODUCT) {
+          const product = products.find(p => p.product_id === targetId);
+          return product?.product_name || targetId;
+        }
+        if (record.line_type === LineType.SERVICE) {
+          const service = services.find(s => s.service_id === targetId);
+          return service?.service_name || targetId;
+        }
+        return targetId || <Text type="secondary">Chưa chọn</Text>;
+      },
+    },
+    {
+      title: "Loại giảm giá",
+      dataIndex: "discount_type",
+      key: "discount_type",
+      render: (type: DiscountType) => {
+        const option = DISCOUNT_TYPE_OPTIONS.find(o => o.value === type);
+        return (
+          <Space>
+            <span>{option?.icon}</span>
+            <span>{option?.label}</span>
+          </Space>
+        );
+      },
+    },
+    {
+      title: "Giá trị",
+      dataIndex: "discount_value",
+      key: "discount_value",
+      render: (value: number, record: CreatePromotionLineRequest) => {
+        if (record.discount_type === DiscountType.PERCENT) return `${value}%`;
+        if (record.discount_type === DiscountType.AMOUNT) return `${value?.toLocaleString()} ₫`;
+        return value || "-";
+      },
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      render: (_: any, __: any, index: number) => (
+        <Space>
+          {isViewMode &&
+              <Button
+                  type="link"
+                  icon={<EyeOutlined/>}
+                  onClick={() => handleEditLine(index)}
+              >
+                  Xem
+              </Button>
+          }
+
+          {!isViewMode &&
+              <>
+                  <Button
+                      type="link"
+                      icon={<EditOutlined/>}
+                      onClick={() => handleEditLine(index)}
+                      disabled={isViewMode}
+                  >
+                      Sửa
+                  </Button>
+                  <Button
+                      type="link"
+                      icon={<CopyOutlined/>}
+                      onClick={() => handleCopyLine(index)}
+                      disabled={isViewMode}
+                  >
+                      Sao chép
+                  </Button>
+                  <Button
+                      type="link"
+                      danger
+                      icon={<DeleteOutlined/>}
+                      onClick={() => handleDeleteLine(index)}
+                      disabled={isViewMode}
+                  >
+                      Xóa
+                  </Button>
+              </>
+          }
+        </Space>
+      ),
+    },
+  ];
+
   const renderBasicInfo = () => (
     <Card
       title={
-        <div style={{display: "flex", alignItems: "center", gap: 8}}>
-          <GiftOutlined style={{color: "#1890ff"}}/>
-          <span>Thông tin cơ bản</span>
-        </div>
+        <Row gutter={16}>
+          <Col span={24}>
+            <Row align={"middle"} style={{gap: 8}}>
+              {`Trạng thái`}
+
+              {isViewMode && initialData && (
+                <Tag color={initialData.is_active ? "green" : "red"}>
+                  {initialData.is_active ? "Đang hoạt động" : "Đã ngừng"}
+                </Tag>
+              )}
+
+              {!isViewMode && initialData && (
+                <Form.Item
+                  name="is_active"
+                  valuePropName="checked"
+                  style={{marginBottom: 0}}
+                >
+                  <Switch
+                    checkedChildren="Đang hoạt động"
+                    unCheckedChildren="Đã ngừng"
+                    defaultChecked={initialData.is_active}
+                  />
+                </Form.Item>
+              )}
+            </Row>
+          </Col>
+        </Row>
       }
       size="small"
       style={{marginBottom: 16}}
@@ -217,20 +398,25 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
         </Col>
         <Col span={12}>
           <Form.Item
-            name="code"
-            label="Mã chương trình"
+            name="promotion_code"
+            label={
+              <span>
+                Mã khuyến mãi{" "}
+                <Tooltip title="Để trống nếu không cần mã coupon">
+                  <InfoCircleOutlined/>
+                </Tooltip>
+              </span>
+            }
             rules={[
-              {required: true, message: "Vui lòng nhập mã chương trình!"},
               {
                 pattern: /^[A-Z0-9_-]+$/,
                 message: "Mã chỉ được chứa chữ in hoa, số, gạch dưới và gạch ngang!",
               },
-              {min: 3, message: "Mã phải có ít nhất 3 ký tự!"},
               {max: 50, message: "Mã không được vượt quá 50 ký tự!"},
             ]}
           >
             <MemoizedInput
-              placeholder="Nhập mã chương trình (VD: SUMMER2024)"
+              placeholder="Nhập mã coupon (VD: SUMMER2024)"
               disabled={isViewMode}
               style={{textTransform: "uppercase"}}
               showCount
@@ -244,7 +430,6 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
         name="description"
         label="Mô tả"
         rules={[
-          {required: true, message: "Vui lòng nhập mô tả!"},
           {min: 10, message: "Mô tả phải có ít nhất 10 ký tự!"},
           {max: 500, message: "Mô tả không được vượt quá 500 ký tự!"},
         ]}
@@ -261,179 +446,68 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
-            name="type"
-            label={
-              <span>
-      Loại khuyến mãi{" "}
-                <Tooltip title="Chọn hình thức giảm giá phù hợp">
-        <InfoCircleOutlined/>
-      </Tooltip>
-    </span>
-            }
-            rules={[{required: true, message: "Vui lòng chọn loại khuyến mãi!"}]}
-          >
-            <Select
-              placeholder="Chọn loại khuyến mãi"
-              disabled={isViewMode}
-              onChange={(value) => {
-                // Find the full object for selectedType
-                const selected = activePromotionTypes.find(t => t.promotionTypeId === value);
-                setSelectedType(selected);
-              }}
-              loading={promotionTypesLoading}
-              notFoundContent={promotionTypesLoading ? <Spin size="small"/> : "Không có loại khuyến mãi"}
-            >
-              {activePromotionTypes?.map((type) => (
-                <Option key={type.promotionTypeId} value={type.promotionTypeId}>
-                  <div>
-                    <div style={{display: "flex", alignItems: "center", gap: 8}}>
-                      <span>{type.typeName}</span>
-                    </div>
-                  </div>
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item
-            name="value"
-            label="Giá trị khuyến mãi"
-            rules={[
-              {required: true, message: "Vui lòng nhập giá trị khuyến mãi!"},
-              {
-                validator: (_, value) => {
-                  if (!value || value <= 0) {
-                    return Promise.reject("Giá trị phải lớn hơn 0!");
-                  }
-                  if (selectedType?.typeCode === "PERCENT_DISCOUNT" && value > 100) {
-                    return Promise.reject("Phần trăm không được vượt quá 100%!");
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
-          >
-            <MemoizedInputNumber
-              min={0}
-              max={selectedType?.typeCode === "PERCENT_DISCOUNT" ? 100 : undefined}
-              placeholder="Nhập giá trị"
-              disabled={isViewMode}
-              style={{width: "100%"}}
-              formatter={(value) =>
-                selectedType?.typeCode === "FIXED_PRICE"
-                  ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  : `${value}`
-              }
-              addonAfter={
-                <Form.Item noStyle shouldUpdate>
-                  {({getFieldValue}) => {
-                    const type = getFieldValue("type");
-                    if (type === "PERCENT_DISCOUNT") return "%";
-                    if (type === "FIXED_PRICE") return "₫";
-                    if (type === "FREE_PRODUCT") return "sản phẩm";
-                    if (type === "BUY_X_GET_Y") return "sản phẩm";
-                    return "";
-                  }}
-                </Form.Item>
-              }
-            />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item
-            name="status"
-            label="Trạng thái"
-            rules={[{required: true, message: "Vui lòng chọn trạng thái!"}]}
-          >
-            <Select placeholder="Chọn trạng thái" disabled={isViewMode}>
-              {PROMOTION_STATUS_OPTIONS.map((status) => (
-                <Option key={status.value} value={status.value}>
-                  <div>
-                    <Tag color={status.color}>{status.label}</Tag>
-                  </div>
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Col>
-      </Row>
-
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item
-            name="startDate"
+            name="start_at"
             label="Ngày bắt đầu"
-            rules={[{required: true, message: "Vui lòng chọn ngày bắt đầu!"}]}
           >
             <DatePicker
               style={{width: "100%"}}
               disabled={isViewMode}
               placeholder="Chọn ngày bắt đầu"
               format="DD/MM/YYYY"
-              disabledDate={(current) => {
-                return current && current < dayjs().startOf("day");
-              }}
             />
           </Form.Item>
         </Col>
-        <Col span={12}>
+        <Col span={8}>
           <Form.Item
-            name="endDate"
+            name="end_at"
             label="Ngày kết thúc"
-            rules={[
-              {required: true, message: "Vui lòng chọn ngày kết thúc!"},
-              ({getFieldValue}) => ({
-                validator(_, value) {
-                  if (!value || !getFieldValue("startDate")) {
-                    return Promise.resolve();
-                  }
-                  if (value.isBefore(getFieldValue("startDate"))) {
-                    return Promise.reject("Ngày kết thúc phải sau ngày bắt đầu!");
-                  }
-                  return Promise.resolve();
-                },
-              }),
-            ]}
           >
             <DatePicker
               style={{width: "100%"}}
               disabled={isViewMode}
               placeholder="Chọn ngày kết thúc"
               format="DD/MM/YYYY"
-              disabledDate={(current) => {
-                const startDate = form.getFieldValue("startDate");
-                return current && startDate && current < startDate;
-              }}
             />
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item
+            name="branch_id"
+            label={
+              <span>
+                Chi nhánh{" "}
+                <Tooltip title="Để trống nếu áp dụng cho tất cả chi nhánh">
+                  <InfoCircleOutlined/>
+                </Tooltip>
+              </span>
+            }
+          >
+            <Select
+              placeholder="Chọn chi nhánh"
+              disabled={isViewMode}
+              allowClear
+              loading={branchesLoading}
+              showSearch
+              optionFilterProp="children"
+            >
+              {branches.map((branch) => (
+                <Option key={branch.branch_id} value={branch.branch_id}>
+                  {branch.branch_name}
+                </Option>
+              ))}
+            </Select>
           </Form.Item>
         </Col>
       </Row>
 
       <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item
-            name="isPublic"
-            label={
-              <span>
-                Công khai{" "}
-                <Tooltip title="Hiển thị chương trình này cho khách hàng xem">
-                  <InfoCircleOutlined/>
-                </Tooltip>
-              </span>
-            }
-            valuePropName="checked"
-          >
-            <Switch disabled={isViewMode} checkedChildren="Có" unCheckedChildren="Không"/>
-          </Form.Item>
-        </Col>
-        <Col span={12}>
+        <Col span={8}>
           <Form.Item
             name="priority"
             label={
               <span>
                 Độ ưu tiên{" "}
-                <Tooltip title="Mức độ ưu tiên khi áp dụng (1-10, càng cao càng ưu tiên)">
+                <Tooltip title="Số thấp = ưu tiên cao hơn (1-10)">
                   <InfoCircleOutlined/>
                 </Tooltip>
               </span>
@@ -457,17 +531,39 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
             />
           </Form.Item>
         </Col>
+        <Col span={8}>
+          <Form.Item
+            name="is_stackable"
+            label={
+              <span>
+                Cộng dồn với KM khác{" "}
+                <Tooltip title="Cho phép sử dụng kết hợp với khuyến mãi khác">
+                  <InfoCircleOutlined/>
+                </Tooltip>
+              </span>
+            }
+            valuePropName="checked"
+          >
+            <Switch disabled={isViewMode} checkedChildren="Có" unCheckedChildren="Không"/>
+          </Form.Item>
+        </Col>
+        <Col span={8}>
+          <Form.Item
+            name="coupon_redeem_once"
+            label={
+              <span>
+                Mã dùng 1 lần{" "}
+                <Tooltip title="Mã coupon chỉ được sử dụng một lần">
+                  <InfoCircleOutlined/>
+                </Tooltip>
+              </span>
+            }
+            valuePropName="checked"
+          >
+            <Switch disabled={isViewMode} checkedChildren="Có" unCheckedChildren="Không"/>
+          </Form.Item>
+        </Col>
       </Row>
-
-      <Form.Item name="notes" label="Ghi chú">
-        <MemoizedTextArea
-          rows={2}
-          placeholder="Nhập ghi chú nội bộ (không hiển thị cho khách hàng)"
-          disabled={isViewMode}
-          maxLength={300}
-          showCount
-        />
-      </Form.Item>
     </Card>
   );
 
@@ -482,16 +578,16 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
       size="small"
       style={{marginBottom: 16}}
     >
-      <Alert
-        message="Để trống nếu không muốn giới hạn"
-        type="info"
-        showIcon
-        style={{marginBottom: 16}}
-      />
+      {!isViewMode && <Alert
+          message="Để trống nếu không muốn giới hạn"
+          type="info"
+          showIcon
+          style={{marginBottom: 16}}
+      />}
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
-            name="usageLimit"
+            name="usage_limit"
             label={
               <span>
                 Giới hạn sử dụng tổng{" "}
@@ -503,7 +599,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
           >
             <MemoizedInputNumber
               min={1}
-              placeholder="Nhập giới hạn tổng (để trống nếu không giới hạn)"
+              placeholder="Nhập giới hạn tổng"
               disabled={isViewMode}
               style={{width: "100%"}}
               formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
@@ -512,7 +608,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
         </Col>
         <Col span={12}>
           <Form.Item
-            name="customerLimit"
+            name="per_customer_limit"
             label={
               <span>
                 Giới hạn mỗi khách hàng{" "}
@@ -524,7 +620,7 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
           >
             <MemoizedInputNumber
               min={1}
-              placeholder="Nhập giới hạn khách hàng (để trống nếu không giới hạn)"
+              placeholder="Nhập giới hạn khách hàng"
               disabled={isViewMode}
               style={{width: "100%"}}
             />
@@ -534,182 +630,304 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
     </Card>
   );
 
-  const renderTargetAudience = () => (
-    <Card
-      title={
-        <div style={{display: "flex", alignItems: "center", gap: 8}}>
-          <StarOutlined style={{color: "#fa8c16"}}/>
-          <span>Đối tượng áp dụng</span>
-        </div>
-      }
-      size="small"
-      style={{marginBottom: 16}}
-    >
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item
-            name={["targetAudience", "customerTypes"]}
-            label="Loại khách hàng"
-            rules={[{required: true, message: "Vui lòng chọn loại khách hàng!"}]}
-          >
-            <Select
-              mode="multiple"
-              placeholder="Chọn loại khách hàng"
-              disabled={isViewMode}
-              allowClear
-            >
-              {CUSTOMER_TYPE_OPTIONS.map((type) => (
-                <Option key={type.value} value={type.value}>
-                  {type.label}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item
-            name={["targetAudience", "branches"]}
-            label="Chi nhánh áp dụng"
-            rules={[{required: true, message: "Vui lòng chọn chi nhánh!"}]}
-          >
-            <Select
-              mode="multiple"
-              placeholder="Chọn chi nhánh"
-              disabled={isViewMode}
-              allowClear
-              loading={branchesLoading}
-              notFoundContent={branchesLoading ? <Spin size="small"/> : "Không có dữ liệu"}
-            >
-              <Option value="all">Tất cả chi nhánh</Option>
-              {branches.map((branch) => (
-                <Option key={branch.branch_id} value={branch.branch_id}>
-                  {branch.branch_name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Col>
-      </Row>
+  const renderPromotionLines = () => {
+    return (
+      <Card
+        title={
+          <div style={{display: "flex", alignItems: "center", gap: 8}}>
+            <PercentageOutlined style={{color: "#52c41a"}}/>
+            <span>Dòng khuyến mãi</span>
+          </div>
+        }
+        size="small"
+      >
+        {!isViewMode && <Alert
+            message="Mỗi dòng khuyến mãi xác định cách thức giảm giá cho sản phẩm/dịch vụ cụ thể"
+            type="info"
+            showIcon
+            style={{marginBottom: 16}}
+        />}
 
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item
-            name={["targetAudience", "services"]}
-            label="Dịch vụ áp dụng"
-            rules={[{required: true, message: "Vui lòng chọn dịch vụ!"}]}
-          >
-            <Select
-              mode="multiple"
-              placeholder="Chọn dịch vụ"
-              disabled={isViewMode}
-              allowClear
-              loading={servicesLoading}
-              notFoundContent={servicesLoading ? <Spin size="small"/> : "Không có dữ liệu"}
-              showSearch
-              optionFilterProp="children"
-            >
-              <Option value="all">Tất cả dịch vụ</Option>
-              {services?.map((service: any) => (
-                <Option key={service.service_id} value={service.service_id}>
-                  {service.service_name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item
-            name={["targetAudience", "products"]}
-            label="Sản phẩm áp dụng"
-            rules={[{required: true, message: "Vui lòng chọn sản phẩm!"}]}
-          >
-            <Select
-              mode="multiple"
-              placeholder="Chọn sản phẩm"
-              disabled={isViewMode}
-              allowClear
-              loading={productsLoading}
-              notFoundContent={productsLoading ? <Spin size="small"/> : "Không có dữ liệu"}
-              showSearch
-              optionFilterProp="children"
-            >
-              <Option value="all">Tất cả sản phẩm</Option>
-              {products.map((product) => (
-                <Option key={product.product_id} value={product.product_id}>
-                  {product.product_name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-        </Col>
-      </Row>
-    </Card>
-  );
 
-  const renderConditions = () => (
-    <Card
-      title={
-        <div style={{display: "flex", alignItems: "center", gap: 8}}>
-          <InfoCircleOutlined style={{color: "#13c2c2"}}/>
-          <span>Điều kiện áp dụng</span>
-        </div>
-      }
-      size="small"
-    >
-      <Alert
-        message="Thiết lập điều kiện để khách hàng được áp dụng khuyến mãi"
-        type="info"
-        showIcon
-        style={{marginBottom: 16}}
-      />
-      <Form.Item name="conditions">
-        <PromotionConditionsBuilder disabled={isViewMode} showPreview={true}/>
-      </Form.Item>
-    </Card>
-  );
+        <Card size="small" style={{marginBottom: 16, background: "#fafafa"}}>
+          <Form form={lineForm} layout="vertical" disabled={isViewMode}>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  name="line_type"
+                  label="Loại áp dụng"
+                  rules={[{required: true, message: "Vui lòng chọn loại!"}]}
+                >
+                  <Select placeholder="Chọn loại áp dụng"
+                          onChange={() => lineForm.setFieldsValue({target_id: undefined})}
+                  >
+                    {LINE_TYPE_OPTIONS.map((opt) => (
+                      <Option key={opt.value} value={opt.value}>
+                        {`${opt.label} - ${opt.description}`}
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
 
-  const renderBenefitsAndTerms = () => (
-    <Card
-      title={
-        <div style={{display: "flex", alignItems: "center", gap: 8}}>
-          <ShoppingCartOutlined style={{color: "#52c41a"}}/>
-          <span>Lợi ích và điều khoản</span>
-        </div>
-      }
-      size="small"
-    >
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item
-            name="benefits"
-            label="Lợi ích"
-            rules={[{required: true, message: "Vui lòng nhập ít nhất 1 lợi ích!"}]}
-          >
-            <Select
-              mode="tags"
-              placeholder="Nhập lợi ích và nhấn Enter để thêm"
-              disabled={isViewMode}
-              style={{width: "100%"}}
-            />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item
-            name="terms"
-            label="Điều khoản"
-            rules={[{required: true, message: "Vui lòng nhập ít nhất 1 điều khoản!"}]}
-          >
-            <Select
-              mode="tags"
-              placeholder="Nhập điều khoản và nhấn Enter để thêm"
-              disabled={isViewMode}
-              style={{width: "100%"}}
-            />
-          </Form.Item>
-        </Col>
-      </Row>
-    </Card>
-  );
+              <Col span={8}>
+                <Form.Item noStyle shouldUpdate={(prev, curr) => prev.line_type !== curr.line_type}>
+                  {({getFieldValue}) => {
+                    const lineType = getFieldValue("line_type");
+                    if (lineType === LineType.ALL) return null;
+
+                    return (
+                      <Form.Item
+                        name="target_id"
+                        label="Đối tượng cụ thể"
+                        rules={[{required: lineType !== LineType.ALL, message: "Vui lòng chọn đối tượng!"}]}
+                      >
+                        {lineType === LineType.PRODUCT && (
+                          <Select
+                            placeholder="Chọn sản phẩm"
+                            loading={productsLoading}
+                            showSearch
+                            optionFilterProp="children"
+                          >
+                            {products.map((product) => (
+                              <Option key={product.product_id} value={product.product_id}>
+                                {product.product_name}
+                              </Option>
+                            ))}
+                          </Select>
+                        )}
+                        {lineType === LineType.SERVICE && (
+                          <Select
+                            placeholder="Chọn dịch vụ"
+                            loading={servicesLoading}
+                            showSearch
+                            optionFilterProp="children"
+                          >
+                            {services.map((service: Service) => (
+                              <Option key={service.service_id} value={service.service_id}>
+                                {service.service_name}
+                              </Option>
+                            ))}
+                          </Select>
+                        )}
+                        {lineType === LineType.CATEGORY && (
+                          <Select
+                            placeholder="Chọn danh mục"
+                            loading={categoriesLoading}
+                            showSearch
+                            optionFilterProp="children"
+                          >
+                            {categories?.data.content.map((category) => (
+                              <Option key={category.category_id} value={category.category_id}>
+                                {category.category_name}
+                              </Option>
+                            ))}
+                          </Select>
+                        )}
+                      </Form.Item>
+                    );
+                  }}
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item
+                  name="discount_type"
+                  label="Loại giảm giá"
+                  rules={[{required: true, message: "Vui lòng chọn loại giảm giá!"}]}
+                >
+                  <Select placeholder="Chọn loại giảm giá"
+                          onChange={() => lineForm.setFieldValue("discount_value", undefined)}
+                  >
+                    {DISCOUNT_TYPE_OPTIONS.map((opt) => (
+                      <Option key={opt.value} value={opt.value}>
+                        <Space>
+                          <span>{opt.icon}</span>
+                          <span>{opt.label}</span>
+                        </Space>
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </Col>
+
+              <Col span={16}>
+                <Form.Item noStyle shouldUpdate={(prev, curr) => prev.discount_type !== curr.discount_type}>
+                  {({getFieldValue}) => {
+                    const discountType = getFieldValue("discount_type");
+
+                    return (
+                      <Row gutter={16}>
+                        {(discountType && (discountType === DiscountType.PERCENT || discountType === DiscountType.AMOUNT)) && (
+                          <>
+                            <Col span={12}>
+                              <Form.Item
+                                name="discount_value"
+                                label="Giá trị giảm"
+                                rules={[
+                                  {required: true, message: "Vui lòng nhập giá trị!"},
+                                  {
+                                    validator: (_, value) => {
+                                      if (discountType === DiscountType.PERCENT && value > 100) {
+                                        return Promise.reject("Phần trăm không được vượt quá 100%!");
+                                      }
+                                      return Promise.resolve();
+                                    },
+                                  },
+                                ]}
+                              >
+                                <MemoizedInputNumber
+                                  min={0}
+                                  max={discountType === DiscountType.PERCENT ? 100 : undefined}
+                                  placeholder="Nhập giá trị"
+                                  style={{width: "100%"}}
+                                  addonAfter={discountType === DiscountType.PERCENT ? "%" : "₫"}
+                                />
+                              </Form.Item>
+                            </Col>
+
+                            {discountType === DiscountType.PERCENT && (
+                              <Col span={12}>
+                                <Form.Item
+                                  name="max_discount_amount"
+                                  label="Giảm tối đa"
+                                >
+                                  <MemoizedInputNumber
+                                    min={0}
+                                    placeholder="Giới hạn giảm tối đa"
+                                    style={{width: "100%"}}
+                                    addonAfter="₫"
+                                  />
+                                </Form.Item>
+                              </Col>
+                            )}
+                          </>
+                        )}
+
+                        {discountType === DiscountType.BUY_X_GET_Y && (
+                          <>
+                            <Col span={12}>
+                              <Form.Item
+                                name="buy_qty"
+                                label="Mua số lượng"
+                                rules={[{required: true, message: "Nhập số lượng mua!"}]}
+                              >
+                                <MemoizedInputNumber
+                                  min={1}
+                                  placeholder="Số lượng"
+                                  style={{width: "100%"}}
+                                />
+                              </Form.Item>
+                            </Col>
+                            <Col span={12}>
+                              <Form.Item
+                                name="get_qty"
+                                label="Tặng số lượng"
+                                rules={[{required: true, message: "Nhập số lượng tặng!"}]}
+                              >
+                                <MemoizedInputNumber
+                                  min={1}
+                                  placeholder="Số lượng"
+                                  style={{width: "100%"}}
+                                />
+                              </Form.Item>
+                            </Col>
+                          </>
+                        )}
+
+                        {discountType === DiscountType.FREE_PRODUCT && (
+                          <>
+                            <Col span={12}>
+                              <Form.Item
+                                name="free_product_id"
+                                label="Sản phẩm tặng"
+                                rules={[{required: true, message: "Chọn sản phẩm tặng!"}]}
+                              >
+                                <Select
+                                  placeholder="Chọn sản phẩm tặng"
+                                  loading={productsLoading}
+                                  showSearch
+                                  optionFilterProp="children"
+                                >
+                                  {products.map((product) => (
+                                    <Option key={product.product_id} value={product.product_id}>
+                                      {product.product_name}
+                                    </Option>
+                                  ))}
+                                </Select>
+                              </Form.Item>
+                            </Col>
+                            <Col span={12}>
+                              <Form.Item
+                                name="free_quantity"
+                                label="Số lượng tặng"
+                                rules={[{required: true, message: "Nhập số lượng!"}]}
+                              >
+                                <MemoizedInputNumber
+                                  min={1}
+                                  placeholder="Số lượng"
+                                  style={{width: "100%"}}
+                                />
+                              </Form.Item>
+                            </Col>
+                          </>
+                        )}
+                      </Row>
+                    );
+                  }}
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name="min_order_value" label="Giá trị đơn tối thiểu">
+                  <MemoizedInputNumber
+                    min={0}
+                    placeholder="Giá trị đơn hàng tối thiểu"
+                    style={{width: "100%"}}
+                    addonAfter="₫"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name="min_quantity" label="Số lượng tối thiểu">
+                  <MemoizedInputNumber
+                    min={1}
+                    placeholder="Số lượng tối thiểu"
+                    style={{width: "100%"}}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {!isViewMode &&
+                <Button
+                    type="primary"
+                    icon={editingLineIndex !== null ? <EditOutlined/> : <PlusOutlined/>}
+                    onClick={handleAddLine}
+                    style={{width: "100%"}}
+                >
+                  {editingLineIndex !== null ? "Cập nhật dòng" : "Thêm dòng khuyến mãi"}
+                </Button>
+            }
+          </Form>
+        </Card>
+
+        <Table
+          dataSource={promotionLines}
+          columns={lineColumns}
+          rowKey={(_, index) => `line-${index}`}
+          pagination={false}
+          locale={{emptyText: "Chưa có dòng khuyến mãi nào"}}
+          size="small"
+          scroll={{x: "max-content", y: 200}}
+        />
+      </Card>
+    );
+  };
 
   return (
     <Modal
@@ -717,32 +935,19 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
       open={open}
       onCancel={onCancel}
       onOk={handleOk}
-      width={1000}
+      width={1200}
       okText={isViewMode ? "Đóng" : initialData ? "Cập nhật" : "Thêm mới"}
       cancelText={isViewMode ? null : "Hủy"}
       confirmLoading={loading}
-      destroyOnClose
+      destroyOnHidden={true}
     >
       <Form
         form={form}
         layout="vertical"
         initialValues={{
-          status: "draft",
-          type: undefined, // Keep as undefined
-          value: 0,
-          isPublic: true,
           priority: 5,
-          benefits: [],
-          terms: [],
-          conditions: [],
-          targetAudience: {
-            customerTypes: ["all"],
-            customerTiers: [],
-            branches: ["all"],
-            services: ["all"],
-            products: ["all"],
-            servicePackages: [],
-          },
+          is_stackable: false,
+          coupon_redeem_once: false,
         }}
       >
         <Tabs
@@ -764,31 +969,18 @@ const PromotionModal: React.FC<PromotionModalProps> = ({
               ),
             },
             {
-              key: "audience",
+              key: "lines",
               label: (
                 <span>
-                  <StarOutlined/> Đối tượng áp dụng
+                  <PercentageOutlined/> Thông tin khuyến mãi
+                  {promotionLines.length > 0 && (
+                    <Tag color="blue" style={{marginLeft: 8}}>
+                      {promotionLines.length}
+                    </Tag>
+                  )}
                 </span>
               ),
-              children: renderTargetAudience(),
-            },
-            {
-              key: "conditions",
-              label: (
-                <span>
-                  <InfoCircleOutlined/> Điều kiện
-                </span>
-              ),
-              children: renderConditions(),
-            },
-            {
-              key: "benefits",
-              label: (
-                <span>
-                  <ShoppingCartOutlined/> Lợi ích & Điều khoản
-                </span>
-              ),
-              children: renderBenefitsAndTerms(),
+              children: renderPromotionLines(),
             },
           ]}
         />
