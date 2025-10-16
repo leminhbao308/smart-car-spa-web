@@ -2,7 +2,6 @@ import React from "react";
 import { MenuProps } from "antd";
 import {
   UserOutlined,
-  TeamOutlined,
   CustomerServiceOutlined,
   CarOutlined,
   ToolOutlined,
