@@ -19,7 +19,7 @@ import {
   Tooltip,
   Spin,
   Empty,
-  Alert,
+  Alert, App,
 } from "antd";
 import {
   SearchOutlined,
@@ -44,6 +44,10 @@ const {RangePicker} = DatePicker;
 const {Option} = Select;
 
 const InvoicesPage = () => {
+  // Ant Design Message
+  const { message } = App.useApp();
+
+  // Data fetching hooks
   const {orders, loading, refetch} = useSalesOrders();
   const confirmMutation = useConfirmSalesOrder();
   const fulfillMutation = useFulfillSalesOrder();

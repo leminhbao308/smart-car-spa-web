@@ -19,7 +19,7 @@ import {
   Spin,
   Alert,
   Form,
-  message,
+  message, App,
 } from "antd";
 import {
   SearchOutlined,
@@ -40,6 +40,10 @@ const {RangePicker} = DatePicker;
 const {Option} = Select;
 
 const ReturnsPage = () => {
+  // Ant Design Message
+  const {message} = App.useApp();
+
+  // Data fetching hooks
   const {
     returnedOrders,
     loading: returnedLoading,
@@ -226,7 +230,10 @@ const ReturnsPage = () => {
       dataIndex: "created_date",
       key: "created_date",
       width: 150,
+      sorter: (a: SaleReturnResponse, b: SaleReturnResponse) =>
+        dayjs(a.created_date).unix() - dayjs(b.created_date).unix(),
       render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm"),
+      defaultSortOrder: "descend",
     },
     {
       title: "Thao tác",

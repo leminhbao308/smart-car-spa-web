@@ -21,7 +21,7 @@ import {
   Badge,
   Empty,
   Statistic,
-  QRCode,
+  QRCode, App,
 } from "antd";
 import {
   SearchOutlined,
@@ -75,6 +75,9 @@ interface ProductWithStock extends Product {
 }
 
 const POSPage = () => {
+  // Ant Design Message
+  const { message } = App.useApp();
+
   // State Management
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchText, setSearchText] = useState("");

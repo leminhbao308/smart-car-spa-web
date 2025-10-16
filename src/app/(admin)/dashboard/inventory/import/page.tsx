@@ -7,7 +7,7 @@ import {
   ImportEditModal,
 } from "@/components/ui/Modal/ImportModal";
 import {ColumnsType} from "antd/es/table";
-import {Tag, Badge, message, Modal, DatePicker, Select, Space, Button} from "antd";
+import {Tag, Badge, message, Modal, DatePicker, Select, Space, Button, App} from "antd";
 import {
   EyeOutlined,
   PlusOutlined,
@@ -27,6 +27,10 @@ const purchaseOrderStatuses = [
 ];
 
 const ImportInventoryPage = () => {
+  // Ant Design Message
+  const { message } = App.useApp();
+
+  // State quản lý
   const [data, setData] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);

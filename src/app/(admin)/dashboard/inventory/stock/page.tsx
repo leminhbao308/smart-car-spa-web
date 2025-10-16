@@ -3,7 +3,7 @@ import React, {useEffect, useMemo, useState} from "react";
 import {AdminTable} from "@/components/ui/Table";
 import {useConfirmationModalContext} from "@/components/ui/Modal";
 import {ColumnsType} from "antd/es/table";
-import {Button, DatePicker, message, Modal, Select, Space, Tag, Tooltip} from "antd";
+import {App, Button, DatePicker, message, Modal, Select, Space, Tag, Tooltip} from "antd";
 import {DollarOutlined, DownloadOutlined, FileExcelOutlined, HistoryOutlined,} from "@ant-design/icons";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
 import {InventoryLevel, InventoryService, Product, PurchaseOrder, PurchaseOrderService} from "@/lib/api";
@@ -28,6 +28,10 @@ interface StockTableItem extends InventoryLevel {
 }
 
 const StockInventoryPage = () => {
+  // Ant Design Message
+  const { message } = App.useApp();
+
+  // State variables
   const [data, setData] = useState<StockTableItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
