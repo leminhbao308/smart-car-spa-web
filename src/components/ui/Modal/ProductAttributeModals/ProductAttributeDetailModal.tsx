@@ -67,7 +67,7 @@ const ProductAttributeDetailModal: React.FC<ProductAttributeDetailModalProps> = 
         bordered
         column={2}
         size="middle"
-        labelStyle={{ fontWeight: 600, backgroundColor: "#fafafa" }}
+        styles={{ label: { fontWeight: 600, backgroundColor: "#fafafa" } }}
       >
         <Descriptions.Item label="Tên thuộc tính" span={2}>
           <strong>{productAttribute.attribute_name}</strong>

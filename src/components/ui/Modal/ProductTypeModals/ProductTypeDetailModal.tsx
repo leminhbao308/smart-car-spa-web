@@ -41,7 +41,7 @@ const ProductTypeDetailModal: React.FC<ProductTypeDetailModalProps> = ({
         bordered
         column={2}
         size="middle"
-        labelStyle={{ fontWeight: 600, backgroundColor: "#fafafa" }}
+        styles={{ label: { fontWeight: 600, backgroundColor: "#fafafa" } }}
       >
         <Descriptions.Item label="Tên loại sản phẩm" span={2}>
           <strong>{productType.product_type_name}</strong>

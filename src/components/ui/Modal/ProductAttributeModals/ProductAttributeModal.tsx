@@ -59,6 +59,7 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
           unit: editingAttribute.unit,
           isRequired: editingAttribute.is_required,
           dataType: editingAttribute.data_type,
+          isActive: editingAttribute.is_active,
         });
       } else {
         form.resetFields();
@@ -79,6 +80,7 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
             unit: values.unit,
             is_required: values.isRequired,
             data_type: values.dataType,
+            is_active: values.isActive,
           },
         });
       } else {
@@ -88,6 +90,7 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
           unit: values.unit,
           is_required: values.isRequired,
           data_type: values.dataType,
+          is_active: values.isActive ?? true, // Mặc định là true cho sản phẩm mới
         });
       }
       
@@ -237,6 +240,18 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
                 <Switch
                   checkedChildren="Bắt buộc"
                   unCheckedChildren="Tùy chọn"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="isActive"
+                label="Trạng thái hoạt động"
+                valuePropName="checked"
+                initialValue={true}
+              >
+                <Switch
+                  checkedChildren="Hoạt động"
+                  unCheckedChildren="Tạm dừng"
                 />
               </Form.Item>
 

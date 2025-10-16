@@ -4,11 +4,10 @@ import { AdminTable } from "@/components/ui/Table";
 import ProductAttributeModal from "@/components/ui/Modal/ProductAttributeModals/ProductAttributeModal";
 import { ProductAttributeDetailModal } from "@/components/ui/Modal/ProductAttributeModals/ProductAttributeDetailModal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Card, Row, Col, Select, Input, Button, Space, App } from "antd";
+import { Tag, Card, Row, Col, Select, Input, Button, Space } from "antd";
 import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   useProductAttributes,
-  useUpdateProductAttributeStatus,
 } from "@/lib/api/hooks/useProductAttributes";
 import { ProductAttribute } from "@/lib/api/types/product.types";
 
@@ -22,12 +21,13 @@ const PRODUCT_ATTRIBUTE_STATUS_OPTIONS = [
 ];
 
 const ProductAttributesPage: React.FC = () => {
-  const { message } = App.useApp();
-  
+
   const [modalVisible, setModalVisible] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [editingAttribute, setEditingAttribute] = useState<ProductAttribute | null>(null);
-  const [viewingAttribute, setViewingAttribute] = useState<ProductAttribute | null>(null);
+  const [editingAttribute, setEditingAttribute] =
+    useState<ProductAttribute | null>(null);
+  const [viewingAttribute, setViewingAttribute] =
+    useState<ProductAttribute | null>(null);
   // Filter states
   const [filters, setFilters] = useState<{
     status?: string;
@@ -37,6 +37,7 @@ const ProductAttributesPage: React.FC = () => {
     searchText: undefined,
   });
 
+
   // Pagination state
   const [pagination, setPagination] = useState({
     current: 1,
@@ -44,46 +45,49 @@ const ProductAttributesPage: React.FC = () => {
     total: 0,
   });
 
-  // React Query hooks
-  const { data: attributesData, isLoading } = useProductAttributes({});
-  const updateStatusMutation = useUpdateProductAttributeStatus();
+  // React Query hooks - get all data without filters
+  const { data: attributesData, isLoading } = useProductAttributes({
+    page: 0,
+    size: 1000, // Get all data for client-side filtering
+  });
 
-  // Extract data from response
+  // Extract data from response and apply client-side filtering
   const attributes = useMemo(() => {
-    return attributesData?.data?.content || [];
-  }, [attributesData]);
-
-  // Update pagination when data changes
-  React.useEffect(() => {
-    if (attributesData?.data) {
-      setPagination(prev => ({
-        ...prev,
-        total: attributesData.data.totalElements || 0,
-      }));
-    }
-  }, [attributesData]);
-
-  // Filtered data
-  const filteredData = useMemo(() => {
-    let filtered = [...attributes];
-
-    // Search filter
+    let filteredData = attributesData?.data?.content || [];
+    
+    // Apply search filter
     if (filters.searchText) {
       const searchLower = filters.searchText.toLowerCase();
-      filtered = filtered.filter(
-        (item) =>
-          item.attribute_name.toLowerCase().includes(searchLower) ||
-          item.attribute_code.toLowerCase().includes(searchLower)
+      filteredData = filteredData.filter((attr: ProductAttribute) =>
+        attr.attribute_name?.toLowerCase().includes(searchLower) ||
+        attr.attribute_code?.toLowerCase().includes(searchLower)
       );
     }
-
-    // Status filter
+    
+    // Apply status filter
     if (filters.status) {
-      filtered = filtered.filter((item) => item.is_active === (filters.status === "true"));
+      const isActive = filters.status === "true";
+      filteredData = filteredData.filter((attr: ProductAttribute) => attr.is_active === isActive);
     }
+    
+    return filteredData;
+  }, [attributesData, filters.searchText, filters.status]);
 
-    return filtered;
-  }, [attributes, filters]);
+  // Client-side pagination for filtered data
+  const paginatedAttributes = useMemo(() => {
+    const startIndex = (pagination.current - 1) * pagination.pageSize;
+    const endIndex = startIndex + pagination.pageSize;
+    return attributes.slice(startIndex, endIndex);
+  }, [attributes, pagination.current, pagination.pageSize]);
+
+  // Update pagination when filtered data changes
+  React.useEffect(() => {
+    setPagination((prev) => ({
+      ...prev,
+      total: attributes.length,
+      current: 1, // Reset to first page when filters change
+    }));
+  }, [attributes.length]);
 
   // Reset filters
   const handleResetFilters = () => {
@@ -108,15 +112,6 @@ const ProductAttributesPage: React.FC = () => {
     setDetailModalOpen(true);
   };
 
-  const handleToggleStatus = (record: ProductAttribute) => {
-    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
-    // You can add confirmation modal here if needed
-    updateStatusMutation.mutateAsync({
-      attributeId: record.attribute_id,
-      data: { is_active: !record.is_active },
-    });
-    message.success(`${action} thuộc tính thành công!`);
-  };
 
   const getDataTypeColor = (dataType: string) => {
     const colors: Record<string, string> = {
@@ -282,7 +277,10 @@ const ProductAttributesPage: React.FC = () => {
                 style={{ width: "100%" }}
               >
                 {PRODUCT_ATTRIBUTE_STATUS_OPTIONS.map((status) => (
-                  <Option key={status.value.toString()} value={status.value.toString()}>
+                  <Option
+                    key={status.value.toString()}
+                    value={status.value.toString()}
+                  >
                     {status.label}
                   </Option>
                 ))}
@@ -294,7 +292,7 @@ const ProductAttributesPage: React.FC = () => {
 
       <AdminTable
         title="Quản lý thuộc tính sản phẩm"
-        dataSource={filteredData}
+        dataSource={paginatedAttributes}
         columns={productAttributeColumns}
         loading={isLoading}
         onAdd={handleAdd}
@@ -302,16 +300,6 @@ const ProductAttributesPage: React.FC = () => {
         onView={handleView}
         addButtonText="Thêm thuộc tính"
         searchable={false}
-        actions={[
-          {
-            key: "toggle-status",
-            label: (record: ProductAttribute) =>
-              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
-            type: "default",
-            danger: (record: ProductAttribute) => record.is_active,
-            onClick: handleToggleStatus,
-          },
-        ]}
         scroll={{ x: 1200 }}
         pagination={{
           current: pagination.current,
@@ -322,7 +310,7 @@ const ProductAttributesPage: React.FC = () => {
           showTotal: (total: number, range: [number, number]) =>
             `${range[0]}-${range[1]} của ${total} thuộc tính`,
           onChange: (page: number, pageSize?: number) => {
-            setPagination(prev => ({
+            setPagination((prev) => ({
               ...prev,
               current: page,
               pageSize: pageSize || 10,

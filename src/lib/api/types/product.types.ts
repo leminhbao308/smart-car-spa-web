@@ -201,6 +201,7 @@ export interface CreateProductTypeRequest {
   product_type_code: string;
   description?: string;
   category_id: string;
+  is_active?: boolean;
 }
 
 export interface UpdateProductTypeRequest {
@@ -208,6 +209,7 @@ export interface UpdateProductTypeRequest {
   product_type_code?: string;
   description?: string;
   category_id?: string;
+  is_active?: boolean;
 }
 
 export interface UpdateProductTypeStatusRequest {
@@ -258,6 +260,7 @@ export interface CreateProductAttributeRequest {
   unit?: string;
   is_required?: boolean;
   data_type?: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+  is_active?: boolean;
 }
 
 export interface UpdateProductAttributeRequest {
@@ -266,6 +269,7 @@ export interface UpdateProductAttributeRequest {
   unit?: string;
   is_required?: boolean;
   data_type?: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+  is_active?: boolean;
 }
 
 export interface UpdateProductAttributeStatusRequest {

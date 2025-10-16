@@ -24,36 +24,7 @@ export const productService = {
   getAllProducts: async (
     params: ProductSearchParams = {}
   ): Promise<ProductResponse> => {
-    const {
-      page = 1,
-      size = 10,
-      sort = "createdDate",
-      direction = "DESC",
-      filters = {},
-    } = params;
-
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      size: size.toString(),
-      sort: sort,
-      direction: direction,
-    });
-
-    // Add filters to query params
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        if (key === "is_active" && value === "deleted") {
-          // Xử lý filter "deleted" đặc biệt
-          queryParams.append("is_deleted", "true");
-        } else {
-          queryParams.append(key, value.toString());
-        }
-      }
-    });
-
-    const response = await api.get(
-      `/products/get-all?${queryParams.toString()}`
-    );
+    const response = await api.get('/products/get-all', { params });
     return response.data;
   },
 

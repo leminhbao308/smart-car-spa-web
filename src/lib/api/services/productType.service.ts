@@ -11,33 +11,7 @@ import {
 export const productTypeService = {
   // Get all product types with pagination and filters
   getAllProductTypes: async (params: ProductTypeSearchParams = {}): Promise<ProductTypeResponse> => {
-    const {
-      page = 1,
-      size = 10,
-      sort = "created_date",
-      direction = "DESC",
-      filters = {},
-    } = params;
-
-    const queryParams = new URLSearchParams({
-      page: page.toString(),
-      size: size.toString(),
-      sort: sort,
-      direction: direction,
-    });
-
-    // Add filters to query params
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        if (key === "is_active" && value === "deleted") {
-          queryParams.append("is_deleted", "true");
-        } else {
-          queryParams.append(key, value.toString());
-        }
-      }
-    });
-
-    const response = await apiClient.get(`/product-types/get-all?${queryParams.toString()}`);
+    const response = await apiClient.get('/product-types/get-all', { params });
     return response.data;
   },
 

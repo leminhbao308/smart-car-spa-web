@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect } from "react";
-import { Modal, Form, Input, Select } from "antd";
+import { Modal, Form, Input, Select, Switch } from "antd";
 import { useCreateProductType, useUpdateProductType } from "@/lib/api/hooks/useProductTypes";
 import { useActiveCategories } from "@/lib/api/hooks/useCategories";
 import { ProductType, CreateProductTypeRequest, UpdateProductTypeRequest } from "@/lib/api/types/product.types";
@@ -33,6 +33,7 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
         productTypeCode: initialData.product_type_code,
         description: initialData.description,
         categoryId: initialData.category_id,
+        isActive: initialData.is_active,
       });
     } else {
       form.resetFields();
@@ -50,6 +51,7 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
           product_type_code: values.productTypeCode,
           description: values.description,
           category_id: values.categoryId,
+          is_active: values.isActive,
         };
 
         await updateMutation.mutateAsync({
@@ -63,6 +65,7 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
           product_type_code: values.productTypeCode,
           description: values.description,
           category_id: values.categoryId,
+          is_active: values.isActive ?? true, // Mặc định là true cho sản phẩm mới
         };
 
         await createMutation.mutateAsync(createData);
@@ -150,6 +153,18 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
           <TextArea
             rows={4}
             placeholder="Nhập mô tả loại sản phẩm (tùy chọn)"
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="isActive"
+          label="Trạng thái hoạt động"
+          valuePropName="checked"
+          initialValue={true}
+        >
+          <Switch
+            checkedChildren="Hoạt động"
+            unCheckedChildren="Tạm dừng"
           />
         </Form.Item>
 

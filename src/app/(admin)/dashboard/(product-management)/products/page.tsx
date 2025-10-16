@@ -1,11 +1,7 @@
 "use client";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { AdminTable } from "@/components/ui/Table";
-import {
-  useConfirmationModalContext,
-  ProductDetailModal,
-  ProductModal,
-} from "@/components/ui/Modal";
+import { ProductDetailModal, ProductModal } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import {
   Tag,
@@ -26,10 +22,7 @@ import {
   ShoppingCartOutlined,
   BarcodeOutlined,
 } from "@ant-design/icons";
-import {
-  useProducts,
-  useUpdateProductStatus,
-} from "@/lib/api/hooks/useProductManagement";
+import { useProducts } from "@/lib/api/hooks/useProductManagement";
 import { useActiveProductTypes } from "@/lib/api/hooks/useProductManagement";
 import { Product, ProductFilters } from "@/lib/api/types/product.types";
 
@@ -37,8 +30,6 @@ const { Search } = Input;
 const { Option } = Select;
 
 const ProductsPage = () => {
-  const { showModal } = useConfirmationModalContext();
-
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -56,24 +47,81 @@ const ProductsPage = () => {
     brand: undefined,
   });
 
-  // API hooks
+  // API hooks - get all data without filters
   const {
     data: productsData,
     isLoading,
     refetch,
   } = useProducts({
-    page: currentPage - 1,
-    size: pageSize,
-    filters,
+    page: 0,
+    size: 1000, // Get all data for client-side filtering
   });
 
-  const products = productsData?.data?.content || [];
-  const totalElements = productsData?.data?.totalElements || 0;
+  // Apply client-side filtering
+  const products = useMemo(() => {
+    let filteredData = productsData?.data?.content || [];
+
+    // Apply search filter
+    if (filters.searchText) {
+      const searchLower = filters.searchText.toLowerCase();
+      filteredData = filteredData.filter(
+        (product: Product) =>
+          product.product_name?.toLowerCase().includes(searchLower) ||
+          product.description?.toLowerCase().includes(searchLower) ||
+          product.sku?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply brand filter
+    if (filters.brand) {
+      const brandLower = filters.brand.toLowerCase();
+      filteredData = filteredData.filter((product: Product) =>
+        product.brand?.toLowerCase().includes(brandLower)
+      );
+    }
+
+    // Apply product type filter
+    if (filters.productTypeId) {
+      filteredData = filteredData.filter(
+        (product: Product) => product.product_type_id === filters.productTypeId
+      );
+    }
+
+    // Apply status filter
+    if (filters.is_active !== undefined) {
+      filteredData = filteredData.filter(
+        (product: Product) => product.is_active === filters.is_active
+      );
+    }
+
+    // Apply featured filter
+    if (filters.isFeatured !== undefined) {
+      filteredData = filteredData.filter(
+        (product: Product) => product.is_featured === filters.isFeatured
+      );
+    }
+
+    return filteredData;
+  }, [
+    productsData,
+    filters.searchText,
+    filters.brand,
+    filters.productTypeId,
+    filters.is_active,
+    filters.isFeatured,
+  ]);
+
+  // Client-side pagination for filtered data
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return products.slice(startIndex, endIndex);
+  }, [products, currentPage, pageSize]);
+
+  const totalElements = products.length;
 
   const { data: productTypesData } = useActiveProductTypes();
   const productTypes = productTypesData || [];
-
-  const updateStatusMutation = useUpdateProductStatus();
 
   // Reset filters
   const handleResetFilters = () => {
@@ -200,25 +248,6 @@ const ProductsPage = () => {
     setEditModalVisible(true);
   };
 
-  const handleToggleStatus = (record: Product) => {
-    const action = record.is_active ? "tạm dừng" : "kích hoạt";
-    showModal({
-      title: record.is_active ? "Tạm dừng sản phẩm" : "Kích hoạt sản phẩm",
-      content: `Bạn có chắc chắn muốn ${action} sản phẩm ${record.product_name}?`,
-      type: record.is_active ? "warning" : "success",
-      onConfirm: async () => {
-        try {
-          await updateStatusMutation.mutateAsync({
-            productId: record.product_id,
-            isActive: !record.is_active,
-          });
-        } catch (error: unknown) {
-          console.error("Failed to update status:", error);
-        }
-      },
-    });
-  };
-
   const handleView = (record: Product) => {
     setSelectedData(record);
     setDetailModalVisible(true);
@@ -333,6 +362,7 @@ const ProductsPage = () => {
               </Select>
             </div>
           </Col>
+
           <Col xs={24} sm={12} md={6}>
             <div>
               <label
@@ -343,10 +373,10 @@ const ProductsPage = () => {
                   display: "block",
                 }}
               >
-                Đặc điểm
+                Sản phẩm nổi bật
               </label>
               <Select
-                placeholder="Chọn đặc điểm"
+                placeholder="Chọn trạng thái nổi bật"
                 value={filters.isFeatured}
                 onChange={(value) =>
                   setFilters({ ...filters, isFeatured: value })
@@ -354,8 +384,8 @@ const ProductsPage = () => {
                 allowClear
                 style={{ width: "100%" }}
               >
-                <Option value={true}>Sản phẩm nổi bật</Option>
-                <Option value={false}>Sản phẩm thường</Option>
+                <Option value={true}>Nổi bật</Option>
+                <Option value={false}>Không nổi bật</Option>
               </Select>
             </div>
           </Col>
@@ -364,23 +394,12 @@ const ProductsPage = () => {
 
       <AdminTable
         title="Quản lý sản phẩm"
-        dataSource={products}
+        dataSource={paginatedProducts}
         columns={productColumns}
         loading={isLoading}
         onAdd={handleAdd}
         onEdit={handleEdit}
         onEditCondition={(record: Product) => !record.is_deleted}
-        actions={[
-          {
-            key: "toggle-status",
-            label: (record: Product) =>
-              record.is_active ? "Tạm dừng" : "Kích hoạt",
-            type: "default",
-            danger: (record: Product) => record.is_active,
-            onClick: handleToggleStatus,
-            condition: (record: Product) => !record.is_deleted,
-          },
-        ]}
         onView={handleView}
         addButtonText="Thêm sản phẩm"
         searchable={false}

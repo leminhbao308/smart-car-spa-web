@@ -13,12 +13,10 @@ import {
   Input,
   Button,
   Space,
-  App,
 } from "antd";
 import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   useProductTypes,
-  useUpdateProductTypeStatus,
 } from "@/lib/api/hooks/useProductTypes";
 import { ProductType } from "@/lib/api/types/product.types";
 
@@ -32,12 +30,7 @@ const PRODUCT_TYPE_STATUS_OPTIONS = [
 ];
 
 const ProductTypesPage: React.FC = () => {
-  const { message } = App.useApp();
   
-  // React Query hooks
-  const { data: productTypesData, isLoading } = useProductTypes({});
-  const updateStatusMutation = useUpdateProductTypeStatus();
-
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -62,46 +55,50 @@ const ProductTypesPage: React.FC = () => {
     total: 0,
   });
 
-  // Extract data from response
+  // React Query hooks - get all data without filters
+  const { data: productTypesData, isLoading } = useProductTypes({
+    page: 0,
+    size: 1000, // Get all data for client-side filtering
+  });
+
+  // Extract data from response and apply client-side filtering
   const productTypes = useMemo(() => {
-    return productTypesData?.data?.content || [];
-  }, [productTypesData]);
-
-  // Update pagination when data changes
-  React.useEffect(() => {
-    if (productTypesData?.data) {
-      setPagination((prev) => ({
-        ...prev,
-        total: productTypesData.data.totalElements || 0,
-      }));
-    }
-  }, [productTypesData]);
-
-  // Filtered data
-  const filteredData = useMemo(() => {
-    let filtered = [...productTypes];
-
-    // Search filter
+    let filteredData = productTypesData?.data?.content || [];
+    
+    // Apply search filter
     if (filters.searchText) {
       const searchLower = filters.searchText.toLowerCase();
-      filtered = filtered.filter(
-        (item) =>
-          item.product_type_name.toLowerCase().includes(searchLower) ||
-          item.product_type_code.toLowerCase().includes(searchLower) ||
-          (item.description &&
-            item.description.toLowerCase().includes(searchLower))
+      filteredData = filteredData.filter((type: ProductType) =>
+        type.product_type_name?.toLowerCase().includes(searchLower) ||
+        type.product_type_code?.toLowerCase().includes(searchLower) ||
+        type.description?.toLowerCase().includes(searchLower)
       );
     }
-
-    // Status filter
+    
+    // Apply status filter
     if (filters.status) {
-      filtered = filtered.filter(
-        (item) => item.is_active === (filters.status === "true")
-      );
+      const isActive = filters.status === "true";
+      filteredData = filteredData.filter((type: ProductType) => type.is_active === isActive);
     }
+    
+    return filteredData;
+  }, [productTypesData, filters.searchText, filters.status]);
 
-    return filtered;
-  }, [productTypes, filters]);
+  // Client-side pagination for filtered data
+  const paginatedProductTypes = useMemo(() => {
+    const startIndex = (pagination.current - 1) * pagination.pageSize;
+    const endIndex = startIndex + pagination.pageSize;
+    return productTypes.slice(startIndex, endIndex);
+  }, [productTypes, pagination.current, pagination.pageSize]);
+
+  // Update pagination when filtered data changes
+  React.useEffect(() => {
+    setPagination((prev) => ({
+      ...prev,
+      total: productTypes.length,
+      current: 1, // Reset to first page when filters change
+    }));
+  }, [productTypes.length]);
 
   // Reset filters
   const handleResetFilters = () => {
@@ -184,15 +181,6 @@ const ProductTypesPage: React.FC = () => {
     setDetailModalOpen(true);
   };
 
-  const handleToggleStatus = (record: ProductType) => {
-    const action = record.is_active ? "vô hiệu hóa" : "kích hoạt";
-    // You can add confirmation modal here if needed
-    updateStatusMutation.mutateAsync({
-      productTypeId: record.product_type_id,
-      isActive: !record.is_active,
-    });
-    message.success(`${action} loại sản phẩm thành công!`);
-  };
 
   return (
     <div>
@@ -273,7 +261,7 @@ const ProductTypesPage: React.FC = () => {
 
       <AdminTable
         title="Quản lý loại sản phẩm"
-        dataSource={filteredData}
+        dataSource={paginatedProductTypes}
         columns={productTypeColumns}
         loading={isLoading}
         onAdd={handleAdd}
@@ -281,16 +269,6 @@ const ProductTypesPage: React.FC = () => {
         onView={handleView}
         addButtonText="Thêm loại sản phẩm"
         searchable={false}
-        actions={[
-          {
-            key: "toggle-status",
-            label: (record: ProductType) =>
-              record.is_active ? "Vô hiệu hóa" : "Kích hoạt",
-            type: "default",
-            danger: (record: ProductType) => record.is_active,
-            onClick: handleToggleStatus,
-          },
-        ]}
         scroll={{ x: 1200 }}
         pagination={{
           current: pagination.current,
