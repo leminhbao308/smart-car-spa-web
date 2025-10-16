@@ -1,30 +1,13 @@
 "use client";
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { AdminTable } from "@/components/ui/Table";
-import {
-  useConfirmationModalContext,
-  ServiceDetailModal,
-  ServiceModal,
-} from "@/components/ui/Modal";
+import { ServiceDetailModal, ServiceModal } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import {
-  Tag,
-  Card,
-  Row,
-  Col,
-  Select,
-  Input,
-  Button,
-  Space,
-  App,
-} from "antd";
-import {
-  FilterOutlined,
-  ReloadOutlined,
-} from "@ant-design/icons";
-import { Service, SERVICE_TYPE_OPTIONS } from "@/lib/api/types/service.types";
+import { Tag, Card, Row, Col, Select, Input, Button, Space, App } from "antd";
+import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Service } from "@/lib/api/types/service.types";
 import { ServiceService } from "@/lib/api/services/service.service";
-import formatCurrency from "@/components/utils/helper/currency.format.helper";
+import { useServiceTypes } from "@/lib/api/hooks/useServiceTypes";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -39,7 +22,29 @@ const ServicesPage = () => {
     pageSize: 10,
     total: 0,
   });
-  const { showModal } = useConfirmationModalContext();
+
+  // Get service types for mapping
+  const { data: serviceTypesData } = useServiceTypes({});
+
+  // Create service type mapping
+  const serviceTypeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (serviceTypesData?.data?.content) {
+      serviceTypesData.data.content.forEach((type) => {
+        map.set(type.service_type_id, type.name);
+      });
+    }
+    return map;
+  }, [serviceTypesData]);
+
+  // Helper function to get service type name
+  const getServiceTypeName = useCallback((service: Service) => {
+    return (
+      service.service_type_name ||
+      serviceTypeMap.get(service.service_type_id) ||
+      "Không xác định"
+    );
+  }, [serviceTypeMap]);
 
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -59,39 +64,46 @@ const ServicesPage = () => {
   });
 
   // Load services data
-  const loadServices = useCallback(async (page: number = 0, size: number = 10) => {
-    try {
-      setLoading(true);
-      console.log("Loading services...", { page, size });
-      const response = await ServiceService.getAllServices({ page, size });
-      
-      // Handle both Service[] and ServicePageResponse
-      if (Array.isArray(response.data)) {
-        // Direct array response
-        console.log("Services loaded:", response.data.length, "items");
-        setServiceData(response.data);
-        setPagination({
-          current: 1,
-          pageSize: response.data.length,
-          total: response.data.length,
-        });
-      } else {
-        // Paginated response
-        console.log("Services loaded:", response.data.content?.length, "items");
-        setServiceData(response.data.content || []);
-        setPagination({
-          current: response.data.number + 1,
-          pageSize: response.data.size,
-          total: response.data.totalElements,
-        });
+  const loadServices = useCallback(
+    async (page: number = 0, size: number = 10) => {
+      try {
+        setLoading(true);
+        console.log("Loading services...", { page, size });
+        const response = await ServiceService.getAllServices({ page, size });
+
+        // Handle both Service[] and ServicePageResponse
+        if (Array.isArray(response.data)) {
+          // Direct array response
+          console.log("Services loaded:", response.data.length, "items");
+          setServiceData(response.data);
+          setPagination({
+            current: 1,
+            pageSize: response.data.length,
+            total: response.data.length,
+          });
+        } else {
+          // Paginated response
+          console.log(
+            "Services loaded:",
+            response.data.content?.length,
+            "items"
+          );
+          setServiceData(response.data.content || []);
+          setPagination({
+            current: response.data.number + 1,
+            pageSize: response.data.size,
+            total: response.data.totalElements,
+          });
+        }
+      } catch (error) {
+        message.error("Không thể tải danh sách dịch vụ");
+        console.error("Error loading services:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      message.error("Không thể tải danh sách dịch vụ");
-      console.error("Error loading services:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [message]);
+    },
+    [message]
+  );
 
   // Refresh data function
   const refreshData = async () => {
@@ -129,8 +141,14 @@ const ServicesPage = () => {
         (item) =>
           item.service_name.toLowerCase().includes(searchLower) ||
           item.service_url.toLowerCase().includes(searchLower) ||
-          item.description.toLowerCase().includes(searchLower) ||
-          item.category_name.toLowerCase().includes(searchLower)
+          (item.description &&
+            item.description.toLowerCase().includes(searchLower)) ||
+          item.category_name.toLowerCase().includes(searchLower) ||
+          getServiceTypeName(item).toLowerCase().includes(searchLower) ||
+          (item.service_process_name &&
+            item.service_process_name.toLowerCase().includes(searchLower)) ||
+          (item.branch_name &&
+            item.branch_name.toLowerCase().includes(searchLower))
       );
     }
 
@@ -149,7 +167,7 @@ const ServicesPage = () => {
     }
 
     return filtered;
-  }, [serviceData, filters]);
+  }, [serviceData, filters, getServiceTypeName]);
 
   // Reset filters
   const handleResetFilters = () => {
@@ -191,26 +209,36 @@ const ServicesPage = () => {
       render: (categoryName: string) => <Tag color="blue">{categoryName}</Tag>,
     },
     {
-      title: "Giá dịch vụ",
-      key: "pricing",
-      width: 200,
-      sorter: (a, b) => a.base_price - b.base_price,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 500, color: "#52c41a", fontSize: 14 }}>
-            {formatCurrency(record.base_price)}
-          </div>
-        </div>
+      title: "Thời gian ước tính",
+      dataIndex: "estimated_duration",
+      key: "estimated_duration",
+      width: 120,
+      sorter: (a, b) => a.estimated_duration - b.estimated_duration,
+      render: (duration: number) => (
+        <div style={{ color: "#1890ff" }}>{duration} phút</div>
       ),
     },
     {
-      title: "Thời gian",
-      dataIndex: "standard_duration",
-      key: "standard_duration",
-      width: 100,
-      sorter: (a, b) => a.standard_duration - b.standard_duration,
-      render: (duration: number) => (
-        <div style={{ color: "#1890ff" }}>{duration} phút</div>
+      title: "Loại dịch vụ",
+      key: "service_type_name",
+      width: 150,
+      render: (_, record) => (
+        <Tag color="purple">{getServiceTypeName(record)}</Tag>
+      ),
+    },
+    {
+      title: "Quy trình",
+      key: "service_process",
+      width: 200,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500, fontSize: 12 }}>
+            {record.service_process_name}
+          </div>
+          <div style={{ fontSize: 11, color: "#666" }}>
+            {record.is_default_process ? "Mặc định" : "Tùy chỉnh"}
+          </div>
+        </div>
       ),
     },
 
@@ -236,8 +264,10 @@ const ServicesPage = () => {
         { text: "Đã xóa", value: "deleted" },
       ],
       onFilter: (value, record) => {
-        if (value === "active") return record.is_active && !record.audit?.is_deleted;
-        if (value === "inactive") return !record.is_active && !record.audit?.is_deleted;
+        if (value === "active")
+          return record.is_active && !record.audit?.is_deleted;
+        if (value === "inactive")
+          return !record.is_active && !record.audit?.is_deleted;
         if (value === "deleted") return record.audit?.is_deleted || false;
         return true;
       },
@@ -269,80 +299,6 @@ const ServicesPage = () => {
     loadServices(pagination.current - 1, pagination.pageSize);
     setTableKey((prev) => prev + 1); // Force table re-render
   };
-
-  const handleToggleStatus = (record: Service) => {
-    const action = record.is_active ? "ngừng hoạt động" : "kích hoạt";
-    showModal({
-      title: record.is_active ? "Ngừng hoạt động" : "Kích hoạt",
-      content: `Bạn có chắc chắn muốn ${action} dịch vụ ${record.service_name}?`,
-      type: record.is_active ? "warning" : "success",
-      onConfirm: async () => {
-        // Optimistic update - update UI immediately
-        setServiceData((prevData) =>
-          prevData.map((service) =>
-            service.service_id === record.service_id
-              ? { ...service, is_active: !record.is_active }
-              : service
-          )
-        );
-
-        try {
-          console.log("Updating service status...", {
-            serviceId: record.service_id,
-            newStatus: !record.is_active,
-          });
-          await ServiceService.updateServiceStatus(record.service_id, {
-            is_active: !record.is_active,
-          });
-          message.success(`${action} dịch vụ thành công!`);
-          console.log("Service status updated successfully");
-        } catch (error) {
-          // Revert optimistic update on error
-          setServiceData((prevData) =>
-            prevData.map((service) =>
-              service.service_id === record.service_id
-                ? { ...service, is_active: record.is_active }
-                : service
-            )
-          );
-          message.error(`Có lỗi xảy ra khi ${action} dịch vụ`);
-          console.error("Error updating service status:", error);
-        }
-      },
-    });
-  };
-
-  // const handleDelete = (record: Service) => {
-  //   showModal({
-  //     title: "Xóa dịch vụ",
-  //     content: `Bạn có chắc chắn muốn xóa dịch vụ ${record.serviceName}? Hành động này không thể hoàn tác.`,
-  //     type: "error",
-  //     onConfirm: async () => {
-  //       try {
-  //         await ServiceService.deleteService(record.serviceId);
-  //         message.success("Xóa dịch vụ thành công!");
-
-  //         // Update the service as deleted in local state immediately
-  //         setServiceData((prevData) =>
-  //           prevData.map((service) =>
-  //             service.serviceId === record.serviceId
-  //               ? { ...service, is_deleted: true }
-  //               : service
-  //           )
-  //         );
-
-  //         console.log("Service marked as deleted in local state:", {
-  //           serviceId: record.serviceId,
-  //           serviceName: record.serviceName,
-  //           is_deleted: true,
-  //         });
-  //       } catch (error) {
-  //         message.error("Có lỗi xảy ra khi xóa dịch vụ");
-  //         console.error("Error deleting service:", error);
-  //       }
-  //     },
-  //   });
-  // };
 
   return (
     <div>
@@ -389,7 +345,7 @@ const ServicesPage = () => {
                 Tìm kiếm
               </label>
               <Search
-                placeholder="Tên, mã dịch vụ..."
+                placeholder="Tìm kiếm theo tên, URL, mô tả, danh mục, loại dịch vụ..."
                 value={filters.searchText}
                 onChange={(e) =>
                   setFilters({ ...filters, searchText: e.target.value })
@@ -442,10 +398,18 @@ const ServicesPage = () => {
                 }
                 allowClear
                 style={{ width: "100%" }}
+                loading={!serviceTypesData}
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  String(option?.children)
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
               >
-                {SERVICE_TYPE_OPTIONS.map((type) => (
-                  <Option key={type.value} value={type.value}>
-                    {type.label}
+                {serviceTypesData?.data?.content?.map((type) => (
+                  <Option key={type.service_type_id} value={type.service_type_id}>
+                    {type.name}
                   </Option>
                 ))}
               </Select>
@@ -463,30 +427,10 @@ const ServicesPage = () => {
         onAdd={handleAdd}
         onEdit={handleEdit}
         onEditCondition={(record: Service) => !record.audit?.is_deleted}
-        actions={[
-          {
-            key: "toggle-status",
-            label: (record: Service) =>
-              record.is_active ? "Ngừng hoạt động" : "Kích hoạt",
-            type: "default",
-            danger: (record: Service) => record.is_active,
-            onClick: handleToggleStatus,
-            condition: (record: Service) => !record.audit?.is_deleted,
-          },
-          // {
-          //   key: "delete",
-          //   label: "Xóa",
-          //   type: "default",
-          //   danger: true,
-          //   icon: <DeleteOutlined />,
-          //   onClick: handleDelete,
-          //   condition: (record: Service) => !record.is_deleted,
-          // },
-        ]}
         onView={handleView}
         addButtonText="Thêm dịch vụ"
         searchable={false}
-        scroll={{ x: 1720 }}
+        scroll={{ x: 1800 }}
         pagination={{
           current: pagination.current,
           pageSize: pagination.pageSize,

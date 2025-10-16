@@ -1,18 +1,7 @@
 "use client";
 import React from "react";
-import {
-  Modal,
-  Card,
-  Descriptions,
-  Tag,
-  Badge,
-  Typography,
-  Space,
-} from "antd";
-import {
-  CalendarOutlined,
-  TagOutlined,
-} from "@ant-design/icons";
+import { Modal, Card, Descriptions, Tag, Badge, Typography, Space } from "antd";
+import { CalendarOutlined, TagOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 
@@ -32,12 +21,12 @@ const ServiceTypeDetailModal: React.FC<ServiceTypeDetailModalProps> = ({
   if (!data) return null;
 
   const getStatusConfig = (isActive: boolean) => {
-    return isActive 
+    return isActive
       ? { label: "Hoạt động", color: "green" }
       : { label: "Không hoạt động", color: "red" };
   };
 
-  const statusConfig = getStatusConfig(data.isActive);
+  const statusConfig = getStatusConfig(data.is_active);
 
   return (
     <Modal
@@ -46,11 +35,16 @@ const ServiceTypeDetailModal: React.FC<ServiceTypeDetailModalProps> = ({
           <Title level={4} style={{ margin: 0 }}>
             {data.name}
           </Title>
+          <Descriptions.Item label="Trạng thái">
+            <Tag color={statusConfig.color}>{statusConfig.label}</Tag>
+          </Descriptions.Item>
         </Space>
       }
       open={visible}
       onCancel={onCancel}
-      width={800}
+      width="90%"
+      style={{ maxWidth: 800 }}
+      styles={{ body: { overflowX: 'hidden' } }}
       footer={null}
     >
       <div style={{ padding: "16px 0" }}>
@@ -66,7 +60,10 @@ const ServiceTypeDetailModal: React.FC<ServiceTypeDetailModalProps> = ({
         >
           <Descriptions column={2} size="small">
             <Descriptions.Item label="ID">
-              <Badge count={data.serviceTypeId} style={{ backgroundColor: "#1890ff" }} />
+              <Badge
+                count={data.service_type_id}
+                style={{ backgroundColor: "#1890ff" }}
+              />
             </Descriptions.Item>
             <Descriptions.Item label="Mã loại dịch vụ">
               <Text code>{data.code}</Text>
@@ -76,25 +73,14 @@ const ServiceTypeDetailModal: React.FC<ServiceTypeDetailModalProps> = ({
                 {data.name}
               </Text>
             </Descriptions.Item>
+            {data.display_name && (
+              <Descriptions.Item label="Tên hiển thị">
+                <Text>{data.display_name}</Text>
+              </Descriptions.Item>
+            )}
             <Descriptions.Item label="Mô tả" span={2}>
               <Text>{data.description}</Text>
             </Descriptions.Item>
-            <Descriptions.Item label="Thời gian mặc định">
-              <Text>{data.defaultDuration ? `${data.defaultDuration} phút` : "Không xác định"}</Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Trạng thái">
-              <Tag color={statusConfig.color}>{statusConfig.label}</Tag>
-            </Descriptions.Item>
-            {data.displayName && (
-              <Descriptions.Item label="Tên hiển thị">
-                <Text>{data.displayName}</Text>
-              </Descriptions.Item>
-            )}
-            {data.version && (
-              <Descriptions.Item label="Phiên bản">
-                <Badge count={data.version} style={{ backgroundColor: "#52c41a" }} />
-              </Descriptions.Item>
-            )}
           </Descriptions>
         </Card>
 
@@ -109,13 +95,17 @@ const ServiceTypeDetailModal: React.FC<ServiceTypeDetailModalProps> = ({
         >
           <Descriptions column={2} size="small">
             <Descriptions.Item label="Ngày tạo">
-              {data.created_date ? new Date(data.created_date).toLocaleString("vi-VN") : "Không xác định"}
+              {data.created_date
+                ? new Date(data.created_date).toLocaleString("vi-VN")
+                : "Không xác định"}
             </Descriptions.Item>
             <Descriptions.Item label="Người tạo">
               <Text>{data.created_by || "Không xác định"}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="Ngày cập nhật">
-              {data.modified_date ? new Date(data.modified_date).toLocaleString("vi-VN") : "Không xác định"}
+              {data.modified_date
+                ? new Date(data.modified_date).toLocaleString("vi-VN")
+                : "Không xác định"}
             </Descriptions.Item>
             <Descriptions.Item label="Người cập nhật">
               <Text>{data.modified_by || "Không xác định"}</Text>

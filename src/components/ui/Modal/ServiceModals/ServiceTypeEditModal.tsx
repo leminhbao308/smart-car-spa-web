@@ -3,23 +3,27 @@ import React, { useState, useEffect } from "react";
 import {
   Modal,
   Form,
-  Select,
   Button,
   Space,
   App,
   Row,
   Col,
+  Card,
+  Switch,
+  Tag,
 } from "antd";
 import {
   EditOutlined,
   SaveOutlined,
   PlusOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
-import { SERVICE_TYPE_STATUS_OPTIONS } from "@/lib/api/types/service-type.types";
 import { ServiceType } from "@/lib/api/types/service-type.types";
-import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
-
-const { Option } = Select;
+import {
+  MemoizedInput,
+  MemoizedTextArea,
+} from "@/components/ui/MemoizedComponents";
 
 interface ServiceTypeEditModalProps {
   visible: boolean;
@@ -32,7 +36,8 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  editData}) => {
+  editData,
+}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const { message } = App.useApp();
@@ -42,12 +47,15 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
       form.setFieldsValue({
         code: editData.code,
         name: editData.name,
+        display_name: editData.display_name,
         description: editData.description,
-        defaultDuration: editData.defaultDuration,
-        isActive: editData.isActive,
+        is_active: editData.is_active,
       });
     } else if (visible) {
       form.resetFields();
+      form.setFieldsValue({
+        is_active: true, // Default to active for new service types
+      });
     }
   }, [visible, editData, form]);
 
@@ -62,7 +70,11 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
       } as ServiceType;
 
       onSuccess(updatedData);
-      message.success(editData ? "Cập nhật loại dịch vụ thành công!" : "Thêm loại dịch vụ thành công!");
+      message.success(
+        editData
+          ? "Cập nhật loại dịch vụ thành công!"
+          : "Thêm loại dịch vụ thành công!"
+      );
       form.resetFields();
     } catch (error) {
       console.log("Form validation failed:", error);
@@ -87,7 +99,9 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
       }
       open={visible}
       onCancel={handleCancel}
-      width={800}
+      width="90%"
+      style={{ maxWidth: 800 }}
+      styles={{ body: { overflowX: 'hidden' } }}
       footer={[
         <Button key="cancel" onClick={handleCancel}>
           Hủy
@@ -108,86 +122,95 @@ const ServiceTypeEditModal: React.FC<ServiceTypeEditModalProps> = ({
         layout="vertical"
         requiredMark={false}
         scrollToFirstError
+        initialValues={{
+          is_active: true,
+        }}
       >
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              label="Tên loại dịch vụ"
-              name="name"
-              rules={[
-                { required: true, message: "Vui lòng nhập tên loại dịch vụ!" },
-                { max: 100, message: "Tên loại dịch vụ không được quá 100 ký tự!" },
-              ]}
-            >
-              <MemoizedInput placeholder="Nhập tên loại dịch vụ" />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              label="Mã loại dịch vụ"
-              name="code"
-              rules={[
-                { required: true, message: "Vui lòng nhập mã loại dịch vụ!" },
-                { max: 50, message: "Mã loại dịch vụ không được quá 50 ký tự!" },
-              ]}
-            >
-              <MemoizedInput placeholder="Nhập mã loại dịch vụ" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Form.Item
-          label="Mô tả"
-          name="description"
-          rules={[
-            { max: 1000, message: "Mô tả không được quá 1000 ký tự!" },
-          ]}
+        <Card size="small" style={{ marginBottom: 16 }}>
+          <Form.Item
+            label="Trạng thái"
+            name="is_active"
+            valuePropName="checked"
+          >
+            <Switch style={{ minWidth: 50 }} />
+          </Form.Item>
+        </Card>
+        {/* Thông tin cơ bản */}
+        <Card
+          title="Thông tin cơ bản"
+          size="small"
+          style={{ marginBottom: 16 }}
         >
-          <MemoizedTextArea
-            rows={3}
-            placeholder="Nhập mô tả loại dịch vụ"
-            maxLength={1000}
-            showCount
-          />
-        </Form.Item>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Tên loại dịch vụ"
+                name="name"
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng nhập tên loại dịch vụ!",
+                  },
+                  {
+                    max: 100,
+                    message: "Tên loại dịch vụ không được quá 100 ký tự!",
+                  },
+                ]}
+              >
+                <MemoizedInput placeholder="Nhập tên loại dịch vụ" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Mã loại dịch vụ"
+                name="code"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mã loại dịch vụ!" },
+                  {
+                    max: 50,
+                    message: "Mã loại dịch vụ không được quá 50 ký tự!",
+                  },
+                ]}
+              >
+                <MemoizedInput placeholder="Nhập mã loại dịch vụ" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Row gutter={16}>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              label="Thời gian mặc định (phút)"
-              name="defaultDuration"
-              rules={[
-                { type: "number", min: 1, message: "Thời gian phải lớn hơn 0!" },
-              ]}
-            >
-              <MemoizedInputNumber
-                placeholder="Nhập thời gian mặc định"
-                min={1}
-                style={{ width: "100%" }}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              label="Trạng thái"
-              name="isActive"
-              rules={[]}
-            >
-              <Select placeholder="Chọn trạng thái">
-                {SERVICE_TYPE_STATUS_OPTIONS.map((status) => (
-                  <Option key={status.value.toString()} value={status.value}>
-                    {status.label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Tên hiển thị"
+                name="display_name"
+                extra="Tên hiển thị cho người dùng (tùy chọn)"
+                rules={[
+                  {
+                    max: 100,
+                    message: "Tên hiển thị không được quá 100 ký tự!",
+                  },
+                ]}
+              >
+                <MemoizedInput placeholder="Nhập tên hiển thị" />
+              </Form.Item>
+            </Col>
+          </Row>
 
+          <Form.Item
+            label="Mô tả"
+            name="description"
+            rules={[{ max: 1000, message: "Mô tả không được quá 1000 ký tự!" }]}
+          >
+            <MemoizedTextArea
+              rows={3}
+              placeholder="Nhập mô tả loại dịch vụ"
+              maxLength={1000}
+              showCount
+            />
+          </Form.Item>
+        </Card>
       </Form>
     </Modal>
   );
 };
 
 export default ServiceTypeEditModal;
-

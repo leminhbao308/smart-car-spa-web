@@ -8,84 +8,84 @@ export interface ServiceProcessInfoDto {
   name: string;
   description?: string;
   code: string;
-  isDefault?: boolean;
-  estimatedDuration?: number;
-  branchId?: string;
-  branchName?: string;
+  is_default?: boolean;
+  estimated_duration?: number;
+  branch_id?: string;
+  branch_name?: string;
   processSteps?: ServiceProcessStepInfoDto[]; // Backend might return process_steps
   process_steps?: ServiceProcessStepInfoDto[]; // Backend snake_case
-  createdDate?: string;
-  modifiedDate?: string;
-  createdBy?: string;
-  modifiedBy?: string;
-  isActive?: boolean;
-  isDeleted?: boolean;
+  created_date?: string;
+  modified_date?: string;
+  created_by?: string;
+  modified_by?: string;
+  is_active?: boolean;
+  is_deleted?: boolean;
 }
 
 export interface ServiceProcessStepInfoDto {
   id: string;
-  processId: string;
-  stepOrder: number;
+  process_id: string;
+  step_order: number;
   name: string;
   description?: string;
-  estimatedTime: number;
-  isRequired: boolean;
-  stepProducts: ServiceProcessStepProductInfoDto[];
-  createdDate: string;
-  modifiedDate: string;
-  createdBy: string;
-  modifiedBy: string;
-  isActive: boolean;
-  isDeleted: boolean;
+  estimated_time: number;
+  is_required: boolean;
+  step_products: ServiceProcessStepProductInfoDto[];
+  created_date: string;
+  modified_date: string;
+  created_by: string;
+  modified_by: string;
+  is_active: boolean;
+  is_deleted: boolean;
 }
 
 export interface ServiceProcessStepProductInfoDto {
   id: string;
-  serviceProcessStepId: string;
-  productId: string;
-  productName: string;
-  productCode: string;
+  service_process_step_id: string;
+  product_id: string;
+  product_name: string;
+  product_code: string;
   quantity: number;
-  unitOfMeasure: string;
+  unit_of_measure: string;
   notes?: string;
-  createdDate: string;
-  modifiedDate: string;
-  createdBy: string;
-  modifiedBy: string;
-  isActive: boolean;
-  isDeleted: boolean;
+  created_date: string;
+  modified_date: string;
+  created_by: string;
+  modified_by: string;
+  is_active: boolean;
+  is_deleted: boolean;
 }
 
 export interface ServiceProcessFilterParam {
   page?: number;
   size?: number;
   search?: string;
-  branchId?: string;
-  isActive?: boolean;
-  isDefault?: boolean;
+  branch_id?: string;
+  is_active?: boolean;
+  is_default?: boolean;
 }
 
 export interface CreateServiceProcessRequest {
   name: string;
   description?: string;
   code: string;
-  isDefault?: boolean;
-  estimatedDuration: number;
-  branchId?: string;
-  processSteps: CreateServiceProcessStepRequest[];
+  is_default?: boolean;
+  estimated_duration: number;
+  branch_id?: string;
+  process_steps: CreateServiceProcessStepRequest[];
 }
 
 export interface CreateServiceProcessStepRequest {
-  stepOrder: number;
+  step_order: number;
   name: string;
   description?: string;
-  estimatedTime: number;
-  isRequired?: boolean;
-  stepProducts?: CreateServiceProcessStepProductRequest[];
+  estimated_time: number;
+  is_required?: boolean;
+  step_products?: CreateServiceProcessStepProductRequest[];
 }
 
 export interface CreateServiceProcessStepProductRequest {
-  productId: string;
+  product_id: string;
   quantity: number;
   notes?: string;
 }
@@ -94,25 +94,25 @@ export interface UpdateServiceProcessRequest {
   name?: string;
   description?: string;
   code?: string;
-  isDefault?: boolean;
-  estimatedDuration?: number;
-  branchId?: string;
-  processSteps?: UpdateServiceProcessStepRequest[];
+  is_default?: boolean;
+  estimated_duration?: number;
+  branch_id?: string;
+  process_steps?: UpdateServiceProcessStepRequest[];
 }
 
 export interface UpdateServiceProcessStepRequest {
   id?: string;
-  stepOrder?: number;
+  step_order?: number;
   name?: string;
   description?: string;
-  estimatedTime?: number;
-  isRequired?: boolean;
-  stepProducts?: UpdateServiceProcessStepProductRequest[];
+  estimated_time?: number;
+  is_required?: boolean;
+  step_products?: UpdateServiceProcessStepProductRequest[];
 }
 
 export interface UpdateServiceProcessStepProductRequest {
   id?: string;
-  productId?: string;
+  product_id?: string;
   quantity?: number;
   notes?: string;
 }

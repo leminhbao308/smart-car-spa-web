@@ -42,12 +42,16 @@ export class ServiceService {
         queryParams.append("service_type_id", params.service_type_id);
       if (params.skill_level)
         queryParams.append("skill_level", params.skill_level);
-      if (params.is_package !== undefined)
-        queryParams.append("is_package", params.is_package.toString());
       if (params.is_featured !== undefined)
         queryParams.append("is_featured", params.is_featured.toString());
       if (params.is_active !== undefined)
         queryParams.append("is_active", params.is_active.toString());
+      if (params.branch_id)
+        queryParams.append("branch_id", params.branch_id);
+      if (params.service_process_id)
+        queryParams.append("service_process_id", params.service_process_id);
+      if (params.is_default_process !== undefined)
+        queryParams.append("is_default_process", params.is_default_process.toString());
       if (params.search) queryParams.append("search", params.search);
 
       const url = `/services/get-all?${queryParams.toString()}`;

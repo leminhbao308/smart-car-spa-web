@@ -16,11 +16,8 @@ export interface Service {
   category_id: string;
   category_name: string;
   description: string;
-  standard_duration: number;
+  estimated_duration: number; // Thời gian ước tính (phút)
   required_skill_level: SkillLevel;
-  is_package: boolean;
-  base_price: number; // Base price for the service
-  labor_cost: number; // Tiền công lao động
   service_type_id: string;
   service_type_name: string;
   is_featured: boolean;
@@ -28,8 +25,7 @@ export interface Service {
   service_process_id: string;
   service_process_name: string;
   service_process_code: string;
-  is_default_process: boolean;
-  estimated_duration: number;
+  is_default_process: boolean; // Có sử dụng quy trình mặc định hay không
   branch_id: string;
   branch_name: string;
   audit: AuditDto; // Audit fields are now in a separate object
@@ -87,15 +83,12 @@ export interface CreateServiceRequest {
   service_url: string;
   category_id?: string;
   description?: string;
-  standard_duration?: number;
+  estimated_duration?: number; // Thời gian ước tính (phút)
   required_skill_level?: SkillLevel;
-  is_package?: boolean;
-  base_price?: number;
-  labor_cost?: number;
   service_type_id?: string;
   is_featured?: boolean;
   service_process_id?: string;
-  is_default_process?: boolean;
+  is_default_process?: boolean; // Có sử dụng quy trình mặc định hay không
   branch_id?: string;
 }
 
@@ -105,16 +98,13 @@ export interface UpdateServiceRequest {
   service_url?: string;
   category_id?: string;
   description?: string;
-  standard_duration?: number;
+  estimated_duration?: number; // Thời gian ước tính (phút)
   required_skill_level?: SkillLevel;
-  is_package?: boolean;
-  base_price?: number;
-  labor_cost?: number;
   service_type_id?: string;
   is_featured?: boolean;
   is_active?: boolean;
   service_process_id?: string;
-  is_default_process?: boolean;
+  is_default_process?: boolean; // Có sử dụng quy trình mặc định hay không
   branch_id?: string;
 }
 
@@ -132,9 +122,11 @@ export interface ServiceFilterParam {
   category_id?: string;
   service_type_id?: string;
   skill_level?: SkillLevel;
-  is_package?: boolean;
   is_featured?: boolean;
   is_active?: boolean;
+  branch_id?: string;
+  service_process_id?: string;
+  is_default_process?: boolean;
   search?: string;
 }
 

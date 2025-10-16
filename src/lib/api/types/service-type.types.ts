@@ -1,15 +1,13 @@
 import { BaseAuditEntity } from "./common.types";
 
-// Service Type API Types
+// Service Type API Types - Updated to match backend ServiceTypeInfoDto
 export interface ServiceType extends BaseAuditEntity {
-  serviceTypeId: string;
+  service_type_id: string;
   code: string;
   name: string;
   description?: string;
-  defaultDuration?: number;
-  isActive: boolean;
-  displayName?: string;
-  version?: number;
+  is_active: boolean;
+  display_name?: string;
 }
 
 // API Request/Response Types
@@ -51,18 +49,18 @@ export interface ServiceTypeResponse {
 export interface CreateServiceTypeRequest {
   code: string;
   name: string;
+  display_name?: string;
   description?: string;
-  defaultDuration?: number;
-  isActive?: boolean;
+  is_active?: boolean;
 }
 
 // Update Service Type Request
 export interface UpdateServiceTypeRequest {
   code?: string;
   name?: string;
+  display_name?: string;
   description?: string;
-  defaultDuration?: number;
-  isActive?: boolean;
+  is_active?: boolean;
 }
 
 // Service Type Filter Parameters
@@ -73,7 +71,7 @@ export interface ServiceTypeFilterParam {
   direction?: "ASC" | "DESC";
   code?: string;
   name?: string;
-  isActive?: boolean;
+  is_active?: boolean;
   search?: string;
 }
 

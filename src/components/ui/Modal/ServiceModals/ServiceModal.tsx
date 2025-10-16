@@ -14,17 +14,23 @@ import {
   Upload,
   Image,
 } from "antd";
+import { UploadOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 import {
-  UploadOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-} from "@ant-design/icons";
-import { MemoizedInput, MemoizedInputNumber, MemoizedTextArea } from "@/components/ui/MemoizedComponents";
-import { CreateServiceRequest, UpdateServiceRequest } from "@/lib/api/types/service.types";
-import { Category } from "@/lib/api/types/category.types";
-import { useServiceTypes, useServiceProcesses, useBranches, useCreateService, useUpdateService, useCategories } from "@/lib/api/hooks";
-import { ServiceService } from "@/lib/api/services/service.service";
-import formatCurrency from "@/components/utils/helper/currency.format.helper";
+  MemoizedInput,
+  MemoizedInputNumber,
+  MemoizedTextArea,
+} from "@/components/ui/MemoizedComponents";
+import {
+  CreateServiceRequest,
+  UpdateServiceRequest,
+} from "@/lib/api/types/service.types";
+import {
+  useServiceTypes,
+  useServiceProcesses,
+  useCreateService,
+  useUpdateService,
+  useCategories,
+} from "@/lib/api/hooks";
 
 const { Option } = Select;
 
@@ -38,16 +44,12 @@ interface ServiceModalProps {
     service_url: string;
     category_id?: string;
     description?: string;
-    standard_duration?: number;
+    estimated_duration?: number;
     required_skill_level?: string;
-    is_package?: boolean;
-    base_price?: number;
-    labor_cost?: number;
     service_type_id?: string;
     is_featured?: boolean;
+    is_active?: boolean;
     service_process_id?: string;
-    is_default_process?: boolean;
-    branch_id?: string;
     image_urls?: string[];
   };
   title?: string;
@@ -66,10 +68,14 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
   const { message } = App.useApp();
 
   // API hooks
-  const { data: serviceTypesData, isLoading: serviceTypesLoading } = useServiceTypes({});
-  const { data: serviceProcessesData, isLoading: serviceProcessesLoading } = useServiceProcesses({});
-  const { data: categoriesData, isLoading: categoriesLoading } = useCategories(0, 1000);
-  const { branches, loading: branchesLoading } = useBranches();
+  const { data: serviceTypesData, isLoading: serviceTypesLoading } =
+    useServiceTypes({});
+  const { data: serviceProcessesData, isLoading: serviceProcessesLoading } =
+    useServiceProcesses({});
+  const { data: categoriesData, isLoading: categoriesLoading } = useCategories(
+    0,
+    1000
+  );
   const createServiceMutation = useCreateService();
   const updateServiceMutation = useUpdateService();
 
@@ -83,15 +89,12 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           serviceUrl: editData.service_url,
           categoryId: editData.category_id,
           description: editData.description,
-          standardDuration: editData.standard_duration,
+          estimatedDuration: editData.estimated_duration,
           requiredSkillLevel: editData.required_skill_level,
-          isPackage: editData.is_package,
-          basePrice: editData.base_price,
-          laborCost: editData.labor_cost,
           serviceTypeId: editData.service_type_id,
           isFeatured: editData.is_featured,
+          isActive: editData.is_active,
           serviceProcessId: editData.service_process_id,
-          branchId: editData.branch_id,
         });
         setImageUrls(editData.image_urls || []);
       } else {
@@ -103,23 +106,27 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
   }, [visible, editData, form]);
 
   // Watch for form field changes
-  const serviceProcessId = Form.useWatch('serviceProcessId', form);
-  const laborCost = Form.useWatch('laborCost', form) || 0;
-  const basePrice = Form.useWatch('basePrice', form) || 0;
-  
+  const serviceProcessId = Form.useWatch("serviceProcessId", form);
+
   const formRef = useRef(form);
   formRef.current = form;
 
   const updateFormFields = useCallback(() => {
     if (serviceProcessId && serviceProcessesData) {
-      const selectedProcess = serviceProcessesData.find(p => p.id === serviceProcessId);
-        if (selectedProcess) {
-          // Update estimated duration if not set
-          const currentDuration = formRef.current.getFieldValue('standardDuration');
-          if (!currentDuration && selectedProcess.estimated_duration) {
-            formRef.current.setFieldValue('standardDuration', selectedProcess.estimated_duration);
-          }
+      const selectedProcess = serviceProcessesData.find(
+        (p) => p.id === serviceProcessId
+      );
+      if (selectedProcess) {
+        // Update estimated duration if not set
+        const currentDuration =
+          formRef.current.getFieldValue("estimatedDuration");
+        if (!currentDuration && selectedProcess.estimated_duration) {
+          formRef.current.setFieldValue(
+            "estimatedDuration",
+            selectedProcess.estimated_duration
+          );
         }
+      }
     }
   }, [serviceProcessId, serviceProcessesData]);
 
@@ -133,22 +140,18 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
       const values = await form.validateFields();
 
       if (editData) {
-        // Update existing service - KHÔNG gửi basePrice và laborCost
+        // Update existing service
         const updateData: UpdateServiceRequest = {
           service_name: values.serviceName,
           service_url: values.serviceUrl,
           category_id: values.categoryId,
           description: values.description,
-          standard_duration: values.standardDuration,
+          estimated_duration: values.estimatedDuration,
           required_skill_level: values.requiredSkillLevel,
-          is_package: values.isPackage || false,
-          // base_price: values.basePrice, // KHÔNG được cập nhật trực tiếp
-          // labor_cost: values.laborCost, // Sử dụng API riêng
           service_type_id: values.serviceTypeId,
           is_featured: values.isFeatured || false,
-          is_active: true,
+          is_active: values.isActive !== undefined ? values.isActive : true,
           service_process_id: values.serviceProcessId,
-          branch_id: values.branchId,
         };
 
         await updateServiceMutation.mutateAsync({
@@ -156,17 +159,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           data: updateData,
         });
 
-        // Cập nhật labor cost riêng nếu có thay đổi
-        if (values.laborCost !== editData.labor_cost) {
-          await ServiceService.updateLaborCost(editData.service_id, {
-            labor_cost: values.laborCost
-          });
-        }
-
-        // Tính lại base price nếu có thay đổi quy trình
-        if (values.serviceProcessId !== editData.service_process_id) {
-          await ServiceService.recalculateBasePrice(editData.service_id);
-        }
+        // Không cần tính lại pricing nữa
 
         message.success("Cập nhật dịch vụ thành công!");
       } else {
@@ -176,23 +169,16 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           service_url: values.serviceUrl,
           category_id: values.categoryId,
           description: values.description,
-          standard_duration: values.standardDuration,
+          estimated_duration: values.estimatedDuration,
           required_skill_level: values.requiredSkillLevel,
-          is_package: values.isPackage || false,
-          base_price: 0, // Backend sẽ tự tính từ quy trình
-          labor_cost: values.laborCost,
           service_type_id: values.serviceTypeId,
           is_featured: values.isFeatured || false,
           service_process_id: values.serviceProcessId,
-          branch_id: values.branchId,
         };
 
-        const newService = await createServiceMutation.mutateAsync(createData);
+        await createServiceMutation.mutateAsync(createData);
 
-        // Tính lại base price sau khi tạo (chỉ khi có serviceProcessId)
-        if (newService && newService.service_id && values.serviceProcessId) {
-          await ServiceService.recalculateBasePrice(newService.service_id);
-        }
+        // Không cần tính lại pricing nữa
 
         message.success("Tạo dịch vụ thành công!");
       }
@@ -218,36 +204,73 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
       open={visible}
       onCancel={handleCancel}
       onOk={handleSubmit}
-      confirmLoading={loading || createServiceMutation.isPending || updateServiceMutation.isPending}
-      width={1000}
+      confirmLoading={
+        loading ||
+        createServiceMutation.isPending ||
+        updateServiceMutation.isPending
+      }
+      width="90%"
+      style={{ maxWidth: 1000 }}
       destroyOnHidden
+      styles={{ body: { overflowX: 'hidden' } }}
     >
       <Form
         form={form}
         layout="vertical"
         initialValues={{
-          isPackage: false,
           isFeatured: false,
-          basePrice: 0,
-          laborCost: 0,
+          isActive: true,
         }}
       >
+        {/* Trạng thái và tính năng */}
+        <Card
+          title="Trạng thái và tính năng"
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Trạng thái"
+                name="isActive"
+                valuePropName="checked"
+                extra="Bật/tắt trạng thái hoạt động của dịch vụ"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Dịch vụ nổi bật"
+                name="isFeatured"
+                valuePropName="checked"
+                extra="Đánh dấu dịch vụ là nổi bật"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
         {/* Thông tin cơ bản */}
         <Card title="Thông tin cơ bản" size="small">
           <Row gutter={16}>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12}>
               <Form.Item
                 label="Tên dịch vụ"
                 name="serviceName"
                 rules={[
                   { required: true, message: "Vui lòng nhập tên dịch vụ!" },
-                  { min: 2, max: 500, message: "Tên dịch vụ phải từ 2-500 ký tự!" },
+                  {
+                    min: 2,
+                    max: 500,
+                    message: "Tên dịch vụ phải từ 2-500 ký tự!",
+                  },
                 ]}
               >
                 <MemoizedInput placeholder="Nhập tên dịch vụ" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
+            <Col xs={24} sm={12}>
               <Form.Item
                 label="URL dịch vụ"
                 name="serviceUrl"
@@ -259,7 +282,10 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                 <MemoizedInput placeholder="Nhập URL dịch vụ" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
               <Form.Item
                 label="Danh mục"
                 name="categoryId"
@@ -276,10 +302,47 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                     return label.toLowerCase().includes(input.toLowerCase());
                   }}
                 >
-                  {categoriesData?.data?.content && categoriesData.data.content.length > 0 &&
-                    categoriesData.data.content.map((category: Category) => (
-                      <Option key={category.category_id} value={category.category_id} label={category.category_name}>
+                  {categoriesData?.data?.content &&
+                    categoriesData.data.content.length > 0 &&
+                    categoriesData.data.content.map((category) => (
+                      <Option
+                        key={category.category_id}
+                        value={category.category_id}
+                        label={category.category_name}
+                      >
                         {category.category_name}
+                      </Option>
+                    ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Loại dịch vụ"
+                name="serviceTypeId"
+                rules={[
+                  { required: true, message: "Vui lòng chọn loại dịch vụ!" },
+                ]}
+              >
+                <Select
+                  placeholder="Chọn loại dịch vụ"
+                  loading={serviceTypesLoading}
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    String(option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                >
+                  {serviceTypesData?.data?.content &&
+                    serviceTypesData.data.content.length > 0 &&
+                    serviceTypesData.data.content.map((serviceType) => (
+                      <Option
+                        key={serviceType.service_type_id}
+                        value={serviceType.service_type_id}
+                      >
+                        {serviceType.name}
                       </Option>
                     ))}
                 </Select>
@@ -290,35 +353,18 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item
-                label="Loại dịch vụ"
-                name="serviceTypeId"
-                rules={[{ required: true, message: "Vui lòng chọn loại dịch vụ!" }]}
-              >
-                <Select
-                  placeholder="Chọn loại dịch vụ"
-                  loading={serviceTypesLoading}
-                  showSearch
-                  optionFilterProp="children"
-                   filterOption={(input, option) =>
-                     String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                   }
-                >
-                  {serviceTypesData?.data?.content && serviceTypesData.data.content.length > 0 &&
-                    serviceTypesData.data.content.map((serviceType) => (
-                      <Option key={serviceType.serviceTypeId} value={serviceType.serviceTypeId}>
-                        {serviceType.name}
-                      </Option>
-                    ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Form.Item
-                label="Thời gian chuẩn (phút)"
-                name="standardDuration"
+                label="Thời gian ước tính (phút)"
+                name="estimatedDuration"
                 rules={[
-                  { required: true, message: "Vui lòng nhập thời gian chuẩn!" },
-                  { type: "number", min: 1, message: "Thời gian phải lớn hơn 0!" },
+                  {
+                    required: true,
+                    message: "Vui lòng nhập thời gian ước tính!",
+                  },
+                  {
+                    type: "number",
+                    min: 1,
+                    message: "Thời gian phải lớn hơn 0!",
+                  },
                 ]}
               >
                 <MemoizedInputNumber
@@ -328,11 +374,13 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                 />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={6}>
+            <Col xs={24} sm={12}>
               <Form.Item
                 label="Cấp độ kỹ năng"
                 name="requiredSkillLevel"
-                rules={[{ required: true, message: "Vui lòng chọn cấp độ kỹ năng!" }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn cấp độ kỹ năng!" },
+                ]}
               >
                 <Select placeholder="Chọn cấp độ">
                   <Option value="BEGINNER">Cơ bản</Option>
@@ -344,117 +392,21 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
             </Col>
           </Row>
 
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Chi nhánh"
-                name="branchId"
-              >
-                <Select
-                  placeholder="Chọn chi nhánh"
-                  allowClear
-                  loading={branchesLoading}
-                  showSearch
-                  optionFilterProp="children"
-                   filterOption={(input, option) =>
-                     String(option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                   }
-                >
-                  {branches && branches.length > 0 &&
-                    branches.map((branch) => (
-                      <Option key={branch.branch_id} value={branch.branch_id}>
-                        {branch.branch_name}
-                      </Option>
-                    ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={6}>
-              <Form.Item
-                label="Chi phí lao động (VNĐ)"
-                name="laborCost"
-                rules={[
-                  { required: true, message: "Vui lòng nhập chi phí lao động!" },
-                  { type: "number", min: 0, message: "Chi phí phải lớn hơn hoặc bằng 0!" },
-                ]}
-              >
-                <MemoizedInputNumber
-                  min={0}
-                  style={{ width: "100%" }}
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
-                  placeholder="Nhập chi phí lao động"
-                />
-              </Form.Item>
-            </Col>
-             <Col xs={24} sm={6}>
-               <Form.Item
-                 label="Giá cơ bản (VNĐ)"
-                 name="basePrice"
-                 extra={
-                   <div style={{ fontSize: 12, color: '#666' }}>
-                     <div>Giá cơ bản được tính tự động từ quy trình dịch vụ</div>
-                   </div>
-                 }
-               >
-                 <MemoizedInputNumber
-                   min={0}
-                   style={{ 
-                     width: "100%",
-                     backgroundColor: "#f8f9fa",
-                     color: "#666",
-                     cursor: "not-allowed",
-                     border: "1px solid #e9ecef"
-                   }}
-                   formatter={(value) =>
-                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                   }
-                   parser={(value) => value!.replace(/\$\s?|(,*)/g, "")}
-                   placeholder="Tự động tính từ quy trình"
-                   readOnly
-                   disabled
-                 />
-               </Form.Item>
-             </Col>
-          </Row>
-
           <Form.Item
             label="Mô tả"
             name="description"
             rules={[{ max: 2000, message: "Mô tả không được quá 2000 ký tự!" }]}
           >
-            <MemoizedTextArea
-              rows={3}
-              placeholder="Nhập mô tả dịch vụ"
-            />
+            <MemoizedTextArea rows={3} placeholder="Nhập mô tả dịch vụ" />
           </Form.Item>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Gói dịch vụ"
-                name="isPackage"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Dịch vụ nổi bật"
-                name="isFeatured"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-          </Row>
         </Card>
 
         {/* Thông tin quy trình */}
-        <Card title="Thông tin quy trình" size="small" style={{ marginTop: 16 }}>
+        <Card
+          title="Thông tin quy trình"
+          size="small"
+          style={{ marginTop: 16 }}
+        >
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item
@@ -474,9 +426,14 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                   }}
                   size="large"
                 >
-                  {serviceProcessesData && serviceProcessesData.length > 0 &&
+                  {serviceProcessesData &&
+                    serviceProcessesData.length > 0 &&
                     serviceProcessesData.map((process) => (
-                      <Option key={process.id} value={process.id} label={process.name}>
+                      <Option
+                        key={process.id}
+                        value={process.id}
+                        label={process.name}
+                      >
                         {process.name}
                       </Option>
                     ))}
@@ -488,36 +445,46 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                 label="Thông tin quy trình được chọn"
                 extra="Thông tin chi tiết về quy trình đã chọn"
               >
-                <div style={{ 
-                  padding: 12, 
-                  backgroundColor: '#f8f9fa', 
-                  borderRadius: 6, 
-                  border: '1px solid #e9ecef',
-                  minHeight: 40,
-                  display: 'flex',
-                  alignItems: 'center'
-                }}>
+                <div
+                  style={{
+                    padding: 12,
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: 6,
+                    border: "1px solid #e9ecef",
+                    minHeight: 40,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
                   {(() => {
-                    const selectedProcess = serviceProcessesData?.find(p => p.id === serviceProcessId);
-                    
+                    const selectedProcess = serviceProcessesData?.find(
+                      (p) => p.id === serviceProcessId
+                    );
+
                     if (selectedProcess) {
                       return (
-                        <div style={{ width: '100%' }}>
-                          <div style={{ fontWeight: 500, color: '#333', marginBottom: 4 }}>
+                        <div style={{ width: "100%" }}>
+                          <div
+                            style={{
+                              fontWeight: 500,
+                              color: "#333",
+                              marginBottom: 4,
+                            }}
+                          >
                             {selectedProcess.name}
                           </div>
-                          <div style={{ fontSize: 12, color: '#666' }}>
-                            {selectedProcess.description || 'Không có mô tả'} • 
-                            {selectedProcess.estimated_duration} phút • 
-                            {selectedProcess.step_count} bước
-                            {selectedProcess.is_default && ' • Mặc định'}
+                          <div style={{ fontSize: 12, color: "#666" }}>
+                            {selectedProcess.description || "Không có mô tả"} •
+                            {selectedProcess.estimated_duration} phút •
+                            {selectedProcess.process_steps?.length || 0} bước
+                            {selectedProcess.is_default && " • Mặc định"}
                           </div>
                         </div>
                       );
                     }
-                    
+
                     return (
-                      <div style={{ color: '#999', fontSize: 14 }}>
+                      <div style={{ color: "#999", fontSize: 14 }}>
                         Chưa chọn quy trình
                       </div>
                     );
@@ -525,36 +492,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                 </div>
               </Form.Item>
             </Col>
-          </Row>
-          
-          <div style={{ marginTop: 16, padding: 16, backgroundColor: "#f8f9fa", borderRadius: 6, border: "1px solid #e9ecef" }}>
-            <Row gutter={16}>
-              <Col span={8}>
-                <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-                  Chi phí lao động:
-                </div>
-                <div style={{ fontWeight: 500, color: "#fa8c16", fontSize: 16 }}>
-                  {formatCurrency(laborCost)}
-                </div>
-              </Col>
-              <Col span={8}>
-                <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-                  Giá cơ bản:
-                </div>
-                <div style={{ fontWeight: 500, color: "#52c41a", fontSize: 16 }}>
-                  {formatCurrency(basePrice)}
-                </div>
-              </Col>
-              <Col span={8}>
-                <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
-                  Tổng dự kiến:
-                </div>
-                <div style={{ fontWeight: 500, color: "#1890ff", fontSize: 18 }}>
-                  {formatCurrency(basePrice + laborCost)}
-                </div>
-              </Col>
-            </Row>
-          </div>
+          </Row>  
         </Card>
 
         {/* Quản lý hình ảnh */}
@@ -572,9 +510,9 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                   const reader = new FileReader();
                   reader.onload = (e) => {
                     const newImageUrl = e.target?.result as string;
-                    setImageUrls(prev => [...prev, newImageUrl]);
+                    setImageUrls((prev) => [...prev, newImageUrl]);
                   };
-                   reader.readAsDataURL(info.file as unknown as File);
+                  reader.readAsDataURL(info.file as unknown as File);
                 }
               }}
             >
@@ -608,14 +546,18 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                       backgroundColor: "rgba(255, 255, 255, 0.8)",
                     }}
                     onClick={() => {
-                      setImageUrls(prev => prev.filter((_, i) => i !== index));
+                      setImageUrls((prev) =>
+                        prev.filter((_, i) => i !== index)
+                      );
                     }}
                   />
                 </div>
               ))}
             </div>
           ) : (
-            <div style={{ textAlign: "center", color: "#999", padding: "20px" }}>
+            <div
+              style={{ textAlign: "center", color: "#999", padding: "20px" }}
+            >
               Chưa có hình ảnh nào
             </div>
           )}

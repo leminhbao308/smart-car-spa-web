@@ -2,12 +2,21 @@
 import React, { useState, useMemo } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import {
-  useConfirmationModalContext,
   ServiceTypeDetailModal,
   ServiceTypeEditModal,
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Card, Row, Col, Select, Input, Button, Space, message } from "antd";
+import {
+  Tag,
+  Card,
+  Row,
+  Col,
+  Select,
+  Input,
+  Button,
+  Space,
+  message,
+} from "antd";
 import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   ServiceType,
@@ -17,20 +26,16 @@ import {
   useServiceTypes,
   useCreateServiceType,
   useUpdateServiceType,
-  useUpdateServiceTypeStatus,
 } from "@/lib/api/hooks/useServiceTypes";
 
 const { Search } = Input;
 const { Option } = Select;
 
 const ServiceTypesPage = () => {
-  const { showModal } = useConfirmationModalContext();
-
   // React Query hooks
   const { data: serviceTypesData, isLoading } = useServiceTypes({});
   const createServiceTypeMutation = useCreateServiceType();
   const updateServiceTypeMutation = useUpdateServiceType();
-  const updateServiceTypeStatusMutation = useUpdateServiceTypeStatus();
 
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -62,35 +67,52 @@ const ServiceTypesPage = () => {
   // Update pagination when data changes
   React.useEffect(() => {
     if (serviceTypesData?.data) {
-      setPagination(prev => ({
+      setPagination((prev) => ({
         ...prev,
         total: serviceTypesData.data.totalElements || 0,
       }));
     }
   }, [serviceTypesData]);
 
-  // Filtered data
+  // Reset pagination when filters change
+  React.useEffect(() => {
+    setPagination((prev) => ({
+      ...prev,
+      current: 1,
+    }));
+  }, [filters]);
+
+  // Filtered data - simple UI filtering
   const filteredData = useMemo(() => {
     let filtered = [...serviceTypes];
 
     // Search filter
-    if (filters.searchText) {
-      const searchLower = filters.searchText.toLowerCase();
-      filtered = filtered.filter(
-        (item) =>
-          item.name.toLowerCase().includes(searchLower) ||
-          item.code.toLowerCase().includes(searchLower) ||
-          (item.description && item.description.toLowerCase().includes(searchLower))
-      );
+    if (filters.searchText?.trim()) {
+      const searchLower = filters.searchText.toLowerCase().trim();
+      filtered = filtered.filter((item) => {
+        // Search in name
+        const nameMatch = item.name.toLowerCase().includes(searchLower);
+        // Search in code
+        const codeMatch = item.code.toLowerCase().includes(searchLower);
+        // Search in display_name if exists
+        const displayNameMatch =
+          item.display_name?.toLowerCase().includes(searchLower) || false;
+        // Search in description if exists
+        const descriptionMatch =
+          item.description?.toLowerCase().includes(searchLower) || false;
+
+        return nameMatch || codeMatch || displayNameMatch || descriptionMatch;
+      });
     }
 
     // Status filter
     if (filters.status) {
-      filtered = filtered.filter((item) => item.isActive === (filters.status === "active"));
+      const isActive = filters.status === "true";
+      filtered = filtered.filter((item) => item.is_active === isActive);
     }
 
     return filtered;
-  }, [serviceTypes, filters]);
+  }, [serviceTypes, filters.searchText, filters.status]);
 
   // Reset filters
   const handleResetFilters = () => {
@@ -98,6 +120,14 @@ const ServiceTypesPage = () => {
       status: undefined,
       searchText: undefined,
     });
+  };
+
+  // Get active filters count for display
+  const getActiveFiltersCount = () => {
+    let count = 0;
+    if (filters.searchText?.trim()) count++;
+    if (filters.status) count++;
+    return count;
   };
 
   // Định nghĩa columns cho loại dịch vụ
@@ -115,37 +145,33 @@ const ServiceTypesPage = () => {
     },
     {
       title: "Tên loại dịch vụ",
-      key: "serviceType",
-      width: 300,
+      key: "name",
+      width: 350,
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 500, fontSize: 16, marginBottom: 4 }}>
             {record.name}
           </div>
+          {record.display_name && (
+            <div style={{ fontSize: 12, color: "#1890ff", marginBottom: 2 }}>
+              Hiển thị: {record.display_name}
+            </div>
+          )}
           <div style={{ fontSize: 12, color: "#666", marginBottom: 2 }}>
-            {record.code}
+            Mã: {record.code}
           </div>
-          <div style={{ fontSize: 11, color: "#999", lineHeight: 1.3 }}>
-            {record.description}
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Thời gian mặc định",
-      dataIndex: "defaultDuration",
-      key: "defaultDuration",
-      width: 120,
-      render: (duration: number) => (
-        <div style={{ color: "#1890ff" }}>
-          {duration ? `${duration} phút` : "Không xác định"}
+          {record.description && (
+            <div style={{ fontSize: 11, color: "#999", lineHeight: 1.3 }}>
+              {record.description}
+            </div>
+          )}
         </div>
       ),
     },
     {
       title: "Trạng thái",
-      dataIndex: "isActive",
-      key: "isActive",
+      dataIndex: "is_active",
+      key: "is_active",
       width: 100,
       render: (isActive: boolean) => {
         const statusConfig = SERVICE_TYPE_STATUS_OPTIONS.find(
@@ -157,7 +183,7 @@ const ServiceTypesPage = () => {
         text: status.label,
         value: status.value,
       })),
-      onFilter: (value, record) => record.isActive === value,
+      onFilter: (value, record) => record.is_active === value,
     },
   ];
 
@@ -182,13 +208,13 @@ const ServiceTypesPage = () => {
       if (editData) {
         // Update existing service type
         await updateServiceTypeMutation.mutateAsync({
-          serviceTypeId: editData.serviceTypeId,
+          serviceTypeId: editData.service_type_id,
           data: {
             code: data.code,
             name: data.name,
+            display_name: data.display_name,
             description: data.description,
-            defaultDuration: data.defaultDuration,
-            isActive: data.isActive,
+            is_active: data.is_active,
           },
         });
         message.success("Cập nhật loại dịch vụ thành công!");
@@ -197,9 +223,9 @@ const ServiceTypesPage = () => {
         await createServiceTypeMutation.mutateAsync({
           code: data.code,
           name: data.name,
+          display_name: data.display_name,
           description: data.description,
-          defaultDuration: data.defaultDuration,
-          isActive: data.isActive,
+          is_active: data.is_active,
         });
         message.success("Thêm loại dịch vụ thành công!");
       }
@@ -211,29 +237,6 @@ const ServiceTypesPage = () => {
     }
   };
 
-  const handleToggleStatus = (record: ServiceType) => {
-    const action = record.isActive ? "vô hiệu hóa" : "kích hoạt";
-    showModal({
-      title: `${
-        action === "vô hiệu hóa" ? "Vô hiệu hóa" : "Kích hoạt"
-      } loại dịch vụ`,
-      content: `Bạn có chắc chắn muốn ${action} loại dịch vụ ${record.name}?`,
-      type: "warning",
-      onConfirm: async () => {
-        try {
-          await updateServiceTypeStatusMutation.mutateAsync({
-            serviceTypeId: record.serviceTypeId,
-            isActive: !record.isActive,
-          });
-          message.success(`${action} loại dịch vụ thành công!`);
-        } catch (error) {
-          message.error(`Có lỗi xảy ra khi ${action} loại dịch vụ`);
-          console.error("Error updating service type status:", error);
-        }
-      },
-    });
-  };
-
   return (
     <div>
       {/* Advanced Filters */}
@@ -242,21 +245,39 @@ const ServiceTypesPage = () => {
           <Space>
             <FilterOutlined />
             Bộ lọc nâng cao
+            {getActiveFiltersCount() > 0 && (
+              <Tag color="blue" style={{ marginLeft: 8 }}>
+                {getActiveFiltersCount()} bộ lọc đang hoạt động
+              </Tag>
+            )}
           </Space>
         }
         style={{ marginBottom: 16 }}
         extra={
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={handleResetFilters}
-            size="small"
-          >
-            Đặt lại
-          </Button>
+          <Space>
+            {getActiveFiltersCount() > 0 && (
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleResetFilters}
+                size="small"
+                type="primary"
+                ghost
+              >
+                Xóa bộ lọc ({getActiveFiltersCount()})
+              </Button>
+            )}
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => window.location.reload()}
+              size="small"
+            >
+              Làm mới
+            </Button>
+          </Space>
         }
       >
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={6}>
+          <Col xs={24} sm={12} md={8}>
             <div>
               <label
                 style={{
@@ -269,7 +290,7 @@ const ServiceTypesPage = () => {
                 Tìm kiếm
               </label>
               <Search
-                placeholder="Tên, mã loại dịch vụ..."
+                placeholder="Tìm kiếm theo tên, mã, tên hiển thị, mô tả..."
                 value={filters.searchText}
                 onChange={(e) =>
                   setFilters({ ...filters, searchText: e.target.value })
@@ -298,7 +319,10 @@ const ServiceTypesPage = () => {
                 style={{ width: "100%" }}
               >
                 {SERVICE_TYPE_STATUS_OPTIONS.map((status) => (
-                  <Option key={status.value.toString()} value={status.value.toString()}>
+                  <Option
+                    key={status.value.toString()}
+                    value={status.value.toString()}
+                  >
                     {status.label}
                   </Option>
                 ))}
@@ -318,27 +342,24 @@ const ServiceTypesPage = () => {
         onView={handleView}
         addButtonText="Thêm loại dịch vụ"
         searchable={false}
-        actions={[
-          {
-            key: "toggle-status",
-            label: (record: ServiceType) =>
-              record.isActive ? "Vô hiệu hóa" : "Kích hoạt",
-            type: "default",
-            danger: (record: ServiceType) => record.isActive,
-            onClick: handleToggleStatus,
-          },
-        ]}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1300 }}
         pagination={{
           current: pagination.current,
           pageSize: pagination.pageSize,
-          total: pagination.total,
+          total: filteredData.length, // Use filtered data length for pagination
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total: number, range: [number, number]) =>
-            `${range[0]}-${range[1]} của ${total} loại dịch vụ`,
+          showTotal: (total: number, range: [number, number]) => {
+            const filteredCount = filteredData.length;
+            const originalCount = serviceTypes.length;
+            if (filteredCount === originalCount) {
+              return `${range[0]}-${range[1]} của ${total} loại dịch vụ`;
+            } else {
+              return `${range[0]}-${range[1]} của ${filteredCount} loại dịch vụ (từ ${originalCount} tổng cộng)`;
+            }
+          },
           onChange: (page: number, pageSize?: number) => {
-            setPagination(prev => ({
+            setPagination((prev) => ({
               ...prev,
               current: page,
               pageSize: pageSize || 10,
