@@ -79,11 +79,25 @@ const AdminSider = () => {
   const [interactiveOpenKeys, setInteractiveOpenKeys] =
     useState<string[]>(openKeys);
 
-  // Sync state với pathname changes
+  // Sync selectedKeys với pathname changes, nhưng giữ nguyên openKeys
   useEffect(() => {
     setInteractiveSelectedKeys(selectedKeys);
-    setInteractiveOpenKeys(openKeys);
+    // Chỉ cập nhật openKeys nếu chưa có hoặc cần mở submenu cho item hiện tại
+    if (openKeys.length > 0) {
+      setInteractiveOpenKeys(prevOpenKeys => {
+        // Merge openKeys mới với các keys đã mở trước đó
+        const newOpenKeys = [...new Set([...prevOpenKeys, ...openKeys])];
+        return newOpenKeys;
+      });
+    }
   }, [selectedKeys, openKeys]);
+
+  // Khởi tạo trạng thái ban đầu khi component mount
+  useEffect(() => {
+    if (openKeys.length > 0 && interactiveOpenKeys.length === 0) {
+      setInteractiveOpenKeys(openKeys);
+    }
+  }, []);
 
   // Xử lý khi click vào menu item
   const handleMenuClick = ({ key }: { key: string }) => {
@@ -96,6 +110,7 @@ const AdminSider = () => {
 
   // Xử lý khi mở/đóng submenu
   const handleOpenChange = (keys: string[]) => {
+    // Chỉ cập nhật khi user thực sự tương tác với menu
     setInteractiveOpenKeys(keys);
   };
 
