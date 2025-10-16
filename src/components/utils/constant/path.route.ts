@@ -37,11 +37,9 @@ export const ROUTES = {
   DASHBOARD_INVENTORY_IMPORT: "/dashboard/inventory/import",
   DASHBOARD_INVENTORY_EXPORT: "/dashboard/inventory/export",
 
-  // Services & Packages
-  DASHBOARD_SERVICE_CATEGORIES: "/dashboard/service-categories",
-  DASHBOARD_SERVICE_PACKAGES_OVERVIEW: "/dashboard/services-packages",
-  DASHBOARD_SERVICE_PACKAGE_TYPES: "/dashboard/services-packages/package-types",
-  DASHBOARD_SERVICE_PACKAGES_LIST: "/dashboard/services-packages/packages",
+  // Services Management
+  DASHBOARD_SERVICE_TYPES: "/dashboard/service-types",
+  DASHBOARD_SERVICES: "/dashboard/services",
 
   // Promotions & Pricing
   DASHBOARD_PROMOTIONS: "/dashboard/promotions",
