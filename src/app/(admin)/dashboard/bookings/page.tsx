@@ -603,17 +603,6 @@ const BookingsPage = () => {
     branchId: string
   ) => {
     try {
-      // Lấy warehouse từ branch
-      const { WarehouseService } = await import(
-        "@/lib/api/services/warehouse.service"
-      );
-      const warehouse = await WarehouseService.getWarehouseByBranchId(branchId);
-
-      if (!warehouse?.id) {
-        console.log("No warehouse found for branch:", branchId);
-        return;
-      }
-
       // Lấy booking details để lấy booking items
       const { BookingService } = await import(
         "@/lib/api/services/bookingService"
@@ -688,7 +677,7 @@ const BookingsPage = () => {
       }));
 
       await InventoryService.fulfillMultipleForBooking(
-        warehouse.id,
+        branchId,
         productsToFulfill,
         bookingId
       );

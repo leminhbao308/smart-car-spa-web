@@ -1,5 +1,5 @@
 "use client";
-import React, { useCallback, useEffect, useState, useMemo } from "react";
+import React, {useCallback, useEffect, useState, useMemo} from "react";
 import {
   Card,
   Row,
@@ -15,13 +15,11 @@ import {
   Form,
   InputNumber,
   Select,
-  message,
   Radio,
   Spin,
   Badge,
   Empty,
-  Statistic,
-  QRCode, App,
+  App,
 } from "antd";
 import {
   SearchOutlined,
@@ -29,21 +27,16 @@ import {
   MinusOutlined,
   DeleteOutlined,
   ShoppingCartOutlined,
-  PrinterOutlined,
-  SaveOutlined,
   UserOutlined,
   BarcodeOutlined,
   ShopOutlined,
   CheckCircleOutlined,
-  DollarOutlined,
   ClearOutlined,
   ReloadOutlined,
-  BankOutlined,
 } from "@ant-design/icons";
 import {
   useUserManagement,
   useBranches,
-  useWarehouseByBranch,
   useCatalogForSale,
   usePricing,
   useInventoryLevels,
@@ -51,14 +44,14 @@ import {
   useVerifyPayment,
   useFulfillSalesOrder,
 } from "@/lib/api/hooks";
-import { Product, UserManagementInfo } from "@/lib/api";
-import { useCategories } from "@/lib/api/hooks/useCategory";
-import type { BranchDisplay } from "@/lib/api/types/branch.types";
-import type { CatalogItem } from "@/lib/api/types/catalog.types";
-import { PaymentModal } from "@/components/ui/Modal/PaymentModal";
+import {Product, UserManagementInfo} from "@/lib/api";
+import {useCategories} from "@/lib/api/hooks/useCategory";
+import type {BranchDisplay} from "@/lib/api/types/branch.types";
+import type {CatalogItem} from "@/lib/api/types/catalog.types";
+import {PaymentModal} from "@/components/ui/Modal/PaymentModal";
 
-const { Title, Text } = Typography;
-const { Option } = Select;
+const {Title, Text} = Typography;
+const {Option} = Select;
 
 interface CartItem {
   productId: string;
@@ -78,7 +71,7 @@ interface ProductWithStock extends Product {
 
 const POSPage = () => {
   // Ant Design Message
-  const { message } = App.useApp();
+  const {message, modal} = App.useApp();
 
   // State Management
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -107,26 +100,21 @@ const POSPage = () => {
   const [isPolling, setIsPolling] = useState(false);
 
   // API Hooks
-  const { branches, loading: branchesLoading } = useBranches({});
-  const {
-    warehouse,
-    loading: warehouseLoading,
-    refresh: refreshWarehouse,
-  } = useWarehouseByBranch(selectedBranch?.branch_id || null);
+  const {branches, loading: branchesLoading} = useBranches({});
   const {
     catalog,
     loading: catalogLoading,
     refresh: refreshCatalog,
-  } = useCatalogForSale(warehouse?.id || "");
-  const { previewBatch, loading: pricingLoading } = usePricing();
-  const { levelsBatch, loading: inventoryLoading } = useInventoryLevels();
-  const { mutateAsync: createAndPay, isPending: isCreatingOrder } =
+  } = useCatalogForSale(selectedBranch?.branch_id || "");
+  const {previewBatch, loading: pricingLoading} = usePricing();
+  const {levelsBatch, loading: inventoryLoading} = useInventoryLevels();
+  const {mutateAsync: createAndPay, isPending: isCreatingOrder} =
     useCreateAndPay();
-  const { mutateAsync: fulfillOrder, isPending: isFulfilling } =
+  const {mutateAsync: fulfillOrder, isPending: isFulfilling} =
     useFulfillSalesOrder();
 
   // Payment verification with polling
-  const { data: paymentStatus, isLoading: isVerifying } = useVerifyPayment(
+  const {data: paymentStatus, isLoading: isVerifying} = useVerifyPayment(
     orderCode,
     {
       enabled: isPolling && !!orderCode,
@@ -198,8 +186,7 @@ const POSPage = () => {
         (stockFilter === "in_stock" && product.availableStock > 10) ||
         (stockFilter === "low_stock" &&
           product.availableStock > 0 &&
-          product.availableStock <= 10) ||
-        (stockFilter === "out_of_stock" && product.availableStock === 0);
+          product.availableStock <= 10);
 
       return matchesSearch && matchesCategory && matchesStock;
     });
@@ -229,10 +216,10 @@ const POSPage = () => {
         return prevCart.map((item) =>
           item.productId === product.product_id
             ? {
-                ...item,
-                quantity: item.quantity + 1,
-                total: (item.quantity + 1) * item.price,
-              }
+              ...item,
+              quantity: item.quantity + 1,
+              total: (item.quantity + 1) * item.price,
+            }
             : item
         );
       } else {
@@ -267,7 +254,7 @@ const POSPage = () => {
 
       return prevCart.map((item) =>
         item.productId === productId
-          ? { ...item, quantity, total: quantity * item.price }
+          ? {...item, quantity, total: quantity * item.price}
           : item
       );
     });
@@ -281,12 +268,12 @@ const POSPage = () => {
   }, []);
 
   const clearCart = useCallback(() => {
-    Modal.confirm({
+    modal.confirm({
       title: "Xóa toàn bộ giỏ hàng?",
       content: "Bạn có chắc chắn muốn xóa tất cả sản phẩm trong giỏ hàng?",
       okText: "Xóa",
       cancelText: "Hủy",
-      okButtonProps: { danger: true },
+      okButtonProps: {danger: true},
       onOk: () => {
         setCart([]);
         message.success("Đã xóa toàn bộ giỏ hàng");
@@ -374,7 +361,7 @@ const POSPage = () => {
       } catch (error: any) {
         message.error(
           "Thanh toán thành công nhưng lỗi khi hoàn thành đơn hàng: " +
-            (error?.message || "")
+          (error?.message || "")
         );
       }
     } else {
@@ -391,13 +378,12 @@ const POSPage = () => {
     setPaymentUrl(null);
     setOrderCode(null);
 
-    // Refresh catalog and warehouse
+    // Refresh catalog
     refreshCatalog();
-    refreshWarehouse();
 
     // close payment modal if open
     setIsPaymentModalVisible(false);
-  }, [refreshCatalog, refreshWarehouse]);
+  }, [refreshCatalog]);
 
   // Payment Cancelled Handler
   const handlePaymentCancelled = useCallback(() => {
@@ -419,10 +405,6 @@ const POSPage = () => {
       message.warning("Vui lòng chọn chi nhánh!");
       return;
     }
-    if (!warehouse) {
-      message.warning("Không tìm thấy kho cho chi nhánh này!");
-      return;
-    }
     setReceivedAmount(getTotalAmount());
     setPaymentMethod("CASH");
     setPaymentQRCode(null);
@@ -430,7 +412,7 @@ const POSPage = () => {
     setOrderCode(null);
     setIsPolling(false);
     setIsPaymentModalVisible(true);
-  }, [cart.length, selectedBranch, warehouse, getTotalAmount]);
+  }, [cart.length, selectedBranch, getTotalAmount]);
 
   const handlePayment = useCallback(async () => {
     // Validation for cash payment
@@ -439,8 +421,8 @@ const POSPage = () => {
       return;
     }
 
-    if (!selectedBranch || !warehouse) {
-      message.error("Thiếu thông tin chi nhánh hoặc kho!");
+    if (!selectedBranch) {
+      message.error("Thiếu thông tin chi nhánh!");
       return;
     }
 
@@ -450,7 +432,6 @@ const POSPage = () => {
       const baseUrl = window.location.origin;
       const orderRequest = {
         branch_id: selectedBranch.branch_id,
-        warehouse_id: warehouse.id,
         customer_id: selectedCustomer?.user_id || undefined,
         lines: cart.map((item) => ({
           product_id: item.productId,
@@ -492,9 +473,8 @@ const POSPage = () => {
         setReceivedAmount(0);
         setPaymentMethod("CASH");
 
-        // Refresh catalog and warehouse
+        // Refresh catalog
         refreshCatalog();
-        refreshWarehouse();
       }
       // Handle BANK payment
       else if (paymentMethod === "BANK") {
@@ -520,12 +500,10 @@ const POSPage = () => {
     receivedAmount,
     getTotalAmount,
     selectedBranch,
-    warehouse,
     selectedCustomer,
     cart,
     createAndPay,
     refreshCatalog,
-    refreshWarehouse,
   ]);
 
   const handleOpenPaymentLink = useCallback(() => {
@@ -558,7 +536,7 @@ const POSPage = () => {
       key: "price",
       width: 120,
       render: (price: number) => (
-        <Text strong style={{ color: "#1890ff" }}>
+        <Text strong style={{color: "#1890ff"}}>
           ₫{price.toLocaleString()}
         </Text>
       ),
@@ -572,7 +550,7 @@ const POSPage = () => {
         <Space>
           <Button
             size="small"
-            icon={<MinusOutlined />}
+            icon={<MinusOutlined/>}
             onClick={() => updateQuantity(record.productId, quantity - 1)}
             disabled={quantity <= 1}
           />
@@ -581,12 +559,12 @@ const POSPage = () => {
             value={quantity}
             min={1}
             max={record.maxQuantity}
-            style={{ width: 60 }}
+            style={{width: 60}}
             onChange={(value) => updateQuantity(record.productId, value || 1)}
           />
           <Button
             size="small"
-            icon={<PlusOutlined />}
+            icon={<PlusOutlined/>}
             onClick={() => updateQuantity(record.productId, quantity + 1)}
             disabled={quantity >= record.maxQuantity}
           />
@@ -608,7 +586,7 @@ const POSPage = () => {
         <Button
           type="text"
           danger
-          icon={<DeleteOutlined />}
+          icon={<DeleteOutlined/>}
           onClick={() => removeFromCart(record.productId)}
         />
       ),
@@ -616,7 +594,7 @@ const POSPage = () => {
   ];
 
   const isLoading =
-    catalogLoading || warehouseLoading || pricingLoading || inventoryLoading;
+    catalogLoading || pricingLoading || inventoryLoading;
 
   return (
     <div
@@ -626,13 +604,13 @@ const POSPage = () => {
         overflow: "hidden",
       }}
     >
-      <Row gutter={[24, 24]} style={{ height: "100%" }}>
+      <Row gutter={[24, 24]} style={{height: "100%"}}>
         {/* Products Section */}
-        <Col xs={24} lg={14} style={{ height: "100%" }}>
+        <Col xs={24} lg={14} style={{height: "100%"}}>
           <Card
             title={
               <Space>
-                <ShopOutlined />
+                <ShopOutlined/>
                 <span>Sản phẩm</span>
                 {selectedBranch && (
                   <Tag color="blue">{selectedBranch.branch_name}</Tag>
@@ -641,26 +619,26 @@ const POSPage = () => {
             }
             extra={
               <Button
-                icon={<ReloadOutlined />}
+                icon={<ReloadOutlined/>}
                 onClick={() => {
                   refreshCatalog();
                   refreshWarehouse();
                 }}
                 loading={isLoading}
               >
-                Làm mới
+                Làm mới dữ liệu
               </Button>
             }
-            style={{ height: "100%", borderRadius: "12px" }}
+            style={{height: "100%", borderRadius: "12px"}}
             styles={{
-              body: { height: "calc(100% - 57px)", overflow: "auto" },
+              body: {height: "calc(100% - 57px)", overflow: "auto"},
             }}
           >
-            <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
+            <Row gutter={[16, 16]} style={{marginBottom: "16px"}}>
               <Col span={8}>
                 <Input
                   placeholder="Tìm kiếm sản phẩm, mã SKU..."
-                  prefix={<SearchOutlined />}
+                  prefix={<SearchOutlined/>}
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   size="large"
@@ -672,7 +650,7 @@ const POSPage = () => {
                   placeholder="Danh mục"
                   value={categoryFilter}
                   onChange={setCategoryFilter}
-                  style={{ width: "100%" }}
+                  style={{width: "100%"}}
                   size="large"
                 >
                   <Option value="all">Tất cả</Option>
@@ -683,48 +661,38 @@ const POSPage = () => {
                   ))}
                 </Select>
               </Col>
-              <Col span={4}>
-                <Select
-                  placeholder="Tồn kho"
-                  value={stockFilter}
-                  onChange={setStockFilter}
-                  style={{ width: "100%" }}
-                  size="large"
-                >
-                  <Option value="all">Tất cả</Option>
-                  <Option value="in_stock">Còn hàng</Option>
-                  <Option value="low_stock">Sắp hết</Option>
-                  <Option value="out_of_stock">Hết hàng</Option>
-                </Select>
-              </Col>
-              <Col span={4}>
+              <Col span={6}>
                 <Button
                   size="large"
-                  icon={<ShopOutlined />}
+                  icon={<ShopOutlined/>}
                   onClick={() => setIsBranchModalVisible(true)}
-                  style={{ width: "100%" }}
+                  style={{width: "100%"}}
                   type={selectedBranch ? "primary" : "default"}
                 >
                   {selectedBranch ? (
                     <Text
-                      ellipsis={{ tooltip: true }}
-                      style={{ color: "white" }}
+                      ellipsis={{tooltip: true}}
+                      style={{color: "white"}}
                     >
                       {selectedBranch.branch_name}
                     </Text>
                   ) : (
-                    "Chọn chi nhánh"
+                    <Text
+                      ellipsis={{tooltip: true}}
+                    >
+                      Chọn chi nhánh
+                    </Text>
                   )}
                 </Button>
               </Col>
-              <Col span={4}>
+              <Col span={6}>
                 <Button
                   size="large"
-                  icon={<UserOutlined />}
+                  icon={<UserOutlined/>}
                   onClick={() => setIsCustomerModalVisible(true)}
-                  style={{ width: "100%" }}
+                  style={{width: "100%"}}
                 >
-                  <Text ellipsis={{ tooltip: true }}>
+                  <Text ellipsis={{tooltip: true}}>
                     {selectedCustomer
                       ? selectedCustomer.full_name
                       : "Khách hàng"}
@@ -735,7 +703,7 @@ const POSPage = () => {
 
             {!selectedBranch ? (
               <Empty
-                style={{ marginTop: "100px" }}
+                style={{marginTop: "100px"}}
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
                   <Space direction="vertical">
@@ -746,12 +714,12 @@ const POSPage = () => {
                 }
               />
             ) : isLoading ? (
-              <div style={{ textAlign: "center", padding: "80px 20px" }}>
-                <Spin size="large" />
-                <div style={{ marginTop: "16px" }}>Đang tải sản phẩm...</div>
+              <div style={{textAlign: "center", padding: "80px 20px"}}>
+                <Spin size="large"/>
+                <div style={{marginTop: "16px"}}>Đang tải sản phẩm...</div>
               </div>
             ) : filteredProducts.length === 0 ? (
-              <Empty description="Không tìm thấy sản phẩm" />
+              <Empty description="Không tìm thấy sản phẩm"/>
             ) : (
               <Row gutter={[16, 16]}>
                 {filteredProducts.map((product) => (
@@ -773,8 +741,8 @@ const POSPage = () => {
                         product.availableStock === 0
                           ? "red"
                           : product.availableStock <= 10
-                          ? "orange"
-                          : "green"
+                            ? "orange"
+                            : "green"
                       }
                     >
                       <Card
@@ -823,7 +791,7 @@ const POSPage = () => {
                             }}
                           >
                             <BarcodeOutlined
-                              style={{ fontSize: "32px", color: "#999" }}
+                              style={{fontSize: "32px", color: "#999"}}
                             />
                           </div>
                           <div
@@ -880,7 +848,7 @@ const POSPage = () => {
                                     justifyContent: "center",
                                   }}
                                 >
-                                  <Text ellipsis={{ tooltip: product.brand }}>
+                                  <Text ellipsis={{tooltip: product.brand}}>
                                     {product.brand}
                                   </Text>
                                 </Tag>
@@ -898,9 +866,9 @@ const POSPage = () => {
                               {product.sku && (
                                 <Tag
                                   color="blue"
-                                  style={{ fontSize: "10px", margin: 0 }}
+                                  style={{fontSize: "10px", margin: 0}}
                                 >
-                                  <Text ellipsis={{ tooltip: product.sku }}>
+                                  <Text ellipsis={{tooltip: product.sku}}>
                                     {product.sku}
                                   </Text>
                                 </Tag>
@@ -918,13 +886,13 @@ const POSPage = () => {
         </Col>
 
         {/* Cart Section */}
-        <Col xs={24} lg={10} style={{ height: "100%" }}>
+        <Col xs={24} lg={10} style={{height: "100%"}}>
           <Card
             title={
               <Space>
-                <ShoppingCartOutlined />
+                <ShoppingCartOutlined/>
                 <span>Giỏ hàng</span>
-                <Badge count={getTotalItems()} showZero color="#1890ff" />
+                <Badge count={getTotalItems()} showZero color="#1890ff"/>
               </Space>
             }
             extra={
@@ -932,14 +900,14 @@ const POSPage = () => {
                 <Button
                   size="small"
                   danger
-                  icon={<ClearOutlined />}
+                  icon={<ClearOutlined/>}
                   onClick={clearCart}
                 >
                   Xóa tất cả
                 </Button>
               )
             }
-            style={{ height: "100%", borderRadius: "12px" }}
+            style={{height: "100%", borderRadius: "12px"}}
             styles={{
               body: {
                 height: "calc(100% - 57px)",
@@ -962,7 +930,7 @@ const POSPage = () => {
             ) : (
               <>
                 <div
-                  style={{ flex: 1, overflow: "auto", marginBottom: "16px" }}
+                  style={{flex: 1, overflow: "auto", marginBottom: "16px"}}
                 >
                   <Table
                     dataSource={cart}
@@ -973,48 +941,48 @@ const POSPage = () => {
                   />
                 </div>
 
-                <Divider style={{ margin: "12px 0" }} />
+                <Divider style={{margin: "12px 0"}}/>
 
-                <div style={{ marginBottom: "16px" }}>
-                  <Row justify="space-between" style={{ marginBottom: "8px" }}>
+                <div style={{marginBottom: "16px"}}>
+                  <Row justify="space-between" style={{marginBottom: "8px"}}>
                     <Text>Tổng sản phẩm:</Text>
                     <Text strong>{getTotalItems()}</Text>
                   </Row>
-                  <Row justify="space-between" style={{ marginBottom: "8px" }}>
+                  <Row justify="space-between" style={{marginBottom: "8px"}}>
                     <Text>Khách hàng:</Text>
                     <Text>{selectedCustomer?.full_name || "Khách lẻ"}</Text>
                   </Row>
-                  <Row justify="space-between" style={{ marginBottom: "8px" }}>
+                  <Row justify="space-between" style={{marginBottom: "8px"}}>
                     <Text>Chi nhánh:</Text>
                     <Text>{selectedBranch?.branch_name || "Chưa chọn"}</Text>
                   </Row>
 
-                  <Divider style={{ margin: "8px 0" }} />
+                  <Divider style={{margin: "8px 0"}}/>
 
-                  <Row justify="space-between" style={{ marginBottom: "4px" }}>
+                  <Row justify="space-between" style={{marginBottom: "4px"}}>
                     <Text>Tạm tính:</Text>
                     <Text>₫{getSubtotal().toLocaleString()}</Text>
                   </Row>
 
                   <Row justify="space-between">
-                    <Title level={4} style={{ margin: 0 }}>
+                    <Title level={4} style={{margin: 0}}>
                       Tổng cộng:
                     </Title>
-                    <Title level={4} style={{ margin: 0, color: "#1890ff" }}>
+                    <Title level={4} style={{margin: 0, color: "#1890ff"}}>
                       ₫{getTotalAmount().toLocaleString()}
                     </Title>
                   </Row>
                 </div>
 
-                <Space direction="vertical" style={{ width: "100%" }}>
+                <Space direction="vertical" style={{width: "100%"}}>
                   <Button
                     type="primary"
                     size="large"
-                    icon={<ShoppingCartOutlined />}
+                    icon={<ShoppingCartOutlined/>}
                     onClick={handleCheckout}
                     disabled={cart.length === 0 || !selectedBranch}
                     loading={isCreatingOrder}
-                    style={{ width: "100%" }}
+                    style={{width: "100%"}}
                   >
                     Thanh toán
                   </Button>
@@ -1057,8 +1025,8 @@ const POSPage = () => {
       >
         <Input
           placeholder="Tìm kiếm chi nhánh..."
-          prefix={<SearchOutlined />}
-          style={{ marginBottom: "16px" }}
+          prefix={<SearchOutlined/>}
+          style={{marginBottom: "16px"}}
         />
         <Row gutter={[16, 16]}>
           {branches.map((branch) => (
@@ -1075,7 +1043,7 @@ const POSPage = () => {
                     selectedBranch?.branch_id === branch.branch_id ? 2 : 1,
                 }}
               >
-                <Space direction="vertical" style={{ width: "100%" }}>
+                <Space direction="vertical" style={{width: "100%"}}>
                   <div
                     style={{
                       display: "flex",
@@ -1085,10 +1053,10 @@ const POSPage = () => {
                   >
                     <Text strong>{branch.branch_name}</Text>
                     {selectedBranch?.branch_id === branch.branch_id && (
-                      <CheckCircleOutlined style={{ color: "#1890ff" }} />
+                      <CheckCircleOutlined style={{color: "#1890ff"}}/>
                     )}
                   </div>
-                  <Text type="secondary" style={{ fontSize: "12px" }}>
+                  <Text type="secondary" style={{fontSize: "12px"}}>
                     {branch.address}
                   </Text>
                   <div>
@@ -1135,7 +1103,7 @@ const POSPage = () => {
           <Radio.Group
             value={customerType}
             onChange={(e) => handleCustomerTypeChange(e.target.value)}
-            style={{ marginTop: "8px" }}
+            style={{marginTop: "8px"}}
           >
             <Space>
               <Radio value="guest">Khách lẻ</Radio>
@@ -1146,9 +1114,9 @@ const POSPage = () => {
         </div>
 
         {customerType === "guest" && (
-          <div style={{ textAlign: "center", padding: "40px" }}>
-            <UserOutlined style={{ fontSize: "48px", color: "#d9d9d9" }} />
-            <div style={{ marginTop: "16px" }}>
+          <div style={{textAlign: "center", padding: "40px"}}>
+            <UserOutlined style={{fontSize: "48px", color: "#d9d9d9"}}/>
+            <div style={{marginTop: "16px"}}>
               <Text type="secondary">Sử dụng thông tin khách lẻ mặc định</Text>
             </div>
             <Button
@@ -1157,7 +1125,7 @@ const POSPage = () => {
                 handleCustomerTypeChange("guest");
                 setIsCustomerModalVisible(false);
               }}
-              style={{ marginTop: "16px" }}
+              style={{marginTop: "16px"}}
             >
               Xác nhận
             </Button>
@@ -1166,16 +1134,16 @@ const POSPage = () => {
 
         {customerType === "existing" && (
           <div>
-            <Space.Compact style={{ width: "100%", marginBottom: "16px" }}>
+            <Space.Compact style={{width: "100%", marginBottom: "16px"}}>
               <Input
                 placeholder="Tìm kiếm theo tên, SĐT hoặc email"
-                prefix={<SearchOutlined />}
+                prefix={<SearchOutlined/>}
                 value={customerSearchText}
                 onChange={(e) => setCustomerSearchText(e.target.value)}
                 onPressEnter={handleSearchCustomer}
               />
               <Button type="primary" onClick={handleSearchCustomer}>
-                <SearchOutlined />
+                <SearchOutlined/>
               </Button>
             </Space.Compact>
 
@@ -1183,13 +1151,13 @@ const POSPage = () => {
               loading={isUsersLoading}
               dataSource={users}
               columns={[
-                { title: "Tên", dataIndex: "full_name", key: "full_name" },
+                {title: "Tên", dataIndex: "full_name", key: "full_name"},
                 {
                   title: "SĐT",
                   dataIndex: "phone_number",
                   key: "phone_number",
                 },
-                { title: "Email", dataIndex: "email", key: "email" },
+                {title: "Email", dataIndex: "email", key: "email"},
                 {
                   title: "Thao tác",
                   key: "action",

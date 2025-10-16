@@ -1,6 +1,5 @@
 import {BaseAuditEntity, Branch, BranchRef, Product, ProductRef, UserManagementInfo, WarehouseRef} from "@/lib/api";
 import {UUID} from "node:crypto";
-import {Warehouse} from "@/lib/api/types/warehouse.types";
 
 
 export interface SalesOrderLineInput extends BaseAuditEntity {
@@ -57,7 +56,6 @@ export interface SaleOrderResponse extends BaseAuditEntity {
   id: UUID;
   customer?: UserManagementInfo;
   branch: Branch;
-  warehouse: Warehouse;
   status: "DRAFT" | "CONFIRMED" | "FULFILLED" | "PARTIALLY_RETURNED" | "RETURNED" | "CANCELLED";
   lines: SaleOrderLineResponse[];
 }
@@ -72,7 +70,7 @@ export interface SaleOrderLineResponse extends BaseAuditEntity {
 export interface SaleReturnResponse extends BaseAuditEntity {
   id: string;
   sales_order: SaleOrderResponse;
-  warehouse: Warehouse;
+  branch: Branch;
   lines: SaleReturnItemResponse[];
 }
 

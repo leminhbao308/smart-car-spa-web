@@ -10,7 +10,6 @@ interface PriceHistoryModalProps {
   visible: boolean;
   onClose: () => void;
   product: Product | null;
-  warehouseId: string;
   // Function to fetch price history - should be passed from parent
   onFetchHistory?: (productId: string) => Promise<PurchaseHistory | null>;
 }
@@ -19,7 +18,6 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({
                                                                visible,
                                                                onClose,
                                                                product,
-                                                               warehouseId,
                                                                onFetchHistory,
                                                              }) => {
   const [loading, setLoading] = useState(false);
@@ -105,7 +103,7 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({
       render: (_, record) => record.supplier?.supplier_name || "N/A",
     },
     {
-      title: "Số lượng",
+      title: "Số lượng nhập",
       dataIndex: "qty_ordered",
       key: "qty_ordered",
       width: 100,
@@ -113,7 +111,7 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({
       render: (qty: number) => <strong>{qty}</strong>,
     },
     {
-      title: "Đơn giá",
+      title: "Đơn giá nhập",
       dataIndex: "unit_cost",
       key: "unit_cost",
       width: 150,

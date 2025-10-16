@@ -12,28 +12,28 @@ export interface UseCatalogReturn {
 }
 
 
-export const useCatalogForSale = (warehouseId: string): UseCatalogReturn => {
+export const useCatalogForSale = (branchId: string): UseCatalogReturn => {
   const [state, setState] = useState<CatalogData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
 
   const fetchData = useCallback(async () => {
-    if (!warehouseId) {
+    if (!branchId) {
       setState(null);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const resp: CatalogData = await CatalogService.getForSaleCatalogs(warehouseId);
+      const resp: CatalogData = await CatalogService.getForSaleCatalogs(branchId);
       setState(resp);
     } catch (e: any) {
       setError(e?.message || "Failed to load catalog");
     } finally {
       setLoading(false);
     }
-  }, [warehouseId]);
+  }, [branchId]);
 
 
   useEffect(() => {
