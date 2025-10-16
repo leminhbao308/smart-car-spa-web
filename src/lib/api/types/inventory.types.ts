@@ -1,6 +1,5 @@
 import {BaseAuditEntity} from './common.types';
-import {Product} from "@/lib/api";
-import {Warehouse} from "@/lib/api/types/warehouse.types";
+import {Branch, Product} from "@/lib/api";
 
 export interface InventoryView extends BaseAuditEntity {
   on_hand: number;
@@ -10,14 +9,14 @@ export interface InventoryView extends BaseAuditEntity {
 
 export interface InventoryLevel extends BaseAuditEntity {
   product: Product,
-  warehouse: Warehouse,
+  branch: Branch,
   on_hand: number,
   reserved: number,
   available: number,
 }
 
 export interface StockRequest {
-  warehouse_id: string;
+  branch_id: string;
   product_id: string;
   qty: number;
   unit_cost: number;
@@ -28,7 +27,7 @@ export interface StockRequest {
 
 // New types for booking inventory operations
 export interface BookingInventoryRequest {
-  warehouse_id: string;
+  branch_id: string;
   product_id: string;
   qty: number;
   ref_id: string;
@@ -41,7 +40,7 @@ export interface BookingInventoryResponse {
 }
 
 export interface InventoryLevelsBatchRequest {
-  warehouse_id: string;
+  branch_id: string;
   product_ids: string[];
 }
 

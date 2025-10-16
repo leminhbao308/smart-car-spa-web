@@ -2,11 +2,11 @@ import api from "../axios";
 import {InventoryLevel, InventoryLevelsBatchRequest, InventoryLevelsBatchResponse, StockRequest, BookingInventoryRequest, BookingInventoryResponse} from "@/lib/api/types/inventory.types";
 
 export const InventoryService = {
-  getInvLevel: async (productId: string, warehouseId: string): Promise<InventoryLevel> => {
+  getInvLevel: async (productId: string, branchId: string): Promise<InventoryLevel> => {
     const response = await api.get(`/inv/level`, {
       params: {
         productId,
-        warehouseId
+        branchId
       }
     });
     return response.data.data;
@@ -101,20 +101,20 @@ export const InventoryService = {
    * Reserve multiple products for booking
    */
   reserveMultipleForBooking: async (
-    warehouseId: string,
+    branchId: string,
     products: { productId: string; quantity: number }[],
     bookingId: string
   ): Promise<BookingInventoryResponse[]> => {
-    const promises = products.map(product => 
+    const promises = products.map(product =>
       InventoryService.reserveForBooking({
-        warehouse_id: warehouseId,
+        branch_id: branchId,
         product_id: product.productId,
         qty: product.quantity,
         ref_id: bookingId,
         ref_type: "SALE_ORDER"
       })
     );
-    
+
     return Promise.all(promises);
   },
 
@@ -122,20 +122,20 @@ export const InventoryService = {
    * Release multiple products for booking
    */
   releaseMultipleForBooking: async (
-    warehouseId: string,
+    branchId: string,
     products: { productId: string; quantity: number }[],
     bookingId: string
   ): Promise<BookingInventoryResponse[]> => {
-    const promises = products.map(product => 
+    const promises = products.map(product =>
       InventoryService.releaseForBooking({
-        warehouse_id: warehouseId,
+        branch_id: branchId,
         product_id: product.productId,
         qty: product.quantity,
         ref_id: bookingId,
         ref_type: "SALE_ORDER"
       })
     );
-    
+
     return Promise.all(promises);
   },
 
@@ -143,20 +143,20 @@ export const InventoryService = {
    * Fulfill multiple products for booking
    */
   fulfillMultipleForBooking: async (
-    warehouseId: string,
+    branchId: string,
     products: { productId: string; quantity: number }[],
     bookingId: string
   ): Promise<BookingInventoryResponse[]> => {
-    const promises = products.map(product => 
+    const promises = products.map(product =>
       InventoryService.fulfillForBooking({
-        warehouse_id: warehouseId,
+        branch_id: branchId,
         product_id: product.productId,
         qty: product.quantity,
         ref_id: bookingId,
         ref_type: "SALE_ORDER"
       })
     );
-    
+
     return Promise.all(promises);
   }
 

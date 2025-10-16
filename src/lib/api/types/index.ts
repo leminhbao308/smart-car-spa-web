@@ -49,9 +49,6 @@ export * from './price-book.types';
 // Sale Order types
 export * from './sale-order.types';
 
-// Warehouse types
-export * from './warehouse.types';
-
 // Service Bay types
 export * from './service-bay.types';
 // Purchase Order types

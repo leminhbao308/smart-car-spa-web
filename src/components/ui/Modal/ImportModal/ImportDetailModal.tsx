@@ -23,7 +23,7 @@ const ImportDetailModal: React.FC<ImportDetailModalProps> = ({
     {
       title: "Tên sản phẩm",
       key: "productName",
-      render: (_, line) => line.product?.productName || "N/A",
+      render: (_, line) => line.product?.product_name || "N/A",
     },
     {
       title: "Nhà cung cấp",
@@ -111,11 +111,7 @@ const ImportDetailModal: React.FC<ImportDetailModalProps> = ({
           </Descriptions.Item>
 
           <Descriptions.Item label="Chi nhánh" span={2}>
-            {record.branch?.branch_name || "N/A"}
-          </Descriptions.Item>
-
-          <Descriptions.Item label="Kho" span={2}>
-            {record.warehouse?.id || "N/A"}
+            {`${record.branch?.branch_name} - ${record.branch?.address}` || "N/A"}
           </Descriptions.Item>
 
           <Descriptions.Item label="Ngày nhập" span={1}>

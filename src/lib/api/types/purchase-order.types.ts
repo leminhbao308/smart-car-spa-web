@@ -1,9 +1,8 @@
-import {BaseAuditEntity, Branch, Product, Supplier, Warehouse} from "@/lib/api";
+import {BaseAuditEntity, Branch, Product, Supplier} from "@/lib/api";
 
 export interface PurchaseOrder extends BaseAuditEntity {
   id: string;
   branch: Branch;
-  warehouse: Warehouse;
   lines: PurchaseOrderLine[];
 }
 
@@ -19,7 +18,6 @@ export interface PurchaseOrderLine extends BaseAuditEntity {
 
 export interface CreatePORequest {
   branch_id: string;
-  warehouse_id: string;
   lines: CreatePOLineRequest[];
 }
 

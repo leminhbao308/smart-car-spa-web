@@ -28,7 +28,6 @@ import {
   Product,
   Supplier,
 } from "@/lib/api";
-import {useWarehouseByBranch} from "@/lib/api/hooks/useWarehouseByBranch";
 
 const {Option} = Select;
 
@@ -63,7 +62,6 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
 
   // Selected branch for warehouse lookup
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
-  const {warehouse, loading: warehouseLoading} = useWarehouseByBranch(selectedBranchId);
 
   // Load initial data
   useEffect(() => {
@@ -110,16 +108,16 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
     setTotalAmount(total);
   }, [items]);
 
-  // Update warehouse_id when warehouse is loaded
+  // Update branch_id when branch is loaded
   useEffect(() => {
-    if (warehouse) {
-      form.setFieldValue("warehouse_id", warehouse.id);
+    if (selectedBranchId) {
+      form.setFieldValue("branch_id", selectedBranchId);
     }
-  }, [warehouse, form]);
+  }, [selectedBranchId, form]);
 
   const handleBranchChange = (branchId: string) => {
     setSelectedBranchId(branchId);
-    form.setFieldValue("warehouse_id", undefined);
+    form.setFieldValue("branch_id", undefined);
   };
 
   const handleAddItem = () => {
@@ -156,11 +154,6 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
     try {
       const values = await form.validateFields();
 
-      if (!warehouse) {
-        message.error("Vui lòng đợi kho được tải");
-        return;
-      }
-
       if (items.length === 0) {
         message.error("Vui lòng thêm ít nhất một sản phẩm");
         return;
@@ -181,7 +174,6 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
 
       const data: CreatePORequest = {
         branch_id: values.branch_id,
-        warehouse_id: warehouse.id,
         lines: items.map(({id, ...item}) => ({
           ...item,
           lot_code: item.lot_code || undefined,
@@ -363,7 +355,7 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
           type="primary"
           loading={loading}
           onClick={handleSave}
-          disabled={loadingData || warehouseLoading}
+          disabled={loadingData}
         >
           Nhập hàng
         </Button>,
@@ -402,24 +394,6 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
                     </Option>
                   ))}
                 </Select>
-              </Form.Item>
-
-              <Form.Item label="Kho nhập" hidden={true}>
-                <Spin spinning={warehouseLoading}>
-                  {warehouse ? (
-                    <div
-                      style={{
-                        padding: "8px 12px",
-                        background: "#f0f0f0",
-                        borderRadius: 4,
-                      }}
-                    >
-                      {warehouse.id.substring(0, 20)}...
-                    </div>
-                  ) : (
-                    <div style={{color: "#999"}}>Chọn chi nhánh trước</div>
-                  )}
-                </Spin>
               </Form.Item>
             </div>
           </Form>

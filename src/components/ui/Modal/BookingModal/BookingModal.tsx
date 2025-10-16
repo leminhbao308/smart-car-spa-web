@@ -44,7 +44,6 @@ import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
 import { BranchDisplay } from "@/lib/api/types/branch.types";
 import { PriceBookItem } from "@/lib/api/types/price-book.types";
 import { ServiceProcessStepProductInfoDto } from "@/lib/api/types/service-process.types";
-import { useWarehouseByBranch } from "@/lib/api/hooks/useWarehouseByBranch";
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -107,11 +106,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const { branches, loading: isLoadingBranches } = useBranches();
   const { data: priceBooksData, isLoading: isLoadingPriceBooks } =
     useActivePriceBooks();
-
-  // Warehouse hook - lấy warehouse từ branch đã chọn
-  const { warehouse, loading: isLoadingWarehouse } = useWarehouseByBranch(
-    selectedBranch?.branch_id || null
-  );
 
   // Filter vehicles by selected customer
   const vehicles = React.useMemo(() => {
@@ -274,8 +268,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       console.log("Unique products after grouping:", uniqueProducts);
       console.log("Required products for booking:", uniqueProducts);
 
-      // Reserve inventory nếu có warehouse và products
-      if (warehouse?.id && uniqueProducts.length > 0) {
+      // Reserve inventory nếu có branch và products
+      if (selectedBranch?.branch_id && uniqueProducts.length > 0) {
         try {
           // Validate products có productId
           const validProducts = uniqueProducts.filter(
@@ -299,11 +293,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }));
 
           console.log("Valid products to reserve:", productsToReserve);
-          console.log("Warehouse ID:", warehouse.id);
+          console.log("Branch ID:", selectedBranch.branch_id);
           console.log("Booking ID:", bookingId);
 
           await InventoryService.reserveMultipleForBooking(
-            warehouse.id,
+            selectedBranch.branch_id,
             productsToReserve,
             bookingId
           );
@@ -328,9 +322,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Function để release inventory khi booking bị cancel
   const releaseInventoryForBooking = async (bookingId: string) => {
     try {
-      if (!warehouse?.id || requiredProducts.length === 0) {
+      if (!selectedBranch?.branch_id || requiredProducts.length === 0) {
         console.log(
-          "No warehouse or products to release for booking:",
+          "No branch or products to release for booking:",
           bookingId
         );
         return;
@@ -346,7 +340,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }));
 
       await InventoryService.releaseMultipleForBooking(
-        warehouse.id,
+        selectedBranch.branch_id,
         productsToRelease,
         bookingId
       );
@@ -360,9 +354,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Function để fulfill inventory khi booking chuyển sang IN_PROGRESS
   const fulfillInventoryForBooking = async (bookingId: string) => {
     try {
-      if (!warehouse?.id || requiredProducts.length === 0) {
+      if (!selectedBranch?.branch_id || requiredProducts.length === 0) {
         console.log(
-          "No warehouse or products to fulfill for booking:",
+          "No branch or products to fulfill for booking:",
           bookingId
         );
         return;
@@ -378,7 +372,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }));
 
       await InventoryService.fulfillMultipleForBooking(
-        warehouse.id,
+        selectedBranch.branch_id,
         productsToFulfill,
         bookingId
       );

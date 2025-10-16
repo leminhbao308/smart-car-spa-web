@@ -3,19 +3,16 @@ import React, {useEffect, useMemo, useState} from "react";
 import {AdminTable} from "@/components/ui/Table";
 import {useConfirmationModalContext} from "@/components/ui/Modal";
 import {ColumnsType} from "antd/es/table";
-import {App, Button, DatePicker, message, Modal, Select, Space, Tag, Tooltip} from "antd";
+import {App, Button, DatePicker, Modal, Select, Space, Tag, Tooltip} from "antd";
 import {DollarOutlined, DownloadOutlined, FileExcelOutlined, HistoryOutlined,} from "@ant-design/icons";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
-import {InventoryLevel, InventoryService, Product, PurchaseOrder, PurchaseOrderService} from "@/lib/api";
+import {BranchDisplay, InventoryLevel, InventoryService, Product, PurchaseOrder, PurchaseOrderService} from "@/lib/api";
 import {useInventoryLevels} from "@/lib/api/hooks";
 import {useProducts} from "@/lib/api/hooks/useProducts";
 import {useBranches} from "@/lib/api/hooks/useBranches";
 import {usePricing} from "@/lib/api/hooks/usePricing";
-import {useWarehouseByBranch} from "@/lib/api/hooks/useWarehouseByBranch";
 import PriceHistoryModal from "@/components/ui/Modal/StockModal/PriceHistoryModal";
 import dayjs, {Dayjs} from "dayjs";
-
-const {RangePicker} = DatePicker;
 
 interface StockTableItem extends InventoryLevel {
   key: string;
@@ -29,12 +26,12 @@ interface StockTableItem extends InventoryLevel {
 
 const StockInventoryPage = () => {
   // Ant Design Message
-  const { message } = App.useApp();
+  const {message} = App.useApp();
 
   // State variables
   const [data, setData] = useState<StockTableItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [priceHistoryVisible, setPriceHistoryVisible] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -50,9 +47,6 @@ const StockInventoryPage = () => {
   const [exportLoading, setExportLoading] = useState(false);
   const [exportBranch, setExportBranch] = useState<string | undefined>(undefined);
 
-  // Get warehouse based on selected branch
-  const {warehouse, loading: warehouseLoading} = useWarehouseByBranch(selectedBranch);
-
   // Create branch map for quick lookup
   const branchMap = useMemo(() => {
     const map = new Map();
@@ -64,22 +58,22 @@ const StockInventoryPage = () => {
 
   // Set default branch when branches are loaded
   useEffect(() => {
-    if (branches.length > 0 && !selectedBranch) {
-      setSelectedBranch(branches[0].branch_id);
+    if (branches.length > 0 && !selectedBranchId) {
+      setSelectedBranchId(branches[0].branch_id);
     }
-  }, [branches, selectedBranch]);
+  }, [branches, selectedBranchId]);
 
   // Fetch purchase orders on mount
   useEffect(() => {
     fetchPurchaseOrders();
   }, []);
 
-  // Fetch inventory when warehouse is available
+  // Fetch inventory when branch is available
   useEffect(() => {
-    if (warehouse && products.length > 0 && branches.length > 0) {
+    if (selectedBranchId && products.length > 0 && branches.length > 0) {
       fetchInventoryLevels();
     }
-  }, [warehouse, products, branches, purchaseOrders]);
+  }, [selectedBranchId, products, branches, purchaseOrders]);
 
   const fetchPurchaseOrders = async () => {
     try {
@@ -90,10 +84,10 @@ const StockInventoryPage = () => {
     }
   };
 
-  const getLastPurchasePrice = (productId: string, warehouseId: string): number | undefined => {
-    // Find last received purchase order for this product in this warehouse
+  const getLastPurchasePrice = (productId: string, branchId: string): number | undefined => {
+    // Find last received purchase order for this product in this branch
     const relevantPOs = purchaseOrders
-      .filter(po => po.warehouse.id === warehouseId)
+      .filter(po => po.branch.branch_id === branchId)
       .sort((a, b) => new Date(b.created_date).getTime() - new Date(a.created_date).getTime());
 
     for (const po of relevantPOs) {
@@ -106,13 +100,13 @@ const StockInventoryPage = () => {
   };
 
   const fetchInventoryLevels = async () => {
-    if (!warehouse || products.length === 0) return;
+    if (!selectedBranchId || products.length === 0) return;
 
     setLoading(true);
     try {
       const productIds = products.map((p: Product) => p.product_id);
       const batchResult = await inventoryHook.levelsBatch({
-        warehouse_id: warehouse.id,
+        branch_id: selectedBranchId,
         product_ids: productIds,
       });
 
@@ -134,8 +128,8 @@ const StockInventoryPage = () => {
         console.error("Failed to fetch pricing:", error);
       }
 
-      const branchName = warehouse?.branch?.branch_id
-        ? branchMap.get(warehouse.branch.branch_id)
+      const branchName = selectedBranchId
+        ? branchMap.get(selectedBranchId)
         : "N/A";
 
       const stockItems: StockTableItem[] = products.map((product: Product) => {
@@ -153,7 +147,7 @@ const StockInventoryPage = () => {
           stockStatus = "high";
         }
 
-        const lastPurchasePrice = getLastPurchasePrice(product.product_id, warehouse.id);
+        const lastPurchasePrice = getLastPurchasePrice(product.product_id, selectedBranchId);
         const sellingPrice = sellingPrices[product.product_id];
         const profitMargin = lastPurchasePrice && sellingPrice
           ? ((sellingPrice - lastPurchasePrice) / lastPurchasePrice) * 100
@@ -163,7 +157,6 @@ const StockInventoryPage = () => {
           key: product.product_id,
           id: product.product_id,
           product: product,
-          warehouse: warehouse,
           on_hand: onHand,
           reserved: reserved,
           available: available,
@@ -285,21 +278,6 @@ const StockInventoryPage = () => {
     },
     {
       title: (
-        <Tooltip title="Giá nhập gần nhất">
-          <span>Giá nhập gần nhất <DollarOutlined style={{fontSize: 12}}/></span>
-        </Tooltip>
-      ),
-      dataIndex: "lastPurchasePrice",
-      key: "lastPurchasePrice",
-      width: 130,
-      render: (price?: number) => (
-        <div>
-          {price !== undefined ? formatCurrency(price) : <span style={{color: "#999"}}>Chưa nhập</span>}
-        </div>
-      ),
-    },
-    {
-      title: (
         <Tooltip title="Giá bán hiện tại">
           <span>Giá bán hiện tại<DollarOutlined style={{fontSize: 12}}/></span>
         </Tooltip>
@@ -344,7 +322,7 @@ const StockInventoryPage = () => {
   const outOfStock = data.filter((item) => item.stockStatus === "out").length;
   const lowStock = data.filter((item) => item.stockStatus === "low").length;
 
-  const isLoading = loading || inventoryHook.loading || branchesLoading || pricingHook.loading || warehouseLoading;
+  const isLoading = loading || inventoryHook.loading || branchesLoading || pricingHook.loading;
 
   return (
     <div>
@@ -376,8 +354,8 @@ const StockInventoryPage = () => {
           <span style={{fontWeight: 500}}>Chọn chi nhánh:</span>
           <Select
             style={{width: 500}}
-            value={selectedBranch}
-            onChange={setSelectedBranch}
+            value={selectedBranchId}
+            onChange={setSelectedBranchId}
             placeholder="Chọn chi nhánh"
             loading={branchesLoading}
           >
@@ -401,7 +379,7 @@ const StockInventoryPage = () => {
         actions={[
           {
             key: "priceHistory",
-            label: "Lịch sử giá",
+            label: "Lịch sử nhập hàng",
             type: "default",
             icon: <HistoryOutlined/>,
             onClick: handlePriceHistory,
@@ -434,7 +412,6 @@ const StockInventoryPage = () => {
           setSelectedProduct(null);
         }}
         product={selectedProduct}
-        warehouseId={warehouse?.id || ""}
         onFetchHistory={fetchPriceHistory}
       />
 
@@ -495,7 +472,7 @@ const StockInventoryPage = () => {
                 label: branch.branch_name
               }))}
             />
-            {!selectedBranch && (
+            {!selectedBranchId && (
               <div style={{fontSize: 12, color: "#6b7280", marginTop: 4}}>
                 Vui lòng chọn chi nhánh để xuất báo cáo tồn kho
               </div>
