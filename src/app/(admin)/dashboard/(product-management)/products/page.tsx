@@ -75,7 +75,6 @@ const ProductsPage = () => {
   const productTypes = productTypesData || [];
 
   const updateStatusMutation = useUpdateProductStatus();
-  const deleteMutation = useDeleteProduct();
 
   // Reset filters
   const handleResetFilters = () => {
@@ -176,32 +175,11 @@ const ProductsPage = () => {
       render: (unit: string) => <Tag color="green">{unit}</Tag>,
     },
     {
-      title: "Giá dự kiến",
-      dataIndex: "peak_price",
-      key: "peak_price",
-      width: 120,
-      sorter: (a, b) => (a.peak_price || 0) - (b.peak_price || 0),
-      render: (price: number) => (
-        <div style={{ fontWeight: 500, color: "#52c41a" }}>
-          {price ? price.toLocaleString() + "đ" : "N/A"}
-        </div>
-      ),
-    },
-    {
       title: "Trạng thái",
       dataIndex: "is_active",
       key: "is_active",
       width: 120,
-      render: (isActive: boolean, record: Product) => {
-        // if (record.is_deleted) {
-        //   return (
-        //     <Badge
-        //       status="default"
-        //       text="Đã xóa"
-        //       style={{ color: "#999" }}
-        //     />
-        //   );
-        // }
+      render: (isActive: boolean) => {
         return (
           <Badge
             status={isActive ? "success" : "error"}
@@ -241,21 +219,6 @@ const ProductsPage = () => {
       },
     });
   };
-
-  // const handleDelete = (record: Product) => {
-  //   showModal({
-  //     title: "Xóa sản phẩm",
-  //     content: `Bạn có chắc chắn muốn xóa sản phẩm ${record.product_name}?`,
-  //     type: "error",
-  //     onConfirm: async () => {
-  //       try {
-  //           await deleteMutation.mutateAsync(record.product_id);
-  //       } catch (error: unknown) {
-  //         console.error("Failed to delete:", error);
-  //       }
-  //     },
-  //   });
-  // };
 
   const handleView = (record: Product) => {
     setSelectedData(record);

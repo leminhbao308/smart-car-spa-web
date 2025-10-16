@@ -12,8 +12,13 @@ import {
   Switch,
   Typography,
   Avatar,
-  App} from "antd";
-import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
+  App,
+} from "antd";
+import {
+  MemoizedInput,
+  MemoizedTextArea,
+  MemoizedInputNumber,
+} from "@/components/ui/MemoizedComponents";
 import ProductAttributeManager from "@/components/ui/ProductAttributeManager/ProductAttributeManager";
 import {
   EditOutlined,
@@ -21,15 +26,18 @@ import {
   PlusOutlined,
   DollarOutlined,
   InfoCircleOutlined,
-  InboxOutlined} from "@ant-design/icons";
+  InboxOutlined,
+} from "@ant-design/icons";
 import {
   Product,
   CreateProductRequest,
   UpdateProductRequest,
-  CreateProductAttributeValueRequest} from "@/lib/api/types/product.types";
+  CreateProductAttributeValueRequest,
+} from "@/lib/api/types/product.types";
 import {
   useCreateProduct,
-  useUpdateProduct} from "@/lib/api/hooks/useProducts";
+  useUpdateProduct,
+} from "@/lib/api/hooks/useProducts";
 import { useProductTypes } from "@/lib/api/hooks/useProductTypes";
 import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { productAttributeValueService } from "@/lib/api/services/productAttributeValue.service";
@@ -48,17 +56,20 @@ const ProductModal: React.FC<ProductModalProps> = ({
   visible,
   onCancel,
   onSuccess,
-  editData}) => {
+  editData,
+}) => {
   const [form] = Form.useForm();
-  const [attributeValues, setAttributeValues] = React.useState<CreateProductAttributeValueRequest[]>([]);
+  const [attributeValues, setAttributeValues] = React.useState<
+    CreateProductAttributeValueRequest[]
+  >([]);
   const { message } = App.useApp();
 
   const createProductMutation = useCreateProduct();
   const updateProductMutation = useUpdateProduct();
   const { data: productTypesData } = useProductTypes({
     filters: {
-      is_active: true
-    }
+      is_active: true,
+    },
   });
   const { data: suppliersData } = useSuppliers({});
   const suppliers = suppliersData?.data?.content || [];
@@ -66,8 +77,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
   const productTypes = productTypesData?.data?.content || [];
 
   const loading =
-    createProductMutation.isPending || 
-    updateProductMutation.isPending;
+    createProductMutation.isPending || updateProductMutation.isPending;
 
   useEffect(() => {
     if (visible && editData) {
@@ -84,11 +94,12 @@ const ProductModal: React.FC<ProductModalProps> = ({
         supplierId: editData.supplier_id,
         description: editData.description,
         unitOfMeasure: editData.unit_of_measure,
-        is_active: editData.is_active});
-      
+        is_active: editData.is_active,
+      });
+
       // Initialize attribute values for editing
       if (editData.attribute_values && editData.attribute_values.length > 0) {
-        const initialAttributes = editData.attribute_values.map(attr => ({
+        const initialAttributes = editData.attribute_values.map((attr) => ({
           product_id: editData.product_id,
           attribute_id: attr.attribute_id,
           value_text: attr.value_text,
@@ -110,12 +121,14 @@ const ProductModal: React.FC<ProductModalProps> = ({
 
       // Validate attributes for new products
       if (!editData && attributeValues.length > 0) {
-        const invalidAttributes = attributeValues.filter(attr => 
-          !attr.attribute_id || 
-          (attr.value_text === undefined && attr.value_number === undefined) ||
-          (attr.value_text === null && attr.value_number === null)
+        const invalidAttributes = attributeValues.filter(
+          (attr) =>
+            !attr.attribute_id ||
+            (attr.value_text === undefined &&
+              attr.value_number === undefined) ||
+            (attr.value_text === null && attr.value_number === null)
         );
-        
+
         if (invalidAttributes.length > 0) {
           message.error("Vui lòng hoàn thiện thông tin thuộc tính sản phẩm");
           return;
@@ -136,39 +149,50 @@ const ProductModal: React.FC<ProductModalProps> = ({
           barcode: values.barcode,
           supplier_id: values.supplierId,
           is_featured: values.isFeatured,
-          is_active: values.is_active};
+          is_active: values.is_active,
+        };
 
         // Update product first
-        updateProductMutation.mutate({
-          productId: editData.product_id,
-          data: updateData
-        }, {
-          onSuccess: () => {
-            // Then update attributes if there are any
-            if (attributeValues.length > 0) {
-              // Use the new service with operation support
-              productAttributeValueService.bulkUpdateProductAttributeValuesByProduct(
-                editData.product_id,
-                attributeValues.map(attr => ({
-                  attribute_id: attr.attribute_id,
-                  value_text: attr.value_text,
-                  value_number: attr.value_number,
-                  operation: attr.operation // Chỉ có khi là DELETE
-                }))
-              ).then(() => {
-                message.success("Cập nhật sản phẩm và thuộc tính thành công!");
+        updateProductMutation.mutate(
+          {
+            productId: editData.product_id,
+            data: updateData,
+          },
+          {
+            onSuccess: () => {
+              // Then update attributes if there are any
+              if (attributeValues.length > 0) {
+                // Use the new service with operation support
+                productAttributeValueService
+                  .bulkUpdateProductAttributeValuesByProduct(
+                    editData.product_id,
+                    attributeValues.map((attr) => ({
+                      attribute_id: attr.attribute_id,
+                      value_text: attr.value_text,
+                      value_number: attr.value_number,
+                      operation: attr.operation, // Chỉ có khi là DELETE
+                    }))
+                  )
+                  .then(() => {
+                    message.success(
+                      "Cập nhật sản phẩm và thuộc tính thành công!"
+                    );
+                    onSuccess();
+                  })
+                  .catch((error) => {
+                    console.error("Failed to update attributes:", error);
+                    message.warning(
+                      "Cập nhật sản phẩm thành công nhưng có lỗi khi cập nhật thuộc tính"
+                    );
+                    onSuccess(); // Still call onSuccess for product update
+                  });
+              } else {
+                message.success("Cập nhật sản phẩm thành công!");
                 onSuccess();
-              }).catch((error) => {
-                console.error("Failed to update attributes:", error);
-                message.warning("Cập nhật sản phẩm thành công nhưng có lỗi khi cập nhật thuộc tính");
-                onSuccess(); // Still call onSuccess for product update
-              });
-            } else {
-              message.success("Cập nhật sản phẩm thành công!");
-              onSuccess();
-            }
+              }
+            },
           }
-        });
+        );
       } else {
         // Create new product - transform to API format
         const productData: CreateProductRequest = {
@@ -183,33 +207,41 @@ const ProductModal: React.FC<ProductModalProps> = ({
           barcode: values.barcode,
           supplier_id: values.supplierId,
           is_featured: values.isFeatured,
-          is_active: values.is_active};
-        
+          is_active: values.is_active,
+        };
+
         createProductMutation.mutate(productData, {
           onSuccess: (newProduct) => {
             // After creating product, create attributes if there are any
             if (attributeValues.length > 0 && newProduct?.product_id) {
               // Filter out DELETE operations for new products (shouldn't happen but safety check)
-              const createAttributes = attributeValues.filter(attr => attr.operation !== 'DELETE');
-              
+              const createAttributes = attributeValues.filter(
+                (attr) => attr.operation !== "DELETE"
+              );
+
               if (createAttributes.length > 0) {
                 // Use createMultipleProductAttributeValues for new products
-                productAttributeValueService.createMultipleProductAttributeValues(
-                  newProduct.product_id,
-                  createAttributes.map(attr => ({
-                    product_id: newProduct.product_id,
-                    attribute_id: attr.attribute_id,
-                    value_text: attr.value_text,
-                    value_number: attr.value_number,
-                  }))
-                ).then(() => {
-                  message.success("Tạo sản phẩm và thuộc tính thành công!");
-                  onSuccess();
-                }).catch((error) => {
-                  console.error("Failed to create attributes:", error);
-                  message.warning("Tạo sản phẩm thành công nhưng có lỗi khi tạo thuộc tính");
-                  onSuccess(); // Still call onSuccess for product creation
-                });
+                productAttributeValueService
+                  .createMultipleProductAttributeValues(
+                    newProduct.product_id,
+                    createAttributes.map((attr) => ({
+                      product_id: newProduct.product_id,
+                      attribute_id: attr.attribute_id,
+                      value_text: attr.value_text,
+                      value_number: attr.value_number,
+                    }))
+                  )
+                  .then(() => {
+                    message.success("Tạo sản phẩm và thuộc tính thành công!");
+                    onSuccess();
+                  })
+                  .catch((error) => {
+                    console.error("Failed to create attributes:", error);
+                    message.warning(
+                      "Tạo sản phẩm thành công nhưng có lỗi khi tạo thuộc tính"
+                    );
+                    onSuccess(); // Still call onSuccess for product creation
+                  });
               } else {
                 message.success("Tạo sản phẩm thành công!");
                 onSuccess();
@@ -218,7 +250,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
               message.success("Tạo sản phẩm thành công!");
               onSuccess();
             }
-          }
+          },
         });
       }
     } catch (error) {
@@ -226,7 +258,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
     }
   };
 
-  const handleAttributeChange = (newAttributeValues: CreateProductAttributeValueRequest[]) => {
+  const handleAttributeChange = (
+    newAttributeValues: CreateProductAttributeValueRequest[]
+  ) => {
     setAttributeValues(newAttributeValues);
   };
 
@@ -243,9 +277,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
           <Avatar
             size={40}
             icon={editData ? <EditOutlined /> : <PlusOutlined />}
-            style={{ 
+            style={{
               backgroundColor: editData ? "#1890ff" : "#52c41a",
-              color: "white"
+              color: "white",
             }}
           />
           <div>
@@ -253,7 +287,9 @@ const ProductModal: React.FC<ProductModalProps> = ({
               {editData ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm mới"}
             </Title>
             <Text type="secondary" style={{ fontSize: 12 }}>
-              {editData ? "Cập nhật thông tin sản phẩm" : "Nhập thông tin sản phẩm mới"}
+              {editData
+                ? "Cập nhật thông tin sản phẩm"
+                : "Nhập thông tin sản phẩm mới"}
             </Text>
           </div>
         </div>
@@ -274,17 +310,18 @@ const ProductModal: React.FC<ProductModalProps> = ({
           size="large"
           style={{
             background: editData ? "#1890ff" : "#52c41a",
-            borderColor: editData ? "#1890ff" : "#52c41a"}}
+            borderColor: editData ? "#1890ff" : "#52c41a",
+          }}
         >
           {editData ? "Cập nhật sản phẩm" : "Thêm sản phẩm"}
         </Button>,
       ]}
       styles={{
-        body: { 
+        body: {
           padding: "24px",
           maxHeight: "80vh",
-          overflowY: "auto"
-        }
+          overflowY: "auto",
+        },
       }}
     >
       <Form
@@ -293,6 +330,80 @@ const ProductModal: React.FC<ProductModalProps> = ({
         requiredMark={false}
         scrollToFirstError
       >
+        {/* Thông tin bổ sung */}
+        <Card
+          title={
+            <Space>
+              <InboxOutlined style={{ color: "#fa8c16" }} />
+              <span>Thông tin bổ sung</span>
+            </Space>
+          }
+          size="small"
+          style={{
+            marginBottom: 16,
+            border: "1px solid #f0f0f0",
+            borderRadius: 8,
+          }}
+        >
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Nhà cung cấp"
+                name="supplierId"
+                rules={[
+                  { required: true, message: "Vui lòng chọn nhà cung cấp!" },
+                ]}
+              >
+                <Select
+                  placeholder="Tìm kiếm và chọn nhà cung cấp"
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    String(option?.children || "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  style={{ width: "100%" }}
+                >
+                  {suppliers?.map(
+                    (supplier: {
+                      supplier_id: string;
+                      supplier_name: string;
+                    }) => (
+                      <Option
+                        key={supplier.supplier_id}
+                        value={supplier.supplier_id}
+                      >
+                        {supplier.supplier_name}
+                      </Option>
+                    )
+                  )}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Sản phẩm nổi bật"
+                name="isFeatured"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Trạng thái hoạt động"
+                name="is_active"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
         {/* Thông tin cơ bản */}
         <Card
           title={
@@ -302,10 +413,10 @@ const ProductModal: React.FC<ProductModalProps> = ({
             </Space>
           }
           size="small"
-          style={{ 
+          style={{
             marginBottom: 16,
             border: "1px solid #f0f0f0",
-            borderRadius: 8
+            borderRadius: 8,
           }}
         >
           <Row gutter={16}>
@@ -364,25 +475,34 @@ const ProductModal: React.FC<ProductModalProps> = ({
               <Form.Item
                 label="Loại sản phẩm"
                 name="productTypeId"
-                rules={[{ required: true, message: "Vui lòng chọn loại sản phẩm!" }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn loại sản phẩm!" },
+                ]}
               >
                 <Select
                   placeholder="Tìm kiếm và chọn loại sản phẩm"
                   showSearch
                   optionFilterProp="children"
                   filterOption={(input, option) =>
-                    String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                    String(option?.children || "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
                   }
                   style={{ width: "100%" }}
                 >
-                  {productTypes?.map((productType: { product_type_id: string; product_type_name: string }) => (
-                    <Option
-                      key={productType.product_type_id}
-                      value={productType.product_type_id}
-                    >
-                      {productType.product_type_name}
-                    </Option>
-                  ))}
+                  {productTypes?.map(
+                    (productType: {
+                      product_type_id: string;
+                      product_type_name: string;
+                    }) => (
+                      <Option
+                        key={productType.product_type_id}
+                        value={productType.product_type_id}
+                      >
+                        {productType.product_type_name}
+                      </Option>
+                    )
+                  )}
                 </Select>
               </Form.Item>
             </Col>
@@ -441,111 +561,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
           </Form.Item>
         </Card>
 
-        {/* Thông tin giá cả */}
-        <Card
-          title={
-            <Space>
-              <DollarOutlined style={{ color: "#52c41a" }} />
-              <span>Thông tin giá cả</span>
-            </Space>
-          }
-          size="small"
-          style={{ 
-            marginBottom: 16,
-            border: "1px solid #f0f0f0",
-            borderRadius: 8
-          }}
-        >
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Giá cao nhất (VNĐ)"
-                name="peakPrice"
-                rules={[
-                  { type: "number", min: 0, message: "Giá phải lớn hơn hoặc bằng 0!" },
-                ]}
-              >
-                <MemoizedInputNumber
-                  min={0}
-                  style={{ width: "100%" }}
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  placeholder="Nhập giá cao nhất"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Card>
-
-        {/* Thông tin bổ sung */}
-        <Card
-          title={
-            <Space>
-              <InboxOutlined style={{ color: "#fa8c16" }} />
-              <span>Thông tin bổ sung</span>
-            </Space>
-          }
-          size="small"
-          style={{ 
-            marginBottom: 16,
-            border: "1px solid #f0f0f0",
-            borderRadius: 8
-          }}
-        >
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Nhà cung cấp"
-                name="supplierId"
-                rules={[
-                  { required: true, message: "Vui lòng chọn nhà cung cấp!" },
-                ]}
-              >
-                <Select
-                  placeholder="Tìm kiếm và chọn nhà cung cấp"
-                  showSearch
-                  optionFilterProp="children"
-                  filterOption={(input, option) =>
-                    String(option?.children || '').toLowerCase().includes(input.toLowerCase())
-                  }
-                  style={{ width: "100%" }}
-                >
-                  {suppliers?.map((supplier: { supplier_id: string; supplier_name: string }) => (
-                    <Option
-                      key={supplier.supplier_id}
-                      value={supplier.supplier_id}
-                    >
-                      {supplier.supplier_name}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Sản phẩm nổi bật"
-                name="isFeatured"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Trạng thái hoạt động"
-                name="is_active"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Card>
-
         {/* Product Attribute Manager */}
         <ProductAttributeManager
           productId={editData?.product_id}
@@ -560,4 +575,3 @@ const ProductModal: React.FC<ProductModalProps> = ({
 };
 
 export default ProductModal;
-
