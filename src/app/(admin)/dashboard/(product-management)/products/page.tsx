@@ -399,7 +399,6 @@ const ProductsPage = () => {
         loading={isLoading}
         onAdd={handleAdd}
         onEdit={handleEdit}
-        onEditCondition={(record: Product) => !record.is_deleted}
         onView={handleView}
         addButtonText="Thêm sản phẩm"
         searchable={false}

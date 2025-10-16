@@ -8,46 +8,35 @@ import {
   Col,
   Statistic,
   Progress,
-  App,
 } from "antd";
 import {
-  EditOutlined,
-  EyeOutlined,
   PhoneOutlined,
   MailOutlined,
   EnvironmentOutlined,
   BankOutlined,
   StarOutlined,
   ClockCircleOutlined,
-  PoweroffOutlined,
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
 import {
-  useConfirmationModalContext,
   SupplierDetailModal,
-  SupplierEditModal,
-  SupplierCreateModal,
 } from "@/components/ui/Modal";
-import { useSuppliers, useToggleSupplierStatus } from "@/lib/api/hooks/useSuppliers";
+import SupplierModal from "@/components/ui/Modal/SupplierModal/SupplierModal";
+import { useSuppliers } from "@/lib/api/hooks/useSuppliers";
 import { Supplier } from "@/lib/api/types/supplier.types";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 
 const { Text } = Typography;
 
 const SupplierPage = () => {
-  const { message } = App.useApp();
-  
   // React Query hooks
   const { data: suppliersData, isLoading } = useSuppliers({});
-  const toggleSupplierStatusMutation = useToggleSupplierStatus();
 
   // Modal states
-  const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedData, setSelectedData] = useState<Supplier | null>(null);
-  const [editData, setEditData] = useState<Supplier | null>(null);
-  const { showModal } = useConfirmationModalContext();
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
 
   // Extract data from query result
   const suppliers = useMemo(
@@ -151,68 +140,15 @@ const SupplierPage = () => {
   };
 
   const handleEdit = (record: Supplier) => {
-    setEditData(record);
-    setEditModalVisible(true);
+    setEditingSupplier(record);
+    setModalVisible(true);
   };
 
-  const handleToggleStatus = async (record: Supplier) => {
-    const newStatus = !record.is_active;
-    const actionText = newStatus ? "kích hoạt" : "tạm dừng";
-    
-    showModal({
-      title: `Xác nhận ${actionText} nhà cung cấp`,
-      content: `Bạn có chắc chắn muốn ${actionText} nhà cung cấp "${record.supplier_name}"?`,
-      type: "confirm",
-      confirmText: newStatus ? "Kích hoạt" : "Tạm dừng",
-      cancelText: "Hủy",
-      onConfirm: async () => {
-        try {
-          await toggleSupplierStatusMutation.mutateAsync({
-            supplierId: record.supplier_id,
-            isActive: newStatus,
-          });
-          message.success(`${newStatus ? "Kích hoạt" : "Tạm dừng"} nhà cung cấp thành công`);
-        } catch (error: unknown) {
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : `Có lỗi xảy ra khi ${actionText} nhà cung cấp`;
-          message.error(errorMessage);
-        }
-      },
-    });
-  };
 
-  const handleCreateModalSuccess = () => {
-    setCreateModalVisible(false);
+  const handleModalSuccess = () => {
+    setModalVisible(false);
+    setEditingSupplier(null);
   };
-
-  const handleEditModalSuccess = () => {
-    setEditModalVisible(false);
-    setEditData(null);
-  };
-
-  const actions = [
-    {
-      key: "view",
-      label: "Xem chi tiết",
-      icon: <EyeOutlined />,
-      onClick: handleView,
-    },
-    {
-      key: "edit",
-      label: "Chỉnh sửa",
-      icon: <EditOutlined />,
-      onClick: handleEdit,
-    },
-    {
-      key: "toggle-status",
-      label: (record: Supplier) => record.is_active ? "Tạm dừng" : "Kích hoạt",
-      icon: <PoweroffOutlined />,
-      danger: (record: Supplier) => record.is_active,
-      onClick: handleToggleStatus,
-    },
-  ];
 
   // Statistics
   const statistics = useMemo(() => {
@@ -280,8 +216,12 @@ const SupplierPage = () => {
         title="Quản lý nhà cung cấp"
         dataSource={suppliers}
         columns={columns}
-        actions={actions}
-        onAdd={() => setCreateModalVisible(true)}
+        onAdd={() => {
+          setEditingSupplier(null);
+          setModalVisible(true);
+        }}
+        onView={handleView}
+        onEdit={handleEdit}
         addButtonText="Thêm nhà cung cấp mới"
         loading={isLoading}
         searchable={true}
@@ -299,27 +239,23 @@ const SupplierPage = () => {
       />
 
       {/* Modals */}
-      <SupplierCreateModal
-        visible={createModalVisible}
-        onCancel={() => setCreateModalVisible(false)}
-        onSuccess={handleCreateModalSuccess}
-        loading={isLoading}
+      <SupplierModal
+        open={modalVisible}
+        onCancel={() => {
+          setModalVisible(false);
+          setEditingSupplier(null);
+        }}
+        onSuccess={handleModalSuccess}
+        initialData={editingSupplier}
+        title={
+          editingSupplier ? "Chỉnh sửa nhà cung cấp" : "Thêm nhà cung cấp mới"
+        }
       />
 
       <SupplierDetailModal
         visible={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
-        onEdit={handleEdit}
         supplier={selectedData}
-        loading={isLoading}
-      />
-
-      <SupplierEditModal
-        visible={editModalVisible}
-        onCancel={() => setEditModalVisible(false)}
-        onSuccess={handleEditModalSuccess}
-        supplier={editData}
-        loading={isLoading}
       />
     </div>
   );

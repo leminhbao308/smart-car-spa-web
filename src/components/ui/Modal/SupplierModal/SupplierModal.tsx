@@ -112,6 +112,26 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
     }
   };
 
+  const renderStatusInfo = () => (
+    <Card size="small" style={{ marginBottom: 16 }}>
+      <Row gutter={16}>
+        <Col span={12}>
+          <Form.Item
+            name="is_active"
+            label="Trạng thái hoạt động"
+            valuePropName="checked"
+          >
+            <Switch
+              checkedChildren="Hoạt động"
+              unCheckedChildren="Tạm dừng"
+              disabled={isViewMode}
+            />
+          </Form.Item>
+        </Col>
+      </Row>
+    </Card>
+  );
+
   const renderBasicInfo = () => (
     <Card title="Thông tin cơ bản" size="small" style={{ marginBottom: 16 }}>
       <Row gutter={16}>
@@ -258,26 +278,6 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
     </Card>
   );
 
-  const renderStatusInfo = () => (
-    <Card title="Trạng thái" size="small">
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item
-            name="is_active"
-            label="Trạng thái hoạt động"
-            valuePropName="checked"
-          >
-            <Switch
-              checkedChildren="Hoạt động"
-              unCheckedChildren="Tạm dừng"
-              disabled={isViewMode}
-            />
-          </Form.Item>
-        </Col>
-      </Row>
-    </Card>
-  );
-
   return (
     <Modal
       title={title}
@@ -299,32 +299,12 @@ const SupplierModal: React.FC<SupplierModalProps> = ({
           is_active: true,
         }}
       >
-        <Tabs
-          defaultActiveKey="basic"
-          type="card"
-          items={[
-            {
-              key: "basic",
-              label: "Thông tin cơ bản",
-              children: (
-                <>
-                  {renderBasicInfo()}
-                  {renderContactInfo()}
-                </>
-              ),
-            },
-            {
-              key: "bank",
-              label: "Thông tin ngân hàng",
-              children: renderBankInfo(),
-            },
-            {
-              key: "status",
-              label: "Trạng thái",
-              children: renderStatusInfo(),
-            },
-          ]}
-        />
+        <>
+          {renderStatusInfo()}
+          {renderBasicInfo()}
+          {renderContactInfo()}
+          {renderBankInfo()}
+        </>
       </Form>
     </Modal>
   );

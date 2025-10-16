@@ -9,6 +9,7 @@ import {
   Tag,
   Avatar,
   Divider,
+  Button,
 } from "antd";
 import {
   BankOutlined,
@@ -17,7 +18,6 @@ import {
   EnvironmentOutlined,
   UserOutlined,
   CalendarOutlined,
-  EditOutlined,
 } from "@ant-design/icons";
 import { Supplier } from "@/lib/api/types/supplier.types";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
@@ -27,19 +27,13 @@ const { Title, Text } = Typography;
 interface SupplierDetailModalProps {
   visible: boolean;
   onCancel: () => void;
-  onEdit: (supplier: Supplier) => void;
   supplier: Supplier | null;
-  loading?: boolean;
-  showEditButton?: boolean;
 }
 
 const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
   visible,
   onCancel,
-  onEdit,
   supplier,
-  loading = false,
-  showEditButton = true,
 }) => {
   if (!supplier) return null;
 
@@ -54,26 +48,11 @@ const SupplierDetailModal: React.FC<SupplierDetailModalProps> = ({
       open={visible}
       onCancel={onCancel}
       width={800}
-      footer={showEditButton ? [
-        <button
-          key="edit"
-          onClick={() => onEdit(supplier)}
-          style={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            color: "white",
-            border: "none",
-            padding: "8px 16px",
-            borderRadius: "6px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-          }}
-        >
-          <EditOutlined />
-          Chỉnh sửa
-        </button>,
-      ] : null}
+      footer={[
+        <Button key="close" type="primary" onClick={onCancel}>
+          Đóng
+        </Button>
+      ]}
     >
       <div style={{ padding: "16px 0" }}>
         {/* Header Section */}
