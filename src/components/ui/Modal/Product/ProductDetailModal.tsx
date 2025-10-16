@@ -51,7 +51,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   if (!data) return null;
 
-  console.log(data);
   const image =
     "https://media.istockphoto.com/id/1287044692/vi/anh/c%C3%B4ng-nh%C3%A2n-r%E1%BB%ADa-xe-m%C3%A0u-%C4%91%E1%BB%8F-b%E1%BA%B1ng-b%E1%BB%8Dt-bi%E1%BB%83n-tr%C3%AAn-r%E1%BB%ADa-xe.jpg?s=612x612&w=0&k=20&c=OvMdaw63P3ZwE9FIRsmEGpMvWLjfvzwEBHsErH1JmIk=";
 
@@ -68,9 +67,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <Title level={4} style={{ margin: 0, color: "#262626" }}>
               {data.product_name}
             </Title>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {data.sku} • {data.brand}
-            </Text>
           </div>
           {data.is_featured && (
             <Tooltip title="Sản phẩm nổi bật">
@@ -103,16 +99,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           }}
         >
           <Row gutter={24} align="middle">
-            <Col span={6}>
-              <Statistic
-                title={
-                  <span style={{ color: "rgba(255,255,255,0.8)" }}>Đơn vị</span>
-                }
-                value={data.unit_of_measure}
-                valueStyle={{ color: "#fff", fontSize: 20 }}
-                prefix={<TagOutlined />}
-              />
-            </Col>
             <Col span={6}>
               <div style={{ textAlign: "center" }}>
                 <Badge
@@ -269,11 +255,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </Descriptions.Item>
                 <Descriptions.Item label="Model">
                   <Text strong>{data.model}</Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Giá cao nhất">
-                  <Text strong style={{ color: "#52c41a" }}>
-                    {data.peak_price?.toLocaleString()}đ
-                  </Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Nhà cung cấp">
                   <Button

@@ -58,8 +58,7 @@ export interface Product extends BaseAuditEntity {
   brand: string;
   model: string;
   sku: string;
-  barcode: string;
-  peak_price: number;
+  barcode: string; 
   supplier_id: string;
   is_featured: boolean;
   is_active: boolean;

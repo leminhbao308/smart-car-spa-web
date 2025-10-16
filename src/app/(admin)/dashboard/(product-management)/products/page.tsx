@@ -29,7 +29,6 @@ import {
 import {
   useProducts,
   useUpdateProductStatus,
-  useDeleteProduct,
 } from "@/lib/api/hooks/useProductManagement";
 import { useActiveProductTypes } from "@/lib/api/hooks/useProductManagement";
 import { Product, ProductFilters } from "@/lib/api/types/product.types";
@@ -381,14 +380,6 @@ const ProductsPage = () => {
             onClick: handleToggleStatus,
             condition: (record: Product) => !record.is_deleted,
           },
-          // {
-          //   key: "delete",
-          //   label: "Xóa",
-          //   type: "default",
-          //   danger: true,
-          //   onClick: handleDelete,
-          //   condition: (record: Product) => !record.is_deleted,
-          // },
         ]}
         onView={handleView}
         addButtonText="Thêm sản phẩm"

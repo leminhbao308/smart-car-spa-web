@@ -17,14 +17,12 @@ import {
 import {
   MemoizedInput,
   MemoizedTextArea,
-  MemoizedInputNumber,
 } from "@/components/ui/MemoizedComponents";
 import ProductAttributeManager from "@/components/ui/ProductAttributeManager/ProductAttributeManager";
 import {
   EditOutlined,
   SaveOutlined,
   PlusOutlined,
-  DollarOutlined,
   InfoCircleOutlined,
   InboxOutlined,
 } from "@ant-design/icons";
@@ -89,7 +87,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
         model: editData.model,
         sku: editData.sku,
         barcode: editData.barcode,
-        peakPrice: editData.peak_price,
         isFeatured: editData.is_featured,
         supplierId: editData.supplier_id,
         description: editData.description,
@@ -330,12 +327,43 @@ const ProductModal: React.FC<ProductModalProps> = ({
         requiredMark={false}
         scrollToFirstError
       >
-        {/* Thông tin bổ sung */}
+        {/* Thông tin trạng thái sản phẩm */}
+        <Card
+          size="small"
+          style={{
+            marginBottom: 16,
+            border: "1px solid #f0f0f0",
+            borderRadius: 8,
+          }}
+        >
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Sản phẩm nổi bật"
+                name="isFeatured"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="Trạng thái hoạt động"
+                name="is_active"
+                valuePropName="checked"
+              >
+                <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
+
+        {/* Thông tin nhà cung cấp */}
         <Card
           title={
             <Space>
               <InboxOutlined style={{ color: "#fa8c16" }} />
-              <span>Thông tin bổ sung</span>
+              <span>Thông tin nhà cung cấp</span>
             </Space>
           }
           size="small"
@@ -379,27 +407,6 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     )
                   )}
                 </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Sản phẩm nổi bật"
-                name="isFeatured"
-                valuePropName="checked"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Trạng thái hoạt động"
-                name="is_active"
-                valuePropName="checked"
-              >
-                <Switch />
               </Form.Item>
             </Col>
           </Row>
