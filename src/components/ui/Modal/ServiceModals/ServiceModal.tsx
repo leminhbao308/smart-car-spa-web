@@ -13,8 +13,17 @@ import {
   Card,
   Upload,
   Image,
+  InputNumber,
+  Alert,
 } from "antd";
-import { UploadOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
+import {
+  UploadOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  PlusOutlined,
+  MinusCircleOutlined,
+  InfoCircleOutlined,
+} from "@ant-design/icons";
 import {
   MemoizedInput,
   MemoizedInputNumber,
@@ -23,6 +32,8 @@ import {
 import {
   CreateServiceRequest,
   UpdateServiceRequest,
+  ServiceProductRequest,
+  ProcessStepRequest,
 } from "@/lib/api/types/service.types";
 import {
   useServiceTypes,
@@ -30,7 +41,10 @@ import {
   useCreateService,
   useUpdateService,
   useCategories,
+  useProducts,
 } from "@/lib/api/hooks";
+import { ServiceService } from "@/lib/api/services/service.service";
+import { ServiceProcessService } from "@/lib/api/services/service-process.service";
 
 const { Option } = Select;
 
@@ -44,12 +58,33 @@ interface ServiceModalProps {
     service_url: string;
     category_id?: string;
     description?: string;
-    estimated_duration?: number;
+    estimated_duration?: number; // ✅ Thêm estimated_duration cho service
     required_skill_level?: string;
     service_type_id?: string;
     is_featured?: boolean;
     is_active?: boolean;
     service_process_id?: string;
+    service_products?: Array<{
+      id: string;
+      product_id: string;
+      quantity: number;
+      unit: string;
+      notes?: string;
+      is_required: boolean;
+      sort_order: number;
+    }>;
+    service_process?: {
+      code: string;
+      name: string;
+      description?: string;
+      process_steps?: Array<{
+        id: string;
+        step_order: number;
+        name: string;
+        description?: string;
+        is_required: boolean;
+      }>;
+    };
     image_urls?: string[];
   };
   title?: string;
@@ -65,17 +100,37 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<
+    ServiceProductRequest[]
+  >([]);
+  const [processSteps, setProcessSteps] = useState<ProcessStepRequest[]>([]);
+  const [deletedProductIds, setDeletedProductIds] = useState<string[]>([]);
+  const [deletedStepIds, setDeletedStepIds] = useState<string[]>([]);
+  const [deleteProductModalVisible, setDeleteProductModalVisible] =
+    useState(false);
+  const [deleteStepModalVisible, setDeleteStepModalVisible] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<{
+    index: number;
+    product: ServiceProductRequest;
+  } | null>(null);
+  const [stepToDelete, setStepToDelete] = useState<{
+    index: number;
+    step: ProcessStepRequest;
+  } | null>(null);
   const { message } = App.useApp();
 
   // API hooks
   const { data: serviceTypesData, isLoading: serviceTypesLoading } =
     useServiceTypes({});
-  const { data: serviceProcessesData, isLoading: serviceProcessesLoading } =
-    useServiceProcesses({});
+  const { data: serviceProcessesData } = useServiceProcesses({});
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories(
     0,
     1000
   );
+  const { products: productsData } = useProducts({
+    page: 0,
+    size: 1000,
+  });
   const createServiceMutation = useCreateService();
   const updateServiceMutation = useUpdateService();
 
@@ -97,10 +152,46 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           serviceProcessId: editData.service_process_id,
         });
         setImageUrls(editData.image_urls || []);
+
+        // Set products and process steps for edit mode
+        if (editData.service_products) {
+          setSelectedProducts(
+            editData.service_products.map((sp) => ({
+              product_id: sp.product_id,
+              quantity: sp.quantity,
+              unit: "", // Không cần đơn vị
+              notes: sp.notes,
+              is_required: sp.is_required,
+              sort_order: sp.sort_order,
+              id: sp.id, // Keep the ID for deletion tracking
+            }))
+          );
+        }
+
+        if (editData.service_process?.process_steps) {
+          setProcessSteps(
+            editData.service_process.process_steps.map((step) => ({
+              step_order: step.step_order,
+              name: step.name,
+              description: step.description,
+              is_required: step.is_required,
+              is_active: true, // Default to true for existing steps
+              id: step.id, // Keep the ID for deletion tracking
+            }))
+          );
+        }
       } else {
         // Create mode - reset form
         form.resetFields();
         setImageUrls([]);
+        setSelectedProducts([]);
+        setProcessSteps([]);
+        setDeletedProductIds([]);
+        setDeletedStepIds([]);
+        setDeleteProductModalVisible(false);
+        setDeleteStepModalVisible(false);
+        setProductToDelete(null);
+        setStepToDelete(null);
       }
     }
   }, [visible, editData, form]);
@@ -140,18 +231,37 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
       const values = await form.validateFields();
 
       if (editData) {
-        // Update existing service
+        // Update existing service with products and process
         const updateData: UpdateServiceRequest = {
           service_name: values.serviceName,
           service_url: values.serviceUrl,
           category_id: values.categoryId,
           description: values.description,
-          estimated_duration: values.estimatedDuration,
+          estimated_duration: values.estimatedDuration, // ✅ Thêm estimated_duration cho service
           required_skill_level: values.requiredSkillLevel,
           service_type_id: values.serviceTypeId,
           is_featured: values.isFeatured || false,
           is_active: values.isActive !== undefined ? values.isActive : true,
-          service_process_id: values.serviceProcessId,
+          service_products:
+            selectedProducts.length > 0 ? selectedProducts : undefined,
+          service_process:
+            processSteps.length > 0
+              ? {
+                  // Không gửi code khi update - giữ nguyên code hiện tại
+                  ...(editData
+                    ? {}
+                    : { code: values.processCode || `PROC-${Date.now()}` }),
+                  name:
+                    values.processName ||
+                    editData.service_process?.name ||
+                    `${values.serviceName} - Quy trình`,
+                  description:
+                    values.processDescription ||
+                    editData.service_process?.description,
+                  is_default: false,
+                  process_steps: processSteps,
+                }
+              : undefined,
         };
 
         await updateServiceMutation.mutateAsync({
@@ -159,27 +269,52 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           data: updateData,
         });
 
-        // Không cần tính lại pricing nữa
+        // Delete removed products
+        for (const productId of deletedProductIds) {
+          try {
+            await ServiceService.deleteServiceProduct(productId);
+          } catch (error) {
+            console.error("Error deleting service product:", error);
+          }
+        }
+
+        // Delete removed process steps
+        for (const stepId of deletedStepIds) {
+          try {
+            await ServiceProcessService.deleteServiceProcessStep(stepId);
+          } catch (error) {
+            console.error("Error deleting process step:", error);
+          }
+        }
 
         message.success("Cập nhật dịch vụ thành công!");
       } else {
-        // Create new service
+        // Create new service with products and process
         const createData: CreateServiceRequest = {
           service_name: values.serviceName,
           service_url: values.serviceUrl,
           category_id: values.categoryId,
           description: values.description,
-          estimated_duration: values.estimatedDuration,
+          estimated_duration: values.estimatedDuration, // ✅ Thêm estimated_duration cho service
           required_skill_level: values.requiredSkillLevel,
           service_type_id: values.serviceTypeId,
           is_featured: values.isFeatured || false,
-          service_process_id: values.serviceProcessId,
+          service_products:
+            selectedProducts.length > 0 ? selectedProducts : undefined,
+          service_process:
+            processSteps.length > 0
+              ? {
+                  code: values.processCode || `PROC-${Date.now()}`,
+                  name:
+                    values.processName || `${values.serviceName} - Quy trình`,
+                  description: values.processDescription,
+                  is_default: true,
+                  process_steps: processSteps,
+                }
+              : undefined,
         };
 
         await createServiceMutation.mutateAsync(createData);
-
-        // Không cần tính lại pricing nữa
-
         message.success("Tạo dịch vụ thành công!");
       }
 
@@ -195,7 +330,103 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
   const handleCancel = () => {
     form.resetFields();
     setImageUrls([]);
+    setSelectedProducts([]);
+    setProcessSteps([]);
+    setDeletedProductIds([]);
+    setDeletedStepIds([]);
+    setDeleteProductModalVisible(false);
+    setDeleteStepModalVisible(false);
+    setProductToDelete(null);
+    setStepToDelete(null);
     onCancel();
+  };
+
+  // Helper functions for products and process steps
+  const addProduct = () => {
+    setSelectedProducts([
+      ...selectedProducts,
+      {
+        product_id: "",
+        quantity: 1,
+        unit: "", // Không cần đơn vị
+        notes: "",
+        is_required: true,
+        sort_order: selectedProducts.length + 1,
+      },
+    ]);
+  };
+
+  const removeProduct = (index: number) => {
+    const product = selectedProducts[index];
+    setProductToDelete({ index, product });
+    setDeleteProductModalVisible(true);
+  };
+
+  const confirmDeleteProduct = () => {
+    if (productToDelete) {
+      const { index, product } = productToDelete;
+      // If it's an existing product (has ID), add to deleted list
+      if (product.id) {
+        setDeletedProductIds([...deletedProductIds, product.id]);
+      }
+      setSelectedProducts(selectedProducts.filter((_, i) => i !== index));
+      setDeleteProductModalVisible(false);
+      setProductToDelete(null);
+      message.success("Đã xóa sản phẩm khỏi danh sách");
+    }
+  };
+
+  const updateProduct = (
+    index: number,
+    field: keyof ServiceProductRequest,
+    value: string | number | boolean
+  ) => {
+    const updated = [...selectedProducts];
+    updated[index] = { ...updated[index], [field]: value };
+    setSelectedProducts(updated);
+  };
+
+  const addProcessStep = () => {
+    setProcessSteps([
+      ...processSteps,
+      {
+        step_order: processSteps.length + 1,
+        name: "",
+        description: "",
+        is_required: true,
+        is_active: true,
+      },
+    ]);
+  };
+
+  const removeProcessStep = (index: number) => {
+    const step = processSteps[index];
+    setStepToDelete({ index, step });
+    setDeleteStepModalVisible(true);
+  };
+
+  const confirmDeleteStep = () => {
+    if (stepToDelete) {
+      const { index, step } = stepToDelete;
+      // If it's an existing step (has ID), add to deleted list
+      if (step.id) {
+        setDeletedStepIds([...deletedStepIds, step.id]);
+      }
+      setProcessSteps(processSteps.filter((_, i) => i !== index));
+      setDeleteStepModalVisible(false);
+      setStepToDelete(null);
+      message.success("Đã xóa bước khỏi quy trình");
+    }
+  };
+
+  const updateProcessStep = (
+    index: number,
+    field: keyof ProcessStepRequest,
+    value: string | number | boolean
+  ) => {
+    const updated = [...processSteps];
+    updated[index] = { ...updated[index], [field]: value };
+    setProcessSteps(updated);
   };
 
   return (
@@ -212,7 +443,13 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
       width="90%"
       style={{ maxWidth: 1000 }}
       destroyOnHidden
-      styles={{ body: { overflowX: 'hidden' } }}
+      styles={{
+        body: {
+          overflowX: "hidden",
+          maxHeight: "80vh",
+          overflowY: "auto",
+        },
+      }}
     >
       <Form
         form={form}
@@ -228,7 +465,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           size="small"
           style={{ marginBottom: 16 }}
         >
-          <Row gutter={16}>
+          <Row gutter={[16, 16]}>
             <Col xs={24} sm={12}>
               <Form.Item
                 label="Trạng thái"
@@ -253,7 +490,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         </Card>
         {/* Thông tin cơ bản */}
         <Card title="Thông tin cơ bản" size="small">
-          <Row gutter={16}>
+          <Row gutter={[16, 16]}>
             <Col xs={24} sm={12}>
               <Form.Item
                 label="Tên dịch vụ"
@@ -284,12 +521,13 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
             </Col>
           </Row>
 
-          <Row gutter={16}>
+          <Row gutter={[16, 16]}>
             <Col xs={24} sm={12}>
               <Form.Item
                 label="Danh mục"
                 name="categoryId"
                 rules={[{ required: true, message: "Vui lòng chọn danh mục!" }]}
+                initialValue={editData?.category_id}
               >
                 <Select
                   placeholder="Chọn danh mục"
@@ -323,6 +561,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                 rules={[
                   { required: true, message: "Vui lòng chọn loại dịch vụ!" },
                 ]}
+                initialValue={editData?.service_type_id}
               >
                 <Select
                   placeholder="Chọn loại dịch vụ"
@@ -349,8 +588,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
               </Form.Item>
             </Col>
           </Row>
-
-          <Row gutter={16}>
+          <Row gutter={[16, 16]}>
             <Col xs={24} sm={12}>
               <Form.Item
                 label="Thời gian ước tính (phút)"
@@ -366,6 +604,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                     message: "Thời gian phải lớn hơn 0!",
                   },
                 ]}
+                initialValue={editData?.estimated_duration}
               >
                 <MemoizedInputNumber
                   min={1}
@@ -381,6 +620,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
                 rules={[
                   { required: true, message: "Vui lòng chọn cấp độ kỹ năng!" },
                 ]}
+                initialValue={editData?.required_skill_level}
               >
                 <Select placeholder="Chọn cấp độ">
                   <Option value="BEGINNER">Cơ bản</Option>
@@ -396,107 +636,280 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
             label="Mô tả"
             name="description"
             rules={[{ max: 2000, message: "Mô tả không được quá 2000 ký tự!" }]}
+            initialValue={editData?.description}
           >
             <MemoizedTextArea rows={3} placeholder="Nhập mô tả dịch vụ" />
           </Form.Item>
         </Card>
 
-        {/* Thông tin quy trình */}
+        {/* Quản lý sản phẩm dịch vụ */}
         <Card
-          title="Thông tin quy trình"
+          title="Sản phẩm dịch vụ"
           size="small"
           style={{ marginTop: 16 }}
+          extra={
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={addProduct}
+              size="small"
+            >
+              Thêm sản phẩm
+            </Button>
+          }
         >
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Quy trình dịch vụ"
-                name="serviceProcessId"
-                extra="Chọn quy trình dịch vụ để áp dụng cho dịch vụ này (tùy chọn)"
-              >
-                <Select
-                  placeholder="Chọn quy trình dịch vụ"
-                  allowClear
-                  loading={serviceProcessesLoading}
-                  showSearch
-                  optionFilterProp="label"
-                  filterOption={(input, option) => {
-                    const label = String(option?.label ?? "");
-                    return label.toLowerCase().includes(input.toLowerCase());
-                  }}
-                  size="large"
+          {selectedProducts.length > 0 ? (
+            <div>
+              {selectedProducts.map((product, index) => (
+                <Card
+                  key={index}
+                  size="small"
+                  style={{ marginBottom: 12 }}
+                  title={`Sản phẩm ${index + 1}`}
+                  extra={
+                    <Button
+                      type="text"
+                      danger
+                      icon={<MinusCircleOutlined />}
+                      onClick={() => removeProduct(index)}
+                      size="small"
+                    />
+                  }
                 >
-                  {serviceProcessesData &&
-                    serviceProcessesData.length > 0 &&
-                    serviceProcessesData.map((process) => (
-                      <Option
-                        key={process.id}
-                        value={process.id}
-                        label={process.name}
-                      >
-                        {process.name}
-                      </Option>
-                    ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Thông tin quy trình được chọn"
-                extra="Thông tin chi tiết về quy trình đã chọn"
-              >
-                <div
-                  style={{
-                    padding: 12,
-                    backgroundColor: "#f8f9fa",
-                    borderRadius: 6,
-                    border: "1px solid #e9ecef",
-                    minHeight: 40,
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  {(() => {
-                    const selectedProcess = serviceProcessesData?.find(
-                      (p) => p.id === serviceProcessId
-                    );
-
-                    if (selectedProcess) {
-                      return (
-                        <div style={{ width: "100%" }}>
-                          <div
-                            style={{
-                              fontWeight: 500,
-                              color: "#333",
-                              marginBottom: 4,
-                            }}
-                          >
-                            {selectedProcess.name}
-                          </div>
-                          <div style={{ fontSize: 12, color: "#666" }}>
-                            {selectedProcess.description || "Không có mô tả"} •
-                            {selectedProcess.estimated_duration} phút •
-                            {selectedProcess.process_steps?.length || 0} bước
-                            {selectedProcess.is_default && " • Mặc định"}
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div style={{ color: "#999", fontSize: 14 }}>
-                        Chưa chọn quy trình
+                  <Row gutter={[16, 16]}>
+                    <Col span={12}>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 12, color: "#666" }}>
+                          Sản phẩm
+                        </label>
+                        <Select
+                          placeholder="Chọn sản phẩm"
+                          value={product.product_id}
+                          onChange={(value) =>
+                            updateProduct(index, "product_id", value)
+                          }
+                          style={{ width: "100%" }}
+                          showSearch
+                          optionFilterProp="children"
+                          filterOption={(input, option) =>
+                            String(option?.children)
+                              .toLowerCase()
+                              .includes(input.toLowerCase())
+                          }
+                        >
+                          {productsData?.map((prod) => (
+                            <Option
+                              key={prod.product_id}
+                              value={prod.product_id}
+                            >
+                              {prod.product_name}
+                            </Option>
+                          ))}
+                        </Select>
                       </div>
-                    );
-                  })()}
-                </div>
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 12, color: "#666" }}>
+                          Số lượng
+                        </label>
+                        <InputNumber
+                          min={0.1}
+                          step={0.1}
+                          value={product.quantity}
+                          onChange={(value) =>
+                            updateProduct(index, "quantity", value || 0)
+                          }
+                          style={{ width: "100%" }}
+                        />
+                      </div>
+                    </Col>
+                  </Row>
+                  <Row gutter={[16, 16]}>
+                    <Col span={12}>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 12, color: "#666" }}>
+                          Ghi chú
+                        </label>
+                        <MemoizedInput
+                          placeholder="Ghi chú về sản phẩm"
+                          value={product.notes}
+                          onChange={(e) =>
+                            updateProduct(index, "notes", e.target.value)
+                          }
+                        />
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 12, color: "#666" }}>
+                          Bắt buộc
+                        </label>
+                        <Select
+                          value={product.is_required}
+                          onChange={(value) =>
+                            updateProduct(index, "is_required", value)
+                          }
+                          style={{ width: "100%" }}
+                        >
+                          <Option value={true}>Bắt buộc</Option>
+                          <Option value={false}>Tùy chọn</Option>
+                        </Select>
+                      </div>
+                    </Col>
+                  </Row>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Alert
+              message="Chưa có sản phẩm nào"
+              description="Nhấn 'Thêm sản phẩm' để thêm sản phẩm cho dịch vụ này"
+              type="info"
+              showIcon
+              icon={<InfoCircleOutlined />}
+            />
+          )}
+        </Card>
+
+        {/* Tạo quy trình dịch vụ */}
+        <Card
+          title="Quy trình dịch vụ"
+          size="small"
+          style={{ marginTop: 16 }}
+          extra={
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={addProcessStep}
+              size="small"
+            >
+              Thêm bước
+            </Button>
+          }
+        >
+          <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+            <Col span={12}>
+              <Form.Item
+                label="Mã quy trình"
+                name="processCode"
+                rules={[
+                  {
+                    required: processSteps.length > 0 && !editData,
+                    message: "Vui lòng nhập mã quy trình!",
+                  },
+                ]}
+                initialValue={editData?.service_process?.code}
+              >
+                <MemoizedInput
+                  placeholder="VD: BD-CAMRY-001"
+                  disabled={!!editData}
+                />
               </Form.Item>
             </Col>
-          </Row>  
+            <Col span={12}>
+              <Form.Item
+                label="Tên quy trình"
+                name="processName"
+                rules={[
+                  {
+                    required: processSteps.length > 0,
+                    message: "Vui lòng nhập tên quy trình!",
+                  },
+                ]}
+                initialValue={editData?.service_process?.name}
+              >
+                <MemoizedInput placeholder="Tên quy trình" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item
+            label="Mô tả quy trình"
+            name="processDescription"
+            initialValue={editData?.service_process?.description}
+          >
+            <MemoizedTextArea rows={2} placeholder="Mô tả quy trình dịch vụ" />
+          </Form.Item>
+
+          {processSteps.length > 0 ? (
+            <div>
+              {processSteps.map((step, index) => (
+                <Card
+                  key={index}
+                  size="small"
+                  style={{ marginBottom: 12 }}
+                  title={`Bước ${step.step_order}`}
+                  extra={
+                    <Button
+                      type="text"
+                      danger
+                      icon={<MinusCircleOutlined />}
+                      onClick={() => removeProcessStep(index)}
+                      size="small"
+                    />
+                  }
+                >
+                  <Row gutter={[16, 16]}>
+                    <Col span={18}>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 12, color: "#666" }}>
+                          Tên bước
+                        </label>
+                        <MemoizedInput
+                          placeholder="Tên bước"
+                          value={step.name}
+                          onChange={(e) =>
+                            updateProcessStep(index, "name", e.target.value)
+                          }
+                        />
+                      </div>
+                    </Col>
+                    <Col span={6}>
+                      <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontSize: 12, color: "#666" }}>
+                          Bắt buộc
+                        </label>
+                        <Select
+                          value={step.is_required}
+                          onChange={(value) =>
+                            updateProcessStep(index, "is_required", value)
+                          }
+                          style={{ width: "100%" }}
+                        >
+                          <Option value={true}>Bắt buộc</Option>
+                          <Option value={false}>Tùy chọn</Option>
+                        </Select>
+                      </div>
+                    </Col>
+                  </Row>
+                  <div style={{ marginBottom: 8 }}>
+                    <label style={{ fontSize: 12, color: "#666" }}>Mô tả</label>
+                    <MemoizedTextArea
+                      rows={2}
+                      placeholder="Mô tả chi tiết bước này"
+                      value={step.description}
+                      onChange={(e) =>
+                        updateProcessStep(index, "description", e.target.value)
+                      }
+                    />
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Alert
+              message="Chưa có bước nào"
+              description="Nhấn 'Thêm bước' để tạo quy trình cho dịch vụ này"
+              type="info"
+              showIcon
+              icon={<InfoCircleOutlined />}
+            />
+          )}
         </Card>
 
         {/* Quản lý hình ảnh */}
-        <Card
+        {/* <Card
           title="Hình ảnh dịch vụ"
           size="small"
           style={{ marginTop: 16 }}
@@ -561,8 +974,67 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
               Chưa có hình ảnh nào
             </div>
           )}
-        </Card>
+        </Card> */}
       </Form>
+
+      {/* Delete Product Confirmation Modal */}
+      <Modal
+        title="Xác nhận xóa sản phẩm"
+        open={deleteProductModalVisible}
+        onOk={confirmDeleteProduct}
+        onCancel={() => {
+          setDeleteProductModalVisible(false);
+          setProductToDelete(null);
+        }}
+        okText="Xóa"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true }}
+      >
+        <p>
+          Bạn có chắc chắn muốn xóa sản phẩm{" "}
+          <strong>
+            {productToDelete?.product?.product_id
+              ? productsData?.find(
+                  (p) => p.product_id === productToDelete.product.product_id
+                )?.product_name
+              : "này"}
+          </strong>{" "}
+          khỏi danh sách?
+        </p>
+        {productToDelete?.product?.id && (
+          <p style={{ color: "#ff4d4f", fontSize: 12 }}>
+            ⚠️ Sản phẩm này đã tồn tại trong hệ thống và sẽ bị xóa vĩnh viễn.
+          </p>
+        )}
+      </Modal>
+
+      {/* Delete Step Confirmation Modal */}
+      <Modal
+        title="Xác nhận xóa bước quy trình"
+        open={deleteStepModalVisible}
+        onOk={confirmDeleteStep}
+        onCancel={() => {
+          setDeleteStepModalVisible(false);
+          setStepToDelete(null);
+        }}
+        okText="Xóa"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true }}
+      >
+        <p>
+          Bạn có chắc chắn muốn xóa bước{" "}
+          <strong>
+            {stepToDelete?.step?.name ||
+              `Bước ${stepToDelete?.step?.step_order || ""}`}
+          </strong>{" "}
+          khỏi quy trình?
+        </p>
+        {stepToDelete?.step?.id && (
+          <p style={{ color: "#ff4d4f", fontSize: 12 }}>
+            ⚠️ Bước này đã tồn tại trong hệ thống và sẽ bị xóa vĩnh viễn.
+          </p>
+        )}
+      </Modal>
     </Modal>
   );
 };

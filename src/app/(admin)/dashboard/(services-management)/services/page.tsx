@@ -38,13 +38,16 @@ const ServicesPage = () => {
   }, [serviceTypesData]);
 
   // Helper function to get service type name
-  const getServiceTypeName = useCallback((service: Service) => {
-    return (
-      service.service_type_name ||
-      serviceTypeMap.get(service.service_type_id) ||
-      "Không xác định"
-    );
-  }, [serviceTypeMap]);
+  const getServiceTypeName = useCallback(
+    (service: Service) => {
+      return (
+        service.service_type_name ||
+        serviceTypeMap.get(service.service_type_id) ||
+        "Không xác định"
+      );
+    },
+    [serviceTypeMap]
+  );
 
   // Modal states
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -143,12 +146,16 @@ const ServicesPage = () => {
           item.service_url.toLowerCase().includes(searchLower) ||
           (item.description &&
             item.description.toLowerCase().includes(searchLower)) ||
-          item.category_name.toLowerCase().includes(searchLower) ||
+          (item.category_name &&
+            item.category_name.toLowerCase().includes(searchLower)) ||
           getServiceTypeName(item).toLowerCase().includes(searchLower) ||
+          (item.service_process?.name &&
+            item.service_process.name.toLowerCase().includes(searchLower)) ||
           (item.service_process_name &&
             item.service_process_name.toLowerCase().includes(searchLower)) ||
-          (item.branch_name &&
-            item.branch_name.toLowerCase().includes(searchLower))
+          item.service_products?.some((sp) =>
+            sp.product_info.product_name.toLowerCase().includes(searchLower)
+          )
       );
     }
 
@@ -210,12 +217,18 @@ const ServicesPage = () => {
     },
     {
       title: "Thời gian ước tính",
-      dataIndex: "estimated_duration",
       key: "estimated_duration",
       width: 120,
-      sorter: (a, b) => a.estimated_duration - b.estimated_duration,
-      render: (duration: number) => (
-        <div style={{ color: "#1890ff" }}>{duration} phút</div>
+      sorter: (a, b) =>
+        (a.service_process?.estimated_duration || a.estimated_duration || 0) -
+        (b.service_process?.estimated_duration || b.estimated_duration || 0),
+      render: (_, record) => (
+        <div style={{ color: "#1890ff" }}>
+          {record.service_process?.estimated_duration ||
+            record.estimated_duration ||
+            0}{" "}
+          phút
+        </div>
       ),
     },
     {
@@ -233,11 +246,28 @@ const ServicesPage = () => {
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 500, fontSize: 12 }}>
-            {record.service_process_name}
+            {record.service_process?.name ||
+              record.service_process_name ||
+              "Chưa có quy trình"}
           </div>
           <div style={{ fontSize: 11, color: "#666" }}>
-            {record.is_default_process ? "Mặc định" : "Tùy chỉnh"}
+            {record.service_process?.code || record.service_process_code || ""}
+            {record.service_process?.process_steps?.length && (
+              <span> • {record.service_process.process_steps.length} bước</span>
+            )}
           </div>
+        </div>
+      ),
+    },
+    {
+      title: "Sản phẩm",
+      key: "service_products",
+      width: 100,
+      render: (_, record) => (
+        <div style={{ textAlign: "center" }}>
+          <Tag color="green">
+            {record.service_products?.length || 0} sản phẩm
+          </Tag>
         </div>
       ),
     },
@@ -345,7 +375,7 @@ const ServicesPage = () => {
                 Tìm kiếm
               </label>
               <Search
-                placeholder="Tìm kiếm theo tên, URL, mô tả, danh mục, loại dịch vụ..."
+                placeholder="Tìm kiếm theo tên, URL, mô tả, danh mục, loại dịch vụ, quy trình, sản phẩm..."
                 value={filters.searchText}
                 onChange={(e) =>
                   setFilters({ ...filters, searchText: e.target.value })
@@ -408,7 +438,10 @@ const ServicesPage = () => {
                 }
               >
                 {serviceTypesData?.data?.content?.map((type) => (
-                  <Option key={type.service_type_id} value={type.service_type_id}>
+                  <Option
+                    key={type.service_type_id}
+                    value={type.service_type_id}
+                  >
                     {type.name}
                   </Option>
                 ))}
@@ -430,7 +463,7 @@ const ServicesPage = () => {
         onView={handleView}
         addButtonText="Thêm dịch vụ"
         searchable={false}
-        scroll={{ x: 1800 }}
+        scroll={{ x: 2000 }}
         pagination={{
           current: pagination.current,
           pageSize: pagination.pageSize,

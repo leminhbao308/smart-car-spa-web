@@ -534,4 +534,41 @@ export class ServiceService {
       throw error;
     }
   }
+
+  /**
+   * Delete service product
+   */
+  static async deleteServiceProduct(serviceProductId: string): Promise<void> {
+    try {
+      const response = await apiClient.post(`/products/${serviceProductId}/delete`);
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to delete service product");
+      }
+    } catch (error: unknown) {
+      console.log("Delete service product error:", error);
+
+      if (error && typeof error === "object" && "response" in error) {
+        const errorResponse = error as {
+          response?: { status?: number; data?: { message?: string } };
+        };
+        if (errorResponse.response?.status === 404) {
+          throw new Error("Không tìm thấy sản phẩm dịch vụ để xóa.");
+        } else if (errorResponse.response?.status === 403) {
+          throw new Error("Bạn không có quyền xóa sản phẩm dịch vụ này.");
+        } else if (errorResponse.response?.status === 500) {
+          throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
+        } else if (errorResponse.response?.status === 401) {
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
+        }
+      }
+      const errorMessage =
+        error && typeof error === "object" && "message" in error
+          ? (error as { message: string }).message
+          : "Không thể xóa sản phẩm dịch vụ. Vui lòng thử lại.";
+      throw new Error(errorMessage);
+    }
+  }
 }

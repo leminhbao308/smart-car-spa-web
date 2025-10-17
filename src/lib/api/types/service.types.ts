@@ -8,27 +8,101 @@ export interface AuditDto {
   is_deleted: boolean;
 }
 
+// Service Product Types
+export interface ServiceProduct {
+  id: string;
+  service_id: string;
+  product_id: string;
+  product_info: ProductInfo;
+  quantity: number;
+  unit: string;
+  notes?: string;
+  is_required: boolean;
+  sort_order: number;
+  audit: AuditDto;
+}
+
+export interface ProductInfo {
+  product_id: string;
+  product_url: string;
+  product_name: string;
+  product_type_id: string;
+  product_type_name: string;
+  description?: string;
+  brand?: string;
+  model?: string;
+  sku?: string;
+  barcode?: string;
+  unit_of_measure: string;
+  supplier_id?: string;
+  is_featured: boolean;
+  attribute_values: ProductAttributeValue[];
+  audit: AuditDto;
+}
+
+export interface ProductAttributeValue {
+  product_id: string;
+  attribute_id: string;
+  attribute_name: string;
+  attribute_code: string;
+  unit?: string;
+  data_type: "STRING" | "NUMBER" | "DECIMAL" | "INTEGER" | "BOOLEAN" | "DATE";
+  value_text?: string;
+  value_number?: number;
+  display_value: string;
+}
+
+// Service Process Types
+export interface ServiceProcess {
+  id: string;
+  code: string;
+  name: string;
+  description?: string;
+  estimated_duration: number;
+  is_default: boolean;
+  is_active: boolean;
+  step_count: number;
+  process_steps: ProcessStep[];
+  audit: AuditDto;
+}
+
+export interface ProcessStep {
+  id: string;
+  name: string;
+  description?: string;
+  process_id: string;
+  process_name: string;
+  step_order: number;
+  estimated_time: number;
+  is_required: boolean;
+  is_first_step: boolean;
+  is_last_step: boolean;
+  audit: AuditDto;
+}
+
 // Service API Types - Updated to match backend ServiceInfoDto with audit object
 export interface Service {
   service_id: string;
   service_url: string;
   service_name: string;
-  category_id: string;
-  category_name: string;
-  description: string;
-  estimated_duration: number; // Thời gian ước tính (phút)
+  category_id?: string;
+  category_name?: string;
+  description?: string;
   required_skill_level: SkillLevel;
   service_type_id: string;
-  service_type_name: string;
+  service_type_name?: string;
   is_featured: boolean;
   is_active: boolean;
-  service_process_id: string;
-  service_process_name: string;
-  service_process_code: string;
-  is_default_process: boolean; // Có sử dụng quy trình mặc định hay không
-  branch_id: string;
-  branch_name: string;
-  audit: AuditDto; // Audit fields are now in a separate object
+  service_process_id?: string;
+  service_process_name?: string;
+  service_process_code?: string;
+  is_default_process?: boolean;
+  estimated_duration?: number;
+  branch_id?: string;
+  branch_name?: string;
+  service_products?: ServiceProduct[];
+  service_process?: ServiceProcess;
+  audit: AuditDto;
 }
 
 // Enums
@@ -77,35 +151,60 @@ export interface ServicePageResponse {
   empty: boolean;
 }
 
-// Create Service Request
+// Create Service Request - Updated to include service_products and service_process
 export interface CreateServiceRequest {
   service_name: string;
   service_url: string;
   category_id?: string;
   description?: string;
-  estimated_duration?: number; // Thời gian ước tính (phút)
-  required_skill_level?: SkillLevel;
-  service_type_id?: string;
+  estimated_duration?: number; // ✅ Thêm estimated_duration
+  required_skill_level: SkillLevel;
+  service_type_id: string;
   is_featured?: boolean;
-  service_process_id?: string;
-  is_default_process?: boolean; // Có sử dụng quy trình mặc định hay không
-  branch_id?: string;
+  service_products?: ServiceProductRequest[];
+  service_process?: ServiceProcessRequest;
 }
 
-// Update Service Request
+export interface ServiceProductRequest {
+  product_id: string;
+  quantity: number;
+  unit: string;
+  notes?: string;
+  is_required: boolean;
+  sort_order: number;
+  id?: string; // For tracking existing products in edit mode
+}
+
+export interface ServiceProcessRequest {
+  code?: string; // Optional for update operations
+  name: string;
+  description?: string;
+  is_default: boolean;
+  process_steps: ProcessStepRequest[];
+}
+
+export interface ProcessStepRequest {
+  step_order: number;
+  name: string;
+  description?: string;
+  is_required: boolean;
+  is_active: boolean;
+  id?: string; // For tracking existing steps in edit mode
+}
+
+// Update Service Request - Updated to include service_products and service_process
 export interface UpdateServiceRequest {
   service_name?: string;
   service_url?: string;
   category_id?: string;
   description?: string;
-  estimated_duration?: number; // Thời gian ước tính (phút)
+  estimated_duration?: number; // ✅ Thêm estimated_duration
   required_skill_level?: SkillLevel;
   service_type_id?: string;
   is_featured?: boolean;
   is_active?: boolean;
-  service_process_id?: string;
-  is_default_process?: boolean; // Có sử dụng quy trình mặc định hay không
-  branch_id?: string;
+  service_products?: ServiceProductRequest[];
+  service_process?: ServiceProcessRequest;
 }
 
 // Update Service Status Request
