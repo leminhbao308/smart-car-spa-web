@@ -8,7 +8,10 @@ import {
   ServiceBayDropdownItem,
   BayAvailabilityRequest,
   ServiceBayStatistics,
-  BayStatus
+  BayStatus,
+  AvailableTechnician,
+  BulkAssignTechnicianRequest,
+  TechnicianAssignmentRequest
 } from "../types/service-bay.types";
 
 export class ServiceBayService {
@@ -331,6 +334,101 @@ export class ServiceBayService {
       return response.data.data;
     } catch (error: unknown) {
       console.log("Get bay bookings error:", error);
+      throw error;
+    }
+  }
+
+  // ==================== TECHNICIAN MANAGEMENT METHODS ====================
+
+  /**
+   * Get available technicians for service bay assignment
+   */
+  static async getAvailableTechnicians(): Promise<AvailableTechnician[]> {
+    try {
+      const response = await apiClient.get("/service-bays/available-technicians");
+      return response.data.data;
+    } catch (error: unknown) {
+      console.log("Get available technicians error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Bulk assign technicians to service bay
+   */
+  static async bulkAssignTechnicians(
+    bayId: string,
+    data: BulkAssignTechnicianRequest
+  ): Promise<ServiceBay> {
+    try {
+      const response = await apiClient.post(`/service-bays/${bayId}/assign-technicians`, data);
+      return response.data.data;
+    } catch (error: unknown) {
+      console.log("Bulk assign technicians error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Assign single technician to service bay
+   */
+  static async assignTechnician(
+    bayId: string,
+    data: TechnicianAssignmentRequest
+  ): Promise<ServiceBay> {
+    try {
+      const response = await apiClient.post(`/service-bays/${bayId}/assign-technician`, data);
+      return response.data.data;
+    } catch (error: unknown) {
+      console.log("Assign technician error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove technician from service bay
+   */
+  static async removeTechnician(
+    bayId: string,
+    technicianId: string
+  ): Promise<ServiceBay> {
+    try {
+      const response = await apiClient.post(`/service-bays/${bayId}/remove-technician/${technicianId}`);
+      return response.data.data;
+    } catch (error: unknown) {
+      console.log("Remove technician error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update technician status in service bay
+   */
+  static async updateTechnicianStatus(
+    bayId: string,
+    technicianId: string,
+    status: string,
+    notes?: string
+  ): Promise<ServiceBay> {
+    try {
+      const data = { status, notes };
+      const response = await apiClient.post(`/service-bays/${bayId}/technician/${technicianId}/status`, data);
+      return response.data.data;
+    } catch (error: unknown) {
+      console.log("Update technician status error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get technicians assigned to service bay
+   */
+  static async getBayTechnicians(bayId: string): Promise<AvailableTechnician[]> {
+    try {
+      const response = await apiClient.get(`/service-bays/${bayId}/technicians`);
+      return response.data.data;
+    } catch (error: unknown) {
+      console.log("Get bay technicians error:", error);
       throw error;
     }
   }

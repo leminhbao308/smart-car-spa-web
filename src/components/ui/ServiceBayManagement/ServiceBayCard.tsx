@@ -62,20 +62,18 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
     }
   };
 
-  const getAvailabilityStatus = () => {
-    if (bay.is_maintenance) {
-      return { text: "Bảo trì", color: "warning" };
-    }
-    if (bay.is_closed) {
-      return { text: "Tạm đóng", color: "error" };
-    }
-    if (bay.is_available) {
-      return { text: "Có sẵn", color: "success" };
-    }
-    return { text: "Bận", color: "processing" };
-  };
-
-  const availability = getAvailabilityStatus();
+  // const getAvailabilityStatus = () => {
+  //   if (bay.is_maintenance) {
+  //     return { text: "Bảo trì", color: "warning" };
+  //   }
+  //   if (bay.is_closed) {
+  //     return { text: "Tạm đóng", color: "error" };
+  //   }
+  //   if (bay.is_available) {
+  //     return { text: "Có sẵn", color: "success" };
+  //   }
+  //   return { text: "Bận", color: "processing" };
+  // };
 
   return (
     <Card
@@ -179,7 +177,35 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
             valueStyle={{ fontSize: "14px", color: "#faad14" }}
           />
         </Col>
+        <Col span={8}>
+          <Statistic
+            title="Kỹ thuật viên"
+            value={bay.technician_count || 0}
+            valueStyle={{ fontSize: "14px", color: "#1890ff" }}
+          />
+        </Col>
       </Row>
+
+      {/* Technician Info */}
+      {bay.technicians && bay.technicians.length > 0 && (
+        <div style={{ marginBottom: "12px" }}>
+          <Text type="secondary" style={{ fontSize: "12px", display: "block", marginBottom: "4px" }}>
+            Kỹ thuật viên:
+          </Text>
+          <Space wrap size="small">
+            {bay.technicians.slice(0, 3).map((technician) => (
+              <Tag key={technician.technician_id} color="blue">
+                {technician.technician_name}
+              </Tag>
+            ))}
+            {bay.technicians.length > 3 && (
+              <Tag color="default">
+                +{bay.technicians.length - 3} khác
+              </Tag>
+            )}
+          </Space>
+        </div>
+      )}
     </Card>
   );
 };

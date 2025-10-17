@@ -1,5 +1,22 @@
 import { BaseAuditEntity } from "./common.types";
 
+// Technician Types
+export interface TechnicianInfo {
+  technician_id: string;
+  technician_name: string;
+  technician_code: string;
+  technician_phone: string;
+  technician_email: string;
+  is_active: boolean;
+}
+
+export enum TechnicianStatus {
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  BUSY = "BUSY",
+  ON_BREAK = "ON_BREAK"
+}
+
 // Service Bay Types
 export interface ServiceBay extends BaseAuditEntity {
   bay_id: string;
@@ -21,6 +38,11 @@ export interface ServiceBay extends BaseAuditEntity {
   is_available: boolean;
   is_maintenance: boolean;
   is_closed: boolean;
+  
+  // Technician fields
+  technicians?: TechnicianInfo[];
+  technician_count?: number;
+  has_technicians?: boolean;
 }
 
 // Enums - BayType removed as per requirements
@@ -84,6 +106,11 @@ export interface UpdateServiceBayRequest {
   display_order?: number;
   status: BayStatus;
   notes?: string;
+  
+  // Technician management fields
+  technician_ids?: string[];
+  default_technician_status?: TechnicianStatus;
+  technician_notes?: string;
 }
 
 export interface ServiceBayFilterParam {
@@ -121,6 +148,28 @@ export const BAY_STATUS_OPTIONS = [
   { value: BayStatus.INACTIVE, label: "Không hoạt động", color: "default" }
 ];
 
+// Technician Management Types
+export interface AvailableTechnician {
+  technician_id: string;
+  technician_name: string;
+  technician_code: string;
+  technician_phone: string;
+  technician_email: string;
+  is_active: boolean;
+}
+
+export interface BulkAssignTechnicianRequest {
+  technician_ids: string[];
+  status: TechnicianStatus;
+  notes?: string;
+}
+
+export interface TechnicianAssignmentRequest {
+  technician_id: string;
+  status: TechnicianStatus;
+  notes?: string;
+}
+
 // Statistics Types
 export interface ServiceBayStatistics {
   bay_id: string;
@@ -134,3 +183,11 @@ export interface ServiceBayStatistics {
   last_booking_date?: string;
   next_booking_date?: string;
 }
+
+// Constants for Technician Status
+export const TECHNICIAN_STATUS_OPTIONS = [
+  { value: TechnicianStatus.ACTIVE, label: "Hoạt động", color: "success" },
+  { value: TechnicianStatus.INACTIVE, label: "Không hoạt động", color: "default" },
+  { value: TechnicianStatus.BUSY, label: "Bận", color: "processing" },
+  { value: TechnicianStatus.ON_BREAK, label: "Nghỉ giải lao", color: "warning" }
+];

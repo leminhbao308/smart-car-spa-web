@@ -78,7 +78,8 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
       }
       open={visible}
       onCancel={onCancel}
-      width={900}
+      width="95%"
+      style={{ maxWidth: 1000 }}
       footer={[
         <Button key="close" onClick={onCancel}>
           <CloseOutlined />
@@ -209,6 +210,93 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
               </Descriptions>
             </Col>
           </Row>
+        </Card>
+
+        {/* Technician Information */}
+        <Card title="Thông tin kỹ thuật viên" style={{ marginBottom: 16 }}>
+          {data.technicians && data.technicians.length > 0 ? (
+            <div>
+              <div style={{ marginBottom: 16 }}>
+                <Text strong style={{ fontSize: 16 }}>
+                  Tổng số kỹ thuật viên: {data.technicians.length}
+                </Text>
+              </div>
+              <Row gutter={[16, 16]}>
+                {data.technicians.map((technician) => (
+                  <Col span={24} key={technician.technician_id}>
+                    <Card
+                      size="small"
+                      style={{
+                        border: `1px solid ${technician.is_active ? '#52c41a' : '#d9d9d9'}`,
+                        backgroundColor: technician.is_active ? '#f6ffed' : '#fafafa'
+                      }}
+                    >
+                      <Row gutter={16} align="middle">
+                        <Col span={2}>
+                          <div style={{ textAlign: "center" }}>
+                            <UserOutlined 
+                              style={{ 
+                                fontSize: 24, 
+                                color: technician.is_active ? '#52c41a' : '#d9d9d9' 
+                              }} 
+                            />
+                          </div>
+                        </Col>
+                        <Col span={16}>
+                          <div>
+                            <div style={{ marginBottom: 4 }}>
+                              <Text strong style={{ fontSize: 16 }}>
+                                {technician.technician_name}
+                              </Text>
+                              <Tag 
+                                color={technician.is_active ? 'success' : 'default'} 
+                                style={{ marginLeft: 8 }}
+                              >
+                                {technician.is_active ? 'Hoạt động' : 'Không hoạt động'}
+                              </Tag>
+                            </div>
+                            <div style={{ marginBottom: 2 }}>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                <strong>Mã:</strong> {technician.technician_code}
+                              </Text>
+                            </div>
+                            <div style={{ marginBottom: 2 }}>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                <strong>SĐT:</strong> {technician.technician_phone}
+                              </Text>
+                            </div>
+                            <div>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                <strong>Email:</strong> {technician.technician_email}
+                              </Text>
+                            </div>
+                          </div>
+                        </Col>
+                        <Col span={6}>
+                          <div style={{ textAlign: "right" }}>
+                            <Tag 
+                              color={technician.is_active ? 'green' : 'red'}
+                              style={{ fontSize: 12 }}
+                            >
+                              {technician.is_active ? '✓ Đang làm việc' : '✗ Tạm nghỉ'}
+                            </Tag>
+                          </div>
+                        </Col>
+                      </Row>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </div>
+          ) : (
+            <Alert
+              message="Chưa có kỹ thuật viên"
+              description="Khu vực dịch vụ này chưa được gán kỹ thuật viên nào."
+              type="info"
+              showIcon
+              icon={<UserOutlined />}
+            />
+          )}
         </Card>
 
         {/* Audit Information */}

@@ -6,7 +6,10 @@ import {
   ServiceBayFilterParam,
   CreateServiceBayRequest,
   UpdateServiceBayRequest,
-  BayStatus
+  BayStatus,
+  AvailableTechnician,
+  BulkAssignTechnicianRequest,
+  TechnicianAssignmentRequest
 } from "../types/service-bay.types";
 
 // Query keys for service bays
@@ -23,6 +26,10 @@ export const serviceBayKeys = {
   active: (branchId?: string) => [...serviceBayKeys.all, 'active', { branchId }] as const,
   available: (branchId: string, startTime: string, endTime: string) => 
     [...serviceBayKeys.all, 'available', { branchId, startTime, endTime }] as const,
+  // Technician management keys
+  technicians: () => [...serviceBayKeys.all, 'technicians'] as const,
+  availableTechnicians: () => [...serviceBayKeys.technicians(), 'available'] as const,
+  bayTechnicians: (bayId: string) => [...serviceBayKeys.technicians(), 'bay', bayId] as const,
 };
 
 /**
@@ -295,4 +302,138 @@ export const useRefreshServiceBays = () => {
       queryKey: serviceBayKeys.lists(),
     });
   };
+};
+
+// ==================== TECHNICIAN MANAGEMENT HOOKS ====================
+
+/**
+ * Hook for getting available technicians
+ */
+export const useAvailableTechnicians = () => {
+  return useQuery({
+    queryKey: serviceBayKeys.availableTechnicians(),
+    queryFn: () => ServiceBayService.getAvailableTechnicians(),
+    enabled: true,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+/**
+ * Hook for getting technicians assigned to a service bay
+ */
+export const useBayTechnicians = (bayId: string | null) => {
+  return useQuery({
+    queryKey: serviceBayKeys.bayTechnicians(bayId || ''),
+    queryFn: () => ServiceBayService.getBayTechnicians(bayId!),
+    enabled: !!bayId,
+  });
+};
+
+/**
+ * Hook for bulk assigning technicians to service bay
+ */
+export const useBulkAssignTechnicians = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ bayId, data }: { bayId: string; data: BulkAssignTechnicianRequest }) =>
+      ServiceBayService.bulkAssignTechnicians(bayId, data),
+    onSuccess: (_, { bayId }) => {
+      // Invalidate service bay detail
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.detail(bayId),
+      });
+      // Invalidate bay technicians
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.bayTechnicians(bayId),
+      });
+      // Invalidate service bays list
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.lists(),
+      });
+    },
+  });
+};
+
+/**
+ * Hook for assigning single technician to service bay
+ */
+export const useAssignTechnician = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ bayId, data }: { bayId: string; data: TechnicianAssignmentRequest }) =>
+      ServiceBayService.assignTechnician(bayId, data),
+    onSuccess: (_, { bayId }) => {
+      // Invalidate service bay detail
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.detail(bayId),
+      });
+      // Invalidate bay technicians
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.bayTechnicians(bayId),
+      });
+      // Invalidate service bays list
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.lists(),
+      });
+    },
+  });
+};
+
+/**
+ * Hook for removing technician from service bay
+ */
+export const useRemoveTechnician = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ bayId, technicianId }: { bayId: string; technicianId: string }) =>
+      ServiceBayService.removeTechnician(bayId, technicianId),
+    onSuccess: (_, { bayId }) => {
+      // Invalidate service bay detail
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.detail(bayId),
+      });
+      // Invalidate bay technicians
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.bayTechnicians(bayId),
+      });
+      // Invalidate service bays list
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.lists(),
+      });
+    },
+  });
+};
+
+/**
+ * Hook for updating technician status in service bay
+ */
+export const useUpdateTechnicianStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ bayId, technicianId, status, notes }: { 
+      bayId: string; 
+      technicianId: string; 
+      status: string; 
+      notes?: string 
+    }) =>
+      ServiceBayService.updateTechnicianStatus(bayId, technicianId, status, notes),
+    onSuccess: (_, { bayId }) => {
+      // Invalidate service bay detail
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.detail(bayId),
+      });
+      // Invalidate bay technicians
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.bayTechnicians(bayId),
+      });
+      // Invalidate service bays list
+      queryClient.invalidateQueries({
+        queryKey: serviceBayKeys.lists(),
+      });
+    },
+  });
 };
