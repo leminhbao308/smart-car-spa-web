@@ -58,7 +58,7 @@ const ReturnsPage = () => {
   } = useFullfilledOrders();
   const {mutate: createReturn, isPending: isCreatingReturn} = useCreateReturn();
 
-  const [selectedOrder, setSelectedOrder] = useState<SaleOrderResponse | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<SaleReturnResponse | null>(null);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -101,11 +101,6 @@ const ReturnsPage = () => {
     }
   };
 
-  useEffect(() => {
-    console.log('Returned Orders:', returnedOrders);
-    console.log('Fullfilled Orders:', fullfilledOrders);
-  }, [returnedOrders, fullfilledOrders]);
-
   const calculateOrderTotal = (order: SaleOrderResponse) => {
     return order?.lines?.reduce((sum, line) =>
       sum + (line.quantity * Number(line.unit_price)), 0
@@ -132,7 +127,7 @@ const ReturnsPage = () => {
     });
   }, [returnedOrders, searchText, statusFilter, dateRange]);
 
-  const handleViewDetail = (order: SaleOrderResponse) => {
+  const handleViewDetail = (order: SaleReturnResponse) => {
     setSelectedOrder(order);
     setIsDetailModalVisible(true);
   };
@@ -246,7 +241,7 @@ const ReturnsPage = () => {
               type="text"
               size={"middle"}
               icon={<EyeOutlined/>}
-              onClick={() => handleViewDetail(record.sales_order)}
+              onClick={() => handleViewDetail(record)}
             />
           </Tooltip>
         </Space>
@@ -396,32 +391,32 @@ const ReturnsPage = () => {
                 <Descriptions.Item label="Mã đơn hàng" span={2}>
                   <Text strong code>{selectedOrder.id}</Text>
                 </Descriptions.Item>
+                <Descriptions.Item label="Người thực hiện hoàn trả" span={2}>
+                  {selectedOrder.created_by}
+                </Descriptions.Item>
                 <Descriptions.Item label="Trạng thái" span={1}>
                   <Tag
-                    color={getStatusColor(selectedOrder.status)}
-                    icon={getStatusIcon(selectedOrder.status)}
+                    color={getStatusColor(selectedOrder.sales_order.status)}
+                    icon={getStatusIcon(selectedOrder.sales_order.status)}
                   >
-                    {getStatusText(selectedOrder.status)}
+                    {getStatusText(selectedOrder.sales_order.status)}
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày tạo" span={1}>
                   {dayjs(selectedOrder.created_date).format("DD/MM/YYYY HH:mm")}
                 </Descriptions.Item>
                 <Descriptions.Item label="Khách hàng" span={1}>
-                  {selectedOrder.customer?.full_name || "Khách lẻ"}
+                  {selectedOrder.sales_order.customer?.full_name || "Khách lẻ"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Số điện thoại" span={1}>
-                  {selectedOrder.customer?.phone_number || "-"}
+                  {selectedOrder.sales_order.customer?.phone_number || "-"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Chi nhánh" span={1}>
                   {selectedOrder.branch.branch_name}
                 </Descriptions.Item>
-                <Descriptions.Item label="Kho hàng" span={1}>
-                  {selectedOrder.warehouse.branch.branch_name}
-                </Descriptions.Item>
                 <Descriptions.Item label="Số tiền hoàn trả" span={2}>
                   <Text strong style={{fontSize: "16px", color: "#ff4d4f"}}>
-                    ₫{calculateOrderTotal(selectedOrder).toLocaleString()}
+                    ₫{calculateOrderTotal(selectedOrder.sales_order).toLocaleString()}
                   </Text>
                 </Descriptions.Item>
               </Descriptions>
@@ -430,7 +425,7 @@ const ReturnsPage = () => {
 
               <Title level={5}>Chi tiết sản phẩm hoàn trả</Title>
               <Table
-                dataSource={selectedOrder.lines}
+                dataSource={selectedOrder.sales_order.lines}
                 columns={[
                   {
                     title: "Mã SP",
