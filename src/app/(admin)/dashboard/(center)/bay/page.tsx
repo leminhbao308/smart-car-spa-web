@@ -11,12 +11,9 @@ import {
   Select,
   Input,
   Statistic,
-  message,
   Divider,
 } from "antd";
 import {
-  PlusOutlined,
-  ReloadOutlined,
   FilterOutlined,
   SearchOutlined,
   ToolOutlined,
@@ -37,7 +34,6 @@ import {
 } from "@/components/ui/Modal/ServiceBayModals";
 import {
   ServiceBayGrid,
-  ServiceBayStatusModal,
 } from "@/components/ui/ServiceBayManagement";
 
 const { Title, Text } = Typography;
@@ -47,27 +43,35 @@ const { Search } = Input;
 const ServiceBayManagementPage = () => {
   // State management
   const [selectedBranch, setSelectedBranch] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<BayStatus | undefined>(undefined);
+  const [selectedStatus, setSelectedStatus] = useState<BayStatus | undefined>(
+    undefined
+  );
   const [searchText, setSearchText] = useState("");
-  
+
   // Modal states
   const [modalVisible, setModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [selectedBay, setSelectedBay] = useState<ServiceBay | null>(null);
   const [editData, setEditData] = useState<ServiceBay | null>(null);
 
   // Hooks
   const { branches } = useBranches({});
 
-  // Filter params
+  // Set default branch when branches are loaded
+  React.useEffect(() => {
+    if (branches && branches.length > 0 && !selectedBranch) {
+      setSelectedBranch(branches[0].branch_id);
+    }
+  }, [branches, selectedBranch]);
+
+  // Filter params - Always filter by selected branch
   const filterParams: ServiceBayFilterParam = useMemo(() => {
     const params: ServiceBayFilterParam = {
       page: 0,
       size: 50,
     };
 
-    // Only add filter params if they have values
+    // Always require a branch to be selected
     if (selectedBranch) {
       params.branch_id = selectedBranch;
     }
@@ -81,18 +85,30 @@ const ServiceBayManagementPage = () => {
     return params;
   }, [selectedBranch, selectedStatus, searchText]);
 
-  const { data: baysResponse, isLoading: loading, refetch: refreshBays } = useServiceBays(filterParams);
+  const {
+    data: baysResponse,
+    isLoading: loading,
+    refetch: refreshBays,
+  } = useServiceBays(filterParams);
   const bays = useMemo(() => baysResponse?.data?.content || [], [baysResponse]);
 
   // Statistics
   const statistics = useMemo(() => {
     const total = bays.length;
-    const active = bays.filter(bay => bay.status === BayStatus.ACTIVE).length;
-    const maintenance = bays.filter(bay => bay.status === BayStatus.MAINTENANCE).length;
-    const closed = bays.filter(bay => bay.status === BayStatus.CLOSED).length;
-    const available = bays.filter(bay => bay.is_available).length;
-    const totalBookings = bays.reduce((sum, bay) => sum + bay.total_bookings, 0);
-    const activeBookings = bays.reduce((sum, bay) => sum + bay.active_bookings, 0);
+    const active = bays.filter((bay) => bay.status === BayStatus.ACTIVE).length;
+    const maintenance = bays.filter(
+      (bay) => bay.status === BayStatus.MAINTENANCE
+    ).length;
+    const closed = bays.filter((bay) => bay.status === BayStatus.CLOSED).length;
+    const available = bays.filter((bay) => bay.is_available).length;
+    const totalBookings = bays.reduce(
+      (sum, bay) => sum + bay.total_bookings,
+      0
+    );
+    const activeBookings = bays.reduce(
+      (sum, bay) => sum + bay.active_bookings,
+      0
+    );
 
     return {
       total,
@@ -106,11 +122,6 @@ const ServiceBayManagementPage = () => {
   }, [bays]);
 
   // Handlers
-  const handleAdd = () => {
-    setEditData(null);
-    setModalVisible(true);
-  };
-
   const handleEdit = (bay: ServiceBay) => {
     setEditData(bay);
     setModalVisible(true);
@@ -121,26 +132,10 @@ const ServiceBayManagementPage = () => {
     setDetailModalVisible(true);
   };
 
-  const handleStatusChange = (bay: ServiceBay) => {
-    setSelectedBay(bay);
-    setStatusModalVisible(true);
-  };
-
   const handleModalSuccess = () => {
     setModalVisible(false);
     setEditData(null);
     refreshBays();
-  };
-
-  const handleStatusModalSuccess = () => {
-    setStatusModalVisible(false);
-    setSelectedBay(null);
-    refreshBays();
-  };
-
-  const handleRefresh = () => {
-    refreshBays();
-    message.success("Đã làm mới dữ liệu");
   };
 
   const handleFilterReset = () => {
@@ -150,14 +145,14 @@ const ServiceBayManagementPage = () => {
   };
 
   // Filter options
-  const branchOptions = branches.map(branch => ({
+  const branchOptions = branches.map((branch) => ({
     label: `${branch.branch_name} (${branch.branch_code})`,
     value: branch.branch_id,
   }));
 
   // bayTypeOptions removed as BayType is no longer used
 
-  const statusOptions = BAY_STATUS_OPTIONS.map(option => ({
+  const statusOptions = BAY_STATUS_OPTIONS.map((option) => ({
     label: option.label,
     value: option.value,
   }));
@@ -168,31 +163,21 @@ const ServiceBayManagementPage = () => {
       <div style={{ marginBottom: "24px" }}>
         <Row justify="space-between" align="middle">
           <Col>
-            <Title level={2} style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+            <Title
+              level={2}
+              style={{
+                margin: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
               <ToolOutlined style={{ color: "#1890ff" }} />
               Quản lý khu vực dịch vụ
             </Title>
             <Text type="secondary">
               Quản lý các khu vực dịch vụ tại chi nhánh
             </Text>
-          </Col>
-          <Col>
-            <Space>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={handleRefresh}
-                loading={loading}
-              >
-                Làm mới
-              </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAdd}
-              >
-                Thêm khu vực dịch vụ
-              </Button>
-            </Space>
           </Col>
         </Row>
       </div>
@@ -254,10 +239,12 @@ const ServiceBayManagementPage = () => {
               showSearch
               optionFilterProp="children"
               filterOption={(input, option) =>
-                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                String(option?.children || "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
               }
             >
-              {branchOptions.map(option => (
+              {branchOptions.map((option) => (
                 <Option key={option.value} value={option.value}>
                   {option.label}
                 </Option>
@@ -272,7 +259,7 @@ const ServiceBayManagementPage = () => {
               style={{ width: "100%" }}
               allowClear
             >
-              {statusOptions.map(option => (
+              {statusOptions.map((option) => (
                 <Option key={option.value} value={option.value}>
                   {option.label}
                 </Option>
@@ -291,9 +278,9 @@ const ServiceBayManagementPage = () => {
             </Space.Compact>
           </Col>
         </Row>
-        
+
         <Divider style={{ margin: "16px 0" }} />
-        
+
         <Row justify="space-between" align="middle">
           <Col>
             <Space>
@@ -301,12 +288,17 @@ const ServiceBayManagementPage = () => {
                 Hiển thị {bays.length} khu vực dịch vụ
                 {selectedBranch && (
                   <span style={{ marginLeft: "8px", color: "#1890ff" }}>
-                    • Chi nhánh: {branches.find(b => b.branch_id === selectedBranch)?.branch_name || selectedBranch}
+                    • Chi nhánh:{" "}
+                    {branches.find((b) => b.branch_id === selectedBranch)
+                      ?.branch_name || selectedBranch}
                   </span>
                 )}
                 {selectedStatus && (
                   <span style={{ marginLeft: "8px", color: "#faad14" }}>
-                    • Trạng thái: {BAY_STATUS_OPTIONS.find(bs => bs.value === selectedStatus)?.label || selectedStatus}
+                    • Trạng thái:{" "}
+                    {BAY_STATUS_OPTIONS.find(
+                      (bs) => bs.value === selectedStatus
+                    )?.label || selectedStatus}
                   </span>
                 )}
                 {searchText && (
@@ -325,7 +317,7 @@ const ServiceBayManagementPage = () => {
                 </Button>
               )}
             </Space>
-              </Col>
+          </Col>
         </Row>
       </Card>
 
@@ -336,7 +328,6 @@ const ServiceBayManagementPage = () => {
           loading={loading}
           onEdit={handleEdit}
           onView={handleView}
-          onStatusChange={handleStatusChange}
           emptyMessage="Không có khu vực dịch vụ nào phù hợp với bộ lọc"
         />
       </Card>
@@ -362,15 +353,6 @@ const ServiceBayManagementPage = () => {
         data={selectedBay}
       />
 
-      <ServiceBayStatusModal
-        visible={statusModalVisible}
-        onCancel={() => {
-          setStatusModalVisible(false);
-          setSelectedBay(null);
-        }}
-        onSuccess={handleStatusModalSuccess}
-        bay={selectedBay}
-      />
     </div>
   );
 };

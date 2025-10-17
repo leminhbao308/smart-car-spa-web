@@ -73,6 +73,7 @@ export interface CreateServiceBayRequest {
   bay_code?: string;
   description?: string;
   display_order?: number;
+  status: BayStatus;
   notes?: string;
 }
 
@@ -81,6 +82,7 @@ export interface UpdateServiceBayRequest {
   bay_code?: string;
   description?: string;
   display_order?: number;
+  status: BayStatus;
   notes?: string;
 }
 

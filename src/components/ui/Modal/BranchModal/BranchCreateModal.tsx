@@ -1,6 +1,6 @@
 ﻿"use client";
 import React from "react";
-import { Modal, Form, Select, Button, message, Space } from "antd";
+import { Modal, Form, Select, Button, Space, App } from "antd";
 import {
   MemoizedInput,
   MemoizedTextArea,
@@ -23,6 +23,7 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
+  const { message } = App.useApp();
 
   const handleSubmit = async () => {
     if (!centerId) {
@@ -69,28 +70,36 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
   };
 
   return (
-    <Modal
-      title="Thêm chi nhánh mới"
-      open={open}
-      onCancel={handleCancel}
-      width={800}
-      footer={[
-        <Button key="cancel" onClick={handleCancel}>
-          Hủy
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          loading={loading}
-          onClick={handleSubmit}
-        >
-          Tạo chi nhánh
-        </Button>,
-      ]}
-    >
-      <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
+    <App>
+      <Modal
+        title="Thêm chi nhánh mới"
+        open={open}
+        onCancel={handleCancel}
+        width={800}
+        footer={[
+          <Button key="cancel" onClick={handleCancel}>
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={loading}
+            onClick={handleSubmit}
+          >
+            Tạo chi nhánh
+          </Button>,
+        ]}
+      >
+      <Form 
+        form={form} 
+        layout="vertical" 
+        style={{ marginTop: 24 }}
+        initialValues={{
+          operating_status: "ACTIVE"
+        }}
+      >
         <Form.Item name="operating_status" label="Trạng thái hoạt động">
-          <Select placeholder="Chọn trạng thái" defaultValue="ACTIVE">
+          <Select placeholder="Chọn trạng thái">
             <Select.Option value="ACTIVE">Hoạt động</Select.Option>
             <Select.Option value="INACTIVE">Tạm dừng</Select.Option>
             <Select.Option value="MAINTENANCE">Bảo trì</Select.Option>
@@ -159,7 +168,8 @@ const BranchCreateModal: React.FC<BranchCreateModalProps> = ({
           <MemoizedInput type="date" />
         </Form.Item>
       </Form>
-    </Modal>
+      </Modal>
+    </App>
   );
 };
 
