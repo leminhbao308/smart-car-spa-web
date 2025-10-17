@@ -31,16 +31,12 @@ export const useInitiatePayment = () => {
  * @param options - Configuration options
  * @param options.enabled - Whether to enable the query
  * @param options.refetchInterval - Interval in ms to refetch (default: 3000ms)
- * @param options.onSuccess - Callback when payment is successful
- * @param options.onCancelled - Callback when payment is cancelled
  */
 export const useVerifyPayment = (
   orderCode: number | null,
   options?: {
     enabled?: boolean;
     refetchInterval?: number;
-    onSuccess?: (data: any) => void;
-    onCancelled?: (data: any) => void;
   }
 ) => {
   return useQuery({
@@ -57,18 +53,12 @@ export const useVerifyPayment = (
       const data = query.state.data;
       // Stop polling if payment is completed or cancelled
       if (data?.status === "COMPLETED" || data?.status === "CANCELED") {
-        if (data?.status === "COMPLETED" && options?.onSuccess) {
-          options.onSuccess(data);
-        }
-        if (data?.status === "CANCELED" && options?.onCancelled) {
-          options.onCancelled(data);
-        }
-        return false;
+        return false; // Dừng polling
       }
-      // Continue polling with specified interval (default 3 seconds)
+      // Continue polling
       return options?.refetchInterval || 3000;
     },
-    refetchIntervalInBackground: true, // Continue polling even when tab is not focused
+    refetchIntervalInBackground: true,
   });
 };
 
