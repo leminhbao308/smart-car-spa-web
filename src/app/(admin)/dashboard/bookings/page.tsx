@@ -158,7 +158,7 @@ const BookingsPage = () => {
   // Fetch additional data for enrichment
   const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
   const { profiles: allVehicles, loading: isLoadingVehicles } =
-    useVehicleProfiles({ size: 1000 });
+    useVehicleProfiles({ params: { size: 1000 }});
 
   // Helper function to enrich booking data with customer and vehicle info
   const enrichBookingData = (

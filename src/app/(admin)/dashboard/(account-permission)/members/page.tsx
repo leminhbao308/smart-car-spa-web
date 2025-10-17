@@ -8,9 +8,9 @@ import {
   CustomerVehiclesModal,
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Avatar, message } from "antd";
-import { PhoneOutlined } from "@ant-design/icons";
-import { UserManagementInfo } from "@/lib/api/types";
+import {Tag, Avatar, message, Space, Button} from "antd";
+import {CarOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PhoneOutlined} from "@ant-design/icons";
+import {Promotion, UserManagementInfo} from "@/lib/api/types";
 import { useUserManagement } from "@/lib/api/hooks/useUserManagement";
 import { calculateAge } from "@/components/utils/helper/member.helper";
 
@@ -22,7 +22,7 @@ const MembersPage = () => {
     users,
     pagination,
     isLoading,
-    error, 
+    error,
     deleteUser,
     setFilters,
     goToPage,
@@ -151,6 +151,51 @@ const MembersPage = () => {
       onFilter: (value, record: UserManagementInfo) =>
         record.is_active === value,
     },
+    {
+      title: "Thao tác",
+      key: "action",
+      width: 180,
+      render: (_, record: UserManagementInfo) => (
+        <Space>
+          <Button
+            type="primary"
+            icon={<EyeOutlined/>}
+            onClick={() => handleView(record)}
+            size={"small"}
+          >
+            Xem
+          </Button>
+          <Button
+            type="default"
+            icon={<EditOutlined/>}
+            onClick={() => handleEdit(record)}
+            size={"small"}
+            disabled={record.is_deleted}
+          >
+            Sửa
+          </Button>
+          <Button
+            type="default"
+            icon={<CarOutlined />}
+            onClick={() => handleViewVehicles(record)}
+            size={"small"}
+            disabled={record.is_deleted}
+          >
+            Xe của KH
+          </Button>
+          <Button
+            type="default"
+            danger
+            icon={<DeleteOutlined/>}
+            onClick={() => handleDeleteUser(record)}
+            size={"small"}
+            disabled={!record.is_active && record.is_deleted}
+          >
+            Xóa
+          </Button>
+        </Space>
+      ),
+    },
   ];
 
   // Handlers
@@ -217,26 +262,12 @@ const MembersPage = () => {
         columns={columns}
         loading={isLoading}
         onAdd={handleAdd}
-        onEdit={handleEdit}
-        onEditCondition={(record: UserManagementInfo) => !record.is_deleted}
-        onView={handleView}
         addButtonText="Thêm khách hàng"
         searchable={true}
         searchPlaceholder="Tìm kiếm khách hàng theo tên, email, số điện thoại..."
         searchFields={["full_name", "email", "phone_number", "address"]}
         useServerSearch={true}
         onSearch={searchUsers}
-        actions={[
-          {
-            key: "delete-user",
-            label: "Xóa",
-            type: "default",
-            danger: true,
-            onClick: handleDeleteUser,
-            condition: (record: UserManagementInfo) =>
-              record.is_active && !record.is_deleted,
-          },
-        ]}
         scroll={{ x: 1200 }}
         rowKey="user_id"
         pagination={{

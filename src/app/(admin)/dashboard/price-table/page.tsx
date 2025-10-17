@@ -12,7 +12,7 @@ import {
   Input,
   Button,
   message,
-  Spin,
+  Spin, App,
 } from "antd";
 import {
   EditOutlined,
@@ -37,7 +37,7 @@ import {ServiceService} from "@/lib/api/services/service.service";
 import {servicePackageService} from "@/lib/api/services/service-package.service";
 import {PriceBook, PriceBookItem} from "@/lib/api/types/price-book.types";
 import {useBranches} from "@/lib/api/hooks/useBranches";
-import {Product, Service, ServicePackage} from "@/lib/api";
+import {Product, Promotion, Service, ServicePackage} from "@/lib/api";
 import PriceBookDetailModal from "@/components/ui/Modal/PriceTableModals/PriceBookDetailModal";
 import PriceBookFormModal from "@/components/ui/Modal/PriceTableModals/PriceBookFormModal";
 
@@ -66,6 +66,9 @@ const PRICE_TABLE_STATUSES = [
 ];
 
 const PriceBookPage = () => {
+  // Ant Design Message
+  const {message} = App.useApp();
+
   const [priceBooks, setPriceBooks] = useState<PriceTableUI[]>([]);
   const [filteredData, setFilteredData] = useState<PriceTableUI[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,10 +84,8 @@ const PriceBookPage = () => {
   // Cached data for products, services, service packages
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [servicePackages, setServicePackages] = useState<ServicePackage[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
-  const {showModal} = useConfirmationModalContext();
   const {branches} = useBranches({});
 
   // Filter states
@@ -97,7 +98,7 @@ const PriceBookPage = () => {
     if (dataLoaded) return; // Skip if already loaded
 
     try {
-      const [productsResponse, servicesResponse, servicePackagesResponse] = await Promise.all([
+      const [productsResponse, servicesResponse] = await Promise.all([
         productService.getAllProducts({
           page: 1,
           size: 1000,
@@ -107,7 +108,6 @@ const PriceBookPage = () => {
           page: 0,
           size: 1000,
         }),
-        servicePackageService.getAllServicePackages(0, 1000),
       ]);
 
       setProducts(productsResponse.data.content || []);
@@ -116,7 +116,6 @@ const PriceBookPage = () => {
       } else {
         setServices(servicesResponse.data || []);
       }
-      setServicePackages(servicePackagesResponse.data.content || []);
       setDataLoaded(true);
     } catch (error: any) {
       console.error("Failed to fetch master data:", error);
@@ -414,87 +413,35 @@ const PriceBookPage = () => {
         );
       },
     },
-  ];
-
-  const actions = [
     {
-      key: "view",
-      label: "Xem chi tiết",
-      icon: <EyeOutlined/>,
-      onClick: (record: PriceTableUI) => {
-        fetchPriceBookDetails(record.id);
-      },
+      title: "Thao tác",
+      key: "action",
+      width: 250,
+      render: (_, record: PriceTableUI) => (
+        <Space>
+          <Button
+            type="primary"
+            icon={<EyeOutlined/>}
+            onClick={() => fetchPriceBookDetails(record.id)}
+            size={"small"}
+          >
+            Xem
+          </Button>
+          <Button
+            type="default"
+            icon={<EditOutlined/>}
+            onClick={() => handleEdit(record)}
+            size={"small"}
+          >
+            Sửa
+          </Button>
+        </Space>
+      ),
     },
-    {
-      key: "edit",
-      label: "Chỉnh sửa",
-      icon: <EditOutlined/>,
-      onClick: (record: PriceTableUI) => {
-        handleEdit(record);
-      },
-    }
   ];
-
-  // Statistics - use useMemo to avoid recalculation
-  const statistics = useMemo(() => {
-    const totalTables = priceBooks.length;
-    const activeTables = priceBooks.filter((t) => t.active).length;
-    const allItems = priceBooks.flatMap((pb) => pb.items || []);
-    const itemTypeCounts = getItemTypeCounts(allItems);
-
-    return {
-      totalTables,
-      activeTables,
-      itemTypeCounts,
-    };
-  }, [priceBooks]);
 
   return (
     <div>
-      {/* Statistics */}
-      <Row gutter={[16, 16]} style={{marginBottom: 24}}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Tổng bảng giá"
-              value={statistics.totalTables}
-              prefix={<DollarOutlined/>}
-              valueStyle={{color: "#1890ff"}}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Đang áp dụng"
-              value={statistics.activeTables}
-              prefix={<ShopOutlined/>}
-              valueStyle={{color: "#52c41a"}}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Sản phẩm"
-              value={statistics.itemTypeCounts.PRODUCT}
-              prefix={<ShoppingOutlined/>}
-              valueStyle={{color: "#1890ff"}}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Dịch vụ & Gói"
-              value={statistics.itemTypeCounts.SERVICE + statistics.itemTypeCounts.SERVICE_PACKAGE}
-              prefix={<ToolOutlined/>}
-              valueStyle={{color: "#52c41a"}}
-            />
-          </Card>
-        </Col>
-      </Row>
-
       {/* Filters */}
       <Card title="Bộ lọc" style={{marginBottom: 24}} size="small">
         <Row gutter={[16, 8]}>
@@ -522,7 +469,7 @@ const PriceBookPage = () => {
               ))}
             </Select>
           </Col>
-          <Col span={8}>
+          <Col span={5}>
             <Select
               placeholder="Chọn trạng thái"
               value={selectedStatus}
@@ -537,10 +484,8 @@ const PriceBookPage = () => {
               ))}
             </Select>
           </Col>
-        </Row>
-        <Row style={{marginTop: 16}}>
-          <Col>
-            <Button icon={<ReloadOutlined/>} onClick={handleResetFilters}>
+          <Col span={3}>
+            <Button icon={<ReloadOutlined/>} onClick={handleResetFilters} style={{width: "100%"}}>
               Xóa bộ lọc
             </Button>
           </Col>
@@ -576,7 +521,6 @@ const PriceBookPage = () => {
           <AdminTable
             dataSource={filteredData}
             columns={columns}
-            actions={actions}
             showAddButton={false}
             searchable={false}
             pagination={{
@@ -595,7 +539,6 @@ const PriceBookPage = () => {
         selectedPriceBook={selectedPriceBook}
         products={products}
         services={services}
-        servicePackages={servicePackages}
         onClose={() => setDetailModalVisible(false)}
       />
 
@@ -607,7 +550,6 @@ const PriceBookPage = () => {
         priceBook={selectedPriceBook}
         products={products}
         services={services}
-        servicePackages={servicePackages}
         branches={branches}
         onClose={() => {
           setFormModalVisible(false);

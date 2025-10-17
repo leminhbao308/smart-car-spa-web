@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect} from "react";
 import {
   Modal,
   Form,
@@ -11,27 +11,31 @@ import {
   Alert,
   Spin,
   Typography,
-  message} from "antd";
+  message, Input, Switch
+} from "antd";
 import {
   CarOutlined,
   InfoCircleOutlined,
   NumberOutlined,
   FileTextOutlined,
   UserOutlined,
-  EditOutlined} from "@ant-design/icons";
+  EditOutlined
+} from "@ant-design/icons";
 
-const { Title, Text } = Typography;
-import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
-import { useVehicleTypesDropdown } from "@/lib/api/hooks/useVehicleTypes";
-import { useVehicleBrandsDropdown } from "@/lib/api/hooks/useVehicleBrands";
-import { VehicleBrandSelect } from "@/components/ui/VehicleBrandSelect";
-import { VehicleTypeSelect } from "@/components/ui/VehicleTypeSelect";
-import { VehicleModelSelect } from "@/components/ui/VehicleModelSelect";
-import { CustomerSelect } from "@/components/ui/CustomerSelect";
-import { VehicleProfileService } from "@/lib/api/services/vehicle-profile.service";
-import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
+const {Title, Text} = Typography;
+import {VehicleProfileDisplay} from "@/lib/api/types/vehicle-profile.types";
+import {useVehicleTypesDropdown} from "@/lib/api/hooks/useVehicleTypes";
+import {useVehicleBrandsDropdown} from "@/lib/api/hooks/useVehicleBrands";
+import {VehicleBrandSelect} from "@/components/ui/VehicleBrandSelect";
+import {VehicleTypeSelect} from "@/components/ui/VehicleTypeSelect";
+import {VehicleModelSelect} from "@/components/ui/VehicleModelSelect";
+import {CustomerSelect} from "@/components/ui/CustomerSelect";
+import {VehicleProfileService} from "@/lib/api/services/vehicle-profile.service";
+import {MemoizedInput, MemoizedTextArea, MemoizedInputNumber} from "@/components/ui/MemoizedComponents";
+import {useUser} from "@/lib/api/hooks";
 
 interface EditVehicleProfileModalProps {
+  ownerId?: string;
   visible: boolean;
   onCancel: () => void;
   onSuccess: (updatedProfile: VehicleProfileDisplay) => void;
@@ -40,17 +44,22 @@ interface EditVehicleProfileModalProps {
 }
 
 const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
-  visible,
-  onCancel,
-  onSuccess,
-  profile,
-  loading = false}) => {
+                                                                           ownerId,
+                                                                           visible,
+                                                                           onCancel,
+                                                                           onSuccess,
+                                                                           profile,
+                                                                           loading = false
+                                                                         }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
+  // fetch user by ownerId and set to form if ownerId is provided
+  const {user: owner, loading: isOwnerLoading} = useUser(ownerId || null);
+
   // Get dropdown data from APIs
-  const { loading: typesLoading, error: typesError } = useVehicleTypesDropdown();
-  const { loading: brandsLoading, error: brandsError } = useVehicleBrandsDropdown();
+  const {loading: typesLoading, error: typesError} = useVehicleTypesDropdown();
+  const {loading: brandsLoading, error: brandsError} = useVehicleBrandsDropdown();
 
   useEffect(() => {
     if (visible && profile) {
@@ -62,9 +71,27 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
         vehicle_type_id: profile.vehicle_type_id,
         vehicle_model_id: profile.vehicle_model_id,
         owner_id: profile.owner_id,
-        distance_traveled: profile.distance_traveled});
+        distance_traveled: profile.distance_traveled,
+        is_active: profile.is_active,
+      });
+
+      // Set owner_id if ownerId is provided
+      if (ownerId) {
+        form.setFieldsValue({
+          owner_id: ownerId,
+        });
+      }
     }
-  }, [visible, profile, form]);
+  }, [visible, profile, form, ownerId]);
+
+  // Set owner_id when owner data is loaded
+  useEffect(() => {
+    if (ownerId && owner && visible) {
+      form.setFieldsValue({
+        owner_id: ownerId,
+      });
+    }
+  }, [ownerId, owner, visible, form]);
 
   const handleSubmit = async () => {
     try {
@@ -83,7 +110,9 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
         vehicle_type_id: values.vehicle_type_id,
         vehicle_model_id: values.vehicle_model_id,
         owner_id: values.owner_id,
-        distance_traveled: values.distance_traveled};
+        distance_traveled: values.distance_traveled,
+        is_active: values.is_active,
+      };
 
       console.log("Updating vehicle profile with data:", updateData);
 
@@ -117,7 +146,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
   return (
     <Modal
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
           <div style={{
             background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
             borderRadius: '50%',
@@ -128,13 +157,13 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
             justifyContent: 'center',
             color: 'white'
           }}>
-            <EditOutlined style={{ fontSize: 18 }} />
+            <EditOutlined style={{fontSize: 18}}/>
           </div>
           <div>
-            <Title level={4} style={{ margin: 0, color: '#1f2937' }}>
+            <Title level={4} style={{margin: 0, color: '#1f2937'}}>
               Chỉnh sửa hồ sơ xe
             </Title>
-            <Text type="secondary" style={{ fontSize: 13 }}>
+            <Text type="secondary" style={{fontSize: 13}}>
               Cập nhật thông tin cho {profile.license_plate}
             </Text>
           </div>
@@ -143,7 +172,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
       open={visible}
       onCancel={handleCancel}
       width={1000}
-      style={{ top: 20 }}
+      style={{top: 20}}
       footer={[
         <Button key="cancel" onClick={handleCancel} size="large">
           Hủy
@@ -187,8 +216,8 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
           borderRadius: 8,
           marginBottom: 20
         }}>
-          <Spin size="large" />
-          <div style={{ marginTop: 12, color: '#64748b', fontSize: 14 }}>
+          <Spin size="large"/>
+          <div style={{marginTop: 12, color: '#64748b', fontSize: 14}}>
             Đang tải dữ liệu từ server...
           </div>
         </div>
@@ -200,12 +229,12 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
         requiredMark={false}
         scrollToFirstError
         disabled={isDataLoading || hasApiError}
-        style={{ padding: '0 4px' }}
+        style={{padding: '0 4px'}}
       >
         {/* Owner Information Section */}
         <Card
           title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
               <div style={{
                 background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                 borderRadius: 6,
@@ -216,15 +245,16 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
                 justifyContent: 'center',
                 color: 'white'
               }}>
-                <UserOutlined style={{ fontSize: 14 }} />
+                <UserOutlined style={{fontSize: 14}}/>
               </div>
               <div>
-                <Title level={5} style={{ margin: 0, color: '#1f2937' }}>
+                <Title level={5} style={{margin: 0, color: '#1f2937'}}>
                   Thông tin chủ xe
                 </Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Chọn khách hàng làm chủ xe
-                </Text>
+                {!ownerId &&
+                    <Text type="secondary" style={{fontSize: 12}}>
+                        Chọn khách hàng làm chủ xe
+                    </Text>}
               </div>
             </div>
           }
@@ -247,21 +277,27 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
             <Col xs={24}>
               <Form.Item
                 label={
-                  <span style={{ fontWeight: 500, color: '#374151' }}>
-                    Chủ xe <span style={{ color: '#ef4444' }}>*</span>
+                  <span style={{fontWeight: 500, color: '#374151'}}>
+                    Chủ xe <span style={{color: '#ef4444'}}>*</span>
                   </span>
                 }
                 name="owner_id"
-                rules={[{ required: true, message: "Vui lòng chọn chủ xe!" }]}
+                rules={[{required: true, message: "Vui lòng chọn chủ xe!"}]}
               >
-                <CustomerSelect
-                  placeholder="Chọn khách hàng"
-                  size="large"
-                  style={{
-                    borderRadius: 8,
-                    border: '1px solid #d1d5db'
-                  }}
-                />
+                {ownerId &&
+                    <Spin spinning={isOwnerLoading}>
+                        <Input defaultValue={owner?.full_name} disabled/>
+                    </Spin>
+                }
+                {!ownerId &&
+                    <CustomerSelect
+                        placeholder="Chọn khách hàng"
+                        size="large"
+                        style={{
+                          borderRadius: 8,
+                          border: '1px solid #d1d5db'
+                        }}
+                    />}
               </Form.Item>
             </Col>
           </Row>
@@ -270,7 +306,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
         {/* Basic Information Section */}
         <Card
           title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
               <div style={{
                 background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
                 borderRadius: 6,
@@ -281,13 +317,13 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
                 justifyContent: 'center',
                 color: 'white'
               }}>
-                <NumberOutlined style={{ fontSize: 14 }} />
+                <NumberOutlined style={{fontSize: 14}}/>
               </div>
               <div>
-                <Title level={5} style={{ margin: 0, color: '#1f2937' }}>
+                <Title level={5} style={{margin: 0, color: '#1f2937'}}>
                   Thông tin cơ bản
                 </Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" style={{fontSize: 12}}>
                   Biển số và số km hiện tại
                 </Text>
               </div>
@@ -309,16 +345,16 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
           }}
         >
           <Row gutter={[20, 16]}>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={9}>
               <Form.Item
                 label={
-                  <span style={{ fontWeight: 500, color: '#374151' }}>
-                    Biển số xe <span style={{ color: '#ef4444' }}>*</span>
+                  <span style={{fontWeight: 500, color: '#374151'}}>
+                    Biển số xe <span style={{color: '#ef4444'}}>*</span>
                   </span>
                 }
                 name="license_plate"
                 rules={[
-                  { required: true, message: "Vui lòng nhập biển số xe!" },
+                  {required: true, message: "Vui lòng nhập biển số xe!"},
                   {
                     pattern: /^[0-9]{2}[A-Z]{1,2}-[0-9]{4,5}$/,
                     message: "Biển số không đúng định dạng! (VD: 51A-12345)"
@@ -339,17 +375,17 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
               </Form.Item>
             </Col>
 
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={9}>
               <Form.Item
                 label={
-                  <span style={{ fontWeight: 500, color: '#374151' }}>
-                    Số km đã đi <span style={{ color: '#ef4444' }}>*</span>
+                  <span style={{fontWeight: 500, color: '#374151'}}>
+                    Số km đã đi <span style={{color: '#ef4444'}}>*</span>
                   </span>
                 }
                 name="distance_traveled"
                 rules={[
-                  { required: true, message: "Vui lòng nhập số km!" },
-                  { type: 'number', min: 0, message: "Số km phải lớn hơn hoặc bằng 0!" },
+                  {required: true, message: "Vui lòng nhập số km!"},
+                  {type: 'number', min: 0, message: "Số km phải lớn hơn hoặc bằng 0!"},
                 ]}
               >
                 <MemoizedInputNumber
@@ -364,13 +400,31 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
                 />
               </Form.Item>
             </Col>
+
+            <Col xs={24} sm={6}>
+              <Form.Item
+                label={
+                  <span style={{fontWeight: 500, color: '#374151'}}>
+                    Trạng thái hoạt động<span style={{color: '#ef4444'}}>*</span>
+                  </span>
+                }
+                name="is_active"
+                valuePropName="checked"
+                style={{marginBottom: 0}}
+              >
+                <Switch
+                  checkedChildren="Đang hoạt động"
+                  unCheckedChildren="Đã ngừng"
+                />
+              </Form.Item>
+            </Col>
           </Row>
         </Card>
 
         {/* Vehicle Details Section */}
         <Card
           title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
               <div style={{
                 background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                 borderRadius: 6,
@@ -381,13 +435,13 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
                 justifyContent: 'center',
                 color: 'white'
               }}>
-                <CarOutlined style={{ fontSize: 14 }} />
+                <CarOutlined style={{fontSize: 14}}/>
               </div>
               <div>
-                <Title level={5} style={{ margin: 0, color: '#1f2937' }}>
+                <Title level={5} style={{margin: 0, color: '#1f2937'}}>
                   Thông tin xe
                 </Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" style={{fontSize: 12}}>
                   Hãng, loại và dòng xe
                 </Text>
               </div>
@@ -412,12 +466,12 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
             <Col xs={24} sm={12}>
               <Form.Item
                 label={
-                  <span style={{ fontWeight: 500, color: '#374151' }}>
-                    Hãng xe <span style={{ color: '#ef4444' }}>*</span>
+                  <span style={{fontWeight: 500, color: '#374151'}}>
+                    Hãng xe <span style={{color: '#ef4444'}}>*</span>
                   </span>
                 }
                 name="vehicle_brand_id"
-                rules={[{ required: true, message: "Vui lòng chọn hãng xe!" }]}
+                rules={[{required: true, message: "Vui lòng chọn hãng xe!"}]}
               >
                 <VehicleBrandSelect
                   placeholder="Chọn hãng xe"
@@ -434,12 +488,12 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
             <Col xs={24} sm={12}>
               <Form.Item
                 label={
-                  <span style={{ fontWeight: 500, color: '#374151' }}>
-                    Loại xe <span style={{ color: '#ef4444' }}>*</span>
+                  <span style={{fontWeight: 500, color: '#374151'}}>
+                    Loại xe <span style={{color: '#ef4444'}}>*</span>
                   </span>
                 }
                 name="vehicle_type_id"
-                rules={[{ required: true, message: "Vui lòng chọn loại xe!" }]}
+                rules={[{required: true, message: "Vui lòng chọn loại xe!"}]}
               >
                 <VehicleTypeSelect
                   placeholder="Chọn loại xe"
@@ -458,12 +512,12 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
             <Col xs={24} sm={12}>
               <Form.Item
                 label={
-                  <span style={{ fontWeight: 500, color: '#374151' }}>
-                    Dòng xe <span style={{ color: '#ef4444' }}>*</span>
+                  <span style={{fontWeight: 500, color: '#374151'}}>
+                    Dòng xe <span style={{color: '#ef4444'}}>*</span>
                   </span>
                 }
                 name="vehicle_model_id"
-                rules={[{ required: true, message: "Vui lòng chọn dòng xe!" }]}
+                rules={[{required: true, message: "Vui lòng chọn dòng xe!"}]}
               >
                 <VehicleModelSelect
                   placeholder="Chọn dòng xe"
@@ -481,7 +535,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
         {/* Additional Information Section */}
         <Card
           title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
               <div style={{
                 background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
                 borderRadius: 6,
@@ -492,13 +546,13 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
                 justifyContent: 'center',
                 color: 'white'
               }}>
-                <FileTextOutlined style={{ fontSize: 14 }} />
+                <FileTextOutlined style={{fontSize: 14}}/>
               </div>
               <div>
-                <Title level={5} style={{ margin: 0, color: '#1f2937' }}>
+                <Title level={5} style={{margin: 0, color: '#1f2937'}}>
                   Thông tin bổ sung
                 </Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" style={{fontSize: 12}}>
                   Mô tả chi tiết về xe (tùy chọn)
                 </Text>
               </div>
@@ -523,7 +577,7 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
             <Col xs={24}>
               <Form.Item
                 label={
-                  <span style={{ fontWeight: 500, color: '#374151' }}>
+                  <span style={{fontWeight: 500, color: '#374151'}}>
                     Mô tả chi tiết
                   </span>
                 }
@@ -547,68 +601,68 @@ const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = ({
         </Card>
 
         {/* Help Section */}
-        <Card
-          title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                borderRadius: 6,
-                width: 32,
-                height: 32,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white'
-              }}>
-                <InfoCircleOutlined style={{ fontSize: 14 }} />
+        {!ownerId && <Card
+            title={
+              <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                <div style={{
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  borderRadius: 6,
+                  width: 32,
+                  height: 32,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white'
+                }}>
+                  <InfoCircleOutlined style={{fontSize: 14}}/>
+                </div>
+                <div>
+                  <Title level={5} style={{margin: 0, color: '#1f2937'}}>
+                    Hướng dẫn chỉnh sửa
+                  </Title>
+                  <Text type="secondary" style={{fontSize: 12}}>
+                    Lưu ý quan trọng khi cập nhật hồ sơ xe
+                  </Text>
+                </div>
               </div>
-              <div>
-                <Title level={5} style={{ margin: 0, color: '#1f2937' }}>
-                  Hướng dẫn chỉnh sửa
-                </Title>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Lưu ý quan trọng khi cập nhật hồ sơ xe
-                </Text>
-              </div>
-            </div>
-          }
-          size="small"
-          style={{
-            borderRadius: 12,
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
-          }}
-          styles={{
-            header: {
-              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-              borderRadius: '12px 12px 0 0',
-              borderBottom: '1px solid #e5e7eb'
             }
-          }}
+            size="small"
+            style={{
+              borderRadius: 12,
+              border: '1px solid #e5e7eb',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
+            }}
+            styles={{
+              header: {
+                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                borderRadius: '12px 12px 0 0',
+                borderBottom: '1px solid #e5e7eb'
+              }
+            }}
         >
-          <div style={{
-            fontSize: 13,
-            color: '#92400e',
-            lineHeight: 1.6
-          }}>
-            <div style={{ marginBottom: 12 }}>
-              <strong style={{ color: '#b45309' }}>✏️ Chỉnh sửa:</strong> Cập nhật thông tin cần thiết cho hồ sơ xe
+            <div style={{
+              fontSize: 13,
+              color: '#92400e',
+              lineHeight: 1.6
+            }}>
+                <div style={{marginBottom: 12}}>
+                    <strong style={{color: '#b45309'}}>✏️ Chỉnh sửa:</strong> Cập nhật thông tin cần thiết cho hồ sơ xe
+                </div>
+                <div style={{marginBottom: 12}}>
+                    <strong style={{color: '#b45309'}}>📋 Biển số xe:</strong> Đảm bảo biển số đúng định dạng (VD: 51A-12345)
+                </div>
+                <div style={{marginBottom: 12}}>
+                    <strong style={{color: '#b45309'}}>📊 Số km:</strong> Cập nhật số km hiện tại chính xác
+                </div>
+                <div style={{marginBottom: 12}}>
+                    <strong style={{color: '#b45309'}}>🏭 Thông tin xe:</strong> Chọn đúng hãng, loại và dòng xe
+                </div>
+                <div>
+                    <strong style={{color: '#b45309'}}>👤 Chủ xe:</strong> Xác nhận thông tin chủ xe chính xác
+                </div>
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <strong style={{ color: '#b45309' }}>📋 Biển số xe:</strong> Đảm bảo biển số đúng định dạng (VD: 51A-12345)
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <strong style={{ color: '#b45309' }}>📊 Số km:</strong> Cập nhật số km hiện tại chính xác
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <strong style={{ color: '#b45309' }}>🏭 Thông tin xe:</strong> Chọn đúng hãng, loại và dòng xe
-            </div>
-            <div>
-              <strong style={{ color: '#b45309' }}>👤 Chủ xe:</strong> Xác nhận thông tin chủ xe chính xác
-            </div>
-          </div>
-        </Card>
+        </Card>}
       </Form>
     </Modal>
   );

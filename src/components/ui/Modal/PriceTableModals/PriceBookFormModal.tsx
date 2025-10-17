@@ -34,7 +34,6 @@ interface PriceBookFormModalProps {
   priceBook?: PriceTableUI | null;
   products: Product[];
   services: Service[];
-  servicePackages: ServicePackage[];
   branches: BranchDisplay[];
   onClose: () => void;
   onSubmit: (data: any) => Promise<void>;
@@ -52,7 +51,7 @@ interface PriceBookFormData {
 }
 
 interface ItemFormData {
-  item_type: "PRODUCT" | "SERVICE" | "SERVICE_PACKAGE";
+  item_type: "PRODUCT" | "SERVICE";
   item_id: string;
   policy_type: "FIXED" | "MARKUP_ON_PEAK";
   fixed_price?: number | null;
@@ -66,7 +65,6 @@ const PriceBookFormModal: React.FC<PriceBookFormModalProps> = ({
                                                                  priceBook,
                                                                  products,
                                                                  services,
-                                                                 servicePackages,
                                                                  branches,
                                                                  onClose,
                                                                  onSubmit,
@@ -129,9 +127,6 @@ const PriceBookFormModal: React.FC<PriceBookFormModalProps> = ({
       } else if (values.item_type === "SERVICE") {
         const service = services.find((s) => s.service_id === values.item_id);
         itemName = service?.service_name || "";
-      } else if (values.item_type === "SERVICE_PACKAGE") {
-        const pkg = servicePackages.find((sp) => sp.package_id === values.item_id);
-        itemName = pkg?.package_name || "";
       }
 
       // Tìm item trùng lặp (ngoại trừ item đang chỉnh sửa)
@@ -230,7 +225,6 @@ const PriceBookFormModal: React.FC<PriceBookFormModalProps> = ({
   const getAvailableItems = (itemType: string) => {
     if (itemType === "PRODUCT") return products;
     if (itemType === "SERVICE") return services;
-    if (itemType === "SERVICE_PACKAGE") return servicePackages;
     return [];
   };
 
@@ -516,7 +510,6 @@ const PriceBookFormModal: React.FC<PriceBookFormModalProps> = ({
             >
               <Select.Option value="PRODUCT">Sản phẩm</Select.Option>
               <Select.Option value="SERVICE">Dịch vụ</Select.Option>
-              <Select.Option value="SERVICE_PACKAGE">Gói dịch vụ</Select.Option>
             </Select>
           </Form.Item>
 
@@ -556,12 +549,6 @@ const PriceBookFormModal: React.FC<PriceBookFormModalProps> = ({
                       (availableItems as Service[]).map((s) => (
                         <Select.Option key={s.service_id} value={s.service_id}>
                           {s.service_name}
-                        </Select.Option>
-                      ))}
-                    {itemType === "SERVICE_PACKAGE" &&
-                      (availableItems as ServicePackage[]).map((sp) => (
-                        <Select.Option key={sp.package_id} value={sp.package_id}>
-                          {sp.package_name}
                         </Select.Option>
                       ))}
                   </Select>

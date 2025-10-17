@@ -32,7 +32,6 @@ interface PriceBookDetailModalProps {
   selectedPriceBook: PriceTableUI | null;
   products: Product[];
   services: Service[];
-  servicePackages: ServicePackage[];
   onClose: () => void;
 }
 
@@ -42,7 +41,6 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
                                                                      selectedPriceBook,
                                                                      products,
                                                                      services,
-                                                                     servicePackages,
                                                                      onClose,
                                                                    }) => {
   const formatCurrency = (amount: number) => {
@@ -61,8 +59,6 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
         return <ShoppingOutlined style={{color: "#1890ff"}}/>;
       case "SERVICE":
         return <ToolOutlined style={{color: "#52c41a"}}/>;
-      case "SERVICE_PACKAGE":
-        return <InsertRowBelowOutlined style={{color: "#fa8c16"}}/>;
       default:
         return <AppstoreOutlined/>;
     }
@@ -74,8 +70,6 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
         return "Sản phẩm";
       case "SERVICE":
         return "Dịch vụ";
-      case "SERVICE_PACKAGE":
-        return "Gói dịch vụ";
       default:
         return type;
     }
@@ -101,10 +95,6 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
     return services.find((s) => s.service_id === serviceId) || null;
   };
 
-  const getServicePackageInfo = (packageId: string) => {
-    return servicePackages.find((p) => p.package_id === packageId) || null;
-  };
-
   const itemColumns = [
     {
       title: "Loại",
@@ -128,7 +118,6 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
       key: "item_name",
       render: (text: string, record: PriceBookItem) => {
         let extraInfo = null;
-        let additionalDetails = null;
 
         if (record.item_type === "PRODUCT" && record.product) {
           const product = getProductInfo(record.product.product_id);
@@ -144,28 +133,7 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
           if (service) {
             extraInfo = (
               <span style={{fontSize: 12, color: "#8c8c8c"}}>
-                Mã: {service.service_id}
-              </span>
-            );
-            additionalDetails = (
-              <span style={{fontSize: 11, color: "#8c8c8c", display: "block"}}>
-                Giá cơ bản: {formatCurrency(service.base_price)} | Tiền công:{" "}
-                {formatCurrency(service.labor_cost)}
-              </span>
-            );
-          }
-        } else if (record.item_type === "SERVICE_PACKAGE" && record.servicePackage) {
-          const pkg = getServicePackageInfo(record.servicePackage.package_id);
-          if (pkg) {
-            extraInfo = (
-              <span style={{fontSize: 12, color: "#8c8c8c"}}>
-                Loại: {pkg.service_package_type_name}
-              </span>
-            );
-            additionalDetails = (
-              <span style={{fontSize: 11, color: "#8c8c8c", display: "block"}}>
-                Chi phí DV: {formatCurrency(pkg.service_cost)} | Chi phí SP:{" "}
-                {formatCurrency(pkg.service_cost)}
+                Phân loại: {service.category_name} | Thời lượng: {service.estimated_duration} phút
               </span>
             );
           }
@@ -175,22 +143,10 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
           <div>
             <div style={{fontWeight: 600}}>{text}</div>
             {extraInfo}
-            {additionalDetails}
           </div>
         );
       },
     },
-    // {
-    //   title: "Chính sách giá",
-    //   dataIndex: "policy_type",
-    //   key: "policy_type",
-    //   width: 180,
-    //   render: (policy: string) => (
-    //     <Tag color={policy === "FIXED" ? "blue" : "orange"}>
-    //       {policy === "FIXED" ? "Giá cố định" : "Markup theo giá vốn"}
-    //     </Tag>
-    //   ),
-    // },
     {
       title: "Giá",
       key: "price",
@@ -280,7 +236,7 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
           {/* Statistics */}
           <Card title="Thống kê" size="small">
             <Row gutter={16}>
-              <Col span={6}>
+              <Col span={8}>
                 <Statistic
                   title="Tổng mục"
                   value={selectedPriceBook.items?.length || 0}
@@ -288,7 +244,7 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
                   valueStyle={{color: "#1890ff"}}
                 />
               </Col>
-              <Col span={6}>
+              <Col span={8}>
                 <Statistic
                   title="Sản phẩm"
                   value={itemCounts.PRODUCT}
@@ -296,20 +252,12 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
                   valueStyle={{color: "#1890ff"}}
                 />
               </Col>
-              <Col span={6}>
+              <Col span={8}>
                 <Statistic
                   title="Dịch vụ"
                   value={itemCounts.SERVICE}
                   prefix={<ToolOutlined/>}
                   valueStyle={{color: "#52c41a"}}
-                />
-              </Col>
-              <Col span={6}>
-                <Statistic
-                  title="Gói dịch vụ"
-                  value={itemCounts.SERVICE_PACKAGE}
-                  prefix={<InsertRowBelowOutlined/>}
-                  valueStyle={{color: "#fa8c16"}}
                 />
               </Col>
             </Row>
@@ -380,28 +328,6 @@ const PriceBookDetailModal: React.FC<PriceBookDetailModalProps> = ({
                     pagination={{
                       pageSize: 5,
                       showTotal: (total) => `Tổng ${total} dịch vụ`,
-                    }}
-                    size="small"
-                  />
-                </Tabs.TabPane>
-                <Tabs.TabPane
-                  tab={
-                    <span>
-                      <InsertRowBelowOutlined/> Gói dịch vụ (
-                      {itemCounts.SERVICE_PACKAGE})
-                    </span>
-                  }
-                  key="packages"
-                >
-                  <Table
-                    dataSource={selectedPriceBook.items.filter(
-                      (i) => i.item_type === "SERVICE_PACKAGE"
-                    )}
-                    columns={itemColumns}
-                    rowKey="id"
-                    pagination={{
-                      pageSize: 5,
-                      showTotal: (total) => `Tổng ${total} gói`,
                     }}
                     size="small"
                   />

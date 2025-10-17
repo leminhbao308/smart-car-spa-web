@@ -14,7 +14,7 @@ import {
   DatePicker,
   Input,
   Spin,
-  Tooltip, message,
+  Tooltip, App,
 } from "antd";
 import {
   EditOutlined,
@@ -54,6 +54,9 @@ const {Text, Title} = Typography;
 const {RangePicker} = DatePicker;
 
 const PromotionsPage = () => {
+  // Ant Design Message
+  const {message} = App.useApp();
+
   // State management
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);

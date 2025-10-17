@@ -102,7 +102,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Data hooks
   const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
   const { profiles: allVehicles, loading: isLoadingVehicles } =
-    useVehicleProfiles({ size: 1000 });
+    useVehicleProfiles({ params: { size: 1000 }});
   const { branches, loading: isLoadingBranches } = useBranches();
   const { data: priceBooksData, isLoading: isLoadingPriceBooks } =
     useActivePriceBooks();
