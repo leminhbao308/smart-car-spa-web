@@ -5,7 +5,7 @@ import { CenterInfoDisplay, CenterInfoForm } from "@/components/ui/CenterInfo";
 import { useCenters } from "@/lib/api/hooks/useCenters";
 
 const GeneralInformationPage = () => {
-  const { centers, loading, error, refreshCenters } = useCenters({});
+  const { centers, loading, error, refreshCenters } = useCenters();
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const { message } = App.useApp();
@@ -71,11 +71,11 @@ const GeneralInformationPage = () => {
     return (
       <Alert
         message="Lỗi tải dữ liệu"
-        description={error}
+        description={error?.message || "Có lỗi xảy ra khi tải dữ liệu"}
         type="error"
         showIcon
         action={
-          <Button size="small" onClick={refreshCenters}>
+          <Button size="small" onClick={() => refreshCenters()}>
             Thử lại
           </Button>
         }

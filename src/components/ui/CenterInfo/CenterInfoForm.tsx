@@ -63,44 +63,78 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
   const { message } = App.useApp();
 
   // Helper function to get business hours with defaults
-  const getBusinessHoursWithDefaults = (businessHours: Partial<BusinessHours> | undefined | null) => {
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+  const getBusinessHoursWithDefaults = (
+    businessHours: Partial<BusinessHours> | undefined | null
+  ) => {
+    const days = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ] as const;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: Record<string, { open: any; close: any }> = {};
-    
+
     // Ensure businessHours is not null/undefined
     const safeBusinessHours = businessHours || {};
-    
-    days.forEach(day => {
+
+    days.forEach((day) => {
       result[day] = {
-        open: safeBusinessHours[day]?.open 
+        open: safeBusinessHours[day]?.open
           ? dayjs(safeBusinessHours[day]?.open, "HH:mm")
-          : dayjs(day === 'sunday' ? "09:00" : "08:00", "HH:mm"),
-        close: safeBusinessHours[day]?.close 
+          : dayjs(day === "sunday" ? "09:00" : "08:00", "HH:mm"),
+        close: safeBusinessHours[day]?.close
           ? dayjs(safeBusinessHours[day]?.close, "HH:mm")
-          : dayjs(day === 'saturday' ? "18:00" : day === 'sunday' ? "17:00" : "20:00", "HH:mm"),
+          : dayjs(
+              day === "saturday"
+                ? "18:00"
+                : day === "sunday"
+                ? "17:00"
+                : "20:00",
+              "HH:mm"
+            ),
       };
     });
-    
+
     return result;
   };
 
   // Helper function to format business hours for API
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const formatBusinessHoursForAPI = (businessHours: Record<string, { open?: any; close?: any }> | undefined | null): BusinessHours => {
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+  const formatBusinessHoursForAPI = (
+    businessHours:
+      | Record<string, { open?: any; close?: any }>
+      | undefined
+      | null
+  ): BusinessHours => {
+    const days = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ] as const;
     const result = {} as BusinessHours;
-    
+
     // Ensure businessHours is not null/undefined
     const safeBusinessHours = businessHours || {};
-    
-    days.forEach(day => {
+
+    days.forEach((day) => {
       result[day] = {
-        open: safeBusinessHours[day]?.open?.format("HH:mm") || (day === 'sunday' ? "09:00" : "08:00"),
-        close: safeBusinessHours[day]?.close?.format("HH:mm") || (day === 'saturday' ? "18:00" : day === 'sunday' ? "17:00" : "20:00"),
+        open:
+          safeBusinessHours[day]?.open?.format("HH:mm") ||
+          (day === "sunday" ? "09:00" : "08:00"),
+        close:
+          safeBusinessHours[day]?.close?.format("HH:mm") ||
+          (day === "saturday" ? "18:00" : day === "sunday" ? "17:00" : "20:00"),
       };
     });
-    
+
     return result;
   };
 
@@ -108,7 +142,7 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
     if (open) {
       if (initialData) {
         const data = initialData as CenterDisplay;
-        
+
         // Debug log to check data structure
         console.log("Initial data:", data);
         console.log("Business hours:", data.business_hours);
@@ -123,7 +157,7 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const safeData = data as any;
-        
+
         form.setFieldsValue({
           // Basic information
           center_name: safeData.center_name || "",
@@ -138,7 +172,8 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
           logo_url: safeData.logo_url || "",
           established_date: safeData.established_date || "",
           operating_status: safeData.operating_status || "ACTIVE",
-          is_active: safeData.is_active !== undefined ? safeData.is_active : true,
+          is_active:
+            safeData.is_active !== undefined ? safeData.is_active : true,
           manager_id: safeData.manager_id || "",
 
           // Business hours
@@ -238,6 +273,29 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
       ),
       children: (
         <div style={{ padding: "0 8px" }}>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item
+                name="operating_status"
+                label="Trạng thái hoạt động"
+                rules={[
+                  { required: true, message: "Vui lòng chọn trạng thái" },
+                ]}
+              >
+                <Select placeholder="Chọn trạng thái">
+                  <Option value="ACTIVE">
+                    <span style={{ color: "#52c41a" }}>●</span> Hoạt động
+                  </Option>
+                  <Option value="INACTIVE">
+                    <span style={{ color: "#ff4d4f" }}>●</span> Tạm dừng
+                  </Option>
+                  <Option value="MAINTENANCE">
+                    <span style={{ color: "#faad14" }}>●</span> Bảo trì
+                  </Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
           <Row gutter={[24, 24]}>
             {/* Thông tin chung */}
             <Col span={12}>
@@ -297,47 +355,6 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
                 >
                   <Input type="date" />
                 </Form.Item>
-
-                <Row gutter={12}>
-                  <Col span={12}>
-                    <Form.Item
-                      name="operating_status"
-                      label="Trạng thái hoạt động"
-                      rules={[
-                        { required: true, message: "Vui lòng chọn trạng thái" },
-                      ]}
-                    >
-                      <Select placeholder="Chọn trạng thái">
-                        <Option value="ACTIVE">
-                          <span style={{ color: "#52c41a" }}>●</span> Hoạt động
-                        </Option>
-                        <Option value="INACTIVE">
-                          <span style={{ color: "#ff4d4f" }}>●</span> Tạm dừng
-                        </Option>
-                        <Option value="MAINTENANCE">
-                          <span style={{ color: "#faad14" }}>●</span> Bảo trì
-                        </Option>
-                      </Select>
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item
-                      name="is_active"
-                      label="Trạng thái"
-                      valuePropName="checked"
-                    >
-                      <Select placeholder="Chọn trạng thái">
-                        <Option value={true}>
-                          <span style={{ color: "#52c41a" }}>●</span> Kích hoạt
-                        </Option>
-                        <Option value={false}>
-                          <span style={{ color: "#ff4d4f" }}>●</span> Vô hiệu
-                          hóa
-                        </Option>
-                      </Select>
-                    </Form.Item>
-                  </Col>
-                </Row>
               </Card>
             </Col>
 
@@ -383,25 +400,6 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
                   rules={[{ type: "url", message: "URL không hợp lệ" }]}
                 >
                   <Input placeholder="https://example.com" />
-                </Form.Item>
-
-                <Form.Item name="logo_url" label="Logo URL">
-                  <Input placeholder="Nhập URL logo" />
-                </Form.Item>
-
-                <Form.Item
-                  name="manager_id"
-                  label={
-                    <Space>
-                      <UserOutlined />
-                      ID Quản lý
-                    </Space>
-                  }
-                  rules={[
-                    { required: true, message: "Vui lòng nhập ID quản lý" },
-                  ]}
-                >
-                  <Input placeholder="Nhập ID quản lý" />
                 </Form.Item>
               </Card>
             </Col>
@@ -516,361 +514,6 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
                 >
                   <Input placeholder="Nhập email marketing" />
                 </Form.Item>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* Giờ làm việc */}
-          <Card
-            title={
-              <Space>
-                <ClockCircleOutlined style={{ color: "#fa8c16" }} />
-                <Text strong>Giờ làm việc</Text>
-              </Space>
-            }
-            style={{ marginTop: 24 }}
-          >
-            <Row gutter={[16, 16]}>
-              <Col span={8}>
-                <Title level={5}>Thứ 2</Title>
-                <Row gutter={8}>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "monday", "open"]}
-                      label="Mở cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "monday", "close"]}
-                      label="Đóng cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Col>
-
-              <Col span={8}>
-                <Title level={5}>Thứ 3</Title>
-                <Row gutter={8}>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "tuesday", "open"]}
-                      label="Mở cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "tuesday", "close"]}
-                      label="Đóng cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Col>
-
-              <Col span={8}>
-                <Title level={5}>Thứ 4</Title>
-                <Row gutter={8}>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "wednesday", "open"]}
-                      label="Mở cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "wednesday", "close"]}
-                      label="Đóng cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Col>
-
-              <Col span={8}>
-                <Title level={5}>Thứ 5</Title>
-                <Row gutter={8}>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "thursday", "open"]}
-                      label="Mở cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "thursday", "close"]}
-                      label="Đóng cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Col>
-
-              <Col span={8}>
-                <Title level={5}>Thứ 6</Title>
-                <Row gutter={8}>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "friday", "open"]}
-                      label="Mở cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "friday", "close"]}
-                      label="Đóng cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Col>
-
-              <Col span={8}>
-                <Title level={5}>Thứ 7</Title>
-                <Row gutter={8}>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "saturday", "open"]}
-                      label="Mở cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "saturday", "close"]}
-                      label="Đóng cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Col>
-
-              <Col span={8}>
-                <Title level={5}>Chủ nhật</Title>
-                <Row gutter={8}>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "sunday", "open"]}
-                      label="Mở cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item
-                      name={["business_hours", "sunday", "close"]}
-                      label="Đóng cửa"
-                    >
-                      <TimePicker
-                        style={{ width: "100%" }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              </Col>
-            </Row>
-          </Card>
-        </div>
-      ),
-    },
-    {
-      key: "social",
-      label: (
-        <span>
-          <FacebookOutlined />
-          Mạng xã hội & Dịch vụ
-        </span>
-      ),
-      children: (
-        <div style={{ padding: "0 8px" }}>
-          <Row gutter={[24, 24]}>
-            {/* Social Media */}
-            <Col span={12}>
-              <Card
-                title={
-                  <Space>
-                    <FacebookOutlined style={{ color: "#1890ff" }} />
-                    <Text strong>Mạng xã hội</Text>
-                  </Space>
-                }
-                style={{ height: "100%" }}
-              >
-                <Form.Item
-                  name={["social_media", "facebook"]}
-                  label={
-                    <Space>
-                      <FacebookOutlined style={{ color: "#1877f2" }} />
-                      Facebook
-                    </Space>
-                  }
-                  rules={[{ type: "url", message: "URL không hợp lệ" }]}
-                >
-                  <Input placeholder="https://facebook.com/yourpage" />
-                </Form.Item>
-
-                <Form.Item
-                  name={["social_media", "instagram"]}
-                  label={
-                    <Space>
-                      <InstagramOutlined style={{ color: "#e4405f" }} />
-                      Instagram
-                    </Space>
-                  }
-                  rules={[{ type: "url", message: "URL không hợp lệ" }]}
-                >
-                  <Input placeholder="https://instagram.com/yourpage" />
-                </Form.Item>
-
-                <Form.Item
-                  name={["social_media", "youtube"]}
-                  label={
-                    <Space>
-                      <YoutubeOutlined style={{ color: "#ff0000" }} />
-                      YouTube
-                    </Space>
-                  }
-                  rules={[{ type: "url", message: "URL không hợp lệ" }]}
-                >
-                  <Input placeholder="https://youtube.com/yourchannel" />
-                </Form.Item>
-
-                <Form.Item
-                  name={["social_media", "tiktok"]}
-                  label="TikTok"
-                  rules={[{ type: "url", message: "URL không hợp lệ" }]}
-                >
-                  <Input placeholder="https://tiktok.com/@yourpage" />
-                </Form.Item>
-              </Card>
-            </Col>
-
-            {/* Service Areas */}
-            <Col span={12}>
-              <Card
-                title={
-                  <Space>
-                    <EnvironmentOutlined style={{ color: "#52c41a" }} />
-                    <Text strong>Khu vực phục vụ</Text>
-                  </Space>
-                }
-                style={{ height: "100%" }}
-              >
-                <Form.Item
-                  name="service_areas"
-                  label="Danh sách khu vực"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Vui lòng nhập ít nhất một khu vực",
-                    },
-                  ]}
-                >
-                  <Select
-                    mode="tags"
-                    placeholder="Nhập khu vực phục vụ"
-                    style={{ width: "100%" }}
-                    tokenSeparators={[","]}
-                    options={[
-                      { value: "Hà Nội", label: "Hà Nội" },
-                      { value: "Hà Đông", label: "Hà Đông" },
-                      { value: "Long Biên", label: "Long Biên" },
-                      { value: "Cầu Giấy", label: "Cầu Giấy" },
-                      { value: "Đống Đa", label: "Đống Đa" },
-                      { value: "Hai Bà Trưng", label: "Hai Bà Trưng" },
-                      { value: "Hoàn Kiếm", label: "Hoàn Kiếm" },
-                      { value: "Ba Đình", label: "Ba Đình" },
-                      { value: "Tây Hồ", label: "Tây Hồ" },
-                      { value: "Thanh Xuân", label: "Thanh Xuân" },
-                    ]}
-                  />
-                </Form.Item>
-
-                <div
-                  style={{
-                    marginTop: 16,
-                    padding: 12,
-                    backgroundColor: "#f6ffed",
-                    border: "1px solid #b7eb8f",
-                    borderRadius: 6,
-                  }}
-                >
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    💡 Mẹo: Bạn có thể nhập trực tiếp tên khu vực hoặc chọn từ
-                    danh sách gợi ý
-                  </Text>
-                </div>
               </Card>
             </Col>
           </Row>

@@ -12,16 +12,10 @@ import {
   Col,
   Statistic,
 } from "antd";
-import {
-  EditOutlined,
-  EyeOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
+import { EditOutlined, EyeOutlined } from "@ant-design/icons";
 import {
   ServiceBay,
-  BayType,
   BayStatus,
-  BAY_TYPE_OPTIONS,
   BAY_STATUS_OPTIONS,
 } from "@/lib/api/types/service-bay.types";
 
@@ -31,7 +25,6 @@ interface ServiceBayCardProps {
   bay: ServiceBay;
   onEdit: (bay: ServiceBay) => void;
   onView: (bay: ServiceBay) => void;
-  onStatusChange: (bay: ServiceBay, status: BayStatus) => void;
   loading?: boolean;
 }
 
@@ -39,25 +32,19 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
   bay,
   onEdit,
   onView,
-  onStatusChange,
   loading = false,
 }) => {
-  const getBayTypeInfo = (type: BayType) => {
-    return BAY_TYPE_OPTIONS.find(opt => opt.value === type) || {
-      label: type,
-      color: "#8c8c8c",
-      icon: "🔧"
-    };
-  };
+  // getBayTypeInfo removed as BayType is no longer used
 
   const getBayStatusInfo = (status: BayStatus) => {
-    return BAY_STATUS_OPTIONS.find(opt => opt.value === status) || {
-      label: status,
-      color: "default"
-    };
+    return (
+      BAY_STATUS_OPTIONS.find((opt) => opt.value === status) || {
+        label: status,
+        color: "default",
+      }
+    );
   };
 
-  const typeInfo = getBayTypeInfo(bay.bay_type);
   const statusInfo = getBayStatusInfo(bay.status);
 
   const getStatusColor = (status: BayStatus) => {
@@ -90,7 +77,6 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
 
   const availability = getAvailabilityStatus();
 
-
   return (
     <Card
       hoverable
@@ -104,13 +90,13 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
         flexDirection: "column",
         minHeight: "280px",
       }}
-      styles={{ 
-        body: { 
-          padding: "16px", 
-          flex: 1, 
-          display: "flex", 
-          flexDirection: "column" 
-        } 
+      styles={{
+        body: {
+          padding: "16px",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+        },
       }}
       actions={[
         <Tooltip title="Xem chi tiết" key="view">
@@ -129,32 +115,24 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
             style={{ color: "#52c41a" }}
           />
         </Tooltip>,
-        <Tooltip title="Quản lý trạng thái" key="status">
-          <Button
-            type="text"
-            icon={<SettingOutlined />}
-            onClick={() => onStatusChange(bay, bay.status)}
-            style={{ color: "#722ed1" }}
-          />
-        </Tooltip>,
       ]}
     >
       {/* Header */}
       <div style={{ marginBottom: "16px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-          <span style={{ fontSize: "24px", marginTop: "2px" }}>{typeInfo.icon}</span>
+          <span style={{ fontSize: "24px", marginTop: "2px" }}>🔧</span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Title 
-              level={4} 
-              style={{ 
-                margin: 0, 
+            <Title
+              level={4}
+              style={{
+                margin: 0,
                 marginBottom: "4px",
                 fontSize: "16px",
                 fontWeight: 600,
                 lineHeight: "1.2",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
-                textOverflow: "ellipsis"
+                textOverflow: "ellipsis",
               }}
             >
               {bay.bay_name}
@@ -171,26 +149,22 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
       {/* Status and Branch */}
       <div style={{ marginBottom: "16px" }}>
         <Space direction="vertical" size="small" style={{ width: "100%" }}>
-          <Tag color="green" style={{ fontSize: "12px", padding: "4px 8px" }}>
-            Hoạt động
-          </Tag>
+          <Space size="small">
+            <Tag
+              color={statusInfo.color}
+              style={{ fontSize: "12px", padding: "4px 8px" }}
+            >
+              {statusInfo.label}
+            </Tag>
+          </Space>
           <Text type="secondary" style={{ fontSize: "12px" }}>
             {bay.branch_name}
           </Text>
         </Space>
       </div>
 
-
       {/* Statistics */}
       <Row gutter={8} style={{ marginBottom: "12px" }}>
-        <Col span={8}>
-          <Statistic
-            title="Sức chứa"
-            value={bay.capacity}
-            suffix="xe"
-            valueStyle={{ fontSize: "14px", color: "#1890ff" }}
-          />
-        </Col>
         <Col span={8}>
           <Statistic
             title="Đặt lịch"
@@ -206,9 +180,6 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
           />
         </Col>
       </Row>
-
-
-
     </Card>
   );
 };

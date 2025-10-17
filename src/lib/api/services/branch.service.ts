@@ -7,25 +7,9 @@ import {
   UpdateBranchRequest,
   DeleteBranchResponse,
   BranchDisplay,
-  OperatingHours,
-  BranchContactInfo,
 } from "../types/branch.types";
 
 export class BranchService {
-  /**
-   * Parse JSON string safely
-   */
-  private static parseJsonSafely<T>(jsonString: string | undefined | null, defaultValue: T): T {
-    if (!jsonString || jsonString === 'undefined' || jsonString === 'null') {
-      return defaultValue;
-    }
-    try {
-      return JSON.parse(jsonString);
-    } catch (error) {
-      console.warn("Failed to parse JSON:", jsonString, error);
-      return defaultValue;
-    }
-  }
 
   /**
    * Transform branch data to display format
@@ -33,7 +17,9 @@ export class BranchService {
   private static transformToDisplayFormat(branch: Branch): BranchDisplay {
     return {
       ...branch,
-      operating_hours: this.parseJsonSafely<OperatingHours>(branch.operating_hours, {
+      // Các fields này không còn tồn tại trong backend DTO mới
+      // Chỉ giữ lại các fields cần thiết cho display
+      operating_hours: {
         monday: { open: "08:00", close: "20:00" },
         tuesday: { open: "08:00", close: "20:00" },
         wednesday: { open: "08:00", close: "20:00" },
@@ -41,10 +27,10 @@ export class BranchService {
         friday: { open: "08:00", close: "20:00" },
         saturday: { open: "08:00", close: "18:00" },
         sunday: { open: "09:00", close: "17:00" },
-      }),
-      contact_info: this.parseJsonSafely<BranchContactInfo>(branch.contact_info, {}),
-      facilities: this.parseJsonSafely<string[]>(branch.facilities, []),
-      services_offered: this.parseJsonSafely<string[]>(branch.services_offered, []),
+      },
+      contact_info: {},
+      facilities: [],
+      services_offered: [],
     };
   }
 

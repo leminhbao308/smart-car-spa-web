@@ -12,22 +12,9 @@ export interface Branch {
   address: string;
   phone: string;
   email: string;
-  operating_hours: string; // JSON string
-  service_capacity: number;
-  current_workload: number;
-  latitude: number;
-  longitude: number;
-  area_sqm: number;
-  parking_spaces: number;
+  service_slots: number; // Số lượng khu vực dịch vụ cố định
   established_date: string;
-  total_employees: number;
-  total_customers: number;
-  monthly_revenue: number;
   operating_status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
-  branch_type: "STANDARD" | "PREMIUM" | "VIP";
-  contact_info: string; // JSON string
-  facilities: string; // JSON string
-  services_offered: string; // JSON string
   center_id: string;
   center_name: string;
   center_code: string;
@@ -36,8 +23,18 @@ export interface Branch {
   manager_email: string;
   manager_assigned_at: string;
   manager_assigned_by: string;
-  utilization_rate: number;
-  is_at_capacity: boolean;
+}
+
+// Service Slot interface
+export interface ServiceSlot {
+  slot_id: string;
+  slot_name: string;
+  slot_code: string;
+  slot_type: "WASH" | "REPAIR" | "LIFT" | "INSPECTION" | "PAINT" | "DETAILING" | "TIRE" | "GENERAL";
+  status: "AVAILABLE" | "OCCUPIED" | "MAINTENANCE" | "CLOSED";
+  is_active: boolean;
+  display_order: number;
+  notes?: string;
 }
 
 export interface BranchListResponse {
@@ -67,45 +64,30 @@ export interface BranchResponse {
 export interface CreateBranchRequest {
   branch_name: string;
   branch_code: string;
-  description: string;
+  description?: string;
   address: string;
-  phone: string;
-  email: string;
-  operating_hours: string;
-  service_capacity: number;
-  latitude: number;
-  longitude: number;
-  area_sqm: number;
-  parking_spaces: number;
-  established_date: string;
+  phone?: string;
+  email?: string;
+  service_slots?: number; // Mặc định 8
+  established_date?: string;
   center_id: string;
-  manager_id: string;
-  operating_status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
-  branch_type: "STANDARD" | "PREMIUM" | "VIP";
-  contact_info: string;
-  facilities: string;
-  services_offered: string;
+  manager_id?: string;
+  operating_status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE"; // Mặc định ACTIVE
 }
 
 export interface UpdateBranchRequest {
-  branch_name: string;
-  description: string;
-  address: string;
-  phone: string;
-  email: string;
-  operating_hours: string;
-  service_capacity: number;
-  current_workload: number;
-  latitude: number;
-  longitude: number;
-  area_sqm: number;
-  parking_spaces: number;
-  operating_status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
-  branch_type: "STANDARD" | "PREMIUM" | "VIP";
-  contact_info: string;
-  facilities: string;
-  services_offered: string;
-  is_active: boolean;
+  branch_name?: string;
+  branch_code?: string;
+  description?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  service_slots?: number;
+  established_date?: string;
+  center_id?: string;
+  manager_id?: string;
+  operating_status?: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
+  is_active?: boolean;
 }
 
 export interface DeleteBranchResponse {

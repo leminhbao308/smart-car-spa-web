@@ -6,7 +6,6 @@ import {
   ServiceBayFilterParam,
   CreateServiceBayRequest,
   UpdateServiceBayRequest,
-  BayType,
   BayStatus
 } from "../types/service-bay.types";
 
@@ -17,23 +16,22 @@ export const serviceBayKeys = {
   list: (filters: ServiceBayFilterParam) => [...serviceBayKeys.lists(), { filters }] as const,
   details: () => [...serviceBayKeys.all, 'detail'] as const,
   detail: (id: string) => [...serviceBayKeys.details(), id] as const,
-  dropdown: (branchId?: string, bayType?: BayType) => [...serviceBayKeys.all, 'dropdown', { branchId, bayType }] as const,
+  dropdown: (branchId?: string) => [...serviceBayKeys.all, 'dropdown', { branchId }] as const,
   statistics: (id: string) => [...serviceBayKeys.all, 'statistics', id] as const,
   bookings: (id: string) => [...serviceBayKeys.all, 'bookings', id] as const,
   byBranch: (branchId: string) => [...serviceBayKeys.all, 'byBranch', branchId] as const,
-  byType: (bayType: BayType) => [...serviceBayKeys.all, 'byType', bayType] as const,
   active: (branchId?: string) => [...serviceBayKeys.all, 'active', { branchId }] as const,
-  available: (branchId: string, startTime: string, endTime: string, bayType?: BayType) => 
-    [...serviceBayKeys.all, 'available', { branchId, startTime, endTime, bayType }] as const,
+  available: (branchId: string, startTime: string, endTime: string) => 
+    [...serviceBayKeys.all, 'available', { branchId, startTime, endTime }] as const,
 };
 
 /**
  * Hook for service bays dropdown data
  */
-export const useServiceBaysDropdown = (branchId?: string, bayType?: BayType) => {
+export const useServiceBaysDropdown = (branchId?: string) => {
   return useQuery({
-    queryKey: serviceBayKeys.dropdown(branchId, bayType),
-    queryFn: () => ServiceBayService.getServiceBaysDropdown(branchId, bayType),
+    queryKey: serviceBayKeys.dropdown(branchId),
+    queryFn: () => ServiceBayService.getServiceBaysDropdown(branchId),
     enabled: true,
   });
 };
@@ -71,16 +69,7 @@ export const useServiceBaysByBranch = (branchId: string | null) => {
   });
 };
 
-/**
- * Hook for service bays by type
- */
-export const useServiceBaysByType = (bayType: BayType | null) => {
-  return useQuery({
-    queryKey: serviceBayKeys.byType(bayType || BayType.GENERAL_BAY),
-    queryFn: () => ServiceBayService.getServiceBaysByType(bayType!),
-    enabled: !!bayType,
-  });
-};
+// useServiceBaysByType removed as BayType is no longer used
 
 /**
  * Hook for active service bays
@@ -99,12 +88,11 @@ export const useActiveServiceBays = (branchId?: string) => {
 export const useAvailableServiceBays = (
   branchId: string | null,
   startTime: string | null,
-  endTime: string | null,
-  bayType?: BayType
+  endTime: string | null
 ) => {
   return useQuery({
-    queryKey: serviceBayKeys.available(branchId || '', startTime || '', endTime || '', bayType),
-    queryFn: () => ServiceBayService.getAvailableServiceBays(branchId!, startTime!, endTime!, bayType),
+    queryKey: serviceBayKeys.available(branchId || '', startTime || '', endTime || ''),
+    queryFn: () => ServiceBayService.getAvailableServiceBays(branchId!, startTime!, endTime!),
     enabled: !!(branchId && startTime && endTime),
   });
 };

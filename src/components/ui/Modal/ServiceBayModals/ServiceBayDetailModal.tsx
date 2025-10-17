@@ -9,10 +9,8 @@ import {
   Row,
   Col,
   Statistic,
-  Timeline,
   Button,
   Space,
-  Divider,
   Typography,
   Spin,
   Alert,
@@ -20,24 +18,21 @@ import {
 import {
   EyeOutlined,
   CloseOutlined,
-  ToolOutlined,
   CarOutlined,
   CalendarOutlined,
   UserOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
-  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import {
-  ServiceBay,
-  BayType,
-  BayStatus,
-  BAY_TYPE_OPTIONS,
+  ServiceBay, 
+  BayStatus, 
   BAY_STATUS_OPTIONS,
+  ServiceBayStatistics,
 } from "@/lib/api/types/service-bay.types";
 import { useServiceBayStatistics } from "@/lib/api/hooks/useServiceBays";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface ServiceBayDetailModalProps {
   visible: boolean;
@@ -50,26 +45,19 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
   onCancel,
   data,
 }) => {
-  const [statistics, setStatistics] = useState<any>(null);
-  const { statistics: bayStats, loading: statsLoading } = useServiceBayStatistics(
+  const [statistics, setStatistics] = useState<ServiceBayStatistics | null>(null);
+  const { data: bayStats, isLoading: statsLoading } = useServiceBayStatistics(
     data?.bay_id || null
   );
 
   useEffect(() => {
-    if (visible && data) {
+    if (visible && data && bayStats) {
       setStatistics(bayStats);
     }
   }, [visible, data, bayStats]);
 
   if (!data) return null;
 
-  const getBayTypeInfo = (type: BayType) => {
-    return BAY_TYPE_OPTIONS.find(opt => opt.value === type) || {
-      label: type,
-      color: "#8c8c8c",
-      icon: "🔧"
-    };
-  };
 
   const getBayStatusInfo = (status: BayStatus) => {
     return BAY_STATUS_OPTIONS.find(opt => opt.value === status) || {
@@ -78,7 +66,6 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
     };
   };
 
-  const typeInfo = getBayTypeInfo(data.bay_type);
   const statusInfo = getBayStatusInfo(data.status);
 
   return (
@@ -105,9 +92,9 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
         <Card
           title={
             <Space>
-              <span style={{ fontSize: "20px" }}>{typeInfo.icon}</span>
+              <span style={{ fontSize: "20px" }}>🔧</span>
               <span>{data.bay_name}</span>
-              <Tag color={typeInfo.color}>{typeInfo.label}</Tag>
+              <Tag color="blue">Khu vực dịch vụ</Tag>
             </Space>
           }
           style={{ marginBottom: 16 }}
@@ -126,11 +113,8 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
             <Descriptions.Item label="Trạng thái">
               <Tag color={statusInfo.color}>{statusInfo.label}</Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="Sức chứa">
-              <Text strong>{data.capacity} xe</Text>
-            </Descriptions.Item>
             <Descriptions.Item label="Thứ tự hiển thị">
-              <Text>{data.display_order}</Text>
+              <Text strong>{data.display_order}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="Tình trạng">
               <Space direction="vertical" size="small">
@@ -147,29 +131,6 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
             </Descriptions.Item>
           </Descriptions>
 
-          {data.description && (
-            <>
-              <Divider />
-              <div>
-                <Text strong>Mô tả:</Text>
-                <div style={{ marginTop: 8 }}>
-                  <Text>{data.description}</Text>
-                </div>
-              </div>
-            </>
-          )}
-
-          {data.notes && (
-            <>
-              <Divider />
-              <div>
-                <Text strong>Ghi chú:</Text>
-                <div style={{ marginTop: 8 }}>
-                  <Text type="secondary">{data.notes}</Text>
-                </div>
-              </div>
-            </>
-          )}
         </Card>
 
         {/* Statistics */}
@@ -226,32 +187,24 @@ const ServiceBayDetailModal: React.FC<ServiceBayDetailModalProps> = ({
           )}
         </Card>
 
-        {/* Bay Type Specific Information */}
-        <Card title="Thông tin chuyên biệt" style={{ marginBottom: 16 }}>
+        {/* Service Bay Information */}
+        <Card title="Thông tin khu vực dịch vụ" style={{ marginBottom: 16 }}>
           <Row gutter={16}>
             <Col span={8}>
               <div style={{ textAlign: "center", padding: "16px" }}>
                 <div style={{ fontSize: "24px", marginBottom: "8px" }}>
-                  {data.is_wash_bay ? "🚿" : data.is_repair_bay ? "🔧" : data.is_lift_bay ? "⬆️" : "🔧"}
+                  🔧
                 </div>
-                <Text strong>
-                  {data.is_wash_bay ? "Bệ rửa xe" : 
-                   data.is_repair_bay ? "Bệ sửa chữa" : 
-                   data.is_lift_bay ? "Bệ nâng xe" : "Bệ tổng hợp"}
-                </Text>
+                <Text strong>Khu vực dịch vụ</Text>
               </div>
             </Col>
             <Col span={16}>
               <Descriptions column={1} size="small">
-                <Descriptions.Item label="Loại bệ">
-                  <Tag color={typeInfo.color}>{typeInfo.label}</Tag>
+                <Descriptions.Item label="Mô tả">
+                  <Text>{data.description || "Chưa có mô tả"}</Text>
                 </Descriptions.Item>
-                <Descriptions.Item label="Chức năng">
-                  <Space wrap>
-                    {data.is_wash_bay && <Tag color="blue">Rửa xe</Tag>}
-                    {data.is_repair_bay && <Tag color="green">Sửa chữa</Tag>}
-                    {data.is_lift_bay && <Tag color="purple">Nâng xe</Tag>}
-                  </Space>
+                <Descriptions.Item label="Ghi chú">
+                  <Text type="secondary">{data.notes || "Chưa có ghi chú"}</Text>
                 </Descriptions.Item>
               </Descriptions>
             </Col>

@@ -10,7 +10,6 @@ interface ServiceBayGridProps {
   loading?: boolean;
   onEdit: (bay: ServiceBay) => void;
   onView: (bay: ServiceBay) => void;
-  onStatusChange: (bay: ServiceBay, status: BayStatus) => void;
   emptyMessage?: string;
 }
 
@@ -19,7 +18,6 @@ const ServiceBayGrid: React.FC<ServiceBayGridProps> = ({
   loading = false,
   onEdit,
   onView,
-  onStatusChange,
   emptyMessage = "Không có khu vực dịch vụ nào",
 }) => {
   if (loading) {
@@ -55,7 +53,6 @@ const ServiceBayGrid: React.FC<ServiceBayGridProps> = ({
             bay={bay}
             onEdit={onEdit}
             onView={onView}
-            onStatusChange={onStatusChange}
           />
         </Col>
       ))}
