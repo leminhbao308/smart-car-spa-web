@@ -490,18 +490,13 @@ const InvoicesPage = () => {
                 {selectedOrder.customer?.full_name || "Khách lẻ"}
               </Descriptions.Item>
               <Descriptions.Item label="Số điện thoại" span={1}>
-                {selectedOrder.customer?.phone_number || "N/A"}
+                {selectedOrder.customer?.phone_number || ""}
               </Descriptions.Item>
               <Descriptions.Item label="Chi nhánh" span={1}>
                 {selectedOrder.branch.branch_name}
               </Descriptions.Item>
               <Descriptions.Item label="Địa chỉ" span={1}>
                 {selectedOrder.branch.address}
-              </Descriptions.Item>
-              <Descriptions.Item label="Kho hàng" span={1}>
-                <Text copyable={{text: selectedOrder.warehouse.id}}>
-                  {selectedOrder.warehouse.id.slice(0, 8)}...
-                </Text>
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái" span={1}>
                 <Tag color={getStatusColor(selectedOrder.status)}>
