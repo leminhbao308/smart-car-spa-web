@@ -19,9 +19,7 @@ import {
 import {
   ServiceBay,
   CreateServiceBayRequest,
-  UpdateServiceBayRequest,
-  BayType,
-  BAY_TYPE_OPTIONS} from "@/lib/api/types/service-bay.types";
+  UpdateServiceBayRequest} from "@/lib/api/types/service-bay.types";
 import { 
   useCreateServiceBay, 
   useUpdateServiceBay, 
@@ -67,9 +65,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           branch_id: editData.branch_id,
           bay_name: editData.bay_name,
           bay_code: editData.bay_code,
-          bay_type: editData.bay_type,
           description: editData.description,
-          capacity: editData.capacity,
           display_order: editData.display_order,
           notes: editData.notes});
       } else {
@@ -91,9 +87,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           branch_id: editData.branch_id,
           bay_name: editData.bay_name,
           bay_code: editData.bay_code,
-          bay_type: editData.bay_type,
           description: editData.description,
-          capacity: editData.capacity,
           display_order: editData.display_order,
           notes: editData.notes});
       } else {
@@ -110,9 +104,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
         const updateData: UpdateServiceBayRequest = {
           bay_name: values.bay_name as string,
           bay_code: values.bay_code as string | undefined,
-          bay_type: values.bay_type as BayType,
           description: values.description as string | undefined,
-          capacity: values.capacity as number,
           display_order: values.display_order as number | undefined,
           notes: values.notes as string | undefined};
         result = await updateServiceBayMutation.mutateAsync({
@@ -125,9 +117,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           branch_id: values.branch_id as string,
           bay_name: values.bay_name as string,
           bay_code: values.bay_code as string | undefined,
-          bay_type: values.bay_type as BayType,
           description: values.description as string | undefined,
-          capacity: (values.capacity as number) || 1,
           display_order: (values.display_order as number) || 1,
           notes: values.notes as string | undefined};
         result = await createServiceBayMutation.mutateAsync(createData);
@@ -247,24 +237,6 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
               </Select>
             </Form.Item>
           </Col>
-          <Col span={12}>
-            <Form.Item
-              name="bay_type"
-              label="Loại khu vực dịch vụ"
-              rules={[{ required: true, message: "Vui lòng chọn loại khu vực dịch vụ" }]}
-            >
-              <Select placeholder="Chọn loại khu vực dịch vụ">
-                {BAY_TYPE_OPTIONS.map((option) => (
-                  <Option key={option.value} value={option.value}>
-                    <Space>
-                      <span>{option.icon}</span>
-                      <span>{option.label}</span>
-                    </Space>
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
         </Row>
 
         <Row gutter={16}>
@@ -315,25 +287,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
         </Form.Item>
 
         <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item
-              name="capacity"
-              label="Sức chứa"
-              rules={[
-                { required: true, message: "Vui lòng nhập sức chứa" },
-                { type: "number", min: 1, message: "Sức chứa phải lớn hơn 0" },
-              ]}
-            >
-              <MemoizedInputNumber
-                min={1}
-                max={10}
-                placeholder="1"
-                style={{ width: "100%" }}
-                addonAfter="xe"
-              />
-            </Form.Item>
-          </Col>
-          <Col span={8}>
+          <Col span={12}>
             <Form.Item
               name="display_order"
               label="Thứ tự hiển thị"

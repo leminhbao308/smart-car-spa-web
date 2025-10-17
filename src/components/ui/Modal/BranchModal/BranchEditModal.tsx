@@ -1,10 +1,16 @@
 ﻿"use client";
 import React, { useEffect } from "react";
 import { Modal, Form, Select, Button, message, Space } from "antd";
-import { MemoizedInput, MemoizedTextArea, MemoizedInputNumber } from "@/components/ui/MemoizedComponents";
-import { BranchDisplay, UpdateBranchRequest } from "@/lib/api/types/branch.types";
+import {
+  MemoizedInput,
+  MemoizedTextArea,
+  MemoizedInputNumber,
+} from "@/components/ui/MemoizedComponents";
+import {
+  BranchDisplay,
+  UpdateBranchRequest,
+} from "@/lib/api/types/branch.types";
 import { BranchService } from "@/lib/api/services/branch.service";
-
 
 interface BranchEditModalProps {
   open: boolean;
@@ -19,7 +25,8 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
   onCancel,
   onSuccess,
   branch,
-  centerId}) => {
+  centerId,
+}) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
 
@@ -27,17 +34,18 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
     if (branch && open) {
       form.setFieldsValue({
         branch_name: branch.branch_name,
+        branch_code: branch.branch_code,
         description: branch.description,
         address: branch.address,
         phone: branch.phone,
         email: branch.email,
-        service_capacity: branch.service_capacity,
-        current_workload: branch.current_workload,
-        area_sqm: branch.area_sqm,
-        parking_spaces: branch.parking_spaces,
+        service_slots: branch.service_slots,
+        established_date: branch.established_date,
+        center_id: branch.center_id,
+        manager_id: branch.manager_id,
         operating_status: branch.operating_status,
-        branch_type: branch.branch_type,
-        is_active: branch.is_active});
+        is_active: branch.is_active,
+      });
     }
   }, [branch, open, form]);
 
@@ -50,23 +58,27 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
 
       const updateData: UpdateBranchRequest = {
         branch_name: values.branch_name,
+        branch_code: values.branch_code,
         description: values.description,
         address: values.address,
         phone: values.phone,
         email: values.email,
-        service_capacity: values.service_capacity,
-        current_workload: values.current_workload,
-        area_sqm: values.area_sqm,
-        parking_spaces: values.parking_spaces,
+        service_slots: values.service_slots,
+        established_date: values.established_date,
+        center_id: values.center_id,
+        manager_id: values.manager_id,
         operating_status: values.operating_status,
-        branch_type: values.branch_type,
-        is_active: values.is_active};
+        is_active: values.is_active,
+      };
 
       await BranchService.updateBranch(branch.branch_id, updateData);
       message.success("Cập nhật chi nhánh thành công!");
       onSuccess();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Có lỗi xảy ra khi cập nhật chi nhánh";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi cập nhật chi nhánh";
       message.error(errorMessage);
     } finally {
       setLoading(false);
@@ -83,23 +95,48 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
         <Button key="cancel" onClick={onCancel}>
           Hủy
         </Button>,
-        <Button key="submit" type="primary" loading={loading} onClick={handleSubmit}>
+        <Button
+          key="submit"
+          type="primary"
+          loading={loading}
+          onClick={handleSubmit}
+        >
           Cập nhật
         </Button>,
       ]}
     >
-      <Form
-        form={form}
-        layout="vertical"
-        style={{ marginTop: 24 }}
-      >
+      <Form form={form} layout="vertical" style={{ marginTop: 24 }}>
         <Form.Item
-          name="branch_name"
-          label="Tên chi nhánh"
-          rules={[{ required: true, message: "Vui lòng nhập tên chi nhánh" }]}
+          name="operating_status"
+          label="Trạng thái hoạt động"
+          rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+          style={{ width: "50%", marginRight: 8 }}
         >
-          <MemoizedInput placeholder="Nhập tên chi nhánh" />
+          <Select placeholder="Chọn trạng thái">
+            <Select.Option value="ACTIVE">Hoạt động</Select.Option>
+            <Select.Option value="INACTIVE">Tạm dừng</Select.Option>
+            <Select.Option value="MAINTENANCE">Bảo trì</Select.Option>
+          </Select>
         </Form.Item>
+        <Space.Compact style={{ width: "100%" }}>
+          <Form.Item
+            name="branch_name"
+            label="Tên chi nhánh"
+            rules={[{ required: true, message: "Vui lòng nhập tên chi nhánh" }]}
+            style={{ width: "70%", marginRight: 8 }}
+          >
+            <MemoizedInput placeholder="Nhập tên chi nhánh" />
+          </Form.Item>
+
+          <Form.Item
+            name="branch_code"
+            label="Mã chi nhánh"
+            rules={[{ required: true, message: "Vui lòng nhập mã chi nhánh" }]}
+            style={{ width: "30%" }}
+          >
+            <MemoizedInput placeholder="Mã chi nhánh" />
+          </Form.Item>
+        </Space.Compact>
 
         <Form.Item
           name="description"
@@ -132,7 +169,7 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
             label="Email"
             rules={[
               { required: true, message: "Vui lòng nhập email" },
-              { type: "email", message: "Email không hợp lệ" }
+              { type: "email", message: "Email không hợp lệ" },
             ]}
             style={{ width: "50%" }}
           >
@@ -142,102 +179,32 @@ const BranchEditModal: React.FC<BranchEditModalProps> = ({
 
         <Space.Compact style={{ width: "100%" }}>
           <Form.Item
-            name="service_capacity"
-            label="Công suất dịch vụ"
-            rules={[{ required: true, message: "Vui lòng nhập công suất" }]}
+            name="service_slots"
+            label="Số lượng khu vực dịch vụ"
+            rules={[
+              { required: true, message: "Vui lòng nhập số lượng khu vực" },
+            ]}
             style={{ width: "50%", marginRight: 8 }}
           >
             <MemoizedInputNumber
               min={1}
-              placeholder="Công suất"
+              max={20}
+              placeholder="Số lượng khu vực"
               style={{ width: "100%" }}
             />
           </Form.Item>
 
           <Form.Item
-            name="current_workload"
-            label="Khối lượng hiện tại"
-            rules={[{ required: true, message: "Vui lòng nhập khối lượng" }]}
+            name="established_date"
+            label="Ngày thành lập"
             style={{ width: "50%" }}
           >
-            <MemoizedInputNumber
-              min={0}
-              placeholder="Khối lượng"
-              style={{ width: "100%" }}
-            />
+            <MemoizedInput type="date" />
           </Form.Item>
         </Space.Compact>
-
-        <Space.Compact style={{ width: "100%" }}>
-          <Form.Item
-            name="area_sqm"
-            label="Diện tích (m²)"
-            rules={[{ required: true, message: "Vui lòng nhập diện tích" }]}
-            style={{ width: "50%", marginRight: 8 }}
-          >
-            <MemoizedInputNumber
-              min={1}
-              placeholder="Diện tích"
-              style={{ width: "100%" }}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="parking_spaces"
-            label="Chỗ đỗ xe"
-            rules={[{ required: true, message: "Vui lòng nhập số chỗ đỗ xe" }]}
-            style={{ width: "50%" }}
-          >
-            <MemoizedInputNumber
-              min={0}
-              placeholder="Chỗ đỗ xe"
-              style={{ width: "100%" }}
-            />
-          </Form.Item>
-        </Space.Compact>
-
-        <Space.Compact style={{ width: "100%" }}>
-          <Form.Item
-            name="operating_status"
-            label="Trạng thái hoạt động"
-            rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
-            style={{ width: "50%", marginRight: 8 }}
-          >
-            <Select placeholder="Chọn trạng thái">
-              <Select.Option value="ACTIVE">Hoạt động</Select.Option>
-              <Select.Option value="INACTIVE">Tạm dừng</Select.Option>
-              <Select.Option value="MAINTENANCE">Bảo trì</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="branch_type"
-            label="Loại chi nhánh"
-            rules={[{ required: true, message: "Vui lòng chọn loại chi nhánh" }]}
-            style={{ width: "50%" }}
-          >
-            <Select placeholder="Chọn loại chi nhánh">
-              <Select.Option value="STANDARD">Standard</Select.Option>
-              <Select.Option value="PREMIUM">Premium</Select.Option>
-              <Select.Option value="VIP">VIP</Select.Option>
-            </Select>
-          </Form.Item>
-        </Space.Compact>
-
-        <Form.Item
-          name="is_active"
-          label="Trạng thái"
-          rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
-        >
-          <Select placeholder="Chọn trạng thái">
-            <Select.Option value={true}>Kích hoạt</Select.Option>
-            <Select.Option value={false}>Vô hiệu hóa</Select.Option>
-          </Select>
-        </Form.Item>
       </Form>
     </Modal>
   );
 };
 
 export default BranchEditModal;
-

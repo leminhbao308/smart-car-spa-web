@@ -26,9 +26,7 @@ import {
 import {
   ServiceBay,
   ServiceBayFilterParam,
-  BayType,
   BayStatus,
-  BAY_TYPE_OPTIONS,
   BAY_STATUS_OPTIONS,
 } from "@/lib/api/types/service-bay.types";
 import { useServiceBays } from "@/lib/api/hooks/useServiceBays";
@@ -49,7 +47,6 @@ const { Search } = Input;
 const ServiceBayManagementPage = () => {
   // State management
   const [selectedBranch, setSelectedBranch] = useState<string>("");
-  const [selectedBayType, setSelectedBayType] = useState<BayType | undefined>(undefined);
   const [selectedStatus, setSelectedStatus] = useState<BayStatus | undefined>(undefined);
   const [searchText, setSearchText] = useState("");
   
@@ -74,9 +71,6 @@ const ServiceBayManagementPage = () => {
     if (selectedBranch) {
       params.branch_id = selectedBranch;
     }
-    if (selectedBayType) {
-      params.bay_type = selectedBayType;
-    }
     if (selectedStatus) {
       params.status = selectedStatus;
     }
@@ -85,7 +79,7 @@ const ServiceBayManagementPage = () => {
     }
 
     return params;
-  }, [selectedBranch, selectedBayType, selectedStatus, searchText]);
+  }, [selectedBranch, selectedStatus, searchText]);
 
   const { data: baysResponse, isLoading: loading, refetch: refreshBays } = useServiceBays(filterParams);
   const bays = useMemo(() => baysResponse?.data?.content || [], [baysResponse]);
@@ -151,7 +145,6 @@ const ServiceBayManagementPage = () => {
 
   const handleFilterReset = () => {
     setSelectedBranch("");
-    setSelectedBayType(undefined);
     setSelectedStatus(undefined);
     setSearchText("");
   };
@@ -162,10 +155,7 @@ const ServiceBayManagementPage = () => {
     value: branch.branch_id,
   }));
 
-  const bayTypeOptions = BAY_TYPE_OPTIONS.map(option => ({
-    label: `${option.icon} ${option.label}`,
-    value: option.value,
-  }));
+  // bayTypeOptions removed as BayType is no longer used
 
   const statusOptions = BAY_STATUS_OPTIONS.map(option => ({
     label: option.label,
@@ -276,21 +266,6 @@ const ServiceBayManagementPage = () => {
           </Col>
           <Col xs={24} sm={12} lg={6}>
             <Select
-              placeholder="Chọn loại khu vực"
-              value={selectedBayType}
-              onChange={setSelectedBayType}
-              style={{ width: "100%" }}
-              allowClear
-            >
-              {bayTypeOptions.map(option => (
-                <Option key={option.value} value={option.value}>
-                  {option.label}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Select
               placeholder="Chọn trạng thái"
               value={selectedStatus}
               onChange={setSelectedStatus}
@@ -329,11 +304,6 @@ const ServiceBayManagementPage = () => {
                     • Chi nhánh: {branches.find(b => b.branch_id === selectedBranch)?.branch_name || selectedBranch}
                   </span>
                 )}
-                {selectedBayType && (
-                  <span style={{ marginLeft: "8px", color: "#52c41a" }}>
-                    • Loại: {BAY_TYPE_OPTIONS.find(bt => bt.value === selectedBayType)?.label || selectedBayType}
-                  </span>
-                )}
                 {selectedStatus && (
                   <span style={{ marginLeft: "8px", color: "#faad14" }}>
                     • Trạng thái: {BAY_STATUS_OPTIONS.find(bs => bs.value === selectedStatus)?.label || selectedStatus}
@@ -345,7 +315,7 @@ const ServiceBayManagementPage = () => {
                   </span>
                 )}
               </Text>
-              {(selectedBranch || selectedBayType || selectedStatus || searchText) && (
+              {(selectedBranch || selectedStatus || searchText) && (
                 <Button
                   size="small"
                   onClick={handleFilterReset}

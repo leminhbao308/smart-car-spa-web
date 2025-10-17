@@ -19,9 +19,7 @@ import {
 } from "@ant-design/icons";
 import {
   ServiceBay,
-  BayType,
   BayStatus,
-  BAY_TYPE_OPTIONS,
   BAY_STATUS_OPTIONS,
 } from "@/lib/api/types/service-bay.types";
 
@@ -42,13 +40,7 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
   onStatusChange,
   loading = false,
 }) => {
-  const getBayTypeInfo = (type: BayType) => {
-    return BAY_TYPE_OPTIONS.find(opt => opt.value === type) || {
-      label: type,
-      color: "#8c8c8c",
-      icon: "🔧"
-    };
-  };
+  // getBayTypeInfo removed as BayType is no longer used
 
   const getBayStatusInfo = (status: BayStatus) => {
     return BAY_STATUS_OPTIONS.find(opt => opt.value === status) || {
@@ -57,7 +49,6 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
     };
   };
 
-  const typeInfo = getBayTypeInfo(bay.bay_type);
   const statusInfo = getBayStatusInfo(bay.status);
 
   const getStatusColor = (status: BayStatus) => {
@@ -142,7 +133,7 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
       {/* Header */}
       <div style={{ marginBottom: "16px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-          <span style={{ fontSize: "24px", marginTop: "2px" }}>{typeInfo.icon}</span>
+          <span style={{ fontSize: "24px", marginTop: "2px" }}>🔧</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Title 
               level={4} 
@@ -183,14 +174,6 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
 
       {/* Statistics */}
       <Row gutter={8} style={{ marginBottom: "12px" }}>
-        <Col span={8}>
-          <Statistic
-            title="Sức chứa"
-            value={bay.capacity}
-            suffix="xe"
-            valueStyle={{ fontSize: "14px", color: "#1890ff" }}
-          />
-        </Col>
         <Col span={8}>
           <Statistic
             title="Đặt lịch"

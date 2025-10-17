@@ -8,7 +8,6 @@ import {
   ServiceBayDropdownItem,
   BayAvailabilityRequest,
   ServiceBayStatistics,
-  BayType,
   BayStatus
 } from "../types/service-bay.types";
 
@@ -31,9 +30,6 @@ export class ServiceBayService {
       // Add filter params - using correct parameter names from backend
       if (params.branch_id && params.branch_id.trim()) {
         queryParams.append("branchId", params.branch_id.trim());
-      }
-      if (params.bay_type && params.bay_type.trim()) {
-        queryParams.append("bayType", params.bay_type.trim());
       }
       if (params.status && params.status.trim()) {
         queryParams.append("status", params.status.trim());
@@ -96,18 +92,7 @@ export class ServiceBayService {
     }
   }
 
-  /**
-   * Get service bays by type
-   */
-  static async getServiceBaysByType(bayType: BayType): Promise<ServiceBay[]> {
-    try {
-      const response = await apiClient.get(`/service-bays/type/${bayType}`);
-      return response.data.data;
-    } catch (error: unknown) {
-      console.log("Get service bays by type error:", error);
-      throw error;
-    }
-  }
+  // getServiceBaysByType removed as BayType is no longer used
 
   /**
    * Get active service bays
@@ -129,8 +114,7 @@ export class ServiceBayService {
   static async getAvailableServiceBays(
     branchId: string,
     startTime: string,
-    endTime: string,
-    bayType?: BayType
+    endTime: string
   ): Promise<ServiceBay[]> {
     try {
       const queryParams = new URLSearchParams({
@@ -138,10 +122,6 @@ export class ServiceBayService {
         startTime: startTime,
         endTime: endTime
       });
-      
-      if (bayType) {
-        queryParams.append("bayType", bayType);
-      }
 
       const response = await apiClient.get(
         `/service-bays/available?${queryParams.toString()}`
@@ -157,13 +137,11 @@ export class ServiceBayService {
    * Get service bays dropdown
    */
   static async getServiceBaysDropdown(
-    branchId?: string,
-    bayType?: BayType
+    branchId?: string
   ): Promise<ServiceBayDropdownItem[]> {
     try {
       const queryParams = new URLSearchParams();
       if (branchId) queryParams.append("branchId", branchId);
-      if (bayType) queryParams.append("bayType", bayType);
 
       const response = await apiClient.get(
         `/service-bays/dropdown?${queryParams.toString()}`
