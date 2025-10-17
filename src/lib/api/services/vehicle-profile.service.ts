@@ -159,6 +159,60 @@ export class VehicleProfileService {
   }
 
   /**
+   * Get all vehicle profiles by ownerId with pagination and filtering
+   */
+  static async getAllVehicleProfilesByOwnerId(
+    ownerId: string,
+    params: VehicleProfileRequest = {}
+  ): Promise<VehicleProfileResponse> {
+    try {
+      // Build query parameters with defaults
+      const queryParams = new URLSearchParams();
+
+      // Set default values if not provided
+      const page = params.page !== undefined ? params.page : 0;
+      const size = params.size !== undefined ? params.size : 10;
+      const direction = params.direction || "DESC";
+      const sort = params.sort || "createdDate";
+
+      queryParams.append("page", page.toString());
+      queryParams.append("size", size.toString());
+      queryParams.append("direction", direction);
+      queryParams.append("sort", sort);
+
+      const url = `/vehicles/profiles/owner/${ownerId}/get-all?${queryParams.toString()}`;
+
+      const response = await apiClient.get(url);
+      console.log("Vehicle profiles API by ownerId Response received:", response);
+
+      if (response.data.success && response.data.data) {
+        console.log("Raw vehicle profiles data:", response.data.data.content);
+
+        // Transform the data to include names
+        const transformedContent = await this.transformToDisplayFormat(
+          response.data.data.content
+        );
+        console.log("Transformed vehicle profiles data:", transformedContent);
+
+        return {
+          ...response.data,
+          data: {
+            ...response.data.data,
+            content: transformedContent,
+          },
+        };
+      } else {
+        throw new Error(
+          response.data.message || "Failed to fetch vehicle profiles"
+        );
+      }
+    } catch (error: unknown) {
+      console.log("Get all vehicle profiles error details:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Get vehicle profile by ID
    */
   static async getVehicleProfileById(
@@ -277,6 +331,7 @@ export class VehicleProfileService {
 // Export for backward compatibility
 export const vehicleProfileService = {
   getAll: VehicleProfileService.getAllVehicleProfiles,
+  getAllByOwnerId: VehicleProfileService.getAllVehicleProfilesByOwnerId,
   getById: VehicleProfileService.getVehicleProfileById,
   create: VehicleProfileService.createVehicleProfile,
   update: VehicleProfileService.updateVehicleProfile,

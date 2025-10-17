@@ -1,20 +1,20 @@
 "use client";
-import React, { useState, useMemo } from "react";
-import { AdminTable } from "@/components/ui/Table";
+import React, {useState, useMemo} from "react";
+import {AdminTable} from "@/components/ui/Table";
 import {
   useConfirmationModalContext,
   CreateVehicleProfileModal,
   VehicleProfileDetailModal,
   EditVehicleProfileModal,
 } from "@/components/ui/Modal";
-import { ColumnsType } from "antd/es/table";
-import { Tag, message } from "antd";
-import { PhoneOutlined } from "@ant-design/icons";
+import {ColumnsType} from "antd/es/table";
+import {Tag, message} from "antd";
+import {PhoneOutlined} from "@ant-design/icons";
 import {
   vehicleTypes,
   vehicleStatuses,
 } from "@/components/utils/data/car-profiles.data";
-import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
+import {useVehicleProfiles} from "@/lib/api/hooks/useVehicleProfiles";
 import {
   VehicleProfileDisplay,
   CreateVehicleProfileRequest,
@@ -22,7 +22,7 @@ import {
 } from "@/lib/api/types/vehicle-profile.types";
 
 const CarProfilesPage = () => {
-  const { showModal } = useConfirmationModalContext();
+  const {showModal} = useConfirmationModalContext();
 
   // Memoize initial params to prevent unnecessary re-renders
   const initialParams = useMemo(
@@ -44,7 +44,7 @@ const CarProfilesPage = () => {
     createProfile,
     updateProfile,
     deleteProfile,
-  } = useVehicleProfiles(initialParams);
+  } = useVehicleProfiles({params: initialParams});
 
   // Modal states
   const [createModalVisible, setCreateModalVisible] = useState(false);
@@ -97,13 +97,13 @@ const CarProfilesPage = () => {
       width: 200,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 500, fontSize: 14, marginBottom: 4 }}>
+          <div style={{fontWeight: 500, fontSize: 14, marginBottom: 4}}>
             {record.brand_name || "Chưa cập nhật"} {record.model_name || ""}
           </div>
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 2 }}>
+          <div style={{fontSize: 12, color: "#666", marginBottom: 2}}>
             Loại: {record.type_name || "Chưa cập nhật"}
           </div>
-          <div style={{ fontSize: 12, color: "#666" }}>
+          <div style={{fontSize: 12, color: "#666"}}>
             {record.color || "Chưa cập nhật"} •{" "}
             {record.engine_capacity || "Chưa cập nhật"}
           </div>
@@ -131,7 +131,7 @@ const CarProfilesPage = () => {
       width: 100,
       sorter: (a, b) => a.distance_traveled - b.distance_traveled,
       render: (distance: number) => (
-        <span style={{ fontWeight: 500 }}>{distance.toLocaleString()} km</span>
+        <span style={{fontWeight: 500}}>{distance.toLocaleString()} km</span>
       ),
     },
     {
@@ -140,7 +140,7 @@ const CarProfilesPage = () => {
       width: 180,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 500, fontSize: 13 }}>
+          <div style={{fontWeight: 500, fontSize: 13}}>
             {record.owner_name || "Chưa cập nhật"}
           </div>
           <div
@@ -152,7 +152,7 @@ const CarProfilesPage = () => {
               gap: 4,
             }}
           >
-            <PhoneOutlined style={{ fontSize: 10 }} />
+            <PhoneOutlined style={{fontSize: 10}}/>
             {record.owner_phone || "Chưa cập nhật"}
           </div>
         </div>
@@ -164,7 +164,7 @@ const CarProfilesPage = () => {
       key: "description",
       width: 150,
       render: (description: string) => (
-        <div style={{ fontSize: 12, color: "#666" }}>
+        <div style={{fontSize: 12, color: "#666"}}>
           {description || "Chưa có mô tả"}
         </div>
       ),
@@ -177,7 +177,7 @@ const CarProfilesPage = () => {
       sorter: (a, b) =>
         new Date(a.created_date).getTime() - new Date(b.created_date).getTime(),
       render: (date: string) => (
-        <div style={{ fontSize: 12 }}>
+        <div style={{fontSize: 12}}>
           {new Date(date).toLocaleDateString("vi-VN")}
         </div>
       ),
@@ -304,7 +304,7 @@ const CarProfilesPage = () => {
         searchable={true}
         searchPlaceholder="Tìm kiếm hồ sơ xe theo biển số, chủ xe, hãng xe..."
         searchFields={["license_plate", "description", "vehicle_id"]}
-        scroll={{ x: 1600 }}
+        scroll={{x: 1600}}
       />
 
       {/* Modals */}

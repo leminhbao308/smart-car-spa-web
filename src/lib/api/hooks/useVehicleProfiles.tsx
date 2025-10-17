@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { VehicleProfileService } from "../services/vehicle-profile.service";
+import {useState, useEffect, useCallback, useRef} from "react";
+import {VehicleProfileService} from "../services/vehicle-profile.service";
 import {
   VehicleProfile,
   VehicleProfileRequest,
@@ -9,10 +9,15 @@ import {
   UpdateVehicleProfileRequest,
 } from "../types/vehicle-profile.types";
 
+export interface UseVehicleProfilesProps {
+  ownerId?: string;
+  params: VehicleProfileRequest;
+}
+
 /**
  * Hook for all vehicle profiles data with pagination and search
  */
-export const useVehicleProfiles = (params: VehicleProfileRequest = {}) => {
+export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) => {
   const [profiles, setProfiles] = useState<VehicleProfile[]>([]);
   const [pagination, setPagination] = useState({
     page: 0,
@@ -22,7 +27,7 @@ export const useVehicleProfiles = (params: VehicleProfileRequest = {}) => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Use ref to store current params to avoid dependency issues
   const paramsRef = useRef(params);
   paramsRef.current = params;
@@ -33,7 +38,7 @@ export const useVehicleProfiles = (params: VehicleProfileRequest = {}) => {
     try {
       const response = await VehicleProfileService.getAllVehicleProfiles(currentParams);
       setProfiles(response.data.content);
-      setPagination({ 
+      setPagination({
         page: response.data.page,
         size: response.data.size,
         total_elements: response.data.total_elements,
@@ -47,19 +52,52 @@ export const useVehicleProfiles = (params: VehicleProfileRequest = {}) => {
     }
   }, []);
 
+  const fetchProfilesByOwnerId = useCallback(async (ownerId: string, currentParams: VehicleProfileRequest) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await VehicleProfileService.getAllVehicleProfilesByOwnerId(ownerId, currentParams);
+      setProfiles(response.data.content);
+      setPagination({
+        page: response.data.page,
+        size: response.data.size,
+        total_elements: response.data.total_elements,
+        total_pages: response.data.total_pages,
+      });
+    } catch (err) {
+      console.error("Failed to fetch vehicle profiles by ownerId:", err);
+      setError("Failed to load vehicle profiles by owner id.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    fetchProfiles(paramsRef.current);
-  }, [fetchProfiles]);
+    if (ownerId) {
+      fetchProfilesByOwnerId(ownerId, paramsRef.current);
+    } else {
+      fetchProfiles(paramsRef.current);
+    }
+  }, [fetchProfiles, fetchProfilesByOwnerId, ownerId]);
 
   const refreshProfiles = useCallback(() => {
-    fetchProfiles(paramsRef.current);
-  }, [fetchProfiles]);
+    if (ownerId) {
+      return fetchProfilesByOwnerId(ownerId, paramsRef.current);
+    }
+    return fetchProfiles(paramsRef.current);
+  }, [fetchProfiles, fetchProfilesByOwnerId, ownerId]);
 
   const createProfile = useCallback(async (data: CreateVehicleProfileRequest) => {
     try {
       const response = await VehicleProfileService.createVehicleProfile(data);
+
       // Refresh the list after successful creation
-      await fetchProfiles(paramsRef.current);
+      if (ownerId) {
+        await fetchProfilesByOwnerId(ownerId, paramsRef.current);
+      } else {
+        await fetchProfiles(paramsRef.current);
+      }
+
       return response;
     } catch (err) {
       console.error("Failed to create vehicle profile:", err);
@@ -71,7 +109,12 @@ export const useVehicleProfiles = (params: VehicleProfileRequest = {}) => {
     try {
       const response = await VehicleProfileService.updateVehicleProfile(profileId, data);
       // Refresh the list after successful update
-      await fetchProfiles(paramsRef.current);
+      if (ownerId) {
+        await fetchProfilesByOwnerId(ownerId, paramsRef.current);
+      } else {
+        await fetchProfiles(paramsRef.current);
+      }
+
       return response;
     } catch (err) {
       console.error("Failed to update vehicle profile:", err);
@@ -82,15 +125,20 @@ export const useVehicleProfiles = (params: VehicleProfileRequest = {}) => {
   const deleteProfile = useCallback(async (profileId: string) => {
     try {
       await VehicleProfileService.deleteVehicleProfile(profileId);
+
       // Refresh the list after successful deletion
-      await fetchProfiles(paramsRef.current);
+      if (ownerId) {
+        await fetchProfilesByOwnerId(ownerId, paramsRef.current);
+      } else {
+        await fetchProfiles(paramsRef.current);
+      }
     } catch (err) {
       console.error("Failed to delete vehicle profile:", err);
       throw err;
     }
   }, [fetchProfiles]);
 
-  return { profiles, pagination, loading, error, refreshProfiles, createProfile, updateProfile, deleteProfile };
+  return {profiles, pagination, loading, error, refreshProfiles, createProfile, updateProfile, deleteProfile};
 };
 
 /**
@@ -128,5 +176,5 @@ export const useVehicleProfile = (profileId: string | null) => {
     fetchProfile();
   }, [fetchProfile]);
 
-  return { profile, loading, error, refreshProfile };
+  return {profile, loading, error, refreshProfile};
 };
