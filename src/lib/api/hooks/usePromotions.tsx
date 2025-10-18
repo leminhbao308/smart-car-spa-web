@@ -1,9 +1,9 @@
 "use client";
 
-import {useState, useCallback} from "react";
-import {useQuery, useMutation, useQueryClient} from "@tanstack/react-query";
-import {message} from "antd";
-import {promotionService} from "../services/promotion.service";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { message } from "antd";
+import { promotionService } from "../services/promotion.service";
 import {
   Promotion,
   CreatePromotionRequest,
@@ -15,17 +15,24 @@ import {
 export const promotionKeys = {
   all: ["promotions"] as const,
   lists: () => [...promotionKeys.all, "list"] as const,
-  list: (params: PromotionFilterParam) => [...promotionKeys.lists(), params] as const,
+  list: (params: PromotionFilterParam) =>
+    [...promotionKeys.lists(), params] as const,
   details: () => [...promotionKeys.all, "detail"] as const,
   detail: (id: string) => [...promotionKeys.details(), id] as const,
   byCode: (code: string) => [...promotionKeys.all, "code", code] as const,
-  active: (params?: PromotionFilterParam) => [...promotionKeys.all, "active", params] as const,
-  visible: (params?: PromotionFilterParam) => [...promotionKeys.all, "visible", params] as const,
-  expired: (params?: PromotionFilterParam) => [...promotionKeys.all, "expired", params] as const,
-  startingSoon: (params?: PromotionFilterParam) => [...promotionKeys.all, "starting-soon", params] as const,
-  endingSoon: (params?: PromotionFilterParam) => [...promotionKeys.all, "ending-soon", params] as const,
+  active: (params?: PromotionFilterParam) =>
+    [...promotionKeys.all, "active", params] as const,
+  visible: (params?: PromotionFilterParam) =>
+    [...promotionKeys.all, "visible", params] as const,
+  expired: (params?: PromotionFilterParam) =>
+    [...promotionKeys.all, "expired", params] as const,
+  startingSoon: (params?: PromotionFilterParam) =>
+    [...promotionKeys.all, "starting-soon", params] as const,
+  endingSoon: (params?: PromotionFilterParam) =>
+    [...promotionKeys.all, "ending-soon", params] as const,
   byType: (type: string) => [...promotionKeys.all, "type", type] as const,
-  byStatus: (status: string) => [...promotionKeys.all, "status", status] as const,
+  byStatus: (status: string) =>
+    [...promotionKeys.all, "status", status] as const,
   statistics: () => [...promotionKeys.all, "statistics"] as const,
   analytics: (id?: string, fromDate?: string, toDate?: string) =>
     [...promotionKeys.all, "analytics", id, fromDate, toDate] as const,
@@ -54,7 +61,10 @@ export const usePromotion = (promotionId: string, enabled: boolean = true) => {
 };
 
 // Hook for getting promotion by code
-export const usePromotionByCode = (promotionCode: string, enabled: boolean = true) => {
+export const usePromotionByCode = (
+  promotionCode: string,
+  enabled: boolean = true
+) => {
   return useQuery({
     queryKey: promotionKeys.byCode(promotionCode),
     queryFn: () => promotionService.getPromotionByCode(promotionCode),
@@ -91,7 +101,9 @@ export const useExpiredPromotions = (params: PromotionFilterParam = {}) => {
 };
 
 // Hook for getting promotions starting soon
-export const usePromotionsStartingSoon = (params: PromotionFilterParam = {}) => {
+export const usePromotionsStartingSoon = (
+  params: PromotionFilterParam = {}
+) => {
   return useQuery({
     queryKey: promotionKeys.startingSoon(params),
     queryFn: () => promotionService.getPromotionsStartingSoon(params),
@@ -177,32 +189,36 @@ export const usePromotionManagement = () => {
     mutationFn: (data: CreatePromotionRequest) =>
       promotionService.createPromotion(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: promotionKeys.lists()});
-      queryClient.invalidateQueries({queryKey: promotionKeys.all});
+      queryClient.invalidateQueries({ queryKey: promotionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: promotionKeys.all });
       message.success("Tạo chương trình khuyến mãi thành công!");
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi tạo chương trình khuyến mãi";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi tạo chương trình khuyến mãi";
       message.error(errorMessage);
     },
   });
 
   // Update promotion mutation
   const updatePromotionMutation = useMutation({
-    mutationFn: ({id, data}: { id: string; data: UpdatePromotionRequest }) =>
+    mutationFn: ({ id, data }: { id: string; data: UpdatePromotionRequest }) =>
       promotionService.updatePromotion(id, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({queryKey: promotionKeys.lists()});
-      queryClient.invalidateQueries({queryKey: promotionKeys.detail(variables.id)});
-      queryClient.invalidateQueries({queryKey: promotionKeys.all});
+      queryClient.invalidateQueries({ queryKey: promotionKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: promotionKeys.detail(variables.id),
+      });
+      queryClient.invalidateQueries({ queryKey: promotionKeys.all });
       message.success("Cập nhật chương trình khuyến mãi thành công!");
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi cập nhật chương trình khuyến mãi";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi cập nhật chương trình khuyến mãi";
       message.error(errorMessage);
     },
   });
@@ -212,15 +228,18 @@ export const usePromotionManagement = () => {
     mutationFn: (promotionId: string) =>
       promotionService.deletePromotion(promotionId),
     onSuccess: (_, promotionId) => {
-      queryClient.invalidateQueries({queryKey: promotionKeys.lists()});
-      queryClient.invalidateQueries({queryKey: promotionKeys.detail(promotionId)});
-      queryClient.invalidateQueries({queryKey: promotionKeys.all});
+      queryClient.invalidateQueries({ queryKey: promotionKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: promotionKeys.detail(promotionId),
+      });
+      queryClient.invalidateQueries({ queryKey: promotionKeys.all });
       message.success("Xóa chương trình khuyến mãi thành công!");
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi xóa chương trình khuyến mãi";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi xóa chương trình khuyến mãi";
       message.error(errorMessage);
     },
   });
@@ -230,33 +249,41 @@ export const usePromotionManagement = () => {
     mutationFn: (promotionId: string) =>
       promotionService.restorePromotion(promotionId),
     onSuccess: (_, promotionId) => {
-      queryClient.invalidateQueries({queryKey: promotionKeys.lists()});
-      queryClient.invalidateQueries({queryKey: promotionKeys.detail(promotionId)});
-      queryClient.invalidateQueries({queryKey: promotionKeys.all});
+      queryClient.invalidateQueries({ queryKey: promotionKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: promotionKeys.detail(promotionId),
+      });
+      queryClient.invalidateQueries({ queryKey: promotionKeys.all });
       message.success("Khôi phục chương trình khuyến mãi thành công!");
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi khôi phục chương trình khuyến mãi";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi khôi phục chương trình khuyến mãi";
       message.error(errorMessage);
     },
   });
 
   // Update promotion status mutation
   const updatePromotionStatusMutation = useMutation({
-    mutationFn: ({id, isActive}: { id: string; isActive: boolean }) =>
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
       promotionService.updatePromotionStatus(id, isActive),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({queryKey: promotionKeys.lists()});
-      queryClient.invalidateQueries({queryKey: promotionKeys.detail(variables.id)});
-      queryClient.invalidateQueries({queryKey: promotionKeys.all});
-      message.success("Cập nhật trạng thái chương trình khuyến mãi thành công!");
+      queryClient.invalidateQueries({ queryKey: promotionKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: promotionKeys.detail(variables.id),
+      });
+      queryClient.invalidateQueries({ queryKey: promotionKeys.all });
+      message.success(
+        "Cập nhật trạng thái chương trình khuyến mãi thành công!"
+      );
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi cập nhật trạng thái";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi cập nhật trạng thái";
       message.error(errorMessage);
     },
   });
@@ -266,15 +293,18 @@ export const usePromotionManagement = () => {
     mutationFn: (promotionId: string) =>
       promotionService.makePromotionVisible(promotionId),
     onSuccess: (_, promotionId) => {
-      queryClient.invalidateQueries({queryKey: promotionKeys.lists()});
-      queryClient.invalidateQueries({queryKey: promotionKeys.detail(promotionId)});
-      queryClient.invalidateQueries({queryKey: promotionKeys.all});
+      queryClient.invalidateQueries({ queryKey: promotionKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: promotionKeys.detail(promotionId),
+      });
+      queryClient.invalidateQueries({ queryKey: promotionKeys.all });
       message.success("Hiển thị chương trình khuyến mãi thành công!");
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi hiển thị chương trình khuyến mãi";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi hiển thị chương trình khuyến mãi";
       message.error(errorMessage);
     },
   });
@@ -284,50 +314,59 @@ export const usePromotionManagement = () => {
     mutationFn: (promotionId: string) =>
       promotionService.makePromotionInvisible(promotionId),
     onSuccess: (_, promotionId) => {
-      queryClient.invalidateQueries({queryKey: promotionKeys.lists()});
-      queryClient.invalidateQueries({queryKey: promotionKeys.detail(promotionId)});
-      queryClient.invalidateQueries({queryKey: promotionKeys.all});
+      queryClient.invalidateQueries({ queryKey: promotionKeys.lists() });
+      queryClient.invalidateQueries({
+        queryKey: promotionKeys.detail(promotionId),
+      });
+      queryClient.invalidateQueries({ queryKey: promotionKeys.all });
       message.success("Ẩn chương trình khuyến mãi thành công!");
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi ẩn chương trình khuyến mãi";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi ẩn chương trình khuyến mãi";
       message.error(errorMessage);
     },
   });
 
   // Duplicate promotion mutation
   const duplicatePromotionMutation = useMutation({
-    mutationFn: ({id, newName, newCode}: {
+    mutationFn: ({
+      id,
+      newName,
+      newCode,
+    }: {
       id: string;
       newName: string;
-      newCode: string
-    }) =>
-      promotionService.duplicatePromotion(id, newName, newCode),
+      newCode: string;
+    }) => promotionService.duplicatePromotion(id, newName, newCode),
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: promotionKeys.lists()});
-      queryClient.invalidateQueries({queryKey: promotionKeys.all});
+      queryClient.invalidateQueries({ queryKey: promotionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: promotionKeys.all });
       message.success("Sao chép chương trình khuyến mãi thành công!");
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi sao chép chương trình khuyến mãi";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi sao chép chương trình khuyến mãi";
       message.error(errorMessage);
     },
   });
 
   // Bulk update promotion status mutation
   const bulkUpdatePromotionStatusMutation = useMutation({
-    mutationFn: ({promotionIds, status}: {
+    mutationFn: ({
+      promotionIds,
+      status,
+    }: {
       promotionIds: string[];
-      status: string
-    }) =>
-      promotionService.bulkUpdatePromotionStatus(promotionIds, status),
+      status: string;
+    }) => promotionService.bulkUpdatePromotionStatus(promotionIds, status),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({queryKey: promotionKeys.lists()});
-      queryClient.invalidateQueries({queryKey: promotionKeys.all});
+      queryClient.invalidateQueries({ queryKey: promotionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: promotionKeys.all });
       message.success(
         `Cập nhật thành công ${data.success} chương trình khuyến mãi${
           data.failed > 0 ? `, thất bại ${data.failed}` : ""
@@ -335,9 +374,10 @@ export const usePromotionManagement = () => {
       );
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi cập nhật hàng loạt";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra khi cập nhật hàng loạt";
       message.error(errorMessage);
     },
   });
@@ -346,8 +386,8 @@ export const usePromotionManagement = () => {
   const importPromotionsMutation = useMutation({
     mutationFn: (file: File) => promotionService.importPromotions(file),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({queryKey: promotionKeys.lists()});
-      queryClient.invalidateQueries({queryKey: promotionKeys.all});
+      queryClient.invalidateQueries({ queryKey: promotionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: promotionKeys.all });
       message.success(
         `Import thành công ${data.success} chương trình khuyến mãi${
           data.failed > 0 ? `, thất bại ${data.failed}` : ""
@@ -355,84 +395,103 @@ export const usePromotionManagement = () => {
       );
     },
     onError: (error: unknown) => {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi import";
+      const errorMessage =
+        error instanceof Error ? error.message : "Có lỗi xảy ra khi import";
       message.error(errorMessage);
     },
   });
 
   // Export promotions function
-  const exportPromotions = useCallback(async (filters?: Record<string, unknown>) => {
-    try {
-      setLoading(true);
-      const blob = await promotionService.exportPromotions(filters);
+  const exportPromotions = useCallback(
+    async (filters?: Record<string, unknown>) => {
+      try {
+        setLoading(true);
+        const blob = await promotionService.exportPromotions(filters);
 
-      // Create download link
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `promotions_${new Date().getTime()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `promotions_${new Date().getTime()}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
 
-      message.success("Xuất dữ liệu thành công!");
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Có lỗi xảy ra khi xuất dữ liệu";
-      message.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        message.success("Xuất dữ liệu thành công!");
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Có lỗi xảy ra khi xuất dữ liệu";
+        message.error(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   // Validation functions
-  const validatePromotionCode = useCallback(async (code: string): Promise<boolean> => {
-    try {
-      const result = await promotionService.validatePromotionCode(code);
-      return result.valid;
-    } catch {
-      return false;
-    }
-  }, []);
+  const validatePromotionCode = useCallback(
+    async (code: string): Promise<boolean> => {
+      try {
+        const result = await promotionService.validatePromotionCode(code);
+        return result.valid;
+      } catch {
+        return false;
+      }
+    },
+    []
+  );
 
-  const checkPromotionAvailability = useCallback(async (
-    promotionId: string,
-    customerId?: string
-  ): Promise<{ available: boolean; message?: string }> => {
-    try {
-      return await promotionService.checkPromotionAvailability(promotionId, customerId);
-    } catch {
-      return {available: false, message: "Không thể kiểm tra tính khả dụng"};
-    }
-  }, []);
+  const checkPromotionAvailability = useCallback(
+    async (
+      promotionId: string,
+      customerId?: string
+    ): Promise<{ available: boolean; message?: string }> => {
+      try {
+        return await promotionService.checkPromotionAvailability(
+          promotionId,
+          customerId
+        );
+      } catch {
+        return {
+          available: false,
+          message: "Không thể kiểm tra tính khả dụng",
+        };
+      }
+    },
+    []
+  );
 
   // Apply promotion to order
-  const applyPromotion = useCallback(async (
-    promotionId: string,
-    orderData: {
-      customerId: string;
-      items: Array<{
-        serviceId?: string;
-        productId?: string;
-        quantity: number;
-        price: number;
-      }>;
-      totalAmount: number;
-    }
-  ) => {
-    try {
-      return await promotionService.applyPromotion(promotionId, orderData);
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error
-        ? error.message
-        : "Không thể áp dụng chương trình khuyến mãi";
-      throw new Error(errorMessage);
-    }
-  }, []);
+  const applyPromotion = useCallback(
+    async (
+      promotionId: string,
+      orderData: {
+        customerId: string;
+        items: Array<{
+          serviceId?: string;
+          productId?: string;
+          quantity: number;
+          price: number;
+        }>;
+        totalAmount: number;
+      }
+    ) => {
+      try {
+        return await promotionService.applyPromotion(promotionId, orderData);
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Không thể áp dụng chương trình khuyến mãi";
+        throw new Error(errorMessage);
+      }
+    },
+    []
+  );
 
   return {
     // State
@@ -473,13 +532,14 @@ export const usePromotionManagement = () => {
 
 // Hook for promotions dropdown (for forms)
 export const usePromotionsDropdown = () => {
-  const {data, isLoading} = useActivePromotions();
+  const { data, isLoading } = useActivePromotions();
 
-  const options = data?.content?.map((promotion: Promotion) => ({
-    value: promotion.promotion_id,
-    label: `${promotion.name} (${promotion.promotion_code || 'N/A'})`,
-    promotion: promotion,
-  })) || [];
+  const options =
+    data?.content?.map((promotion: Promotion) => ({
+      value: promotion.promotion_id,
+      label: `${promotion.name} (${promotion.promotion_code || "N/A"})`,
+      promotion: promotion,
+    })) || [];
 
   return {
     options,
@@ -490,17 +550,27 @@ export const usePromotionsDropdown = () => {
 
 // Hook for visible promotions dropdown
 export const useVisiblePromotionsDropdown = () => {
-  const {data, isLoading} = useVisiblePromotions();
+  const { data, isLoading } = useVisiblePromotions();
 
-  const options = data?.content?.map((promotion: Promotion) => ({
-    value: promotion.promotion_id,
-    label: `${promotion.name} (${promotion.promotion_code || 'N/A'})`,
-    promotion: promotion,
-  })) || [];
+  const options =
+    data?.content?.map((promotion: Promotion) => ({
+      value: promotion.promotion_id,
+      label: `${promotion.name} (${promotion.promotion_code || "N/A"})`,
+      promotion: promotion,
+    })) || [];
 
   return {
     options,
     isLoading,
     promotions: data?.content || [],
   };
+};
+
+// Hook for promotion usage history
+export const usePromotionUsageHistory = (params: PromotionFilterParam = {}) => {
+  return useQuery({
+    queryKey: [...promotionKeys.all, "usage-history", params],
+    queryFn: () => promotionService.getPromotionUsageHistory(params),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
 };
