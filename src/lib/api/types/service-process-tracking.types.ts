@@ -179,7 +179,6 @@ export interface UpdateServiceProcessTrackingRequest {
 }
 
 export interface StartStepRequest {
-  technician_id: string;
   notes?: string;
 }
 
