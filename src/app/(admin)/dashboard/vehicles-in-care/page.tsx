@@ -96,6 +96,7 @@ const VehiclesInCarePage = () => {
     null
   );
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [shouldCreateTracking, setShouldCreateTracking] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
     type: 'start' | 'cancel';
@@ -331,6 +332,13 @@ const VehiclesInCarePage = () => {
           description: "Bắt đầu chăm sóc thành công",
           placement: "topRight",
         });
+        
+        // Auto-open tracking modal to create tracking records
+        console.log("🚀 Auto-opening tracking modal after start service");
+        setSelectedVehicle(confirmAction.record);
+        setShouldCreateTracking(true); // Signal to create tracking
+        setDetailModalOpen(true);
+        
       } else if (confirmAction.type === 'cancel') {
         await cancelBookingMutation.mutateAsync({
           bookingId: confirmAction.record.booking_id,
@@ -527,6 +535,7 @@ const VehiclesInCarePage = () => {
         dataSource={data}
         columns={columns}
         actions={actions}
+        rowKey="booking_id"
         loading={
           isLoadingCheckedIn ||
           isLoadingInProgress ||
@@ -551,9 +560,14 @@ const VehiclesInCarePage = () => {
           onCancel={() => {
             setDetailModalOpen(false);
             setSelectedVehicle(null);
+            setShouldCreateTracking(false); // Reset tracking creation flag
           }}
           booking={selectedVehicle}
           trackings={trackingData || []}
+          shouldCreateTracking={shouldCreateTracking}
+          onTrackingCreated={() => {
+            setShouldCreateTracking(false); // Reset flag after tracking creation
+          }}
         />
       )}
 

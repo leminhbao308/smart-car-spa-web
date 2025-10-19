@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Table, ConfigProvider } from "antd";
+import { Table } from "antd";
 import type { TableProps } from "antd/es/table";
 
 interface SafeTableProps<T = unknown> extends TableProps<T> {
@@ -85,7 +85,11 @@ const SafeTable = <T = unknown,>(props: SafeTableProps<T>) => {
   return (
     <Table 
       {...props} 
-      rowKey={props.rowKey || 'id'}
+      // Ensure unique keys by adding index if needed
+      rowKey={props.rowKey ? (record: T, index?: number) => {
+        const key = (record as Record<string, unknown>)[props.rowKey! as string];
+        return key ? `${key}-${index || 0}` : `row-${index || 0}`;
+      } : 'id'}
     />
   );
 };
