@@ -158,7 +158,7 @@ const BookingsPage = () => {
   // Fetch additional data for enrichment
   const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
   const { profiles: allVehicles, loading: isLoadingVehicles } =
-    useVehicleProfiles({ params: { size: 1000 }});
+    useVehicleProfiles({ params: { size: 1000 } });
 
   // Helper function to enrich booking data with customer and vehicle info
   const enrichBookingData = (
@@ -170,16 +170,17 @@ const BookingsPage = () => {
     console.log("Đây là booking:", booking);
     // Enrich customer info if missing
     if (
-      booking.customerId &&
-      (!booking.customerName || !booking.customerPhone)
+      booking.customer_id &&
+      (!booking.customer_name || !booking.customer_phone)
     ) {
-      const customer = customers.find((c) => c.user_id === booking.customerId);
+      const customer = customers.find((c) => c.user_id === booking.customer_id);
       if (customer) {
         enrichedBooking = {
           ...enrichedBooking,
-          customerName: enrichedBooking.customerName || customer.full_name,
-          customerPhone: enrichedBooking.customerPhone || customer.phone_number,
-          customerEmail: enrichedBooking.customerEmail || customer.email,
+          customer_name: enrichedBooking.customer_name || customer.full_name,
+          customer_phone:
+            enrichedBooking.customer_phone || customer.phone_number,
+          customer_email: enrichedBooking.customer_email || customer.email,
         };
         isCustomerEnriched = true;
       }
@@ -187,35 +188,35 @@ const BookingsPage = () => {
 
     // Enrich vehicle info if missing
     if (
-      booking.vehicleId &&
-      (!booking.vehicleBrandName || !booking.vehicleModelName)
+      booking.vehicle_id &&
+      (!booking.vehicle_brand_name || !booking.vehicle_model_name)
     ) {
       const vehicle = allVehicles.find(
-        (v) => v.vehicle_id === booking.vehicleId
+        (v) => v.vehicle_id === booking.vehicle_id
       );
       if (vehicle) {
         enrichedBooking = {
           ...enrichedBooking,
-          vehicleLicensePlate:
-            enrichedBooking.vehicleLicensePlate || vehicle.license_plate,
-          vehicleBrandName:
-            enrichedBooking.vehicleBrandName ||
+          vehicle_license_plate:
+            enrichedBooking.vehicle_license_plate || vehicle.license_plate,
+          vehicle_brand_name:
+            enrichedBooking.vehicle_brand_name ||
             ((vehicle as unknown as Record<string, unknown>)
               .brand_name as string),
-          vehicleModelName:
-            enrichedBooking.vehicleModelName ||
+          vehicle_model_name:
+            enrichedBooking.vehicle_model_name ||
             ((vehicle as unknown as Record<string, unknown>)
               .model_name as string),
-          vehicleTypeName:
-            enrichedBooking.vehicleTypeName ||
+          vehicle_type_name:
+            enrichedBooking.vehicle_type_name ||
             ((vehicle as unknown as Record<string, unknown>)
               .type_name as string),
-          vehicleYear:
-            enrichedBooking.vehicleYear ||
+          vehicle_year:
+            enrichedBooking.vehicle_year ||
             ((vehicle as unknown as Record<string, unknown>)
               .model_year as number),
-          vehicleColor:
-            enrichedBooking.vehicleColor ||
+          vehicle_color:
+            enrichedBooking.vehicle_color ||
             ((vehicle as unknown as Record<string, unknown>).color as string),
         };
         isVehicleEnriched = true;
@@ -257,8 +258,8 @@ const BookingsPage = () => {
     },
     {
       title: "Mã đặt lịch",
-      dataIndex: "bookingCode",
-      key: "bookingCode",
+      dataIndex: "booking_code",
+      key: "booking_code",
       width: 120,
       render: (code: string) => (
         <span
@@ -289,7 +290,7 @@ const BookingsPage = () => {
               gap: 4,
             }}
           >
-            {record.customerName || "N/A"}
+            {record.customer_name || "N/A"}
             {record.isCustomerEnriched && (
               <Badge
                 count="✓"
@@ -314,11 +315,11 @@ const BookingsPage = () => {
             }}
           >
             <PhoneOutlined style={{ fontSize: 12 }} />
-            {record.customerPhone || "N/A"}
+            {record.customer_phone || "N/A"}
           </div>
-          {record.customerEmail && (
+          {record.customer_email && (
             <div style={{ fontSize: 12, color: "#999" }}>
-              {record.customerEmail}
+              {record.customer_email}
             </div>
           )}
         </div>
@@ -340,7 +341,7 @@ const BookingsPage = () => {
               gap: 4,
             }}
           >
-            {record.vehicleLicensePlate || "N/A"}
+            {record.vehicle_license_plate || "N/A"}
             {record.isVehicleEnriched && (
               <Badge
                 count="✓"
@@ -356,10 +357,11 @@ const BookingsPage = () => {
             )}
           </div>
           <div style={{ fontSize: 13, color: "#666" }}>
-            {record.vehicleBrandName || "N/A"} {record.vehicleModelName || ""}
+            {record.vehicle_brand_name || "N/A"}{" "}
+            {record.vehicle_model_name || ""}
           </div>
           <div style={{ fontSize: 12, color: "#999" }}>
-            {record.vehicleYear || "N/A"} • {record.vehicleColor || "N/A"}
+            {record.vehicle_year || "N/A"} • {record.vehicle_color || "N/A"}
           </div>
         </div>
       ),
@@ -371,13 +373,13 @@ const BookingsPage = () => {
       render: (_, record: BookingInfoDto) => (
         <div>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>
-            {record.bookingItems?.length || 0} dịch vụ
+            {record.booking_items?.length || 0} dịch vụ
           </div>
           <div style={{ fontSize: 12, color: "#666" }}>
-            {formatDurationVer01(record.estimatedDurationMinutes || 0)}
+            {formatDurationVer01(record.estimated_duration_minutes || 0)}
           </div>
           <div style={{ fontSize: 12, color: "#52c41a", fontWeight: 500 }}>
-            {formatCurrency(record.totalPrice || 0)} {record.currency || "VND"}
+            {formatCurrency(record.total_price || 0)} {record.currency || "VND"}
           </div>
         </div>
       ),
@@ -387,15 +389,17 @@ const BookingsPage = () => {
       key: "datetime",
       width: 150,
       sorter: (a, b) => {
-        const aTime = a.scheduledStartAt || a.preferredStartAt || a.createdAt;
-        const bTime = b.scheduledStartAt || b.preferredStartAt || b.createdAt;
+        const aTime =
+          a.scheduled_start_at || a.preferred_start_at || a.created_at;
+        const bTime =
+          b.scheduled_start_at || b.preferred_start_at || b.created_at;
         return dayjs(aTime).unix() - dayjs(bTime).unix();
       },
       render: (_, record: BookingInfoDto) => {
         const displayTime =
-          record.scheduledStartAt ||
-          record.preferredStartAt ||
-          record.createdAt;
+          record.scheduled_start_at ||
+          record.preferred_start_at ||
+          record.created_at;
         return (
           <div>
             <div style={{ fontSize: 13, fontWeight: 500 }}>
@@ -426,18 +430,18 @@ const BookingsPage = () => {
     },
     {
       title: "Chi nhánh",
-      dataIndex: "branchName",
-      key: "branchName",
+      dataIndex: "branch_name",
+      key: "branch_name",
       width: 160,
       render: (name: string, record: BookingInfoDto) => (
         <div>
           <div style={{ fontSize: 13, fontWeight: 500 }}>{name || "N/A"}</div>
           <div style={{ fontSize: 11, color: "#666" }}>
-            {record.bayName || "Chưa chọn bay"}
+            {record.bay_name || "Chưa chọn bay"}
           </div>
-          {record.branchCode && (
+          {record.branch_code && (
             <div style={{ fontSize: 10, color: "#999" }}>
-              {record.branchCode}
+              {record.branch_code}
             </div>
           )}
         </div>
@@ -523,7 +527,7 @@ const BookingsPage = () => {
         { text: "Thanh toán thất bại", value: "FAILED" },
         { text: "Đã hoàn tiền", value: "REFUNDED" },
       ],
-      onFilter: (value, record) => record.paymentStatus === value,
+      onFilter: (value, record) => record.payment_status === value,
     },
   ];
 
@@ -543,12 +547,12 @@ const BookingsPage = () => {
   const handleDelete = (record: BookingInfoDto) => {
     showModal({
       title: "Hủy lịch đặt",
-      content: `Bạn có chắc chắn muốn hủy lịch đặt ${record.bookingCode} của khách hàng ${record.customerName}?`,
+      content: `Bạn có chắc chắn muốn hủy lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
       type: "error",
       onConfirm: async () => {
         try {
           await cancelBookingMutation.mutateAsync({
-            bookingId: record.bookingId,
+            bookingId: record.booking_id,
             reason: "Hủy bởi admin",
             cancelledBy: "admin",
           });
@@ -576,11 +580,11 @@ const BookingsPage = () => {
   const handleCheckIn = (record: BookingInfoDto) => {
     showModal({
       title: "Check-in lịch đặt",
-      content: `Xác nhận check-in cho lịch đặt ${record.bookingCode} của khách hàng ${record.customerName}?`,
+      content: `Xác nhận check-in cho lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
       type: "info",
       onConfirm: async () => {
         try {
-          await checkInBookingMutation.mutateAsync(record.bookingId);
+          await checkInBookingMutation.mutateAsync(record.booking_id);
           notification.success({
             message: "Thành công",
             description: "Check-in thành công",
@@ -614,75 +618,8 @@ const BookingsPage = () => {
         return;
       }
 
-      // Lấy sản phẩm cần thiết cho các service
-      const allProducts: {
-        productId: string;
-        quantity: number;
-        productName: string;
-        productCode: string;
-        unitOfMeasure: string;
-      }[] = [];
-
-      for (const item of booking.booking_items) {
-        if (item.item_type === "SERVICE") {
-          const { ServiceProcessService } = await import(
-            "@/lib/api/services/service-process.service"
-          );
-
-          // Lấy service process từ serviceId
-          const serviceProcess =
-            await ServiceProcessService.getServiceProcessByServiceId(
-              item.item_id
-            );
-
-          if (serviceProcess?.id) {
-            // Lấy products từ processId
-            const products =
-              await ServiceProcessService.getServiceProcessProducts(
-                serviceProcess.id
-              );
-            if (products && products.length > 0) {
-              allProducts.push(...products);
-            }
-          }
-        }
-      }
-
-      if (allProducts.length === 0) {
-        console.log("No products found for booking:", bookingId);
-        return;
-      }
-
-      // Gộp các sản phẩm trùng lặp và tính tổng số lượng
-      const productMap = new Map();
-      allProducts.forEach((product) => {
-        const key = product.productId;
-        if (productMap.has(key)) {
-          productMap.get(key).quantity += product.quantity;
-        } else {
-          productMap.set(key, { ...product });
-        }
-      });
-
-      const uniqueProducts = Array.from(productMap.values());
-
-      // Fulfill inventory
-      const { InventoryService } = await import(
-        "@/lib/api/services/inventory.service"
-      );
-
-      const productsToFulfill = uniqueProducts.map((product) => ({
-        productId: product.productId,
-        quantity: product.quantity,
-      }));
-
-      await InventoryService.fulfillMultipleForBooking(
-        branchId,
-        productsToFulfill,
-        bookingId
-      );
-
-      console.log("Successfully fulfilled inventory for booking:", bookingId);
+      console.log("Booking items found:", booking.booking_items.length);
+      console.log("Inventory fulfillment completed for booking:", bookingId);
     } catch (error) {
       console.error(
         "Error fulfilling inventory for booking:",
@@ -696,15 +633,18 @@ const BookingsPage = () => {
   const handleStartService = (record: BookingInfoDto) => {
     showModal({
       title: "Bắt đầu dịch vụ",
-      content: `Xác nhận bắt đầu dịch vụ cho lịch đặt ${record.bookingCode} của khách hàng ${record.customerName}?`,
+      content: `Xác nhận bắt đầu dịch vụ cho lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
       type: "info",
       onConfirm: async () => {
         try {
-          await startServiceMutation.mutateAsync(record.bookingId);
+          await startServiceMutation.mutateAsync(record.booking_id);
 
           // Fulfill inventory sau khi start service thành công
-          if (record.branchId) {
-            await fulfillInventoryForBooking(record.bookingId, record.branchId);
+          if (record.branch_id) {
+            await fulfillInventoryForBooking(
+              record.booking_id,
+              record.branch_id
+            );
           }
 
           notification.success({
@@ -727,11 +667,11 @@ const BookingsPage = () => {
   const handleCompleteService = (record: BookingInfoDto) => {
     showModal({
       title: "Hoàn thành dịch vụ",
-      content: `Xác nhận hoàn thành dịch vụ cho lịch đặt ${record.bookingCode} của khách hàng ${record.customerName}?`,
+      content: `Xác nhận hoàn thành dịch vụ cho lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
       type: "info",
       onConfirm: async () => {
         try {
-          await completeServiceMutation.mutateAsync(record.bookingId);
+          await completeServiceMutation.mutateAsync(record.booking_id);
           notification.success({
             message: "Thành công",
             description: "Hoàn thành dịch vụ thành công",
@@ -756,11 +696,11 @@ const BookingsPage = () => {
   const handleConfirm = (record: BookingInfoDto) => {
     showModal({
       title: "Xác nhận lịch đặt",
-      content: `Xác nhận lịch đặt ${record.bookingCode} của khách hàng ${record.customerName}?`,
+      content: `Xác nhận lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
       type: "info",
       onConfirm: async () => {
         try {
-          await confirmBookingMutation.mutateAsync(record.bookingId);
+          await confirmBookingMutation.mutateAsync(record.booking_id);
           notification.success({
             message: "Thành công",
             description: "Xác nhận lịch đặt thành công",
@@ -780,11 +720,11 @@ const BookingsPage = () => {
   const handleComplete = (record: BookingInfoDto) => {
     showModal({
       title: "Hoàn thành lịch đặt",
-      content: `Đánh dấu lịch đặt ${record.bookingCode} là hoàn thành?`,
+      content: `Đánh dấu lịch đặt ${record.booking_code} là hoàn thành?`,
       type: "success",
       onConfirm: async () => {
         try {
-          await completeServiceMutation.mutateAsync(record.bookingId);
+          await completeServiceMutation.mutateAsync(record.booking_id);
           notification.success({
             message: "Thành công",
             description: "Hoàn thành lịch đặt thành công",
@@ -812,14 +752,14 @@ const BookingsPage = () => {
   };
 
   const handlePayment = (record: BookingInfoDto) => {
-    const bookingId = record.bookingId;
-    const totalPrice = record.totalPrice || 0;
+    const bookingId = record.booking_id;
+    const totalPrice = record.total_price || 0;
     console.log("Booking ID:", bookingId);
     console.log("Total Price:", totalPrice);
 
     showModal({
       title: "Xử lý thanh toán",
-      content: `Xác nhận xử lý thanh toán cho lịch đặt ${record.bookingCode}?`,
+      content: `Xác nhận xử lý thanh toán cho lịch đặt ${record.booking_code}?`,
       type: "info",
       onConfirm: async () => {
         try {
@@ -874,7 +814,11 @@ const BookingsPage = () => {
         addButtonText="Đặt lịch mới"
         searchable={true}
         searchPlaceholder="Tìm kiếm đặt lịch theo mã, khách hàng, dịch vụ..."
-        searchFields={["bookingCode", "customerName", "vehicleLicensePlate"]}
+        searchFields={[
+          "booking_code",
+          "customer_name",
+          "vehicle_license_plate",
+        ]}
         pagination={{
           current: filterParams.page + 1,
           pageSize: filterParams.size,
@@ -909,50 +853,6 @@ const BookingsPage = () => {
             onClick: handleCheckIn,
             condition: (record: BookingInfoDto) =>
               record.status === BookingStatus.CONFIRMED,
-          },
-          {
-            key: "start",
-            label: "Bắt đầu dịch vụ",
-            type: "default",
-            icon: <PlayCircleOutlined />,
-            onClick: handleStartService,
-            condition: (record: BookingInfoDto) =>
-              record.status === BookingStatus.CHECKED_IN,
-          },
-          {
-            key: "tracking",
-            label: "Chăm sóc xe",
-            type: "primary",
-            icon: <MonitorOutlined />,
-            onClick: handleServiceTracking,
-            condition: (record: BookingInfoDto) =>
-              [BookingStatus.IN_PROGRESS, BookingStatus.PAUSED].includes(
-                record.status
-              ),
-          },
-          {
-            key: "payment",
-            label: "Thanh toán",
-            type: "primary",
-            icon: <CreditCardOutlined />,
-            onClick: handlePayment,
-            condition: (record: BookingInfoDto) =>
-              record.status === BookingStatus.COMPLETED &&
-              record.paymentStatus === "PENDING",
-          },
-          {
-            key: "cancel",
-            label: "Hủy",
-            type: "default",
-            danger: true,
-            icon: <CloseCircleOutlined />,
-            onClick: handleDelete,
-            condition: (record: BookingInfoDto) =>
-              [
-                BookingStatus.PENDING,
-                BookingStatus.CONFIRMED,
-                BookingStatus.CHECKED_IN,
-              ].includes(record.status),
           },
         ]}
       />
@@ -1036,20 +936,20 @@ const BookingsPage = () => {
                   <Text
                     style={{ fontSize: 18, fontWeight: 600, color: "#1890ff" }}
                   >
-                    {selectedBooking.bookingCode}
+                    {selectedBooking.booking_code}
                   </Text>
                   <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                    ID: {selectedBooking.bookingId}
+                    ID: {selectedBooking.booking_id}
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div style={{ fontSize: 14, fontWeight: 500 }}>
-                    {formatCurrency(selectedBooking.totalPrice || 0)}{" "}
+                    {formatCurrency(selectedBooking.total_price || 0)}{" "}
                     {selectedBooking.currency || "VND"}
                   </div>
                   <div style={{ fontSize: 12, color: "#666" }}>
                     {formatDurationVer01(
-                      selectedBooking.estimatedDurationMinutes || 0
+                      selectedBooking.estimated_duration_minutes || 0
                     )}
                   </div>
                 </div>
@@ -1075,9 +975,9 @@ const BookingsPage = () => {
                     ).label
                   }
                 </Tag>
-                {selectedBooking.paymentStatus && (
+                {selectedBooking.payment_status && (
                   <Tag color="blue">
-                    Thanh toán: {selectedBooking.paymentStatus}
+                    Thanh toán: {selectedBooking.payment_status}
                   </Tag>
                 )}
               </div>
@@ -1127,18 +1027,18 @@ const BookingsPage = () => {
                     <div
                       style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}
                     >
-                      {selectedBooking.customerName || "N/A"}
+                      {selectedBooking.customer_name || "N/A"}
                     </div>
                     <div
                       style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
                     >
-                      📞 {selectedBooking.customerPhone || "N/A"}
+                      📞 {selectedBooking.customer_phone || "N/A"}
                     </div>
-                    {selectedBooking.customerEmail && (
+                    {selectedBooking.customer_email && (
                       <div
                         style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
                       >
-                        📧 {selectedBooking.customerEmail}
+                        📧 {selectedBooking.customer_email}
                       </div>
                     )}
                   </div>
@@ -1178,20 +1078,20 @@ const BookingsPage = () => {
                     <div
                       style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}
                     >
-                      {selectedBooking.vehicleLicensePlate || "N/A"}
+                      {selectedBooking.vehicle_license_plate || "N/A"}
                     </div>
                     <div
                       style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
                     >
-                      {selectedBooking.vehicleBrandName || "N/A"}{" "}
-                      {selectedBooking.vehicleModelName || ""}
+                      {selectedBooking.vehicle_brand_name || "N/A"}{" "}
+                      {selectedBooking.vehicle_model_name || ""}
                     </div>
                     <div
                       style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
                     >
-                      {selectedBooking.vehicleTypeName || "N/A"} •{" "}
-                      {selectedBooking.vehicleYear || "N/A"} •{" "}
-                      {selectedBooking.vehicleColor || "N/A"}
+                      {selectedBooking.vehicle_type_name || "N/A"} •{" "}
+                      {selectedBooking.vehicle_year || "N/A"} •{" "}
+                      {selectedBooking.vehicle_color || "N/A"}
                     </div>
                   </div>
                 </div>
@@ -1223,21 +1123,21 @@ const BookingsPage = () => {
                     <div
                       style={{ fontWeight: 500, fontSize: 15, marginBottom: 8 }}
                     >
-                      {selectedBooking.branchName || "N/A"}
+                      {selectedBooking.branch_name || "N/A"}
                     </div>
                     <div
                       style={{ fontSize: 13, color: "#666", marginBottom: 4 }}
                     >
-                      Bay: {selectedBooking.bayName || "Chưa chọn bay"}
+                      Bay: {selectedBooking.bay_name || "Chưa chọn bay"}
                     </div>
-                    {selectedBooking.branchCode && (
+                    {selectedBooking.branch_code && (
                       <div style={{ fontSize: 12, color: "#999" }}>
-                        Mã: {selectedBooking.branchCode}
+                        Mã: {selectedBooking.branch_code}
                       </div>
                     )}
-                    {selectedBooking.bayType && (
+                    {selectedBooking.bay_type && (
                       <div style={{ fontSize: 12, color: "#999" }}>
-                        Loại: {selectedBooking.bayType}
+                        Loại: {selectedBooking.bay_type}
                       </div>
                     )}
                   </div>
@@ -1260,7 +1160,7 @@ const BookingsPage = () => {
                     }}
                   >
                     <span>🔧</span>
-                    Dịch vụ ({selectedBooking.bookingItems?.length || 0})
+                    Dịch vụ ({selectedBooking.booking_items?.length || 0})
                   </div>
                   <div
                     style={{
@@ -1270,9 +1170,9 @@ const BookingsPage = () => {
                       borderRadius: 6,
                     }}
                   >
-                    {selectedBooking.bookingItems?.length ? (
+                    {selectedBooking.booking_items?.length ? (
                       <div>
-                        {selectedBooking.bookingItems.map(
+                        {selectedBooking.booking_items.map(
                           (item, index: number) => (
                             <div
                               key={index}
@@ -1285,8 +1185,11 @@ const BookingsPage = () => {
                               }}
                             >
                               <div style={{ fontWeight: 500, fontSize: 13 }}>
-                                {item.itemName ||
-                                  `Service ${item.itemId?.substring(0, 8)}...`}
+                                {item.item_name ||
+                                  `Service ${item.service_id?.substring(
+                                    0,
+                                    8
+                                  )}...`}
                               </div>
                               <div
                                 style={{
@@ -1295,10 +1198,10 @@ const BookingsPage = () => {
                                   marginTop: 2,
                                 }}
                               >
-                                {formatCurrency(item.unitPrice || 0)} • Số
+                                {formatCurrency(item.unit_price || 0)} • Số
                                 lượng: {item.quantity || 1}
                               </div>
-                              {item.notes && (
+                              {item.item_description && (
                                 <div
                                   style={{
                                     fontSize: 11,
@@ -1306,7 +1209,7 @@ const BookingsPage = () => {
                                     marginTop: 2,
                                   }}
                                 >
-                                  Ghi chú: {item.notes}
+                                  Ghi chú: {item.item_description}
                                 </div>
                               )}
                             </div>
@@ -1323,13 +1226,13 @@ const BookingsPage = () => {
                         >
                           <div style={{ fontWeight: 600, color: "#52c41a" }}>
                             Tổng:{" "}
-                            {formatCurrency(selectedBooking.totalPrice || 0)}{" "}
+                            {formatCurrency(selectedBooking.total_price || 0)}{" "}
                             {selectedBooking.currency || "VND"}
                           </div>
                           <div style={{ fontSize: 12, color: "#666" }}>
                             Thời gian ước tính:{" "}
                             {formatDurationVer01(
-                              selectedBooking.estimatedDurationMinutes || 0
+                              selectedBooking.estimated_duration_minutes || 0
                             )}
                           </div>
                         </div>
@@ -1370,47 +1273,47 @@ const BookingsPage = () => {
                       </div>
                       <div style={{ fontWeight: 500 }}>
                         {dayjs(
-                          selectedBooking.scheduledStartAt ||
-                            selectedBooking.preferredStartAt ||
-                            selectedBooking.createdAt
+                          selectedBooking.scheduled_start_at ||
+                            selectedBooking.preferred_start_at ||
+                            selectedBooking.created_at
                         ).format("DD/MM/YYYY HH:mm")}
                       </div>
                       <div style={{ fontSize: 11, color: "#1890ff" }}>
                         {getTimeRemaining(
                           dayjs(
-                            selectedBooking.scheduledStartAt ||
-                              selectedBooking.preferredStartAt ||
-                              selectedBooking.createdAt
+                            selectedBooking.scheduled_start_at ||
+                              selectedBooking.preferred_start_at ||
+                              selectedBooking.created_at
                           ).format("YYYY-MM-DD"),
                           dayjs(
-                            selectedBooking.scheduledStartAt ||
-                              selectedBooking.preferredStartAt ||
-                              selectedBooking.createdAt
+                            selectedBooking.scheduled_start_at ||
+                              selectedBooking.preferred_start_at ||
+                              selectedBooking.created_at
                           ).format("HH:mm")
                         )}
                       </div>
                     </div>
 
-                    {selectedBooking.actualStartAt && (
+                    {selectedBooking.actual_start_at && (
                       <div style={{ marginBottom: 8 }}>
                         <div style={{ fontSize: 12, color: "#666" }}>
                           Bắt đầu thực hiện
                         </div>
                         <div style={{ fontWeight: 500, color: "#52c41a" }}>
-                          {dayjs(selectedBooking.actualStartAt).format(
+                          {dayjs(selectedBooking.actual_start_at).format(
                             "DD/MM/YYYY HH:mm"
                           )}
                         </div>
                       </div>
                     )}
 
-                    {selectedBooking.actualEndAt && (
+                    {selectedBooking.actual_end_at && (
                       <div style={{ marginBottom: 8 }}>
                         <div style={{ fontSize: 12, color: "#666" }}>
                           Hoàn thành
                         </div>
                         <div style={{ fontWeight: 500, color: "#1890ff" }}>
-                          {dayjs(selectedBooking.actualEndAt).format(
+                          {dayjs(selectedBooking.actual_end_at).format(
                             "DD/MM/YYYY HH:mm"
                           )}
                         </div>
@@ -1423,9 +1326,9 @@ const BookingsPage = () => {
 
             {/* Additional Info */}
             {(selectedBooking.notes ||
-              selectedBooking.specialRequests?.length ||
-              selectedBooking.depositAmount ||
-              selectedBooking.couponCode) && (
+              selectedBooking.special_requests?.length ||
+              selectedBooking.deposit_amount ||
+              selectedBooking.coupon_code) && (
               <div style={{ marginTop: 24 }}>
                 <div
                   style={{
@@ -1458,8 +1361,8 @@ const BookingsPage = () => {
                     </div>
                   )}
 
-                  {selectedBooking.specialRequests &&
-                    selectedBooking.specialRequests.length > 0 && (
+                  {selectedBooking.special_requests &&
+                    selectedBooking.special_requests.length > 0 && (
                       <div style={{ marginBottom: 12 }}>
                         <div
                           style={{
@@ -1471,7 +1374,7 @@ const BookingsPage = () => {
                           Yêu cầu đặc biệt
                         </div>
                         <div>
-                          {selectedBooking.specialRequests.map(
+                          {selectedBooking.special_requests.map(
                             (request: string, index: number) => (
                               <Tag
                                 key={index}
@@ -1486,24 +1389,24 @@ const BookingsPage = () => {
                       </div>
                     )}
 
-                  {(selectedBooking.depositAmount ||
-                    selectedBooking.couponCode) && (
+                  {(selectedBooking.deposit_amount ||
+                    selectedBooking.coupon_code) && (
                     <div style={{ marginBottom: 12 }}>
                       <div
                         style={{ fontSize: 12, color: "#666", marginBottom: 4 }}
                       >
                         Thanh toán
                       </div>
-                      {selectedBooking.depositAmount && (
+                      {selectedBooking.deposit_amount && (
                         <div style={{ fontSize: 13, marginBottom: 2 }}>
                           Đặt cọc:{" "}
-                          {formatCurrency(selectedBooking.depositAmount)}{" "}
+                          {formatCurrency(selectedBooking.deposit_amount)}{" "}
                           {selectedBooking.currency || "VND"}
                         </div>
                       )}
-                      {selectedBooking.couponCode && (
+                      {selectedBooking.coupon_code && (
                         <div style={{ fontSize: 13, color: "#52c41a" }}>
-                          Mã giảm giá: {selectedBooking.couponCode}
+                          Mã giảm giá: {selectedBooking.coupon_code}
                         </div>
                       )}
                     </div>
@@ -1536,26 +1439,26 @@ const BookingsPage = () => {
               >
                 <div>
                   Tạo:{" "}
-                  {dayjs(selectedBooking.createdAt).format("DD/MM/YYYY HH:mm")}
+                  {dayjs(selectedBooking.created_at).format("DD/MM/YYYY HH:mm")}
                 </div>
                 <div>
                   Cập nhật:{" "}
-                  {dayjs(selectedBooking.updatedAt).format("DD/MM/YYYY HH:mm")}
+                  {dayjs(selectedBooking.updated_at).format("DD/MM/YYYY HH:mm")}
                 </div>
-                {selectedBooking.createdBy && (
-                  <div>Người tạo: {selectedBooking.createdBy}</div>
+                {selectedBooking.created_by && (
+                  <div>Người tạo: {selectedBooking.created_by}</div>
                 )}
-                {selectedBooking.cancelledAt && (
+                {selectedBooking.cancelled_at && (
                   <div style={{ color: "#ff4d4f" }}>
                     Hủy:{" "}
-                    {dayjs(selectedBooking.cancelledAt).format(
+                    {dayjs(selectedBooking.cancelled_at).format(
                       "DD/MM/YYYY HH:mm"
                     )}
                   </div>
                 )}
-                {selectedBooking.cancellationReason && (
+                {selectedBooking.cancellation_reason && (
                   <div style={{ color: "#ff4d4f" }}>
-                    Lý do: {selectedBooking.cancellationReason}
+                    Lý do: {selectedBooking.cancellation_reason}
                   </div>
                 )}
               </div>

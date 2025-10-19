@@ -380,21 +380,21 @@ const BookingModal: React.FC<BookingModalProps> = ({
     if (open) {
       if (mode === "edit" && initialData) {
         form.setFieldsValue({
-          customerId: initialData.customerId,
-          vehicleId: initialData.vehicleId,
-          branchId: initialData.branchId,
+          customerId: initialData.customer_id,
+          vehicleId: initialData.vehicle_id,
+          branchId: initialData.branch_id,
           bookingDate: dayjs(
-            initialData.scheduledStartAt || initialData.preferredStartAt
+            initialData.scheduled_start_at || initialData.preferred_start_at
           ),
           notes: initialData.notes,
           priority: initialData.priority,
         });
         // Convert BookingItemInfoDto to our item format
-        const items = (initialData.bookingItems || []).map(
+        const items = (initialData.booking_items || []).map(
           (item) =>
             ({
-              item_id: item.serviceId,
-              item_name: item.serviceName || "Dịch vụ",
+              item_id: item.service_id || "unknown",
+              item_name: item.item_name || "Dịch vụ",
               item_type: "SERVICE" as const,
               fixed_price: 0,
               policy_type: "FIXED" as const,
@@ -405,8 +405,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
             } as unknown as PriceBookItem)
         );
         setSelectedItems(items);
-        setTotalPrice(initialData.totalPrice || 0);
-        setTotalDuration(initialData.estimatedDurationMinutes || 0);
+        setTotalPrice(initialData.total_price || 0);
+        setTotalDuration(initialData.estimated_duration_minutes || 0);
         setCurrentStep(3); // Skip to final step for edit mode
       } else {
         // Reset everything for create mode
@@ -717,25 +717,25 @@ const BookingModal: React.FC<BookingModalProps> = ({
       } else if (mode === "edit" && initialData) {
         // Handle edit mode with existing API
         const updateRequest: UpdateBookingRequest = {
-          customer_id: selectedCustomer?.user_id || initialData.customerId,
+          customer_id: selectedCustomer?.user_id || initialData.customer_id,
           customer_name:
-            selectedCustomer?.full_name || initialData.customerName,
+            selectedCustomer?.full_name || initialData.customer_name,
           customer_phone:
-            selectedCustomer?.phone_number || initialData.customerPhone,
-          customer_email: selectedCustomer?.email || initialData.customerEmail,
-          vehicle_id: selectedVehicle?.vehicle_id || initialData.vehicleId,
+            selectedCustomer?.phone_number || initialData.customer_phone,
+          customer_email: selectedCustomer?.email || initialData.customer_email,
+          vehicle_id: selectedVehicle?.vehicle_id || initialData.vehicle_id,
           vehicle_license_plate:
-            selectedVehicle?.license_plate || initialData.vehicleLicensePlate,
+            selectedVehicle?.license_plate || initialData.vehicle_license_plate,
           vehicle_brand_id: selectedVehicle?.vehicle_brand_id || "",
           vehicle_brand_name:
-            selectedVehicle?.brand_name || initialData.vehicleBrandName,
+            selectedVehicle?.brand_name || initialData.vehicle_brand_name,
           vehicle_model_name:
-            selectedVehicle?.model_name || initialData.vehicleModelName,
+            selectedVehicle?.model_name || initialData.vehicle_model_name,
           vehicle_type_name:
-            selectedVehicle?.type_name || initialData.vehicleTypeName,
-          vehicle_year: selectedVehicle?.model_year || initialData.vehicleYear,
-          vehicle_color: selectedVehicle?.color || initialData.vehicleColor,
-          branch_id: selectedBranch?.branch_id || initialData.branchId,
+            selectedVehicle?.type_name || initialData.vehicle_type_name,
+          vehicle_year: selectedVehicle?.model_year || initialData.vehicle_year,
+          vehicle_color: selectedVehicle?.color || initialData.vehicle_color,
+          branch_id: selectedBranch?.branch_id || initialData.branch_id,
           preferred_start_at: `${values.bookingDate.format("YYYY-MM-DD")}T${
             selectedSlot?.startTime || "09:00"
           }:00`,
@@ -770,7 +770,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         };
 
         await updateBookingMutation.mutateAsync({
-          bookingId: initialData.bookingId,
+          bookingId: initialData.booking_id,
           request: updateRequest,
         });
 

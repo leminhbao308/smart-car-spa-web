@@ -6,83 +6,90 @@
 
 export interface BookingInfoDto {
   // Core booking info
-  bookingId: string;
-  bookingCode: string;
+  booking_id: string;
+  booking_code: string;
   
   // Customer information
-  customerId?: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string;
+  customer_id?: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
   
   // Vehicle information
-  vehicleId?: string;
-  vehicleLicensePlate: string;
-  vehicleBrandName?: string;
-  vehicleModelName?: string;
-  vehicleTypeName?: string;
-  vehicleYear?: number;
-  vehicleColor?: string;
+  vehicle_id?: string;
+  vehicle_license_plate: string;
+  vehicle_brand_name?: string;
+  vehicle_model_name?: string;
+  vehicle_type_name?: string;
+  vehicle_year?: number;
+  vehicle_color?: string;
   
   // Branch and bay information
-  branchId: string;
-  branchName?: string;
-  branchCode?: string;
-  bayId?: string;
-  bayName?: string;
-  bayType?: string;
+  branch_id: string;
+  branch_name?: string;
+  branch_code?: string;
+  bay_id?: string;
+  bay_name?: string;
+  bay_type?: string;
+  
+  // Slot information
+  slot_id?: string;
+  slot_start_time?: string;
+  slot_end_time?: string;
+  slot_duration_minutes?: number;
+  slot_status?: string;
   
   // Scheduling information
-  preferredStartAt?: string;
-  scheduledStartAt?: string;
-  scheduledEndAt?: string;
-  actualCheckInAt?: string;
-  actualStartAt?: string;
-  actualEndAt?: string;
+  preferred_start_at?: string;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
+  actual_check_in_at?: string;
+  actual_start_at?: string;
+  actual_end_at?: string;
   
   // Duration information
-  estimatedDurationMinutes?: number;
-  bufferMinutes?: number;
-  actualDurationMinutes?: number;
+  estimated_duration_minutes?: number;
+  buffer_minutes?: number;
+  actual_duration_minutes?: number;
   
   // Pricing information
-  totalPrice?: number;
+  total_price?: number;
   currency?: string;
-  depositAmount?: number;
+  deposit_amount?: number;
   
   // Status information
-  paymentStatus?: PaymentStatus;
+  payment_status?: PaymentStatus;
   status: BookingStatus;
   priority?: Priority;
   
   // Additional information
-  couponCode?: string;
+  coupon_code?: string;
   notes?: string;
-  specialRequests?: string[];
+  special_requests?: string[];
   
   // Cancellation information
-  cancellationReason?: string;
-  cancelledAt?: string;
-  cancelledBy?: string;
+  cancellation_reason?: string;
+  cancelled_at?: string;
+  cancelled_by?: string;
   
   // Audit information
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: string;
-  modifiedBy?: string;
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  modified_by?: string;
   
   // Related data
-  bookingItems?: BookingItemInfoDto[];
+  booking_items?: BookingItemInfoDto[];
   assignments?: BookingAssignmentInfoDto[];
   payments?: BookingPaymentInfoDto[];
   
   // Computed fields
-  isActive?: boolean;
-  isCancelled?: boolean;
-  isCompleted?: boolean;
-  needsPayment?: boolean;
-  isFullyPaid?: boolean;
-  totalEstimatedDuration?: number;
+  is_active?: boolean;
+  is_cancelled?: boolean;
+  is_completed?: boolean;
+  needs_payment?: boolean;
+  is_fully_paid?: boolean;
+  total_estimated_duration?: number;
 }
 
 export enum BookingStatus {
@@ -124,37 +131,13 @@ export interface BookingFilterParam {
 
 // Related DTOs
 export interface BookingItemInfoDto {
-  bookingItemId: string;
-  bookingId?: string;
-  itemType?: string;
-  itemId: string;
-  itemName: string;
-  itemUrl?: string;
-  itemDescription?: string;
-  unitPrice: number;
-  quantity: number;
-  subtotalAmount: number;
-  discountAmount?: number;
-  taxAmount?: number;
-  totalAmount: number;
-  durationMinutes?: number;
-  actualDurationMinutes?: number;
-  itemStatus?: string;
-  actualStartAt?: string;
-  actualEndAt?: string;
-  notes?: string;
-  displayOrder?: number;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: string;
-  modifiedBy?: string;
-  isCompleted?: boolean;
-  isInProgress?: boolean;
-  // Legacy fields for backward compatibility
-  serviceId?: string;
-  serviceName?: string;
-  servicePrice?: number;
-  totalPrice?: number;
+  service_id?: string;
+  item_name: string;
+  item_description?: string;
+  discount_amount?: number;
+  tax_amount?: number;
+  unit_price?: number;
+  quantity?: number;
 }
 
 export interface BookingAssignmentInfoDto {
