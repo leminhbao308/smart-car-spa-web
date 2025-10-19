@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import { useConfirmationModalContext } from "@/components/ui/Modal";
 import BookingModal from "@/components/ui/Modal/BookingModal/BookingModal";
+import UpdateBookingModal from "@/components/ui/Modal/UpdateBookingModal/UpdateBookingModal";
 import CreateTrackingModal from "@/components/ui/Modal/CreateTrackingModal";
 import ServiceTrackingModal from "@/components/ui/Modal/ServiceTrackingModal";
 import { ColumnsType } from "antd/es/table";
@@ -13,9 +14,6 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   LoginOutlined,
-  PlayCircleOutlined,
-  MonitorOutlined,
-  CreditCardOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
@@ -127,7 +125,7 @@ const getPriorityConfig = (priority: Priority) => {
 
 const BookingsPage = () => {
   const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingInfoDto | null>(
     null
   );
@@ -533,15 +531,13 @@ const BookingsPage = () => {
 
   // Handlers
   const handleAdd = () => {
-    setModalMode("create");
     setSelectedBooking(null);
     setModalOpen(true);
   };
 
   const handleEdit = (record: BookingInfoDto) => {
-    setModalMode("edit");
     setSelectedBooking(record);
-    setModalOpen(true);
+    setUpdateModalOpen(true);
   };
 
   const handleDelete = (record: BookingInfoDto) => {
@@ -601,96 +597,16 @@ const BookingsPage = () => {
     });
   };
 
-  // Function để fulfill inventory khi start service
-  const fulfillInventoryForBooking = async (
-    bookingId: string,
-    branchId: string
-  ) => {
-    try {
-      // Lấy booking details để lấy booking items
-      const { BookingService } = await import(
-        "@/lib/api/services/bookingService"
-      );
-      const booking = await BookingService.getBookingById(bookingId);
-
-      if (!booking?.booking_items || booking.booking_items.length === 0) {
-        console.log("No booking items found for booking:", bookingId);
-        return;
-      }
-
-      console.log("Booking items found:", booking.booking_items.length);
-      console.log("Inventory fulfillment completed for booking:", bookingId);
-    } catch (error) {
-      console.error(
-        "Error fulfilling inventory for booking:",
-        bookingId,
-        error
-      );
-      // Không throw error để không làm fail start service
-    }
-  };
-
-  const handleStartService = (record: BookingInfoDto) => {
-    showModal({
-      title: "Bắt đầu dịch vụ",
-      content: `Xác nhận bắt đầu dịch vụ cho lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
-      type: "info",
-      onConfirm: async () => {
-        try {
-          await startServiceMutation.mutateAsync(record.booking_id);
-
-          // Fulfill inventory sau khi start service thành công
-          if (record.branch_id) {
-            await fulfillInventoryForBooking(
-              record.booking_id,
-              record.branch_id
-            );
-          }
-
-          notification.success({
-            message: "Thành công",
-            description: "Bắt đầu dịch vụ thành công",
-            placement: "topRight",
-          });
-        } catch (error) {
-          console.error("Start service error:", error);
-          notification.error({
-            message: "Lỗi",
-            description: "Có lỗi xảy ra khi bắt đầu dịch vụ",
-            placement: "topRight",
-          });
-        }
-      },
-    });
-  };
-
-  const handleCompleteService = (record: BookingInfoDto) => {
-    showModal({
-      title: "Hoàn thành dịch vụ",
-      content: `Xác nhận hoàn thành dịch vụ cho lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
-      type: "info",
-      onConfirm: async () => {
-        try {
-          await completeServiceMutation.mutateAsync(record.booking_id);
-          notification.success({
-            message: "Thành công",
-            description: "Hoàn thành dịch vụ thành công",
-            placement: "topRight",
-          });
-        } catch {
-          notification.error({
-            message: "Lỗi",
-            description: "Có lỗi xảy ra khi hoàn thành dịch vụ",
-            placement: "topRight",
-          });
-        }
-      },
-    });
-  };
 
   const handleModalOk = async () => {
     // This will be handled by the BookingModal component
     setModalOpen(false);
+  };
+
+  const handleUpdateModalOk = async () => {
+    // This will be handled by the UpdateBookingModal component
+    setUpdateModalOpen(false);
+    setSelectedBooking(null);
   };
 
   const handleConfirm = (record: BookingInfoDto) => {
@@ -717,71 +633,9 @@ const BookingsPage = () => {
     });
   };
 
-  const handleComplete = (record: BookingInfoDto) => {
-    showModal({
-      title: "Hoàn thành lịch đặt",
-      content: `Đánh dấu lịch đặt ${record.booking_code} là hoàn thành?`,
-      type: "success",
-      onConfirm: async () => {
-        try {
-          await completeServiceMutation.mutateAsync(record.booking_id);
-          notification.success({
-            message: "Thành công",
-            description: "Hoàn thành lịch đặt thành công",
-            placement: "topRight",
-          });
-        } catch {
-          notification.error({
-            message: "Lỗi",
-            description: "Có lỗi xảy ra khi hoàn thành lịch đặt",
-            placement: "topRight",
-          });
-        }
-      },
-    });
-  };
-
   const handleCreateTrackingSuccess = () => {
     setCreateTrackingModalOpen(false);
     setSelectedBooking(null);
-  };
-
-  const handleServiceTracking = (record: BookingInfoDto) => {
-    setSelectedBooking(record);
-    setServiceTrackingModalOpen(true);
-  };
-
-  const handlePayment = (record: BookingInfoDto) => {
-    const bookingId = record.booking_id;
-    const totalPrice = record.total_price || 0;
-    console.log("Booking ID:", bookingId);
-    console.log("Total Price:", totalPrice);
-
-    showModal({
-      title: "Xử lý thanh toán",
-      content: `Xác nhận xử lý thanh toán cho lịch đặt ${record.booking_code}?`,
-      type: "info",
-      onConfirm: async () => {
-        try {
-          // TODO: Implement payment processing logic
-          console.log("Booking ID:", bookingId);
-          console.log("Total Price:", totalPrice);
-
-          notification.success({
-            message: "Thành công",
-            description: "Xử lý thanh toán thành công",
-            placement: "topRight",
-          });
-        } catch (error) {
-          console.error("Payment processing error:", error);
-          notification.error({
-            message: "Lỗi",
-            description: "Có lỗi xảy ra khi xử lý thanh toán",
-            placement: "topRight",
-          });
-        }
-      },
-    });
   };
 
   return (
@@ -855,6 +709,17 @@ const BookingsPage = () => {
             condition: (record: BookingInfoDto) =>
               record.status === BookingStatus.CONFIRMED,
           },
+          {
+            key: "cancel",
+            label: "Hủy booking",
+            type: "default",
+            icon: <CloseCircleOutlined />,
+            onClick: handleDelete,
+            condition: (record: BookingInfoDto) =>
+              record.status === BookingStatus.PENDING ||
+              record.status === BookingStatus.CONFIRMED ||
+              record.status === BookingStatus.CHECKED_IN,
+          },
         ]}
       />
 
@@ -863,10 +728,19 @@ const BookingsPage = () => {
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={handleModalOk}
-        initialData={selectedBooking || undefined}
-        mode={modalMode}
         loading={isLoading}
       />
+
+      {/* Modal cập nhật booking */}
+      {selectedBooking && (
+        <UpdateBookingModal
+          open={updateModalOpen}
+          onCancel={() => setUpdateModalOpen(false)}
+          onOk={handleUpdateModalOk}
+          initialData={selectedBooking}
+          loading={isLoading}
+        />
+      )}
 
       {/* Modal tạo tracking */}
       {selectedBooking && (

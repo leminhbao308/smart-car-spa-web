@@ -255,51 +255,50 @@ export interface CreateBookingWithSlotRequest {
 }
 
 export interface UpdateBookingRequest {
-  customer_id?: string;
+  // Customer information
   customer_name?: string;
   customer_phone?: string;
   customer_email?: string;
-  vehicle_id?: string;
+  
+  // Vehicle information
   vehicle_license_plate?: string;
-  vehicle_brand_id?: string;
   vehicle_brand_name?: string;
   vehicle_model_name?: string;
   vehicle_type_name?: string;
   vehicle_year?: number;
   vehicle_color?: string;
+  
+  // Branch and Service Bay information
   branch_id?: string;
-  bay_id?: string;
+  service_bay_id?: string;
+  
+  // Scheduling information
   preferred_start_at?: string;
   scheduled_start_at?: string;
   scheduled_end_at?: string;
+  
+  // Slot information
+  slot_date?: string;
+  slot_start_time?: string;
+  
+  // Duration information
   estimated_duration_minutes?: number;
   buffer_minutes?: number;
+  
+  // Pricing information
   total_price?: number;
   currency?: string;
   deposit_amount?: number;
+  
+  // Status information
+  payment_status?: PaymentStatus;
+  status?: BookingStatus;
   priority?: Priority;
+  
+  // Additional information
   coupon_code?: string;
   notes?: string;
   special_requests?: string[];
-  status?: BookingStatus;
-  booking_items?: {
-    item_type: string;
-    item_id: string;
-    item_name: string;
-    item_url?: string;
-    item_description?: string;
-    unit_price: number;
-    quantity: number;
-    duration_minutes?: number;
-    discount_amount?: number;
-    tax_amount?: number;
-    notes?: string;
-    display_order?: number;
-  }[];
-  assignments?: {
-    technician_id: string;
-    role: string;
-  }[];
 }
 
 export interface BookingStatisticsDto {

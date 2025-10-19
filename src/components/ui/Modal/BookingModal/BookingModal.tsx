@@ -35,7 +35,6 @@ import { formatDurationVer01 } from "@/components/utils/helper/duration.format.h
 import { MemoizedTextArea } from "@/components/ui/MemoizedComponents";
 import {
   useCreateBookingWithSlot,
-  useUpdateBooking,
 } from "@/lib/api/hooks/useBooking";
 import { useCustomersDropdown } from "@/lib/api/hooks/useUsers";
 import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
@@ -43,16 +42,17 @@ import { useBranches } from "@/lib/api/hooks/useBranches";
 import { useAllPriceBooks } from "@/lib/api/hooks/usePricing";
 import { useActiveServiceBays } from "@/lib/api/hooks/useServiceBays";
 import {
-  BookingInfoDto,
+  BookingScheduleService,
+  TimeSlotDto,
+} from "@/lib/api/services/booking-schedule.service";
+import {
   CreateBookingWithSlotRequest,
-  UpdateBookingRequest,
-  Priority,
 } from "@/lib/api/types/booking.types";
 import { UserManagementInfo } from "@/lib/api/types/user.types";
 import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
 import { BranchDisplay } from "@/lib/api/types/branch.types";
 import { PriceBookItem } from "@/lib/api/types/price-book.types";
-import { SkillLevel } from "@/lib/api/types/service.types";
+// import { SkillLevel } from "@/lib/api/types/service.types"; // Removed unused import
 import { ServiceProcessStepProductInfoDto } from "@/lib/api/types/service-process.types";
 import { ServiceBay } from "@/lib/api/types/service-bay.types";
 
@@ -71,6 +71,9 @@ const priorityLevels = [
 const slotStatusColors = {
   AVAILABLE: "#52c41a",
   BOOKED: "#ff4d4f",
+  IN_PROGRESS: "#1890ff",
+  COMPLETED: "#52c41a",
+  CANCELLED: "#8c8c8c",
   BLOCKED: "#faad14",
   MAINTENANCE: "#722ed1",
   UNAVAILABLE: "#d9d9d9",
@@ -80,6 +83,9 @@ const slotStatusColors = {
 const slotStatusIcons = {
   AVAILABLE: <CheckCircleOutlined />,
   BOOKED: <CloseCircleOutlined />,
+  IN_PROGRESS: <ClockCircleOutlined />,
+  COMPLETED: <CheckCircleOutlined />,
+  CANCELLED: <CloseCircleOutlined />,
   BLOCKED: <ExclamationCircleOutlined />,
   MAINTENANCE: <SettingOutlined />,
   UNAVAILABLE: <CloseCircleOutlined />,
@@ -89,20 +95,11 @@ interface BookingModalProps {
   open: boolean;
   onCancel: () => void;
   onOk: (bookingData: unknown) => void;
-  initialData?: BookingInfoDto;
-  mode?: "create" | "edit";
   loading?: boolean;
 }
 
-// Types for slot selection
-interface SlotInfo {
-  bayId: string;
-  bayName: string;
-  startTime: string;
-  endTime: string;
-  status: "AVAILABLE" | "BOOKED" | "BLOCKED" | "MAINTENANCE" | "UNAVAILABLE";
-  bookingId?: string;
-}
+// Types for slot selection - now using TimeSlotDto from API
+type SlotInfo = TimeSlotDto;
 
 interface SelectedSlot {
   bayId: string;
@@ -116,8 +113,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
   open,
   onCancel,
   onOk,
-  initialData,
-  mode = "create",
   loading = false,
 }) => {
   const [form] = Form.useForm();
@@ -141,10 +136,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [totalPrice, setTotalPrice] = useState(0);
   const [totalDuration, setTotalDuration] = useState(0);
   const [bookingDate, setBookingDate] = useState<string>("");
+  const [availableSlots, setAvailableSlots] = useState<SlotInfo[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   // API hooks
   const createBookingWithSlotMutation = useCreateBookingWithSlot();
-  const updateBookingMutation = useUpdateBooking();
 
   // Data hooks
   const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
@@ -175,20 +171,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
     isLoadingVehicles,
   ]);
 
-  // Get all services and packages from all price books
+  // Get all services from price books (filter for services only, not service packages)
   const availableServices = useMemo(() => {
-    console.log("=== DEBUG ALL PRICE BOOKS API ===");
-    console.log("PriceBooksData:", priceBooksData);
-    console.log("PriceBooksData type:", typeof priceBooksData);
-    console.log("PriceBooksData is array:", Array.isArray(priceBooksData));
-    console.log("IsLoadingPriceBooks:", isLoadingPriceBooks);
-    console.log("PriceBooksError:", priceBooksError);
-    console.log(
-      "PriceBooksError details:",
-      priceBooksError?.message,
-      (priceBooksError as { response?: { data?: unknown } })?.response?.data
-    );
-
     if (priceBooksError) {
       console.error("Error loading price books:", priceBooksError);
       return [];
@@ -205,28 +189,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
 
     const allItems: PriceBookItem[] = [];
-    priceBooksData.forEach((priceBook, bookIndex) => {
-      console.log(`Processing priceBook ${bookIndex + 1}:`, priceBook);
-      console.log(`  - Book name: ${priceBook.name || "Unknown"}`);
-      console.log(`  - Book items:`, priceBook.items);
-      console.log(`  - Items is array:`, Array.isArray(priceBook.items));
-      console.log(`  - Items length:`, priceBook.items?.length || 0);
-
+    priceBooksData.forEach((priceBook) => {
       if (priceBook.items && Array.isArray(priceBook.items)) {
-        priceBook.items.forEach((item, itemIndex) => {
-          console.log(`  Processing item ${itemIndex + 1}:`, item);
-          console.log(`    - Item name: ${item.item_name}`);
-          console.log(`    - Item type: ${item.item_type}`);
-          console.log(`    - Item price: ${item.fixed_price}`);
-          console.log(`    - Service object: ${item.service ? 'exists' : 'null'}`);
-          console.log(`    - Service Package object: ${item.servicePackage ? 'exists' : 'null'}`);
-
-          // Filter items that have service object OR servicePackage object
-          if (item.service || item.servicePackage) {
-            console.log(`    ✓ Adding item to available services (has service or servicePackage object)`);
+        priceBook.items.forEach((item) => {
+          // Filter for services only: serviceId != null AND servicePackageId == null
+          if (item.service && !item.servicePackage) {
             allItems.push(item);
+            console.log(`✓ Added service: ${item.item_name} (${item.item_id})`);
           } else {
-            console.log(`    ✗ Skipping item (no service or servicePackage object)`);
+            console.log(
+              `✗ Skipped item: ${item.item_name} - ${
+                item.service ? "has service" : "no service"
+              }, ${item.servicePackage ? "has package" : "no package"}`
+            );
           }
         });
       } else {
@@ -237,193 +212,96 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }
     });
 
-    console.log("Available services:", allItems);
-    console.log("Total services found:", allItems.length);
-
-    // Temporarily disable fallback to see real API data
-    const USE_FALLBACK_DATA = false; // Set to false to see real API data
-
-    if (allItems.length === 0 && !isLoadingPriceBooks) {
-      if (USE_FALLBACK_DATA) {
-        console.log("No services found, using fallback data for testing");
-      } else {
-        console.log("⚠️ NO SERVICES FOUND FROM API - Check API response above");
-        console.log("This means either:");
-        console.log("1. API returned empty data");
-        console.log("2. Price books have no items with service or servicePackage objects");
-        console.log("3. API endpoint is not working");
-      }
-    }
-
-    // Fallback: Nếu không có dữ liệu từ API, sử dụng dữ liệu mẫu để test
-    if (allItems.length === 0 && !isLoadingPriceBooks && USE_FALLBACK_DATA) {
-      console.log("No services found, using fallback data for testing");
-      const fallbackServices: PriceBookItem[] = [
-        {
-          id: "fallback-1",
-          item_id: "service-1",
-          item_name: "Rửa xe cơ bản",
-          item_type: "SERVICE",
-          policy_type: "FIXED",
-          fixed_price: 100000,
-          markup_percent: null,
-          service: {
-            service_id: "service-1",
-            service_name: "Rửa xe cơ bản",
-            service_url: "/services/wash-basic",
-            description: "Dịch vụ rửa xe cơ bản",
-            estimated_duration: 60,
-            required_skill_level: SkillLevel.BEGINNER,
-            service_type_id: "wash",
-            is_featured: true,
-            is_active: true,
-            audit: {
-              created_date: new Date().toISOString(),
-              modified_date: new Date().toISOString(),
-              created_by: "system",
-              modified_by: "system",
-              is_active: true,
-              is_deleted: false,
-            },
-          },
-          is_active: true,
-          is_deleted: false,
-          created_date: new Date().toISOString(),
-          modified_date: new Date().toISOString(),
-          created_by: "system",
-          modified_by: "system",
-        },
-        {
-          id: "fallback-2",
-          item_id: "service-2",
-          item_name: "Bảo dưỡng định kỳ",
-          item_type: "SERVICE",
-          policy_type: "FIXED",
-          fixed_price: 500000,
-          markup_percent: null,
-          service: {
-            service_id: "service-2",
-            service_name: "Bảo dưỡng định kỳ",
-            service_url: "/services/maintenance",
-            description: "Dịch vụ bảo dưỡng định kỳ",
-            estimated_duration: 120,
-            required_skill_level: SkillLevel.INTERMEDIATE,
-            service_type_id: "maintenance",
-            is_featured: true,
-            is_active: true,
-            audit: {
-              created_date: new Date().toISOString(),
-              modified_date: new Date().toISOString(),
-              created_by: "system",
-              modified_by: "system",
-              is_active: true,
-              is_deleted: false,
-            },
-          },
-          is_active: true,
-          is_deleted: false,
-          created_date: new Date().toISOString(),
-          modified_date: new Date().toISOString(),
-          created_by: "system",
-          modified_by: "system",
-        },
-      ];
-      return fallbackServices;
-    }
-
+    console.log(`Total services found: ${allItems.length}`);
     return allItems;
-  }, [priceBooksData, isLoadingPriceBooks, priceBooksError]);
+  }, [priceBooksData, priceBooksError]);
 
-  // Generate slots for selected bay and date
-  const generateBaySlots = useMemo(() => {
-    if (!selectedBay || !bookingDate) return [];
-
-    const slots: SlotInfo[] = [];
-    const startTime = dayjs("08:00", "HH:mm"); // Default working hours
-    const endTime = dayjs("17:00", "HH:mm"); // Default working hours
-    const slotDuration = 60; // Default slot duration
-
-    let currentTime = startTime;
-    while (currentTime.isBefore(endTime)) {
-      const slotEndTime = currentTime.add(slotDuration, "minute");
-
-      slots.push({
-        bayId: selectedBay.bay_id,
-        bayName: selectedBay.bay_name,
-        startTime: currentTime.format("HH:mm"),
-        endTime: slotEndTime.format("HH:mm"),
-        status: "AVAILABLE", // TODO: Fetch real status from API
-      });
-
-      currentTime = currentTime.add(slotDuration, "minute");
+  // Load available slots from API
+  const loadAvailableSlots = useCallback(async () => {
+    if (!selectedBranch || !selectedBay || !bookingDate || totalDuration <= 0) {
+      setAvailableSlots([]);
+      return;
     }
 
-    return slots;
-  }, [selectedBay, bookingDate]);
+    setLoadingSlots(true);
+    try {
+      const slots = await BookingScheduleService.getAvailableSlots({
+        branchId: selectedBranch.branch_id,
+        date: bookingDate,
+        serviceDurationMinutes: totalDuration,
+        bayId: selectedBay.bay_id,
+      });
+      console.log("Available slots from API:", slots);
+      setAvailableSlots(slots);
+    } catch (error) {
+      console.error("Error loading available slots:", error);
+      setAvailableSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  }, [selectedBranch, selectedBay, bookingDate, totalDuration]);
+
+  // Load slots when dependencies change
+  useEffect(() => {
+    loadAvailableSlots();
+  }, [loadAvailableSlots]);
 
   // Check if slot is suitable for service duration
   const isSlotSuitable = useCallback(
     (slot: SlotInfo) => {
-      if (slot.status !== "AVAILABLE") return false;
-
-      const slotDuration = 60; // Default slot duration
-
-      // For now, just check if single slot is enough
-      // TODO: Check consecutive slots availability
-      return slotDuration >= totalDuration;
+      // For single slot services (≤ 60 minutes)
+      if (totalDuration <= 60) {
+        return slot.isAvailable && slot.durationMinutes >= totalDuration;
+      }
+      
+      // For multi-slot services (> 60 minutes)
+      // Check if this slot and consecutive slots are available
+      const requiredSlots = Math.ceil(totalDuration / 60);
+      const currentSlotIndex = availableSlots.findIndex(s => s.startTime === slot.startTime);
+      
+      if (currentSlotIndex === -1) return false;
+      
+      // Check if we have enough consecutive available slots
+      for (let i = 0; i < requiredSlots; i++) {
+        const checkSlotIndex = currentSlotIndex + i;
+        if (checkSlotIndex >= availableSlots.length) return false;
+        
+        const checkSlot = availableSlots[checkSlotIndex];
+        if (!checkSlot.isAvailable || checkSlot.status !== "AVAILABLE") {
+          return false;
+        }
+      }
+      
+      return true;
     },
-    [totalDuration]
+    [totalDuration, availableSlots]
+  );
+
+  // Check if slot can be selected (available and suitable)
+  const canSelectSlot = useCallback(
+    (slot: SlotInfo) => {
+      return slot.isAvailable && slot.status === "AVAILABLE" && isSlotSuitable(slot);
+    },
+    [isSlotSuitable]
   );
 
   // Reset form when modal opens/closes
   useEffect(() => {
     if (open) {
-      if (mode === "edit" && initialData) {
-        form.setFieldsValue({
-          customerId: initialData.customer_id,
-          vehicleId: initialData.vehicle_id,
-          branchId: initialData.branch_id,
-          bookingDate: dayjs(
-            initialData.scheduled_start_at || initialData.preferred_start_at
-          ),
-          notes: initialData.notes,
-          priority: initialData.priority,
-        });
-        // Convert BookingItemInfoDto to our item format
-        const items = (initialData.booking_items || []).map(
-          (item) =>
-            ({
-              item_id: item.service_id || "unknown",
-              item_name: item.item_name || "Dịch vụ",
-              item_type: "SERVICE" as const,
-              fixed_price: 0,
-              policy_type: "FIXED" as const,
-              markup_percent: null,
-              service: null,
-              servicePackage: null,
-              product: null,
-            } as unknown as PriceBookItem)
-        );
-        setSelectedItems(items);
-        setTotalPrice(initialData.total_price || 0);
-        setTotalDuration(initialData.estimated_duration_minutes || 0);
-        setCurrentStep(3); // Skip to final step for edit mode
-      } else {
-        // Reset everything for create mode
-        form.resetFields();
-        setCurrentStep(0);
-        setSelectedCustomer(null);
-        setSelectedVehicle(null);
-        setSelectedBranch(null);
-        setSelectedItems([]);
-        setSelectedBay(null);
-        setSelectedSlot(null);
-        setTotalPrice(0);
-        setTotalDuration(0);
-        setBookingDate("");
-      }
+      // Reset everything for create mode
+      form.resetFields();
+      setCurrentStep(0);
+      setSelectedCustomer(null);
+      setSelectedVehicle(null);
+      setSelectedBranch(null);
+      setSelectedItems([]);
+      setSelectedBay(null);
+      setSelectedSlot(null);
+      setTotalPrice(0);
+      setTotalDuration(0);
+      setBookingDate("");
     }
-  }, [open, mode, initialData, form]);
+  }, [open, form]);
 
   const calculateTotals = useCallback((items: PriceBookItem[]) => {
     const price = items.reduce((sum, item) => sum + (item.fixed_price || 0), 0);
@@ -512,7 +390,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSlotSelect = useCallback(
     (slot: SlotInfo) => {
-      if (slot.status === "AVAILABLE" && isSlotSuitable(slot)) {
+      if (canSelectSlot(slot)) {
         setSelectedSlot({
           bayId: slot.bayId,
           bayName: slot.bayName,
@@ -522,8 +400,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         });
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [bookingDate, totalDuration] // Remove isSlotSuitable to avoid circular reference
+    [canSelectSlot, bookingDate, totalDuration]
   );
 
   // Function để lấy danh sách sản phẩm cần thiết cho các service và reserve inventory
@@ -645,137 +522,71 @@ const BookingModal: React.FC<BookingModalProps> = ({
     try {
       const values = await form.validateFields();
 
-      if (mode === "create") {
-        if (
-          !selectedCustomer ||
-          !selectedVehicle ||
-          !selectedBranch ||
-          !selectedSlot
-        ) {
-          console.error("Missing required information for booking");
-          return;
-        }
-
-        // Create request for new integrated API
-        const createRequest = {
-          customer_id: selectedCustomer.user_id,
-          customer_name: selectedCustomer.full_name,
-          customer_phone: selectedCustomer.phone_number,
-          customer_email: selectedCustomer.email,
-          vehicle_id: selectedVehicle.vehicle_id,
-          vehicle_license_plate: selectedVehicle.license_plate,
-          vehicle_brand_name: selectedVehicle.brand_name || "",
-          vehicle_model_name: selectedVehicle.model_name || "",
-          vehicle_type_name: selectedVehicle.type_name || "",
-          vehicle_year: selectedVehicle.model_year || new Date().getFullYear(),
-          vehicle_color: selectedVehicle.color || "",
-          branch_id: selectedBranch.branch_id,
-          selected_slot: {
-            bay_id: selectedSlot.bayId,
-            date: selectedSlot.date,
-            start_time: selectedSlot.startTime,
-            service_duration_minutes: selectedSlot.serviceDurationMinutes,
-          },
-          booking_items: selectedItems.map((item) => ({
-            service_id: item.item_id,
-            item_name: item.item_name,
-            item_description:
-              item.service?.description ||
-              item.servicePackage?.description ||
-              "",
-            discount_amount: 0,
-            tax_amount: Math.round((item.fixed_price || 0) * 0.1),
-          })),
-          total_price: totalPrice,
-          currency: "VND",
-          deposit_amount: 0,
-          coupon_code: values.couponCode || undefined,
-          notes: values.notes || "",
-          special_requests: values.specialRequests || [],
-        };
-
-        // Use new integrated booking API
-        const createResponse = await createBookingWithSlotMutation.mutateAsync(
-          createRequest as CreateBookingWithSlotRequest
-        );
-
-        if (createResponse?.data?.bookingId) {
-          console.log(
-            "Booking created successfully:",
-            createResponse.data.bookingId
-          );
-          await fetchRequiredProductsAndReserve(
-            createRequest.booking_items.map((item) => ({
-              item_type: "SERVICE",
-              item_id: item.service_id,
-            })),
-            createResponse.data.bookingId
-          );
-        }
-
-        onOk(createRequest);
-      } else if (mode === "edit" && initialData) {
-        // Handle edit mode with existing API
-        const updateRequest: UpdateBookingRequest = {
-          customer_id: selectedCustomer?.user_id || initialData.customer_id,
-          customer_name:
-            selectedCustomer?.full_name || initialData.customer_name,
-          customer_phone:
-            selectedCustomer?.phone_number || initialData.customer_phone,
-          customer_email: selectedCustomer?.email || initialData.customer_email,
-          vehicle_id: selectedVehicle?.vehicle_id || initialData.vehicle_id,
-          vehicle_license_plate:
-            selectedVehicle?.license_plate || initialData.vehicle_license_plate,
-          vehicle_brand_id: selectedVehicle?.vehicle_brand_id || "",
-          vehicle_brand_name:
-            selectedVehicle?.brand_name || initialData.vehicle_brand_name,
-          vehicle_model_name:
-            selectedVehicle?.model_name || initialData.vehicle_model_name,
-          vehicle_type_name:
-            selectedVehicle?.type_name || initialData.vehicle_type_name,
-          vehicle_year: selectedVehicle?.model_year || initialData.vehicle_year,
-          vehicle_color: selectedVehicle?.color || initialData.vehicle_color,
-          branch_id: selectedBranch?.branch_id || initialData.branch_id,
-          preferred_start_at: `${values.bookingDate.format("YYYY-MM-DD")}T${
-            selectedSlot?.startTime || "09:00"
-          }:00`,
-          estimated_duration_minutes: totalDuration,
-          total_price: totalPrice,
-          priority: values.priority as Priority,
-          notes: values.notes,
-          booking_items: selectedItems.map((item, index) => ({
-            item_type: item.item_type,
-            item_id: item.item_id,
-            item_name: item.item_name,
-            item_url: item.service?.service_url || "",
-            item_description:
-              item.service?.description ||
-              item.servicePackage?.description ||
-              "",
-            unit_price: item.fixed_price || 0,
-            quantity: 1,
-            duration_minutes:
-              item.service?.estimated_duration ||
-              item.servicePackage?.total_duration ||
-              0,
-            discount_amount: 0,
-            tax_amount: Math.round((item.fixed_price || 0) * 0.1),
-            notes:
-              item.service?.description ||
-              item.servicePackage?.description ||
-              "",
-            display_order: index + 1,
-          })),
-          assignments: [],
-        };
-
-        await updateBookingMutation.mutateAsync({
-          bookingId: initialData.booking_id,
-          request: updateRequest,
-        });
-
-        onOk(updateRequest);
+      if (
+        !selectedCustomer ||
+        !selectedVehicle ||
+        !selectedBranch ||
+        !selectedSlot
+      ) {
+        console.error("Missing required information for booking");
+        return;
       }
+
+      // Create request for new integrated API
+      const createRequest = {
+        customer_id: selectedCustomer.user_id,
+        customer_name: selectedCustomer.full_name,
+        customer_phone: selectedCustomer.phone_number,
+        customer_email: selectedCustomer.email,
+        vehicle_id: selectedVehicle.vehicle_id,
+        vehicle_license_plate: selectedVehicle.license_plate,
+        vehicle_brand_name: selectedVehicle.brand_name || "",
+        vehicle_model_name: selectedVehicle.model_name || "",
+        vehicle_type_name: selectedVehicle.type_name || "",
+        vehicle_year: selectedVehicle.model_year || new Date().getFullYear(),
+        vehicle_color: selectedVehicle.color || "",
+        branch_id: selectedBranch.branch_id,
+        selected_slot: {
+          bay_id: selectedSlot.bayId,
+          date: selectedSlot.date,
+          start_time: selectedSlot.startTime,
+          service_duration_minutes: selectedSlot.serviceDurationMinutes,
+        },
+        booking_items: selectedItems.map((item) => ({
+          service_id: item.service?.service_id || item.item_id,
+          item_name: item.item_name,
+          item_description: item.service?.description || "",
+          discount_amount: 0,
+          tax_amount: Math.round((item.fixed_price || 0) * 0.1),
+        })),
+        total_price: totalPrice,
+        currency: "VND",
+        deposit_amount: 0,
+        coupon_code: values.couponCode || undefined,
+        notes: values.notes || "",
+        special_requests: values.specialRequests || [],
+      };
+
+      // Use new integrated booking API
+      const createResponse = await createBookingWithSlotMutation.mutateAsync(
+        createRequest as CreateBookingWithSlotRequest
+      );
+
+      if (createResponse?.data?.bookingId) {
+        console.log(
+          "Booking created successfully:",
+          createResponse.data.bookingId
+        );
+        await fetchRequiredProductsAndReserve(
+          createRequest.booking_items.map((item) => ({
+            item_type: "SERVICE",
+            item_id: item.service_id,
+          })),
+          createResponse.data.bookingId
+        );
+      }
+
+      onOk(createRequest);
     } catch (error) {
       console.error("Booking submission failed:", error);
     }
@@ -928,14 +739,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
       <Card size="small" title="Chọn dịch vụ" style={{ marginBottom: 16 }}>
         <Form.Item
           name="services"
-          label="Dịch vụ & Gói dịch vụ"
+          label="Dịch vụ chăm sóc xe"
           rules={[
             { required: true, message: "Vui lòng chọn ít nhất một dịch vụ" },
           ]}
         >
           <Select
             mode="multiple"
-            placeholder="Chọn dịch vụ hoặc gói dịch vụ"
+            placeholder="Chọn dịch vụ chăm sóc xe"
             onChange={handleServiceChange}
             optionLabelProp="label"
             loading={isLoadingPriceBooks}
@@ -944,7 +755,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 ? "Đang tải dịch vụ..."
                 : priceBooksError
                 ? `Lỗi tải dịch vụ: ${
-                    priceBooksError.message || "Không thể tải danh sách dịch vụ"
+                    (priceBooksError as { response?: { data?: unknown } })
+                      ?.response?.data || "Không thể tải danh sách dịch vụ"
                   }`
                 : availableServices.length === 0
                 ? "Không có dịch vụ nào trong hệ thống"
@@ -963,19 +775,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   <div>
                     <div style={{ fontWeight: 500 }}>
                       {item.item_name}
-                      <Tag
-                        color={item.item_type === "SERVICE" ? "blue" : "green"}
-                        style={{ marginLeft: 8, fontSize: 10 }}
-                      >
-                        {item.item_type === "SERVICE"
-                          ? "Dịch vụ"
-                          : "Gói dịch vụ"}
+                      <Tag color="blue" style={{ marginLeft: 8, fontSize: 10 }}>
+                        Dịch vụ
                       </Tag>
                     </div>
                     <div style={{ fontSize: 12, color: "#666" }}>
-                      {item.service?.description ||
-                        item.servicePackage?.description ||
-                        ""}
+                      {item.service?.description || "Không có mô tả"}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -983,10 +788,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       {item.fixed_price?.toLocaleString()} VNĐ
                     </div>
                     <div style={{ fontSize: 12, color: "#666" }}>
-                      {item.service?.estimated_duration ||
-                        item.servicePackage?.total_duration ||
-                        0}{" "}
-                      phút
+                      {item.service?.estimated_duration || 0} phút
                     </div>
                   </div>
                 </div>
@@ -997,12 +799,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
         {selectedItems.length > 0 && (
           <div style={{ marginTop: 16 }}>
-            <Text strong>Dịch vụ đã chọn:</Text>
+            <Text strong>Dịch vụ đã chọn ({selectedItems.length}):</Text>
             <div style={{ marginTop: 8 }}>
               {selectedItems.map((item, index) => (
                 <Tag
                   key={`${item.item_id}-${index}`}
-                  color={item.item_type === "SERVICE" ? "blue" : "green"}
+                  color="blue"
                   style={{ marginBottom: 4 }}
                 >
                   {item.item_name} - {item.fixed_price?.toLocaleString()} VNĐ
@@ -1160,13 +962,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
           <div>
             <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={24}>
-                <Text strong>Chọn Service Bay:</Text>
+                <Text strong>Chọn Service Bay (8 khu vực):</Text>
                 <div style={{ marginTop: 8 }}>
                   {isLoadingServiceBays ? (
                     <Spin />
                   ) : (
                     <Row gutter={8}>
-                      {serviceBays?.map((bay) => (
+                      {serviceBays?.slice(0, 8).map((bay) => (
                         <Col span={6} key={bay.bay_id}>
                           <Card
                             size="small"
@@ -1191,7 +993,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               <Text strong>{bay.bay_name}</Text>
                             </div>
                             <div style={{ fontSize: 12, color: "#666" }}>
-                              Bay • 60 phút/slot
+                              {bay.bay_code || `Bay ${bay.bay_id.slice(-2)}`} •
+                              60 phút/slot
                             </div>
                           </Card>
                         </Col>
@@ -1207,77 +1010,140 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 <Divider />
                 <Text strong>Chọn Slot trong {selectedBay.bay_name}:</Text>
                 <div style={{ marginTop: 8 }}>
-                  {isLoadingServiceBays ? (
-                    <Spin />
+                  {loadingSlots ? (
+                    <div style={{ textAlign: "center", padding: "20px" }}>
+                      <Spin />
+                      <div
+                        style={{ marginTop: 8, fontSize: 12, color: "#666" }}
+                      >
+                        Đang tải slot...
+                      </div>
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <Alert
+                      message="Không có slot khả dụng"
+                      description="Không có slot nào phù hợp với thời gian dịch vụ đã chọn"
+                      type="warning"
+                      showIcon
+                    />
                   ) : (
                     <Row gutter={8}>
-                      {generateBaySlots.map((slot, index) => (
-                        <Col span={4} key={index}>
-                          <Tooltip
-                            title={
-                              slot.status === "AVAILABLE" &&
-                              isSlotSuitable(slot)
-                                ? `Chọn slot ${slot.startTime} - ${slot.endTime}`
-                                : slot.status === "BOOKED"
-                                ? "Slot đã được đặt"
-                                : slot.status === "BLOCKED"
-                                ? "Slot bị chặn"
-                                : "Slot không khả dụng"
-                            }
-                          >
-                            <Card
-                              size="small"
-                              hoverable={
-                                slot.status === "AVAILABLE" &&
-                                isSlotSuitable(slot)
+                      {availableSlots.map((slot, index) => {
+                        const canSelect = canSelectSlot(slot);
+                        const isSelected =
+                          selectedSlot?.startTime === slot.startTime;
+
+                        return (
+                          <Col span={4} key={index}>
+                            <Tooltip
+                              title={
+                                canSelect
+                                  ? totalDuration > 60
+                                    ? `Chọn ${Math.ceil(totalDuration / 60)} slot liên tiếp từ ${slot.startTime} (${totalDuration} phút)`
+                                    : `Chọn slot ${slot.startTime} - ${slot.endTime}`
+                                  : slot.status === "BOOKED"
+                                  ? "Slot đã được đặt"
+                                  : slot.status === "IN_PROGRESS"
+                                  ? "Slot đang được sử dụng"
+                                  : slot.status === "COMPLETED"
+                                  ? "Slot đã hoàn thành"
+                                  : slot.status === "CANCELLED"
+                                  ? "Slot đã bị hủy"
+                                  : totalDuration > 60
+                                  ? `Cần ${Math.ceil(totalDuration / 60)} slot liên tiếp - không đủ`
+                                  : "Slot không khả dụng"
                               }
-                              style={{
-                                textAlign: "center",
-                                border:
-                                  selectedSlot?.startTime === slot.startTime
-                                    ? "2px solid #52c41a"
-                                    : "1px solid #d9d9d9",
-                                backgroundColor:
-                                  selectedSlot?.startTime === slot.startTime
-                                    ? "#f6ffed"
-                                    : slot.status === "AVAILABLE" &&
-                                      isSlotSuitable(slot)
-                                    ? "#fff"
-                                    : "#f5f5f5",
-                                cursor:
-                                  slot.status === "AVAILABLE" &&
-                                  isSlotSuitable(slot)
-                                    ? "pointer"
-                                    : "not-allowed",
-                                opacity:
-                                  slot.status === "AVAILABLE" &&
-                                  isSlotSuitable(slot)
-                                    ? 1
-                                    : 0.6,
-                              }}
-                              onClick={() => handleSlotSelect(slot)}
                             >
-                              <div
-                                style={{ color: slotStatusColors[slot.status] }}
-                              >
-                                {slotStatusIcons[slot.status]}
-                              </div>
-                              <div
+                              <Card
+                                size="small"
+                                hoverable={canSelect}
                                 style={{
-                                  marginTop: 4,
-                                  fontSize: 12,
-                                  fontWeight: 500,
+                                  textAlign: "center",
+                                  border: isSelected
+                                    ? "2px solid #52c41a"
+                                    : canSelect
+                                    ? "1px solid #d9d9d9"
+                                    : "1px solid #ff4d4f",
+                                  backgroundColor: isSelected
+                                    ? "#f6ffed"
+                                    : canSelect
+                                    ? "#fff"
+                                    : slot.status === "BOOKED"
+                                    ? "#fff2f0"
+                                    : slot.status === "IN_PROGRESS"
+                                    ? "#e6f7ff"
+                                    : "#f5f5f5",
+                                  cursor: canSelect ? "pointer" : "not-allowed",
+                                  opacity: canSelect ? 1 : 0.6,
                                 }}
+                                onClick={() =>
+                                  canSelect && handleSlotSelect(slot)
+                                }
                               >
-                                {slot.startTime}
-                              </div>
-                              <div style={{ fontSize: 10, color: "#666" }}>
-                                {slot.endTime}
-                              </div>
-                            </Card>
-                          </Tooltip>
-                        </Col>
-                      ))}
+                                <div
+                                  style={{
+                                    color:
+                                      slotStatusColors[
+                                        slot.status as keyof typeof slotStatusColors
+                                      ],
+                                    fontSize: 16,
+                                  }}
+                                >
+                                  {
+                                    slotStatusIcons[
+                                      slot.status as keyof typeof slotStatusIcons
+                                    ]
+                                  }
+                                </div>
+                                <div
+                                  style={{
+                                    marginTop: 4,
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    color: canSelect ? "#000" : "#999",
+                                  }}
+                                >
+                                  {slot.startTime}
+                                </div>
+                                <div style={{ fontSize: 10, color: "#666" }}>
+                                  {slot.endTime}
+                                </div>
+                                {totalDuration > 60 && canSelect && (
+                                  <div
+                                    style={{
+                                      fontSize: 8,
+                                      color: "#52c41a",
+                                      marginTop: 2,
+                                      fontWeight: 500,
+                                    }}
+                                  >
+                                    {Math.ceil(totalDuration / 60)} slot
+                                  </div>
+                                )}
+                                {!canSelect && (
+                                  <div
+                                    style={{
+                                      fontSize: 8,
+                                      color: "#ff4d4f",
+                                      marginTop: 2,
+                                    }}
+                                  >
+                                    {slot.status === "BOOKED"
+                                      ? "Đã đặt"
+                                      : slot.status === "IN_PROGRESS"
+                                      ? "Đang dùng"
+                                      : slot.status === "CANCELLED"
+                                      ? "Đã hủy"
+                                      : totalDuration > 60
+                                      ? "Không đủ slot"
+                                      : "Không khả dụng"}
+                                  </div>
+                                )}
+                              </Card>
+                            </Tooltip>
+                          </Col>
+                        );
+                      })}
                     </Row>
                   )}
                 </div>
@@ -1343,9 +1209,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       title={
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <CalendarOutlined style={{ color: "#1890ff" }} />
-          <span>
-            {mode === "create" ? "Đặt lịch chăm sóc xe" : "Chỉnh sửa lịch đặt"}
-          </span>
+          <span>Đặt lịch chăm sóc xe</span>
         </div>
       }
       open={open}
@@ -1375,14 +1239,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 key="submit"
                 type="primary"
                 loading={
-                  loading ||
-                  createBookingWithSlotMutation.isPending ||
-                  updateBookingMutation.isPending
+                  loading || createBookingWithSlotMutation.isPending
                 }
                 onClick={handleSubmit}
                 disabled={!selectedSlot}
               >
-                {mode === "create" ? "Đặt lịch" : "Cập nhật"}
+                Đặt lịch
               </Button>,
             ]
           : []),
