@@ -51,7 +51,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
       resolve(token);
     }
   });
-  
+
   failedQueue = [];
 };
 
@@ -59,35 +59,39 @@ const processQueue = (error: unknown, token: string | null = null) => {
 const refreshToken = async (): Promise<string | null> => {
   try {
     const refreshTokenValue = TokenManager.getRefreshToken();
-    
+
     if (!refreshTokenValue) {
       console.log("No refresh token available for refresh");
       throw new Error("No refresh token available");
     }
 
     console.log("Refreshing token...");
-    
-    const response = await axios.post(`${BASE_URL}/auth/refresh-token`, {
-      refresh_token: refreshTokenValue,
-    }, {
-      timeout: 10000, // 10 second timeout
-      headers: {
-        'Content-Type': 'application/json',
+
+    const response = await axios.post(
+      `${BASE_URL}/auth/refresh-token`,
+      {
+        refreshToken: refreshTokenValue, // FIXED: Changed from refresh_token to refreshToken to match backend DTO
+      },
+      {
+        timeout: 10000, // 10 second timeout
+        headers: {
+          "Content-Type": "application/json",
+        },
       }
-    });
+    );
 
     console.log("Refresh token response:", {
       status: response.status,
       success: response.data?.success,
-      hasData: !!response.data?.data
+      hasData: !!response.data?.data,
     });
 
     if (response.data.success && response.data.data) {
       const { access_token, refresh_token, user_info } = response.data.data;
-      
+
       // Update tokens in storage
       TokenManager.setTokens(access_token, refresh_token, user_info);
-      
+
       console.log("Token refreshed successfully");
       return access_token;
     } else {
@@ -103,16 +107,16 @@ const refreshToken = async (): Promise<string | null> => {
       data: error.response?.data,
       url: error.config?.url,
     });
-    
+
     // Clear all tokens on refresh failure
     TokenManager.clearAll();
-    
+
     // Redirect to login if on client side
     if (typeof window !== "undefined") {
       console.log("Redirecting to login due to token refresh failure");
       window.location.href = "/auth/login";
     }
-    
+
     throw error;
   }
 };
@@ -141,7 +145,7 @@ apiClient.interceptors.response.use(
     // Xử lý lỗi 401 - Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Skip refresh for auth endpoints
-      if (originalRequest.url?.includes('/auth/')) {
+      if (originalRequest.url?.includes("/auth/")) {
         return Promise.reject(error);
       }
 
@@ -149,14 +153,16 @@ apiClient.interceptors.response.use(
         // If already refreshing, add to queue
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          if (originalRequest.headers && token) {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-          }
-          return apiClient(originalRequest);
-        }).catch((err) => {
-          return Promise.reject(err);
-        });
+        })
+          .then((token) => {
+            if (originalRequest.headers && token) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return apiClient(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
       }
 
       originalRequest._retry = true;
@@ -165,7 +171,7 @@ apiClient.interceptors.response.use(
       try {
         const newToken = await refreshToken();
         processQueue(null, newToken);
-        
+
         // Retry original request with new token
         if (originalRequest.headers && newToken) {
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -187,12 +193,12 @@ apiClient.interceptors.response.use(
         data: error.response?.data,
         message: error.response?.data?.message || "Internal server error",
       });
-      
+
       // If this is a refresh token request that failed, clear tokens and redirect
-      if (originalRequest?.url?.includes('/auth/refresh-token')) {
+      if (originalRequest?.url?.includes("/auth/refresh-token")) {
         console.log("Refresh token endpoint returned 500, clearing tokens");
         TokenManager.clearAll();
-        
+
         if (typeof window !== "undefined") {
           window.location.href = "/auth/login";
         }
