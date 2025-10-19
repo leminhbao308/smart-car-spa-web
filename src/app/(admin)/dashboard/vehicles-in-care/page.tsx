@@ -109,6 +109,7 @@ const VehiclesInCarePage = () => {
     useState<ServiceProcessTrackingInfoDto | null>(null);
   const [selectedStepName, setSelectedStepName] = useState<string>("");
   const [bookingTrackingModalOpen, setBookingTrackingModalOpen] = useState(false);
+  const [shouldCreateTracking, setShouldCreateTracking] = useState(false);
   const { notification } = App.useApp();
 
   // API hooks - Load bookings with multiple statuses
@@ -378,9 +379,10 @@ const VehiclesInCarePage = () => {
           placement: "topRight",
         });
 
-        // Auto-open tracking modal to view tracking records
+        // Auto-open tracking modal to create tracking records
         console.log("🚀 Auto-opening tracking modal after start service");
         setSelectedVehicle(confirmAction.record);
+        setShouldCreateTracking(true);
         setDetailModalOpen(true);
       } else if (confirmAction.type === "cancel") {
         await cancelBookingMutation.mutateAsync({
@@ -607,9 +609,19 @@ const VehiclesInCarePage = () => {
             onCancel={() => {
               setDetailModalOpen(false);
               setSelectedVehicle(null);
+              setShouldCreateTracking(false);
             }}
             booking={selectedVehicle}
             trackings={trackingData || []}
+            shouldCreateTracking={shouldCreateTracking}
+            onTrackingCreated={() => {
+              // Refresh tracking data when new tracking is created
+              if (selectedVehicle) {
+                handleUpdateTracking(selectedVehicle);
+              }
+              // Reset shouldCreateTracking after tracking is created
+              setShouldCreateTracking(false);
+            }}
           />
         )}
 

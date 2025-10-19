@@ -232,7 +232,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
         bayId: selectedBay.bay_id,
       });
       console.log("Available slots from API:", slots);
-      setAvailableSlots(slots);
+      
+      // Remove duplicate slots based on startTime and endTime
+      const uniqueSlots = slots.filter((slot, index, self) => 
+        index === self.findIndex(s => 
+          s.startTime === slot.startTime && s.endTime === slot.endTime
+        )
+      );
+      
+      console.log("Unique slots after deduplication:", uniqueSlots);
+      setAvailableSlots(uniqueSlots);
     } catch (error) {
       console.error("Error loading available slots:", error);
       setAvailableSlots([]);
@@ -1034,7 +1043,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                           selectedSlot?.startTime === slot.startTime;
 
                         return (
-                          <Col span={4} key={index}>
+                          <Col span={4} key={`${slot.startTime}-${slot.endTime}-${index}`}>
                             <Tooltip
                               title={
                                 canSelect

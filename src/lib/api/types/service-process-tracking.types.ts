@@ -23,6 +23,9 @@ export interface ServiceProcessTrackingInfoDto {
   estimatedTime?: number;
   isRequired?: boolean;
   
+  // Car service information
+  carServiceId?: string;
+  
   // Technician information
   technicianId: string;
   technicianName?: string;
@@ -163,6 +166,7 @@ export interface CreateServiceProcessTrackingRequest {
   service_step_id: string;
   technician_id?: string;
   bay_id?: string;
+  car_service_id?: string;
   estimated_duration?: number;
   status?: TrackingStatus;
   progress_percent?: number;

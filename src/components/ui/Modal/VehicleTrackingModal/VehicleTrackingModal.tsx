@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Modal,
   Card,
@@ -37,6 +37,8 @@ interface VehicleTrackingModalProps {
   onCancel: () => void;
   booking: BookingInfoDto;
   trackings: ServiceProcessTrackingInfoDto[];
+  shouldCreateTracking?: boolean;
+  onTrackingCreated?: () => void;
 }
 
 interface ServiceWithSteps {
@@ -58,6 +60,8 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
   onCancel,
   booking,
   trackings,
+  shouldCreateTracking = false,
+  onTrackingCreated,
 }) => {
   const [selectedTracking, setSelectedTracking] =
     useState<ServiceProcessTrackingInfoDto | null>(null);
@@ -66,6 +70,9 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
     ServiceWithSteps[]
   >([]);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [trackingsState, setTrackingsState] =
+    useState<ServiceProcessTrackingInfoDto[]>(trackings);
+  const hasCreatedTrackingRef = useRef(false);
 
   const { notification } = App.useApp();
 
@@ -101,20 +108,28 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
     );
   };
 
-  // Calculate overall statistics (only for existing trackings)
-  const totalSteps = trackings.length;
-  const completedSteps = trackings.filter(
+  // Calculate overall statistics
+  const totalSteps = servicesWithSteps.reduce(
+    (sum, service) => sum + service.steps.length,
+    0
+  );
+  const completedSteps = trackingsState.filter(
     (t) => t.status === TrackingStatus.COMPLETED
   ).length;
-  const inProgressSteps = trackings.filter(
+  const inProgressSteps = trackingsState.filter(
     (t) => t.status === TrackingStatus.IN_PROGRESS
   ).length;
 
-  const totalEstimatedTime = trackings.reduce(
-    (sum, t) => sum + (t.estimatedTime || 0),
+  const totalEstimatedTime = servicesWithSteps.reduce(
+    (sum, service) =>
+      sum +
+      service.steps.reduce(
+        (stepSum, step) => stepSum + (step.estimatedTime || 0),
+        0
+      ),
     0
   );
-  const totalActualTime = trackings.reduce(
+  const totalActualTime = trackingsState.reduce(
     (sum, t) => sum + (t.actualDuration || 0),
     0
   );
@@ -122,58 +137,141 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
   // Initialize services with steps (display only - no tracking creation)
   useEffect(() => {
     if (open && booking.booking_items && booking.booking_items.length > 0) {
-      initializeServicesWithSteps();
+      // Only create tracking if shouldCreateTracking is true AND we haven't created tracking yet
+      if (shouldCreateTracking && !hasCreatedTrackingRef.current) {
+        hasCreatedTrackingRef.current = true;
+        initializeServicesWithSteps();
+      } else if (!shouldCreateTracking) {
+        // Just display existing data without creating tracking
+        initializeServicesWithStepsDisplayOnly();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, booking.booking_items, trackings]);
+  }, [open, booking.booking_items, shouldCreateTracking]);
+
+  // Reset hasCreatedTrackingRef when modal closes
+  useEffect(() => {
+    if (!open) {
+      hasCreatedTrackingRef.current = false;
+    }
+  }, [open]);
+
+  // Update trackingsState when trackings prop changes
+  useEffect(() => {
+    setTrackingsState(trackings);
+  }, [trackings]);
 
   // Initialize services with steps (display only - no tracking creation)
-  const initializeServicesWithSteps = async () => {
+  const initializeServicesWithStepsDisplayOnly = async () => {
     console.log(
-      "🚀 Starting initializeServicesWithSteps for booking:",
+      "🚀 Starting initializeServicesWithStepsDisplayOnly for booking:",
       booking.booking_id
     );
     setIsInitializing(true);
     try {
-      const servicesData: ServiceWithSteps[] = [];
+      let servicesData: ServiceWithSteps[] = [];
 
       console.log("📋 Booking items:", booking.booking_items);
 
+      // Cache service process data to avoid multiple API calls
+      const serviceProcessCache = new Map<
+        string,
+        { processId: string; stepIds: string[] }
+      >();
+
+      // Pre-load service process data for all services
+      const { ServiceProcessService } = await import(
+        "@/lib/api/services/service-process.service"
+      );
+
+      for (const bookingItem of booking.booking_items || []) {
+        if (bookingItem.service_id) {
+          try {
+            const serviceProcess =
+              await ServiceProcessService.getServiceProcessByServiceId(
+                bookingItem.service_id
+              );
+            if (serviceProcess?.id) {
+              const processSteps =
+                await ServiceProcessService.getServiceProcessSteps(
+                  serviceProcess.id
+                );
+              const stepIds = processSteps.map((step) => step.id);
+              serviceProcessCache.set(bookingItem.service_id, {
+                processId: serviceProcess.id,
+                stepIds,
+              });
+            }
+          } catch (error) {
+            console.warn(
+              `Error loading service process for service ${bookingItem.service_id}:`,
+              error
+            );
+          }
+        }
+      }
+
+      // Create service groups first (similar to BookingTrackingManagementModal)
+      const serviceMap = new Map<string, ServiceWithSteps>();
+
+      // First, create service groups based on booking_items
+      for (const bookingItem of booking.booking_items || []) {
+        if (bookingItem.service_id) {
+          const serviceId = bookingItem.service_id;
+          const serviceName = bookingItem.item_name || "Unknown Service";
+
+          if (!serviceMap.has(serviceId)) {
+            serviceMap.set(serviceId, {
+              serviceId,
+              serviceName,
+              processId: "",
+              steps: [],
+            });
+          }
+        }
+      }
+
+      // Now process each service and assign steps correctly
       for (const bookingItem of booking.booking_items || []) {
         console.log("🔍 Processing booking item:", bookingItem);
 
         if (bookingItem.service_id) {
           console.log("✅ Found service_id:", bookingItem.service_id);
 
-          // Get service process for this service
-          const { ServiceProcessService } = await import(
-            "@/lib/api/services/service-process.service"
+          const serviceProcessData = serviceProcessCache.get(
+            bookingItem.service_id
           );
-          const serviceProcess =
-            await ServiceProcessService.getServiceProcessByServiceId(
-              bookingItem.service_id
-            );
-
-          console.log("📊 Service process:", serviceProcess);
-
-          if (serviceProcess?.id) {
+          if (serviceProcessData) {
             // Get service process steps
             const processSteps =
               await ServiceProcessService.getServiceProcessSteps(
-                serviceProcess.id
+                serviceProcessData.processId
               );
 
-            console.log("📝 Process steps:", processSteps);
+            console.log(
+              "📝 Process steps for service:",
+              bookingItem.item_name,
+              processSteps
+            );
 
             if (processSteps && processSteps.length > 0) {
               const stepsWithTracking = processSteps.map((step) => {
                 // Find existing tracking for this step
-                const existingTracking = trackings.find(
-                  (t) => t.serviceStepId === step.id
+                // Priority 1: Find by carServiceId if available
+                // Priority 2: Find by serviceStepId only (for backward compatibility)
+                let existingTracking = trackingsState.find(
+                  (t) => t.serviceStepId === step.id && t.carServiceId === bookingItem.service_id
                 );
 
+                // Fallback: Find by serviceStepId only if no carServiceId match
+                if (!existingTracking) {
+                  existingTracking = trackingsState.find(
+                    (t) => t.serviceStepId === step.id && !t.carServiceId
+                  );
+                }
+
                 console.log(
-                  `🔍 Step ${step.name} - existing tracking:`,
+                  `🔍 Step ${step.name} (Service: ${bookingItem.item_name}) - existing tracking:`,
                   existingTracking
                 );
 
@@ -187,14 +285,14 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
                 };
               });
 
-              servicesData.push({
-                serviceId: bookingItem.service_id,
-                serviceName: bookingItem.item_name,
-                processId: serviceProcess.id,
-                steps: stepsWithTracking.sort(
+              // Update the service in the map
+              const service = serviceMap.get(bookingItem.service_id);
+              if (service) {
+                service.processId = serviceProcessData.processId;
+                service.steps = stepsWithTracking.sort(
                   (a, b) => a.stepOrder - b.stepOrder
-                ),
-              });
+                );
+              }
             }
           } else {
             console.log(
@@ -207,7 +305,245 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
         }
       }
 
-      console.log("📊 Final services data:", servicesData);
+      // Convert map to array
+      servicesData = Array.from(serviceMap.values());
+
+      console.log("📊 Final services data:", servicesData.map(service => ({
+        serviceName: service.serviceName,
+        serviceId: service.serviceId,
+        stepCount: service.steps.length,
+        steps: service.steps.map(step => ({
+          stepName: step.stepName,
+          stepOrder: step.stepOrder,
+          hasTracking: !!step.tracking,
+          trackingId: step.tracking?.trackingId,
+          carServiceId: step.tracking?.carServiceId,
+          status: step.tracking?.status
+        }))
+      })));
+      setServicesWithSteps(servicesData);
+    } catch (error) {
+      console.error("❌ Error initializing services with steps:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Có lỗi xảy ra khi khởi tạo quy trình chăm sóc",
+        placement: "topRight",
+      });
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+
+  // Initialize services with steps and create tracking records
+  const initializeServicesWithSteps = async () => {
+    console.log(
+      "🚀 Starting initializeServicesWithSteps for booking:",
+      booking.booking_id
+    );
+    setIsInitializing(true);
+    try {
+      let servicesData: ServiceWithSteps[] = [];
+
+      console.log("📋 Booking items:", booking.booking_items);
+
+      // Cache service process data to avoid multiple API calls
+      const serviceProcessCache = new Map<
+        string,
+        { processId: string; stepIds: string[] }
+      >();
+
+      // Pre-load service process data for all services
+      const { ServiceProcessService } = await import(
+        "@/lib/api/services/service-process.service"
+      );
+
+      for (const bookingItem of booking.booking_items || []) {
+        if (bookingItem.service_id) {
+          try {
+            const serviceProcess =
+              await ServiceProcessService.getServiceProcessByServiceId(
+                bookingItem.service_id
+              );
+            if (serviceProcess?.id) {
+              const processSteps =
+                await ServiceProcessService.getServiceProcessSteps(
+                  serviceProcess.id
+                );
+              const stepIds = processSteps.map((step) => step.id);
+              serviceProcessCache.set(bookingItem.service_id, {
+                processId: serviceProcess.id,
+                stepIds,
+              });
+            }
+          } catch (error) {
+            console.warn(
+              `Error loading service process for service ${bookingItem.service_id}:`,
+              error
+            );
+          }
+        }
+      }
+
+      // Create service groups first (similar to BookingTrackingManagementModal)
+      const serviceMap = new Map<string, ServiceWithSteps>();
+
+      // First, create service groups based on booking_items
+      for (const bookingItem of booking.booking_items || []) {
+        if (bookingItem.service_id) {
+          const serviceId = bookingItem.service_id;
+          const serviceName = bookingItem.item_name || "Unknown Service";
+
+          if (!serviceMap.has(serviceId)) {
+            serviceMap.set(serviceId, {
+              serviceId,
+              serviceName,
+              processId: "",
+              steps: [],
+            });
+          }
+        }
+      }
+
+      // Now process each service and assign steps correctly
+      for (const bookingItem of booking.booking_items || []) {
+        console.log("🔍 Processing booking item:", bookingItem);
+
+        if (bookingItem.service_id) {
+          console.log("✅ Found service_id:", bookingItem.service_id);
+
+          const serviceProcessData = serviceProcessCache.get(
+            bookingItem.service_id
+          );
+          if (serviceProcessData) {
+            // Get service process steps
+            const processSteps =
+              await ServiceProcessService.getServiceProcessSteps(
+                serviceProcessData.processId
+              );
+
+            console.log(
+              "📝 Process steps for service:",
+              bookingItem.item_name,
+              processSteps
+            );
+
+            if (processSteps && processSteps.length > 0) {
+              const stepsWithTracking = await Promise.all(
+                processSteps.map(async (step) => {
+                  // Find existing tracking for this step
+                  // Priority 1: Find by carServiceId if available
+                  // Priority 2: Find by serviceStepId only (for backward compatibility)
+                  let existingTracking = trackingsState.find(
+                    (t) => t.serviceStepId === step.id && t.carServiceId === bookingItem.service_id
+                  );
+
+                  // Fallback: Find by serviceStepId only if no carServiceId match
+                  if (!existingTracking) {
+                    existingTracking = trackingsState.find(
+                      (t) => t.serviceStepId === step.id && !t.carServiceId
+                    );
+                  }
+
+                  console.log(
+                    `🔍 Step ${step.name} (Service: ${bookingItem.item_name}) - existing tracking:`,
+                    existingTracking
+                  );
+
+                  // If no existing tracking, create one
+                  if (!existingTracking && shouldCreateTracking) {
+                    console.log(
+                      `🆕 Creating tracking for step: ${step.name} (Service: ${bookingItem.item_name})`
+                    );
+                    try {
+                      const { ServiceProcessTrackingService } = await import(
+                        "@/lib/api/services/service-process-tracking.service"
+                      );
+
+                      const createTrackingRequest = {
+                        booking_id: booking.booking_id,
+                        service_step_id: step.id,
+                        bay_id: booking.bay_id,
+                        car_service_id: bookingItem.service_id,
+                        status: TrackingStatus.PENDING,
+                        notes: `Tự động tạo tracking cho bước: ${step.name} (Dịch vụ: ${bookingItem.item_name})`,
+                      };
+
+                      console.log(
+                        "📤 Creating tracking with request:",
+                        createTrackingRequest
+                      );
+                      console.log("🏢 Booking bay_id:", booking.bay_id);
+
+                      const newTracking =
+                        await ServiceProcessTrackingService.createTracking(
+                          createTrackingRequest
+                        );
+
+                      console.log("✅ Created tracking:", newTracking);
+                      existingTracking = newTracking;
+
+                      // Add to trackings array
+                      setTrackingsState((prev) => [...prev, newTracking]);
+
+                      // Notify parent component
+                      if (onTrackingCreated) {
+                        onTrackingCreated();
+                      }
+                    } catch (error) {
+                      console.error(
+                        `❌ Error creating tracking for step ${step.name}:`,
+                        error
+                      );
+                    }
+                  }
+
+                  return {
+                    stepId: step.id,
+                    stepName: step.name,
+                    stepOrder: step.step_order,
+                    estimatedTime: step.estimated_time,
+                    isRequired: step.is_required,
+                    tracking: existingTracking,
+                  };
+                })
+              );
+
+              // Update the service in the map
+              const service = serviceMap.get(bookingItem.service_id);
+              if (service) {
+                service.processId = serviceProcessData.processId;
+                service.steps = stepsWithTracking.sort(
+                  (a, b) => a.stepOrder - b.stepOrder
+                );
+              }
+            }
+          } else {
+            console.log(
+              "❌ No service process found for service_id:",
+              bookingItem.service_id
+            );
+          }
+        } else {
+          console.log("❌ No service_id in booking item:", bookingItem);
+        }
+      }
+
+      // Convert map to array
+      servicesData = Array.from(serviceMap.values());
+
+      console.log("📊 Final services data:", servicesData.map(service => ({
+        serviceName: service.serviceName,
+        serviceId: service.serviceId,
+        stepCount: service.steps.length,
+        steps: service.steps.map(step => ({
+          stepName: step.stepName,
+          stepOrder: step.stepOrder,
+          hasTracking: !!step.tracking,
+          trackingId: step.tracking?.trackingId,
+          carServiceId: step.tracking?.carServiceId,
+          status: step.tracking?.status
+        }))
+      })));
       setServicesWithSteps(servicesData);
     } catch (error) {
       console.error("❌ Error initializing services with steps:", error);
@@ -364,97 +700,124 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
                     >
                       <ToolOutlined style={{ color: "#1890ff" }} />
                       <span>{service.serviceName}</span>
-                      <Tag color="blue">
-                        {service.steps.filter((step) => step.tracking).length}{" "}
-                        bước
-                      </Tag>
+                      <Tag color="blue">{service.steps.length} bước</Tag>
                     </div>
                   }
                   style={{ marginBottom: 16 }}
                 >
                   <div>
-                    {service.steps
-                      .filter((step) => step.tracking) // Only show steps that have tracking
-                      .map((step) => {
-                        // Determine visual state
-                        const isCompleted =
-                          step.tracking?.status === TrackingStatus.COMPLETED;
-                        const isInProgress =
-                          step.tracking?.status === TrackingStatus.IN_PROGRESS;
-                        const isPending =
-                          step.tracking?.status === TrackingStatus.PENDING;
+                    {service.steps.map((step) => {
+                      // Determine visual state
+                      const isCompleted =
+                        step.tracking?.status === TrackingStatus.COMPLETED;
+                      const isInProgress =
+                        step.tracking?.status === TrackingStatus.IN_PROGRESS;
+                      const isPending =
+                        step.tracking?.status === TrackingStatus.PENDING;
+                      const hasTracking = !!step.tracking;
 
-                        return (
-                          <div key={step.stepId} style={{ marginBottom: 12 }}>
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                padding: "12px",
-                                backgroundColor: isCompleted
-                                  ? "#f6ffed"
-                                  : isInProgress
-                                  ? "#e6f7ff"
-                                  : isPending
-                                  ? "#fff7e6"
-                                  : "#f5f5f5",
-                                borderRadius: "6px",
-                                border: isCompleted
-                                  ? "1px solid #b7eb8f"
-                                  : isInProgress
-                                  ? "1px solid #91d5ff"
-                                  : isPending
-                                  ? "1px solid #ffd591"
-                                  : "1px solid #d9d9d9",
-                              }}
-                            >
-                              <div style={{ marginRight: 12 }}>
-                                <Tag
-                                  color={
-                                    getStatusConfig(step.tracking!.status).color
-                                  }
-                                  icon={
+                      return (
+                        <div key={step.stepId} style={{ marginBottom: 12 }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              padding: "12px",
+                              backgroundColor: isCompleted
+                                ? "#f6ffed"
+                                : isInProgress
+                                ? "#e6f7ff"
+                                : isPending
+                                ? "#fff7e6"
+                                : hasTracking
+                                ? "#f5f5f5"
+                                : "#fafafa",
+                              borderRadius: "6px",
+                              border: isCompleted
+                                ? "1px solid #b7eb8f"
+                                : isInProgress
+                                ? "1px solid #91d5ff"
+                                : isPending
+                                ? "1px solid #ffd591"
+                                : hasTracking
+                                ? "1px solid #d9d9d9"
+                                : "1px solid #e8e8e8",
+                            }}
+                          >
+                            <div style={{ marginRight: 12 }}>
+                              <Tag
+                                color={
+                                  hasTracking
+                                    ? getStatusConfig(step.tracking!.status)
+                                        .color
+                                    : "default"
+                                }
+                                icon={
+                                  hasTracking ? (
                                     getStatusConfig(step.tracking!.status).icon
-                                  }
-                                >
-                                  Bước {step.stepOrder}
-                                </Tag>
-                              </div>
+                                  ) : (
+                                    <ClockCircleOutlined />
+                                  )
+                                }
+                              >
+                                Bước {step.stepOrder}
+                              </Tag>
+                            </div>
 
-                              <div style={{ flex: 1 }}>
-                                <div
-                                  style={{
-                                    fontWeight: 500,
-                                    marginBottom: 4,
-                                    color: "#000",
-                                  }}
-                                >
-                                  {step.stepName}
-                                </div>
-                                <div style={{ fontSize: 12, color: "#666" }}>
-                                  {step.isRequired && (
-                                    <Tag
-                                      color="red"
-                                      style={{ marginLeft: 8, fontSize: 10 }}
-                                    >
-                                      Bắt buộc
-                                    </Tag>
-                                  )}
-                                </div>
-                                {step.tracking?.notes && (
-                                  <div
+                            <div style={{ flex: 1 }}>
+                              <div
+                                style={{
+                                  fontWeight: 500,
+                                  marginBottom: 4,
+                                  color: hasTracking ? "#000" : "#999",
+                                }}
+                              >
+                                {step.stepName}
+                                {!hasTracking && (
+                                  <Text
                                     style={{
                                       fontSize: 11,
-                                      color: "#666",
-                                      marginTop: 4,
+                                      color: "#999",
+                                      marginLeft: 8,
                                     }}
                                   >
-                                    Ghi chú: {step.tracking.notes}
-                                  </div>
+                                    (Chưa có tracking)
+                                  </Text>
                                 )}
                               </div>
+                              <div style={{ fontSize: 12, color: "#666" }}>
+                                {step.isRequired && (
+                                  <Tag
+                                    color="red"
+                                    style={{ marginLeft: 8, fontSize: 10 }}
+                                  >
+                                    Bắt buộc
+                                  </Tag>
+                                )}
+                                {!hasTracking && (
+                                  <Tag
+                                    color="orange"
+                                    style={{ marginLeft: 8, fontSize: 10 }}
+                                  >
+                                    Chưa tạo tracking
+                                  </Tag>
+                                )}
+                              </div>
+                              {step.tracking?.notes && (
+                                <div
+                                  style={{
+                                    fontSize: 11,
+                                    color: "#666",
+                                    marginTop: 4,
+                                  }}
+                                >
+                                  Ghi chú: {step.tracking.notes}
+                                </div>
+                              )}
+                            </div>
 
-                              <div style={{ marginLeft: 12 }}>
+                            <div style={{ marginLeft: 12 }}>
+                              {hasTracking ? (
                                 <Button
                                   type="primary"
                                   size="small"
@@ -465,13 +828,23 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
                                 >
                                   Chi tiết
                                 </Button>
-                              </div>
+                              ) : (
+                                <Button
+                                  type="default"
+              size="small"
+                                  disabled
+                                  style={{ color: "#999" }}
+                                >
+                                  Chưa có tracking
+                                </Button>
+                              )}
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      );
+                    })}
                   </div>
-                </Card>
+          </Card>
               ))}
             </div>
           )}

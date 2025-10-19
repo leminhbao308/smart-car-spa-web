@@ -161,29 +161,47 @@ const BookingTrackingManagementModal: React.FC<
         }
       }
 
-      // Then, assign trackings to their corresponding services using cached data
+      // Then, assign trackings to their corresponding services using carServiceId
       for (const tracking of trackings) {
         let assignedServiceId: string | null = null;
 
-        // Try to find which service this tracking belongs to using cached data
-        for (const [serviceId, cachedData] of serviceProcessCache.entries()) {
-          const stepBelongsToService = cachedData.stepIds.includes(
-            tracking.serviceStepId
-          );
+        console.log(`🔍 Processing tracking ${tracking.trackingId}:`, {
+          serviceStepId: tracking.serviceStepId,
+          carServiceId: tracking.carServiceId,
+          serviceStepName: tracking.serviceStepName
+        });
 
-          if (stepBelongsToService) {
-            assignedServiceId = serviceId;
-            break; // Found the correct service, stop looking
+        // Priority 1: Use carServiceId if available and valid
+        if (tracking.carServiceId && serviceMap.has(tracking.carServiceId)) {
+          assignedServiceId = tracking.carServiceId;
+          console.log(`✅ Assigned tracking to service by carServiceId: ${assignedServiceId}`);
+        } else {
+          // Priority 2: Try to find which service this tracking belongs to using cached data
+          for (const [serviceId, cachedData] of serviceProcessCache.entries()) {
+            const stepBelongsToService = cachedData.stepIds.includes(
+              tracking.serviceStepId
+            );
+
+            if (stepBelongsToService) {
+              assignedServiceId = serviceId;
+              console.log(`✅ Assigned tracking to service by step mapping: ${assignedServiceId}`);
+              break; // Found the correct service, stop looking
+            }
+          }
+
+          // Priority 3: If we couldn't determine the service, assign to the first available service
+          if (!assignedServiceId && serviceMap.size > 0) {
+            assignedServiceId = Array.from(serviceMap.keys())[0];
+            console.log(`⚠️ Fallback: Assigned tracking to first available service: ${assignedServiceId}`);
           }
         }
 
-        // If we couldn't determine the service, assign to the first available service
-        if (!assignedServiceId && serviceMap.size > 0) {
-          assignedServiceId = Array.from(serviceMap.keys())[0];
-        }
-
         if (assignedServiceId && serviceMap.has(assignedServiceId)) {
-          serviceMap.get(assignedServiceId)!.trackings.push(tracking);
+          const service = serviceMap.get(assignedServiceId)!;
+          service.trackings.push(tracking);
+          console.log(`📝 Added tracking to service "${service.serviceName}" (${service.trackings.length} trackings)`);
+        } else {
+          console.warn(`❌ Could not assign tracking ${tracking.trackingId} to any service`);
         }
       }
 
@@ -194,6 +212,18 @@ const BookingTrackingManagementModal: React.FC<
           (a, b) => (a.serviceStepOrder || 0) - (b.serviceStepOrder || 0)
         ),
       }));
+
+      console.log("📊 Final grouped services:", services.map(service => ({
+        serviceName: service.serviceName,
+        serviceId: service.serviceId,
+        trackingCount: service.trackings.length,
+        trackings: service.trackings.map(t => ({
+          trackingId: t.trackingId,
+          serviceStepName: t.serviceStepName,
+          carServiceId: t.carServiceId,
+          status: t.status
+        }))
+      })));
 
       setServicesWithTrackings(services);
     } catch (error) {
@@ -676,25 +706,6 @@ const BookingTrackingManagementModal: React.FC<
                                       <TextArea
                                         rows={3}
                                         placeholder="Nhập ghi chú về quá trình thực hiện..."
-                                      />
-                                    </Form.Item>
-                                  </Col>
-                                  <Col span={12}>
-                                    <Form.Item
-                                      name="evidence_media_urls"
-                                      label="URL bằng chứng"
-                                    >
-                                      <Input placeholder="https://example.com/evidence.jpg" />
-                                    </Form.Item>
-                                    <Form.Item
-                                      name="progress_percent"
-                                      label="Tiến độ (%)"
-                                    >
-                                      <Input
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        placeholder="90"
                                       />
                                     </Form.Item>
                                   </Col>
