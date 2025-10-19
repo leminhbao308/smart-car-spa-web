@@ -223,6 +223,54 @@ export interface CreateBookingRequest {
   payments?: unknown[];
 }
 
+// New integrated booking request type based on BookingInfoDto
+export interface CreateBookingWithSlotRequest {
+  // Customer information
+  customer_id?: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_email?: string;
+  
+  // Vehicle information
+  vehicle_id?: string;
+  vehicle_license_plate: string;
+  vehicle_brand_name?: string;
+  vehicle_model_name?: string;
+  vehicle_type_name?: string;
+  vehicle_year?: number;
+  vehicle_color?: string;
+  
+  // Branch and slot information
+  branch_id: string;
+  
+  // Selected slot information
+  selected_slot: {
+    bay_id: string;
+    date: string; // YYYY-MM-DD format
+    start_time: string; // HH:mm format
+    service_duration_minutes: number;
+  };
+  
+  // Booking items
+  booking_items: {
+    service_id: string;
+    item_name?: string;
+    item_description?: string;
+    discount_amount?: number;
+    tax_amount?: number;
+  }[];
+  
+  // Pricing information
+  total_price: number;
+  currency?: string;
+  deposit_amount?: number;
+  
+  // Additional information
+  coupon_code?: string;
+  notes?: string;
+  special_requests?: string[];
+}
+
 export interface UpdateBookingRequest {
   customer_id?: string;
   customer_name?: string;

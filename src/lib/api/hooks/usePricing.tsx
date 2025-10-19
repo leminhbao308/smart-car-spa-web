@@ -2,7 +2,6 @@
 import {useState, useCallback} from "react";
 import { useQuery } from "@tanstack/react-query";
 import {PricingPreviewBatchRequest, PricingPreviewItemRequest, PricingService} from "@/lib/api";
-import { PriceBook } from "@/lib/api/types/price-book.types";
 
 
 export const usePricing = () => {
@@ -15,8 +14,8 @@ export const usePricing = () => {
     setError(null);
     try {
       return await PricingService.getPreviewPrice(data);
-    } catch (e: any) {
-      setError(e?.message || "Failed to preview price");
+    } catch (e: unknown) {
+      setError((e as Error)?.message || "Failed to preview price");
       throw e;
     } finally {
       setLoading(false);
@@ -29,8 +28,8 @@ export const usePricing = () => {
     setError(null);
     try {
       return await PricingService.getPreviewPriceBatch(data);
-    } catch (e: any) {
-      setError(e?.message || "Failed to preview batch prices");
+    } catch (e: unknown) {
+      setError((e as Error)?.message || "Failed to preview batch prices");
       throw e;
     } finally {
       setLoading(false);
@@ -47,7 +46,47 @@ export const usePricing = () => {
 export const useActivePriceBooks = () => {
   return useQuery({
     queryKey: ["pricing", "active-books"],
-    queryFn: () => PricingService.getActivePriceBooks(),
+    queryFn: async () => {
+      console.log("=== CALLING getActivePriceBooks API ===");
+      try {
+        const result = await PricingService.getActivePriceBooks();
+        console.log("=== getActivePriceBooks API SUCCESS ===");
+        console.log("API Response:", result);
+        console.log("Response type:", typeof result);
+        console.log("Response is array:", Array.isArray(result));
+        return result;
+      } catch (error) {
+        console.log("=== getActivePriceBooks API ERROR ===");
+        console.error("API Error:", error);
+        throw error;
+      }
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+};
+
+/**
+ * Hook to get all price books for booking (including inactive ones)
+ */
+export const useAllPriceBooks = () => {
+  return useQuery({
+    queryKey: ["pricing", "all-books"],
+    queryFn: async () => {
+      console.log("=== CALLING getAllPriceBooks API ===");
+      try {
+        const result = await PricingService.getAllPriceBooks();
+        console.log("=== getAllPriceBooks API SUCCESS ===");
+        console.log("API Response:", result);
+        console.log("Response type:", typeof result);
+        console.log("Response is array:", Array.isArray(result));
+        return result;
+      } catch (error) {
+        console.log("=== getAllPriceBooks API ERROR ===");
+        console.error("API Error:", error);
+        throw error;
+      }
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });

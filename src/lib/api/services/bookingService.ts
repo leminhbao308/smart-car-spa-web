@@ -8,6 +8,7 @@ import {
   BookingInfoDto,
   BookingFilterParam,
   CreateBookingRequest,
+  CreateBookingWithSlotRequest,
   UpdateBookingRequest,
   BookingStatisticsDto,
   BookingStatus,
@@ -154,6 +155,14 @@ export class BookingService {
    */
   static async createBooking(request: CreateBookingRequest) {
     const response = await apiClient.post(`${this.BASE_URL}/create`, request);
+    return response.data;
+  }
+
+  /**
+   * Create new booking with slot assignment (Integrated API)
+   */
+  static async createBookingWithSlot(request: CreateBookingWithSlotRequest) {
+    const response = await apiClient.post("/integrated-booking/create-with-slot", request);
     return response.data;
   }
 

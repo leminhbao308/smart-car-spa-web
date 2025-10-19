@@ -9,6 +9,7 @@ import {
   BookingInfoDto,
   BookingFilterParam,
   CreateBookingRequest,
+  CreateBookingWithSlotRequest,
   UpdateBookingRequest,
   BookingStatus
 } from '../types/booking.types';
@@ -90,6 +91,17 @@ export const useCreateBooking = () => {
   
   return useMutation({
     mutationFn: (request: CreateBookingRequest) => BookingService.createBooking(request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+    },
+  });
+};
+
+export const useCreateBookingWithSlot = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (request: CreateBookingWithSlotRequest) => BookingService.createBookingWithSlot(request),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
     },
