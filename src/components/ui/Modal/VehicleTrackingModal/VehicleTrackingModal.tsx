@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Modal,
   Card,
@@ -8,13 +8,9 @@ import {
   Typography,
   Row,
   Col,
-  Progress,
   Button,
   Space,
   Statistic,
-  Timeline,
-  Avatar,
-  Divider,
 } from "antd";
 import {
   EyeOutlined,
@@ -22,7 +18,6 @@ import {
   PlayCircleOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  UserOutlined,
   CarOutlined,
   ToolOutlined,
   EnvironmentOutlined,
@@ -33,10 +28,8 @@ import {
   TrackingStatus,
 } from "@/lib/api/types/service-process-tracking.types";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
-import { formatDate } from "@/components/utils/helper/date.format.helper";
-import { formatTime } from "@/components/utils/helper/duration.format.helper";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface VehicleTrackingModalProps {
   open: boolean;
@@ -87,19 +80,6 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
     );
   };
 
-  const getEfficiencyColor = (efficiency: number) => {
-    if (efficiency >= 2) return "#52c41a";
-    if (efficiency >= 1.5) return "#faad14";
-    if (efficiency >= 1) return "#fa8c16";
-    return "#f5222d";
-  };
-
-  const getEfficiencyLabel = (efficiency: number) => {
-    if (efficiency >= 2) return "Rất hiệu quả";
-    if (efficiency >= 1.5) return "Hiệu quả";
-    if (efficiency >= 1) return "Trung bình";
-    return "Cần cải thiện";
-  };
 
   // Calculate overall statistics
   const totalSteps = trackings.length;
@@ -109,11 +89,6 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
   const inProgressSteps = trackings.filter(
     (t) => t.status === TrackingStatus.IN_PROGRESS
   ).length;
-  const pendingSteps = trackings.filter(
-    (t) => t.status === TrackingStatus.PENDING
-  ).length;
-  const overallProgress =
-    totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
   const totalEstimatedTime = trackings.reduce(
     (sum, t) => sum + (t.estimatedTime || 0),
@@ -123,11 +98,6 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
     (sum, t) => sum + (t.actualDuration || 0),
     0
   );
-  const averageEfficiency =
-    trackings.length > 0
-      ? trackings.reduce((sum, t) => sum + (t.efficiency || 0), 0) /
-        trackings.length
-      : 0;
 
   const handleViewDetail = (tracking: ServiceProcessTrackingInfoDto) => {
     setSelectedTracking(tracking);
@@ -247,7 +217,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <CarOutlined style={{ color: "#1890ff" }} />
             <span>Quá trình chăm sóc xe</span>
-            <Tag color="blue">{booking.bookingCode}</Tag>
+            <Tag color="blue">{booking.booking_code}</Tag>
           </div>
         }
         open={open}
@@ -273,13 +243,13 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
                 </div>
                 <div style={{ marginLeft: 24 }}>
                   <div>
-                    <Text strong>Biển số:</Text> {booking.vehicleLicensePlate}
+                    <Text strong>Biển số:</Text> {booking.vehicle_license_plate}
                   </div>
                   <div>
-                    <Text strong>Khách hàng:</Text> {booking.customerName}
+                    <Text strong>Khách hàng:</Text> {booking.customer_name}
                   </div>
                   <div>
-                    <Text strong>SĐT:</Text> {booking.customerPhone}
+                    <Text strong>SĐT:</Text> {booking.customer_phone}
                   </div>
                 </div>
               </Col>
@@ -323,11 +293,11 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
                 </div>
                 <div style={{ marginLeft: 24 }}>
                   <div>
-                    <Text strong>{booking.branchName}</Text>
+                    <Text strong>{booking.branch_name}</Text>
                   </div>
                   <div>
                     <Text style={{ fontSize: 12, color: "#666" }}>
-                      {booking.branchCode}
+                      {booking.branch_code}
                     </Text>
                   </div>
                 </div>

@@ -53,7 +53,7 @@ export const adminMenuItems: MenuItem[] = [
           },
           {
             key: "vehicles-in-care",
-            label: "Quản Lý Xe Đang Chăm Sóc",
+            label: "Quản Lý Chăm Sóc Xe",
             icon: React.createElement(CarOutlined),
           },
         ],
@@ -258,6 +258,7 @@ export const menuKeyToPath: Record<string, string> = {
   brands: "/dashboard/vehicle-brands",
   types: "/dashboard/vehicle-types",
   models: "/dashboard/vehicle-models",
+  "vehicles-in-care": "/dashboard/vehicles-in-care",
   "product-types": "/dashboard/product-types",
   products: "/dashboard/products",
   "product-attributes": "/dashboard/product-attributes",

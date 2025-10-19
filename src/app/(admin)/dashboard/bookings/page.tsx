@@ -791,6 +791,7 @@ const BookingsPage = () => {
         dataSource={data}
         columns={columns}
         scroll={{ x: 1420 }}
+        rowKey="booking_id"
         loading={
           isLoading ||
           isLoadingCustomers ||

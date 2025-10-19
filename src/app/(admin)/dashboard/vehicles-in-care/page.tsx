@@ -8,14 +8,14 @@ import {
   Col,
   Statistic,
   Progress,
-  Avatar,
-  notification,
+  Button,
+  App,
+  Modal,
 } from "antd";
 import {
   EyeOutlined,
   ClockCircleOutlined,
   CarOutlined,
-  UserOutlined,
   PlayCircleOutlined,
   PauseCircleOutlined,
   CheckCircleOutlined,
@@ -29,57 +29,134 @@ import { useVehicleTracking } from "@/lib/api/hooks/useVehicleTracking";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 import { formatTime } from "@/components/utils/helper/duration.format.helper";
 import { 
-  useBookingsByStatus
+  useBookingsByStatus,
+  useStartService,
+  useCancelBooking
 } from "@/lib/api/hooks/useBooking";
-import { 
-  TrackingStatus
-} from "@/lib/api/types/service-process-tracking.types";
-import { 
-  BookingInfoDto,
-  BookingStatus
-} from "@/lib/api/types/booking.types";
+import { useQueryClient } from "@tanstack/react-query";
+import { BookingInfoDto, BookingStatus } from "@/lib/api/types/booking.types";
 
 const { Text } = Typography;
 
 // Helper functions
-const getStatusConfig = (status: TrackingStatus) => {
+const getStatusConfig = (status: BookingStatus) => {
   const statusConfigs = {
-    [TrackingStatus.PENDING]: { label: "Chờ thực hiện", color: "default", icon: <ClockCircleOutlined /> },
-    [TrackingStatus.IN_PROGRESS]: { label: "Đang thực hiện", color: "blue", icon: <PlayCircleOutlined /> },
-    [TrackingStatus.COMPLETED]: { label: "Hoàn thành", color: "green", icon: <CheckCircleOutlined /> },
-    [TrackingStatus.CANCELLED]: { label: "Đã hủy", color: "red", icon: <ExclamationCircleOutlined /> },
+    [BookingStatus.PENDING]: {
+      label: "Chờ xác nhận",
+      color: "orange",
+      icon: <ClockCircleOutlined />,
+    },
+    [BookingStatus.CONFIRMED]: {
+      label: "Đã xác nhận",
+      color: "blue",
+      icon: <CheckCircleOutlined />,
+    },
+    [BookingStatus.CHECKED_IN]: {
+      label: "Đã check-in",
+      color: "cyan",
+      icon: <CheckCircleOutlined />,
+    },
+    [BookingStatus.IN_PROGRESS]: {
+      label: "Đang thực hiện",
+      color: "green",
+      icon: <PlayCircleOutlined />,
+    },
+    [BookingStatus.PAUSED]: {
+      label: "Tạm dừng",
+      color: "yellow",
+      icon: <PauseCircleOutlined />,
+    },
+    [BookingStatus.COMPLETED]: {
+      label: "Hoàn thành",
+      color: "green",
+      icon: <CheckCircleOutlined />,
+    },
+    [BookingStatus.CANCELLED]: {
+      label: "Đã hủy",
+      color: "red",
+      icon: <ExclamationCircleOutlined />,
+    },
+    [BookingStatus.NO_SHOW]: {
+      label: "Không đến",
+      color: "red",
+      icon: <ExclamationCircleOutlined />,
+    },
   };
-  return statusConfigs[status] || { label: "Unknown", color: "default", icon: <ClockCircleOutlined /> };
+  return (
+    statusConfigs[status] || {
+      label: "Unknown",
+      color: "default",
+      icon: <ClockCircleOutlined />,
+    }
+  );
 };
 
-
 const VehiclesInCarePage = () => {
-  const [selectedVehicle, setSelectedVehicle] = useState<BookingInfoDto | null>(null);
+  const [selectedVehicle, setSelectedVehicle] = useState<BookingInfoDto | null>(
+    null
+  );
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  
-  // API hooks - Load both IN_PROGRESS and COMPLETED bookings
-  const { data: inProgressBookings, isLoading: isLoadingInProgress, error: inProgressError } = useBookingsByStatus(BookingStatus.IN_PROGRESS);
-  const { data: completedBookings, isLoading: isLoadingCompleted, error: completedError } = useBookingsByStatus(BookingStatus.COMPLETED);
-  
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'start' | 'cancel';
+    record: BookingInfoDto | null;
+  }>({ type: 'start', record: null });
+  const { notification } = App.useApp();
+
+  // API hooks - Load bookings with multiple statuses
+  const {
+    data: checkedInBookings,
+    isLoading: isLoadingCheckedIn,
+    error: checkedInError,
+  } = useBookingsByStatus(BookingStatus.CHECKED_IN);
+  const {
+    data: inProgressBookings,
+    isLoading: isLoadingInProgress,
+    error: inProgressError,
+  } = useBookingsByStatus(BookingStatus.IN_PROGRESS);
+  const {
+    data: cancelledBookings,
+    isLoading: isLoadingCancelled,
+    error: cancelledError,
+  } = useBookingsByStatus(BookingStatus.CANCELLED);
+  const {
+    data: completedBookings,
+    isLoading: isLoadingCompleted,
+    error: completedError,
+  } = useBookingsByStatus(BookingStatus.COMPLETED);
+
   // Load tracking data for selected vehicle
-  const { data: trackingData } = useVehicleTracking(selectedVehicle?.bookingId || "");
-  
-  
+  const { data: trackingData } = useVehicleTracking(
+    selectedVehicle?.booking_id || ""
+  );
+
+  // Mutation hooks
+  const startServiceMutation = useStartService();
+  const cancelBookingMutation = useCancelBooking();
+  const queryClient = useQueryClient();
+
   // Combine bookings with their trackings
+  const checkedInData = checkedInBookings?.data || [];
   const inProgressData = inProgressBookings?.data || [];
+  const cancelledData = cancelledBookings?.data || [];
   const completedData = completedBookings?.data || [];
-  const data = [...inProgressData, ...completedData];
-  
+  const data = [
+    ...checkedInData,
+    ...inProgressData,
+    ...cancelledData,
+    ...completedData,
+  ];
+
   // Error handling
   useEffect(() => {
-    if (inProgressError || completedError) {
+    if (checkedInError || inProgressError || cancelledError || completedError) {
       notification.error({
         message: "Lỗi tải dữ liệu",
         description: "Có lỗi xảy ra khi tải dữ liệu xe đang chăm sóc",
         placement: "topRight",
       });
     }
-  }, [inProgressError, completedError]);
+  }, [checkedInError, inProgressError, cancelledError, completedError, notification]);
 
   const getStatusIcon = (status: BookingStatus) => {
     switch (status) {
@@ -109,16 +186,16 @@ const VehiclesInCarePage = () => {
           >
             <CarOutlined style={{ marginRight: 8, color: "#1890ff" }} />
             <Text strong style={{ fontSize: 14 }}>
-              {record.vehicleBrandName} {record.vehicleModelName}
+              {record.vehicle_brand_name} {record.vehicle_model_name}
             </Text>
           </div>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            {record.vehicleLicensePlate} • {record.vehicleYear} •{" "}
-            {record.vehicleColor}
+            {record.vehicle_license_plate} • {record.vehicle_year} •{" "}
+            {record.vehicle_color}
           </Text>
           <div style={{ marginTop: 4 }}>
             <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
-              Khách hàng: {record.customerName}
+              Khách hàng: {record.customer_name}
             </Text>
           </div>
         </div>
@@ -132,11 +209,11 @@ const VehiclesInCarePage = () => {
       render: (_: unknown, record: BookingInfoDto) => (
         <div>
           <Text strong style={{ fontSize: 12 }}>
-            {record.bookingItems?.length || 0} dịch vụ
+            {record.booking_items?.length || 0} dịch vụ
           </Text>
           <div style={{ marginTop: 4 }}>
             <Text style={{ fontSize: 11, color: "#8c8c8c" }}>
-              Thời gian: {formatTime(record.estimatedDurationMinutes || 0)}
+              Thời gian: {formatTime(record.estimated_duration_minutes || 0)}
             </Text>
           </div>
         </div>
@@ -151,51 +228,28 @@ const VehiclesInCarePage = () => {
         <div>
           <div style={{ marginBottom: 4 }}>
             <Text style={{ fontSize: 12 }}>
-              Bắt đầu: {formatDate(record.actualStartAt || record.scheduledStartAt || record.preferredStartAt || new Date().toISOString())}
+              Bắt đầu:{" "}
+              {formatDate(
+                record.actual_start_at ||
+                  record.scheduled_start_at ||
+                  record.preferred_start_at ||
+                  new Date().toISOString()
+              )}
             </Text>
           </div>
           <div style={{ marginBottom: 4 }}>
             <Text style={{ fontSize: 12 }}>
-              Dự kiến: {formatDate(record.scheduledEndAt || new Date().toISOString())}
+              Dự kiến:{" "}
+              {formatDate(record.scheduled_end_at || new Date().toISOString())}
             </Text>
           </div>
-          {record.actualEndAt && (
+          {record.actual_end_at && (
             <div>
               <Text style={{ fontSize: 12, color: "#52c41a" }}>
-                Hoàn thành: {formatDate(record.actualEndAt)}
+                Hoàn thành: {formatDate(record.actual_end_at)}
               </Text>
             </div>
           )}
-        </div>
-      ),
-    },
-    {
-      title: "Nhân viên",
-      dataIndex: "assignments",
-      key: "assignments",
-      width: 150,
-      render: (assignments: unknown[]) => (
-        <div>
-          {(assignments as { technicianName: string; role: string }[])?.map((assignment, index: number) => (
-            <div
-              key={index}
-              style={{ display: "flex", alignItems: "center", marginBottom: 4 }}
-            >
-              <Avatar
-                size="small"
-                icon={<UserOutlined />}
-                style={{ marginRight: 4 }}
-              />
-              <div>
-                <Text style={{ fontSize: 11 }}>{assignment.technicianName}</Text>
-                <div>
-                  <Text style={{ fontSize: 10, color: "#8c8c8c" }}>
-                    {assignment.role}
-                  </Text>
-                </div>
-              </div>
-            </div>
-          ))}
         </div>
       ),
     },
@@ -205,7 +259,7 @@ const VehiclesInCarePage = () => {
       key: "status",
       width: 120,
       render: (status: BookingStatus) => {
-        const statusConfig = getStatusConfig(status as unknown as TrackingStatus);
+        const statusConfig = getStatusConfig(status);
         return (
           <Tag color={statusConfig.color} icon={getStatusIcon(status)}>
             {statusConfig.label}
@@ -215,8 +269,8 @@ const VehiclesInCarePage = () => {
     },
     {
       title: "Thanh toán",
-      dataIndex: "paymentStatus",
-      key: "paymentStatus",
+      dataIndex: "payment_status",
+      key: "payment_status",
       width: 120,
       align: "center" as const,
       render: (paymentStatus: string) => {
@@ -226,7 +280,9 @@ const VehiclesInCarePage = () => {
           FAILED: { label: "Thanh toán thất bại", color: "red" },
           REFUNDED: { label: "Đã hoàn tiền", color: "blue" },
         };
-        const config = paymentConfig[paymentStatus as keyof typeof paymentConfig] || {
+        const config = paymentConfig[
+          paymentStatus as keyof typeof paymentConfig
+        ] || {
           label: "Chưa xác định",
           color: "default",
         };
@@ -240,13 +296,13 @@ const VehiclesInCarePage = () => {
   ];
 
   const handlePayment = (record: BookingInfoDto) => {
-    const bookingId = record.bookingId;
-    const totalPrice = record.totalPrice || 0;
-    
+    const bookingId = record.booking_id;
+    const totalPrice = record.total_price || 0;
+
     // TODO: Implement payment processing logic
     console.log("Booking ID:", bookingId);
     console.log("Total Price:", totalPrice);
-    
+
     notification.success({
       message: "Thành công",
       description: "Xử lý thanh toán thành công",
@@ -254,16 +310,85 @@ const VehiclesInCarePage = () => {
     });
   };
 
+  const handleStartService = (record: BookingInfoDto) => {
+    setConfirmAction({ type: 'start', record });
+    setConfirmModalOpen(true);
+  };
+
+  const handleCancelBooking = (record: BookingInfoDto) => {
+    setConfirmAction({ type: 'cancel', record });
+    setConfirmModalOpen(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction.record) return;
+
+    try {
+      if (confirmAction.type === 'start') {
+        await startServiceMutation.mutateAsync(confirmAction.record.booking_id);
+        notification.success({
+          message: "Thành công",
+          description: "Bắt đầu chăm sóc thành công",
+          placement: "topRight",
+        });
+      } else if (confirmAction.type === 'cancel') {
+        await cancelBookingMutation.mutateAsync({
+          bookingId: confirmAction.record.booking_id,
+          reason: "Hủy bởi admin",
+          cancelledBy: "admin",
+        });
+        notification.success({
+          message: "Thành công",
+          description: "Hủy lịch đặt thành công",
+          placement: "topRight",
+        });
+      }
+
+      // Refresh data
+      await queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      
+      setConfirmModalOpen(false);
+      setConfirmAction({ type: 'start', record: null });
+    } catch {
+      notification.error({
+        message: "Lỗi",
+        description: `Có lỗi xảy ra khi ${confirmAction.type === 'start' ? 'bắt đầu chăm sóc' : 'hủy lịch đặt'}`,
+        placement: "topRight",
+      });
+    }
+  };
+
   const actions = [
     {
+      key: "start",
+      label: "Bắt đầu chăm sóc",
+      icon: <PlayCircleOutlined />,
+      type: "primary" as const,
+      onClick: handleStartService,
+      condition: (record: BookingInfoDto) =>
+        record.status === BookingStatus.CHECKED_IN,
+    },
+    {
+      key: "cancel",
+      label: "Hủy lịch đặt",
+      icon: <ExclamationCircleOutlined />,
+      type: "default" as const,
+      danger: true,
+      onClick: handleCancelBooking,
+      condition: (record: BookingInfoDto) =>
+        record.status === BookingStatus.CHECKED_IN,
+    },
+    {
       key: "tracking",
-      label: "Theo dõi quá trình chăm sóc xe",
+      label: "Chăm sóc xe",
       icon: <EyeOutlined />,
       type: "primary" as const,
       onClick: (record: BookingInfoDto) => {
         setSelectedVehicle(record);
         setDetailModalOpen(true);
       },
+      condition: (record: BookingInfoDto) =>
+        [BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED].includes(record.status),
     },
     {
       key: "payment",
@@ -273,19 +398,21 @@ const VehiclesInCarePage = () => {
       onClick: handlePayment,
       condition: (record: BookingInfoDto) =>
         record.status === BookingStatus.COMPLETED &&
-        record.paymentStatus === "PENDING",
+        record.payment_status === "PENDING",
     },
   ];
 
   // Thống kê tổng quan
   const totalVehicles = data.length;
+  const checkedInVehicles = data.filter(
+    (item: BookingInfoDto) => item.status === BookingStatus.CHECKED_IN
+  ).length;
   const inProgressVehicles = data.filter(
     (item: BookingInfoDto) => item.status === BookingStatus.IN_PROGRESS
   ).length;
   const completedVehicles = data.filter(
     (item: BookingInfoDto) => item.status === BookingStatus.COMPLETED
   ).length;
-  const pausedVehicles = data.filter((item: BookingInfoDto) => item.status === BookingStatus.PAUSED).length;
   const cancelledVehicles = data.filter(
     (item: BookingInfoDto) => item.status === BookingStatus.CANCELLED
   ).length;
@@ -298,9 +425,10 @@ const VehiclesInCarePage = () => {
   ).length;
 
   return (
-    <div>
-      {/* Thống kê tổng quan */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+    <App>
+      <div>
+        {/* Thống kê tổng quan */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
@@ -308,6 +436,16 @@ const VehiclesInCarePage = () => {
               value={totalVehicles}
               valueStyle={{ color: "#1890ff" }}
               prefix={<CarOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Đã check-in"
+              value={checkedInVehicles}
+              valueStyle={{ color: "#13c2c2" }}
+              prefix={<CheckCircleOutlined />}
             />
           </Card>
         </Col>
@@ -339,10 +477,10 @@ const VehiclesInCarePage = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Tạm dừng"
-              value={pausedVehicles}
-              valueStyle={{ color: "#fa8c16" }}
-              prefix={<PauseCircleOutlined />}
+              title="Đã hủy"
+              value={cancelledVehicles}
+              valueStyle={{ color: "#f5222d" }}
+              prefix={<ExclamationCircleOutlined />}
             />
           </Card>
         </Col>
@@ -382,16 +520,6 @@ const VehiclesInCarePage = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Đã hủy"
-              value={cancelledVehicles}
-              valueStyle={{ color: "#8c8c8c" }}
-              prefix={<ExclamationCircleOutlined />}
-            />
-          </Card>
-        </Col>
       </Row>
 
       <AdminTable
@@ -399,7 +527,14 @@ const VehiclesInCarePage = () => {
         dataSource={data}
         columns={columns}
         actions={actions}
-        loading={isLoadingInProgress || isLoadingCompleted}
+        loading={
+          isLoadingCheckedIn ||
+          isLoadingInProgress ||
+          isLoadingCancelled ||
+          isLoadingCompleted ||
+          startServiceMutation.isPending ||
+          cancelBookingMutation.isPending
+        }
         pagination={{
           pageSize: 10,
           showSizeChanger: true,
@@ -421,9 +556,72 @@ const VehiclesInCarePage = () => {
           trackings={trackingData || []}
         />
       )}
-    </div>
+
+      {/* Modal xác nhận */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {confirmAction.type === 'start' ? (
+              <PlayCircleOutlined style={{ color: "#1890ff" }} />
+            ) : (
+              <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
+            )}
+            <span>
+              {confirmAction.type === 'start' ? 'Bắt đầu chăm sóc' : 'Hủy lịch đặt'}
+            </span>
+          </div>
+        }
+        open={confirmModalOpen}
+        onCancel={() => {
+          setConfirmModalOpen(false);
+          setConfirmAction({ type: 'start', record: null });
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setConfirmModalOpen(false);
+              setConfirmAction({ type: 'start', record: null });
+            }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            danger={confirmAction.type === 'cancel'}
+            loading={startServiceMutation.isPending || cancelBookingMutation.isPending}
+            onClick={handleConfirmAction}
+          >
+            {confirmAction.type === 'start' ? 'Bắt đầu chăm sóc' : 'Hủy lịch đặt'}
+          </Button>,
+        ]}
+        width={500}
+      >
+        <div style={{ padding: '16px 0' }}>
+          <p style={{ fontSize: 16, marginBottom: 16 }}>
+            {confirmAction.type === 'start' 
+              ? `Bạn có chắc chắn muốn bắt đầu chăm sóc cho xe ${confirmAction.record?.vehicle_license_plate}?`
+              : `Bạn có chắc chắn muốn hủy lịch đặt cho xe ${confirmAction.record?.vehicle_license_plate}?`
+            }
+          </p>
+          {confirmAction.record && (
+            <div style={{ 
+              backgroundColor: '#f5f5f5', 
+              padding: 12, 
+              borderRadius: 6,
+              fontSize: 14 
+            }}>
+              <div><strong>Khách hàng:</strong> {confirmAction.record.customer_name}</div>
+              <div><strong>Biển số:</strong> {confirmAction.record.vehicle_license_plate}</div>
+              <div><strong>Dịch vụ:</strong> {confirmAction.record.booking_items?.length || 0} dịch vụ</div>
+            </div>
+          )}
+        </div>
+      </Modal>
+      </div>
+    </App>
   );
 };
-
 
 export default VehiclesInCarePage;
