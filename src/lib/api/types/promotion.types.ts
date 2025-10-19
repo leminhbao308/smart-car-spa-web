@@ -1,27 +1,27 @@
 // Promotion Management Types - Aligned with Backend
 
 // === ENUMS ===
-import {BaseAuditEntity, PromotionTypeInfo} from "@/lib/api";
+import { BaseAuditEntity, PromotionTypeInfo } from "@/lib/api";
 
 export enum LineType {
   ALL = "ALL",
   CATEGORY = "CATEGORY",
   PRODUCT = "PRODUCT",
-  SERVICE = "SERVICE"
+  SERVICE = "SERVICE",
 }
 
 export enum DiscountType {
   PERCENT = "PERCENT",
   AMOUNT = "AMOUNT",
   FREE_PRODUCT = "FREE_PRODUCT",
-  BUY_X_GET_Y = "BUY_X_GET_Y"
+  BUY_X_GET_Y = "BUY_X_GET_Y",
 }
 
 export const DiscountTypeArr = [
   DiscountType.PERCENT,
   DiscountType.AMOUNT,
   DiscountType.FREE_PRODUCT,
-  DiscountType.BUY_X_GET_Y
+  DiscountType.BUY_X_GET_Y,
 ];
 
 // === MAIN ENTITIES ===
@@ -289,32 +289,68 @@ export interface PromotionValidationResult {
 
 // === OPTIONS FOR UI ===
 export const LINE_TYPE_OPTIONS = [
-  {value: LineType.ALL, label: "Tất cả", description: "Áp dụng cho tất cả sản phẩm/dịch vụ"},
-  {value: LineType.CATEGORY, label: "Danh mục", description: "Áp dụng cho danh mục cụ thể"},
-  {value: LineType.PRODUCT, label: "Sản phẩm", description: "Áp dụng cho sản phẩm cụ thể"},
-  {value: LineType.SERVICE, label: "Dịch vụ", description: "Áp dụng cho dịch vụ cụ thể"},
+  {
+    value: LineType.ALL,
+    label: "Tất cả",
+    description: "Áp dụng cho tất cả sản phẩm/dịch vụ",
+  },
+  {
+    value: LineType.CATEGORY,
+    label: "Danh mục",
+    description: "Áp dụng cho danh mục cụ thể",
+  },
+  {
+    value: LineType.PRODUCT,
+    label: "Sản phẩm",
+    description: "Áp dụng cho sản phẩm cụ thể",
+  },
+  {
+    value: LineType.SERVICE,
+    label: "Dịch vụ",
+    description: "Áp dụng cho dịch vụ cụ thể",
+  },
 ];
 
 export const DISCOUNT_TYPE_OPTIONS = [
-  {value: DiscountType.PERCENT, label: "Giảm theo phần trăm", icon: "📊", description: "Giảm giá theo tỷ lệ phần trăm"},
-  {value: DiscountType.AMOUNT, label: "Giảm số tiền cố định", icon: "💰", description: "Giảm một số tiền cố định"},
-  {value: DiscountType.FREE_PRODUCT, label: "Tặng kèm sản phẩm", icon: "🎁", description: "Tặng kèm sản phẩm khi mua hàng"},
-  {value: DiscountType.BUY_X_GET_Y, label: "Mua X tặng Y", icon: "🎯", description: "Mua một số lượng nhất định được tặng sản phẩm"},
+  {
+    value: DiscountType.PERCENT,
+    label: "Giảm theo phần trăm",
+    icon: "📊",
+    description: "Giảm giá theo tỷ lệ phần trăm",
+  },
+  {
+    value: DiscountType.AMOUNT,
+    label: "Giảm số tiền cố định",
+    icon: "💰",
+    description: "Giảm một số tiền cố định",
+  },
+  {
+    value: DiscountType.FREE_PRODUCT,
+    label: "Tặng kèm sản phẩm",
+    icon: "🎁",
+    description: "Tặng kèm sản phẩm khi mua hàng",
+  },
+  {
+    value: DiscountType.BUY_X_GET_Y,
+    label: "Mua X tặng Y",
+    icon: "🎯",
+    description: "Mua một số lượng nhất định được tặng sản phẩm",
+  },
 ];
 
 // === HELPER FUNCTIONS ===
 export const getLineTypeLabel = (type: LineType): string => {
-  const option = LINE_TYPE_OPTIONS.find(opt => opt.value === type);
+  const option = LINE_TYPE_OPTIONS.find((opt) => opt.value === type);
   return option ? option.label : type;
 };
 
 export const getDiscountTypeLabel = (type: DiscountType): string => {
-  const option = DISCOUNT_TYPE_OPTIONS.find(opt => opt.value === type);
+  const option = DISCOUNT_TYPE_OPTIONS.find((opt) => opt.value === type);
   return option ? option.label : type;
 };
 
 export const getDiscountTypeIcon = (type: DiscountType): string => {
-  const option = DISCOUNT_TYPE_OPTIONS.find(opt => opt.value === type);
+  const option = DISCOUNT_TYPE_OPTIONS.find((opt) => opt.value === type);
   return option ? option.icon : "❓";
 };
 
@@ -346,11 +382,17 @@ export const isPromotionAvailable = (promotion: Promotion): boolean => {
   return true;
 };
 
-export const canPromotionsStack = (promo1: Promotion, promo2: Promotion): boolean => {
+export const canPromotionsStack = (
+  promo1: Promotion,
+  promo2: Promotion
+): boolean => {
   return promo1.is_stackable && promo2.is_stackable;
 };
 
-export const formatDiscountValue = (type: DiscountType, value?: number): string => {
+export const formatDiscountValue = (
+  type: DiscountType,
+  value?: number
+): string => {
   if (value === undefined || value === null) return "-";
 
   switch (type) {
@@ -392,8 +434,15 @@ export const calculateDiscount = (
       break;
 
     case DiscountType.BUY_X_GET_Y:
-      if (line.buy_qty && line.get_qty && line.buy_qty > 0 && line.get_qty > 0) {
-        const eligibleSets = Math.floor(quantity / (line.buy_qty + line.get_qty));
+      if (
+        line.buy_qty &&
+        line.get_qty &&
+        line.buy_qty > 0 &&
+        line.get_qty > 0
+      ) {
+        const eligibleSets = Math.floor(
+          quantity / (line.buy_qty + line.get_qty)
+        );
         const freeItems = eligibleSets * line.get_qty;
         if (freeItems > 0 && line.discount_value) {
           discount = line.discount_value * freeItems;
@@ -402,7 +451,12 @@ export const calculateDiscount = (
       break;
 
     case DiscountType.FREE_PRODUCT:
-      if (line.free_product && line.free_quantity && line.free_quantity > 0 && line.discount_value) {
+      if (
+        line.free_product &&
+        line.free_quantity &&
+        line.free_quantity > 0 &&
+        line.discount_value
+      ) {
         discount = line.discount_value * line.free_quantity;
       }
       break;
@@ -433,15 +487,19 @@ export const isPromotionLineApplicable = (
   }
 
   // Check min quantity
-  if (line.min_quantity && quantity && quantity < line.min_quantity) return false;
+  if (line.min_quantity && quantity && quantity < line.min_quantity)
+    return false;
 
   // Check min order value
-  if (line.min_order_value && itemAmount && itemAmount < line.min_order_value) return false;
+  if (line.min_order_value && itemAmount && itemAmount < line.min_order_value)
+    return false;
 
   return true;
 };
 
-export const getPromotionStatus = (promotion: Promotion): {
+export const getPromotionStatus = (
+  promotion: Promotion
+): {
   status: "active" | "expired" | "upcoming" | "inactive";
   label: string;
   color: string;
@@ -451,16 +509,57 @@ export const getPromotionStatus = (promotion: Promotion): {
   const end = promotion.end_at ? new Date(promotion.end_at) : null;
 
   if (end && now > end) {
-    return {status: "expired", label: "Đã hết hạn", color: "text-red-600"};
+    return { status: "expired", label: "Đã hết hạn", color: "text-red-600" };
   }
 
   if (start && now < start) {
-    return {status: "upcoming", label: "Sắp diễn ra", color: "text-blue-600"};
+    return { status: "upcoming", label: "Sắp diễn ra", color: "text-blue-600" };
   }
 
   if (isPromotionActive(promotion)) {
-    return {status: "active", label: "Đang hoạt động", color: "text-green-600"};
+    return {
+      status: "active",
+      label: "Đang hoạt động",
+      color: "text-green-600",
+    };
   }
 
-  return {status: "inactive", label: "Không hoạt động", color: "text-gray-600"};
+  return {
+    status: "inactive",
+    label: "Không hoạt động",
+    color: "text-gray-600",
+  };
 };
+
+// === PROMOTION USAGE HISTORY ===
+export interface PromotionUsageHistory {
+  promotion_name: string;
+  promotion_code: string;
+  customer_name: string;
+  customer_phone: string;
+  order_id: string;
+  order_amount: number;
+  discount_amount: number;
+  final_amount: number;
+  used_date: string;
+  branch_name: string;
+  status: "FULFILLED" | "RETURNED" | "CANCELLED";
+  notes?: string;
+}
+
+export interface PromotionUsageHistoryFilterParam {
+  page?: number;
+  size?: number;
+  sort?: string;
+  direction?: "ASC" | "DESC";
+  promotion_code?: string;
+  promotion_name?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  order_id?: string;
+  branch_id?: string;
+  branch_name?: string;
+  status?: "FULFILLED" | "RETURNED" | "CANCELLED";
+  from_date?: string;
+  to_date?: string;
+}

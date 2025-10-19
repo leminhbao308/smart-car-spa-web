@@ -1,6 +1,13 @@
-import {BaseAuditEntity, Branch, BranchRef, Product, ProductRef, UserManagementInfo, WarehouseRef} from "@/lib/api";
-import {UUID} from "node:crypto";
-
+import {
+  BaseAuditEntity,
+  Branch,
+  BranchRef,
+  Product,
+  ProductRef,
+  UserManagementInfo,
+  WarehouseRef,
+} from "@/lib/api";
+import { UUID } from "node:crypto";
 
 export interface SalesOrderLineInput extends BaseAuditEntity {
   product: ProductRef;
@@ -56,8 +63,21 @@ export interface SaleOrderResponse extends BaseAuditEntity {
   id: UUID;
   customer?: UserManagementInfo;
   branch: Branch;
-  status: "DRAFT" | "CONFIRMED" | "FULFILLED" | "PARTIALLY_RETURNED" | "RETURNED" | "CANCELLED";
+  status:
+    | "DRAFT"
+    | "CONFIRMED"
+    | "FULFILLED"
+    | "PARTIALLY_RETURNED"
+    | "RETURNED"
+    | "CANCELLED";
   lines: SaleOrderLineResponse[];
+
+  // Discount tracking fields
+  original_amount?: number;
+  total_discount_amount?: number;
+  final_amount?: number; // Final amount after discount (amount to pay)
+  discount_percentage?: number;
+  promotion_snapshot?: string; // JSON array of applied promotions
 }
 
 export interface SaleOrderLineResponse extends BaseAuditEntity {
@@ -65,6 +85,7 @@ export interface SaleOrderLineResponse extends BaseAuditEntity {
   product: Product;
   quantity: number;
   unit_price: number;
+  is_free_item?: boolean;
 }
 
 export interface SaleReturnResponse extends BaseAuditEntity {

@@ -11,13 +11,16 @@ import {
   InputNumber,
   Button,
   QRCode,
+  Divider,
 } from "antd";
 import {
   DollarOutlined,
   ShoppingCartOutlined,
   BankOutlined,
+  GiftOutlined,
 } from "@ant-design/icons";
 import type { UserManagementInfo } from "@/lib/api";
+import type { CartSummary } from "@/lib/utils/promotion-calculator";
 
 const { Text, Title } = Typography;
 
@@ -32,6 +35,7 @@ interface PaymentModalProps {
   paymentQRCode: string | null;
   paymentUrl: string | null;
   orderCode: number | null;
+  cartSummary?: CartSummary;
   onCancel: () => void;
   onPayment: () => void;
   onPaymentMethodChange: (method: "CASH" | "BANK") => void;
@@ -50,6 +54,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   paymentQRCode,
   paymentUrl,
   orderCode,
+  cartSummary,
   onCancel,
   onPayment,
   onPaymentMethodChange,
@@ -57,7 +62,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onOpenPaymentLink,
 }) => {
   const getChange = () => {
-    return Math.max(0, receivedAmount - totalAmount);
+    const finalAmount = cartSummary?.finalTotal || totalAmount;
+    return Math.max(0, receivedAmount - finalAmount);
+  };
+
+  const getFinalAmount = () => {
+    return cartSummary?.finalTotal || totalAmount;
   };
 
   const renderQRCodeView = () => (
@@ -75,7 +85,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             borderRadius: "8px",
           }}
         >
-          <QRCode value={paymentQRCode} size={280} />
+          <QRCode
+            value={paymentQRCode}
+            size={280}
+          />
         </div>
       )}
 
@@ -83,23 +96,48 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         size="small"
         style={{ backgroundColor: "#e6f7ff", marginBottom: "16px" }}
       >
-        <Space direction="vertical" style={{ width: "100%" }}>
+        <Space
+          direction="vertical"
+          style={{ width: "100%" }}
+        >
           <Row justify="space-between">
             <Text strong>Mã đơn hàng:</Text>
             <Text>{orderCode}</Text>
           </Row>
+          {cartSummary && cartSummary.totalDiscount > 0 && (
+            <>
+              <Row justify="space-between">
+                <Text strong>Tổng tiền hàng:</Text>
+                <Text>₫{cartSummary.subtotal.toLocaleString()}</Text>
+              </Row>
+              <Row justify="space-between">
+                <Text
+                  strong
+                  style={{ color: "#52c41a" }}
+                >
+                  Giảm giá:
+                </Text>
+                <Text style={{ color: "#52c41a" }}>
+                  -₫{cartSummary.totalDiscount.toLocaleString()}
+                </Text>
+              </Row>
+            </>
+          )}
           <Row justify="space-between">
-            <Text strong>Số tiền:</Text>
+            <Text strong>Số tiền thanh toán:</Text>
             <Text
               style={{ fontSize: "18px", color: "#1890ff", fontWeight: "bold" }}
             >
-              ₫{totalAmount.toLocaleString()}
+              ₫{getFinalAmount().toLocaleString()}
             </Text>
           </Row>
         </Space>
       </Card>
 
-      <Text type="secondary" style={{ display: "block", marginBottom: "16px" }}>
+      <Text
+        type="secondary"
+        style={{ display: "block", marginBottom: "16px" }}
+      >
         Sau khi thanh toán thành công, bạn sẽ được chuyển hướng tự động
       </Text>
 
@@ -118,31 +156,123 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   );
 
   const renderPaymentForm = () => (
-    <Space direction="vertical" style={{ width: "100%" }} size="large">
+    <Space
+      direction="vertical"
+      style={{ width: "100%" }}
+      size="large"
+    >
       {/* Order Summary */}
-      <Card size="small" style={{ backgroundColor: "#f5f5f5" }}>
-        <Row gutter={[16, 16]}>
-          <Col span={12}>
-            <Statistic
-              title="Tổng sản phẩm"
-              value={totalItems}
-              prefix={<ShoppingCartOutlined />}
-            />
-          </Col>
-          <Col span={12}>
-            <Statistic
-              title="Tổng tiền"
-              value={totalAmount}
-              prefix="₫"
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </Col>
-        </Row>
+      <Card
+        size="small"
+        style={{ backgroundColor: "#f5f5f5" }}
+      >
+        <Space
+          direction="vertical"
+          style={{ width: "100%" }}
+          size="small"
+        >
+          <Row gutter={[16, 16]}>
+            <Col span={12}>
+              <Statistic
+                title="Tổng sản phẩm"
+                value={totalItems}
+                prefix={<ShoppingCartOutlined />}
+              />
+            </Col>
+            <Col span={12}>
+              <Statistic
+                title="Tổng tiền hàng"
+                value={cartSummary?.subtotal || totalAmount}
+                prefix="₫"
+                valueStyle={{ color: "#595959" }}
+              />
+            </Col>
+          </Row>
+
+          {cartSummary && cartSummary.totalDiscount > 0 && (
+            <>
+              <Divider style={{ margin: "8px 0" }} />
+              <Row gutter={[16, 16]}>
+                <Col span={24}>
+                  <Card
+                    size="small"
+                    style={{
+                      backgroundColor: "#f6ffed",
+                      border: "1px solid #b7eb8f",
+                    }}
+                  >
+                    <Space
+                      direction="vertical"
+                      style={{ width: "100%" }}
+                      size={4}
+                    >
+                      <Row justify="space-between">
+                        <Space>
+                          <GiftOutlined style={{ color: "#52c41a" }} />
+                          <Text
+                            strong
+                            style={{ color: "#52c41a" }}
+                          >
+                            Khuyến mãi:
+                          </Text>
+                        </Space>
+                        <Text
+                          strong
+                          style={{ color: "#52c41a" }}
+                        >
+                          -₫{cartSummary.totalDiscount.toLocaleString()}
+                        </Text>
+                      </Row>
+                      {cartSummary.appliedPromotions.map((promo) => (
+                        <Row
+                          key={promo.promotionId}
+                          justify="space-between"
+                          style={{ paddingLeft: 24 }}
+                        >
+                          <Text
+                            type="secondary"
+                            style={{ fontSize: 12 }}
+                          >
+                            • {promo.promotionName}
+                          </Text>
+                          <Text
+                            type="secondary"
+                            style={{ fontSize: 12 }}
+                          >
+                            -₫{promo.discountAmount.toLocaleString()}
+                          </Text>
+                        </Row>
+                      ))}
+                    </Space>
+                  </Card>
+                </Col>
+              </Row>
+              <Divider style={{ margin: "8px 0" }} />
+              <Row gutter={[16, 16]}>
+                <Col span={24}>
+                  <Statistic
+                    title="Tổng thanh toán"
+                    value={cartSummary.finalTotal}
+                    prefix="₫"
+                    valueStyle={{
+                      color: "#1890ff",
+                      fontSize: 24,
+                      fontWeight: "bold",
+                    }}
+                  />
+                </Col>
+              </Row>
+            </>
+          )}
+        </Space>
       </Card>
 
       {/* Customer Info */}
       <div>
-        <Text strong style={{ display: "block", marginBottom: "8px" }}>
+        <Text
+          strong
+          style={{ display: "block", marginBottom: "8px" }}
+        >
           Thông tin khách hàng:
         </Text>
         <Card size="small">
@@ -165,7 +295,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
       {/* Payment Method */}
       <div>
-        <Text strong style={{ display: "block", marginBottom: "8px" }}>
+        <Text
+          strong
+          style={{ display: "block", marginBottom: "8px" }}
+        >
           Phương thức thanh toán:
         </Text>
         <Radio.Group
@@ -173,7 +306,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           onChange={(e) => onPaymentMethodChange(e.target.value)}
           style={{ width: "100%" }}
         >
-          <Space direction="vertical" style={{ width: "100%" }}>
+          <Space
+            direction="vertical"
+            style={{ width: "100%" }}
+          >
             <Radio value="CASH">
               <Space>
                 <DollarOutlined />
@@ -193,7 +329,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       {/* Cash Payment Details */}
       {paymentMethod === "CASH" && (
         <div>
-          <Text strong style={{ display: "block", marginBottom: "8px" }}>
+          <Text
+            strong
+            style={{ display: "block", marginBottom: "8px" }}
+          >
             Số tiền nhận:
           </Text>
           <InputNumber
@@ -217,14 +356,23 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 borderColor: "#b7eb8f",
               }}
             >
-              <Row justify="space-between" align="middle">
+              <Row
+                justify="space-between"
+                align="middle"
+              >
                 <Col>
-                  <Text strong style={{ color: "#52c41a" }}>
+                  <Text
+                    strong
+                    style={{ color: "#52c41a" }}
+                  >
                     Tiền thừa:
                   </Text>
                 </Col>
                 <Col>
-                  <Text strong style={{ color: "#52c41a", fontSize: "18px" }}>
+                  <Text
+                    strong
+                    style={{ color: "#52c41a", fontSize: "18px" }}
+                  >
                     ₫{getChange().toLocaleString()}
                   </Text>
                 </Col>
@@ -241,14 +389,23 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 borderColor: "#ffbb96",
               }}
             >
-              <Row justify="space-between" align="middle">
+              <Row
+                justify="space-between"
+                align="middle"
+              >
                 <Col>
-                  <Text strong style={{ color: "#fa8c16" }}>
+                  <Text
+                    strong
+                    style={{ color: "#fa8c16" }}
+                  >
                     Còn thiếu:
                   </Text>
                 </Col>
                 <Col>
-                  <Text strong style={{ color: "#fa8c16", fontSize: "18px" }}>
+                  <Text
+                    strong
+                    style={{ color: "#fa8c16", fontSize: "18px" }}
+                  >
                     ₫{(totalAmount - receivedAmount).toLocaleString()}
                   </Text>
                 </Col>
@@ -260,8 +417,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
       {/* Bank Payment Info */}
       {paymentMethod === "BANK" && (
-        <Card size="small" style={{ backgroundColor: "#e6f7ff" }}>
-          <Space direction="vertical" style={{ width: "100%" }}>
+        <Card
+          size="small"
+          style={{ backgroundColor: "#e6f7ff" }}
+        >
+          <Space
+            direction="vertical"
+            style={{ width: "100%" }}
+          >
             <Text strong>
               <BankOutlined /> Thanh toán qua ngân hàng
             </Text>
@@ -281,7 +444,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         <Space>
           <Button onClick={onCancel}>Đóng</Button>
           {paymentUrl && (
-            <Button type="primary" onClick={onOpenPaymentLink}>
+            <Button
+              type="primary"
+              onClick={onOpenPaymentLink}
+            >
               Mở link thanh toán
             </Button>
           )}

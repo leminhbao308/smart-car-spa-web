@@ -425,7 +425,9 @@ export const promotionService = {
     if (fromDate) params.append("fromDate", fromDate);
     if (toDate) params.append("toDate", toDate);
 
-    const response = await api.get(`/promotions/analytics?${params.toString()}`);
+    const response = await api.get(
+      `/promotions/analytics?${params.toString()}`
+    );
     return response.data.data;
   },
 
@@ -455,7 +457,9 @@ export const promotionService = {
   },
 
   // Export promotions
-  exportPromotions: async (filters?: Record<string, unknown>): Promise<Blob> => {
+  exportPromotions: async (
+    filters?: Record<string, unknown>
+  ): Promise<Blob> => {
     const response = await api.post("/promotions/export", filters, {
       responseType: "blob",
     });
@@ -490,6 +494,61 @@ export const promotionService = {
     message?: string;
   }> => {
     const response = await api.post("/promotions/validate-code", { code });
+    return response.data.data;
+  },
+
+  // Get promotion usage history
+  getPromotionUsageHistory: async (
+    params: PromotionFilterParam = {}
+  ): Promise<{
+    content: Array<{
+      promotion_name: string;
+      promotion_code: string;
+      customer_name: string;
+      customer_phone: string;
+      order_id: string;
+      order_amount: number;
+      discount_amount: number;
+      final_amount: number;
+      used_date: string;
+      branch_name: string;
+      status: string;
+      notes?: string;
+    }>;
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  }> => {
+    const {
+      page = 0,
+      size = 10,
+      sort = "usedDate",
+      direction = "DESC",
+      ...filters
+    } = params;
+
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sort: sort,
+      direction: direction,
+    });
+
+    // Add filters to query params
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        if (Array.isArray(value)) {
+          value.forEach((v) => queryParams.append(key, v.toString()));
+        } else {
+          queryParams.append(key, value.toString());
+        }
+      }
+    });
+
+    const response = await api.get(
+      `/promotions/usage-history?${queryParams.toString()}`
+    );
     return response.data.data;
   },
 };

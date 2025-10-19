@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, {useState} from "react";
 import {
   Modal,
   Radio,
@@ -11,15 +11,15 @@ import {
   Table,
   Form,
 } from "antd";
-import { SearchOutlined, UserOutlined } from "@ant-design/icons";
-import type { UserManagementInfo } from "@/lib/api";
+import {SearchOutlined, UserOutlined} from "@ant-design/icons";
+import type {UserManagementInfo} from "@/lib/api";
 
-const { Text } = Typography;
+const {Text} = Typography;
 
 interface CustomerSelectionModalProps {
   isVisible: boolean;
   customers: UserManagementInfo[];
-  selectedCustomer: UserManagementInfo | null;
+  activeUserOnly: boolean;
   isLoading: boolean;
   onSelect: (customer: UserManagementInfo) => void;
   onCancel: () => void;
@@ -30,7 +30,7 @@ interface CustomerSelectionModalProps {
 const CustomerSelectionModal: React.FC<CustomerSelectionModalProps> = ({
                                                                          isVisible,
                                                                          customers,
-                                                                         selectedCustomer,
+                                                                         activeUserOnly,
                                                                          isLoading,
                                                                          onSelect,
                                                                          onCancel,
@@ -39,6 +39,10 @@ const CustomerSelectionModal: React.FC<CustomerSelectionModalProps> = ({
                                                                        }) => {
   const [customerType, setCustomerType] = useState("guest");
   const [searchText, setSearchText] = useState("");
+
+  const userDatasource = activeUserOnly
+    ? customers.filter((customer) => customer.is_active)
+    : customers;
 
   const handleCustomerTypeChange = (type: string) => {
     setCustomerType(type);
@@ -109,7 +113,7 @@ const CustomerSelectionModal: React.FC<CustomerSelectionModalProps> = ({
         <Radio.Group
           value={customerType}
           onChange={(e) => handleCustomerTypeChange(e.target.value)}
-          style={{ marginTop: "8px" }}
+          style={{marginTop: "8px"}}
         >
           <Space>
             <Radio value="guest">Khách lẻ</Radio>
@@ -119,9 +123,9 @@ const CustomerSelectionModal: React.FC<CustomerSelectionModalProps> = ({
       </div>
 
       {customerType === "guest" && (
-        <div style={{ textAlign: "center", padding: "40px" }}>
-          <UserOutlined style={{ fontSize: "48px", color: "#d9d9d9" }} />
-          <div style={{ marginTop: "16px" }}>
+        <div style={{textAlign: "center", padding: "40px"}}>
+          <UserOutlined style={{fontSize: "48px", color: "#d9d9d9"}}/>
+          <div style={{marginTop: "16px"}}>
             <Text type="secondary">
               Sử dụng thông tin khách lẻ mặc định
             </Text>
@@ -132,7 +136,7 @@ const CustomerSelectionModal: React.FC<CustomerSelectionModalProps> = ({
               handleCustomerTypeChange("guest");
               handleCancel();
             }}
-            style={{ marginTop: "16px" }}
+            style={{marginTop: "16px"}}
           >
             Xác nhận
           </Button>
@@ -141,22 +145,22 @@ const CustomerSelectionModal: React.FC<CustomerSelectionModalProps> = ({
 
       {customerType === "existing" && (
         <div>
-          <Space.Compact style={{ width: "100%", marginBottom: "16px" }}>
+          <Space.Compact style={{width: "100%", marginBottom: "16px"}}>
             <Input
               placeholder="Tìm kiếm theo tên, SĐT hoặc email"
-              prefix={<SearchOutlined />}
+              prefix={<SearchOutlined/>}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               onPressEnter={handleSearch}
             />
             <Button type="primary" onClick={handleSearch}>
-              <SearchOutlined />
+              <SearchOutlined/>
             </Button>
           </Space.Compact>
 
           <Table
             loading={isLoading}
-            dataSource={customers}
+            dataSource={userDatasource}
             columns={columns}
             pagination={{
               pageSize: 5,
