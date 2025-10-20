@@ -459,4 +459,22 @@ export class BookingService {
       throw error;
     }
   }
+
+  /**
+   * Mark booking as paid
+   */
+  static async markBookingAsPaid(bookingId: string): Promise<void> {
+    try {
+      console.log(`Marking booking as paid - BookingId: ${bookingId}`);
+      const response = await apiClient.post(`/bookings/${bookingId}/mark-paid`);
+      console.log("Mark booking as paid API response:", response);
+      
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to mark booking as paid");
+      }
+    } catch (error: unknown) {
+      console.error("Mark booking as paid error:", error);
+      throw error;
+    }
+  }
 }

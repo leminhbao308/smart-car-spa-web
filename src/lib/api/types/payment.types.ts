@@ -45,6 +45,10 @@ export interface CreateAndPayRequest {
     qty: number;
     unit_price: number;
     is_free_item?: boolean;
+    // Service item support
+    service_id?: string;
+    original_booking_id?: string;
+    original_booking_code?: string;
   }>;
   payment_method: "BANK" | "CASH";
   return_url?: string;

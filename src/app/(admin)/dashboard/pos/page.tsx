@@ -15,6 +15,7 @@ import {
   useActivePriceBooks,
   useAllPriceBooks,
 } from "@/lib/api/hooks";
+import { BookingService } from "@/lib/api/services/booking.service";
 import { Product, UserManagementInfo } from "@/lib/api";
 import { useCategories } from "@/lib/api/hooks/useCategory";
 import type { BranchDisplay } from "@/lib/api/types/branch.types";
@@ -38,6 +39,7 @@ import {
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
 import { Service } from "@/lib/api/types/service.types";
 import { PricingService } from "@/lib/api/services/pricing.service";
+import { UserService } from "@/lib/api/services/user.service";
 
 interface ProductWithStock extends Product {
   sellingPrice: number;
@@ -71,6 +73,7 @@ const POSPage = () => {
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [orderCode, setOrderCode] = useState<number | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const [paymentStartTime, setPaymentStartTime] = useState<number | null>(null);
 
   // API Hooks
   const { branches, loading: branchesLoading } = useBranches({});
@@ -132,151 +135,6 @@ const POSPage = () => {
     // Price books are shared across the system, not branch-specific
     return allPriceBooks[0] || null;
   }, [allPriceBooks]);
-
-  // Debug: Log promotions, services, and price books data
-  useEffect(() => {
-    console.log("🎁 Promotions Data:", promotionsData);
-    console.log("🏢 Selected Branch:", selectedBranch);
-    console.log("🔧 Services Data:", servicesForSale);
-    console.log("💰 All Price Books (System-wide):", allPriceBooks);
-    console.log("💰 Active Price Books (System-wide):", activePriceBooks);
-    console.log("💰 Current Price Book (System-wide):", currentPriceBook);
-    console.log(
-      "📦 Available Promotions Count:",
-      promotionsData?.content?.length
-    );
-    console.log("🔧 Available Services Count:", servicesForSale?.length);
-    console.log(
-      "💰 All Price Books Count (System-wide):",
-      allPriceBooks?.length
-    );
-    console.log(
-      "💰 Active Price Books Count (System-wide):",
-      activePriceBooks?.length
-    );
-
-    // Debug price book items if available
-    if (currentPriceBook) {
-      console.log("💰 Current Price Book ID:", currentPriceBook.id);
-      console.log("💰 Current Price Book Name:", currentPriceBook.name);
-      console.log("💰 Current Price Book Active:", currentPriceBook.active);
-      console.log(
-        "💰 Current Price Book Items Count:",
-        currentPriceBook.items?.length || 0
-      );
-    } else {
-      console.log("❌ No price book available for pricing");
-    }
-
-    // Log all price books and filter active ones
-    if (allPriceBooks && allPriceBooks.length > 0) {
-      console.log("=".repeat(80));
-      console.log("📊 COMPLETE PRICE BOOKS ANALYSIS (NO BRANCH FILTER, NO ACTIVE FILTER)");
-      console.log("=".repeat(80));
-
-      // Filter active price books from all price books (no branch filter)
-      const activePriceBooksFiltered = allPriceBooks.filter(
-        (book) => book.active === true
-      );
-      const inactivePriceBooks = allPriceBooks.filter(
-        (book) => book.active === false
-      );
-
-      console.log(`📊 Total Price Books: ${allPriceBooks.length}`);
-      console.log(`✅ Active Price Books: ${activePriceBooksFiltered.length}`);
-      console.log(`❌ Inactive Price Books: ${inactivePriceBooks.length}`);
-
-      // Log all price books first (no branch filter)
-      console.log("\n📋 ALL PRICE BOOKS (NO BRANCH FILTER):");
-      allPriceBooks.forEach((priceBook, index) => {
-        const status = priceBook.active ? "✅ ACTIVE" : "❌ INACTIVE";
-        console.log(
-          `  ${index + 1}. ${priceBook.name} (${priceBook.code}) - ${status}`
-        );
-        console.log(
-          `     ID: ${priceBook.id}, Branch ID: ${
-            priceBook.branch_id || "NULL"
-          }, Items: ${priceBook.items?.length || 0}`
-        );
-      });
-
-      // Log detailed analysis of ACTIVE price books only
-      if (activePriceBooksFiltered.length > 0) {
-        console.log("\n" + "=".repeat(60));
-        console.log(
-          "📊 DETAILED ANALYSIS OF ACTIVE PRICE BOOKS (NO BRANCH FILTER)"
-        );
-        console.log("=".repeat(60));
-
-        activePriceBooksFiltered.forEach((priceBook, index) => {
-          console.log(`\n📋 Active Price Book ${index + 1}:`);
-          console.log(`  - ID: ${priceBook.id}`);
-          console.log(`  - Name: ${priceBook.name}`);
-          console.log(`  - Code: ${priceBook.code}`);
-          console.log(`  - Active: ${priceBook.active}`);
-          console.log(`  - Currency: ${priceBook.currency}`);
-          console.log(`  - Valid From: ${priceBook.valid_from}`);
-          console.log(`  - Valid To: ${priceBook.valid_to}`);
-          console.log(`  - Branch ID: ${priceBook.branch_id}`);
-          console.log(`  - Items Count: ${priceBook.items?.length || 0}`);
-
-          if (priceBook.items && priceBook.items.length > 0) {
-            console.log(`\n  📦 Price Book Items:`);
-            priceBook.items.forEach((item, itemIndex) => {
-              console.log(`    ${itemIndex + 1}. Item ID: ${item.id}`);
-              console.log(`       - Item Type: ${item.item_type}`);
-              console.log(`       - Item ID: ${item.item_id}`);
-              console.log(`       - Item Name: ${item.item_name}`);
-              console.log(`       - Policy Type: ${item.policy_type}`);
-              console.log(`       - Fixed Price: ${item.fixed_price}`);
-              console.log(`       - Markup Percent: ${item.markup_percent}`);
-
-              // Log service details if it's a service item
-              if (item.item_type === "SERVICE" && item.service) {
-                console.log(`       - Service ID: ${item.service.service_id}`);
-                console.log(
-                  `       - Service Name: ${item.service.service_name}`
-                );
-                console.log(
-                  `       - Service Description: ${item.service.description}`
-                );
-              }
-
-              // Log product details if it's a product item
-              if (item.item_type === "PRODUCT" && item.product) {
-                console.log(`       - Product ID: ${item.product.product_id}`);
-                console.log(
-                  `       - Product Name: ${item.product.product_name}`
-                );
-                console.log(`       - Product SKU: ${item.product.sku}`);
-              }
-
-              console.log(`       - Created At: ${item.created_at}`);
-              console.log(`       - Updated At: ${item.updated_at}`);
-              console.log(`       ---`);
-            });
-          } else {
-            console.log(`  📦 No items found in this price book`);
-          }
-        });
-      } else {
-        console.log("\n❌ No active price books found in the system");
-      }
-
-      console.log("=".repeat(80));
-      console.log("📊 END OF COMPLETE PRICE BOOKS ANALYSIS (NO BRANCH FILTER, NO ACTIVE FILTER)");
-      console.log("=".repeat(80));
-    } else {
-      console.log("❌ No price books found in the system (no branch filter, no active filter)");
-    }
-  }, [
-    promotionsData,
-    selectedBranch,
-    servicesForSale,
-    allPriceBooks,
-    activePriceBooks,
-    currentPriceBook,
-  ]);
 
   // Payment verification with polling
   const { data: paymentStatus } = useVerifyPayment(orderCode, {
@@ -377,7 +235,11 @@ const POSPage = () => {
           (item) => item.item_type === "SERVICE" && item.item_id === serviceId
         );
 
-        if (serviceItem && serviceItem.fixed_price !== null && serviceItem.fixed_price > 0) {
+        if (
+          serviceItem &&
+          serviceItem.fixed_price !== null &&
+          serviceItem.fixed_price > 0
+        ) {
           console.log(
             `💰 Found service ${serviceId} in price book with fixed_price: ${serviceItem.fixed_price}`
           );
@@ -596,6 +458,39 @@ const POSPage = () => {
         return;
       }
 
+      // Auto-fetch customer information from booking
+      let customerInfo: UserManagementInfo | null = null;
+      if (booking.customer_id) {
+        try {
+          console.log(
+            `🔍 Fetching customer info for customer_id: ${booking.customer_id}`
+          );
+          customerInfo = await UserService.getUserById(booking.customer_id);
+          console.log(`✅ Customer info fetched:`, {
+            user_id: customerInfo.user_id,
+            full_name: customerInfo.full_name,
+            phone_number: customerInfo.phone_number,
+            email: customerInfo.email,
+            user_type: customerInfo.user_type,
+          });
+
+          // Auto-set selected customer
+          setSelectedCustomer(customerInfo);
+          message.success(
+            `Đã tự động chọn khách hàng: ${customerInfo.full_name}`
+          );
+        } catch (error) {
+          console.error(
+            `❌ Failed to fetch customer info for ${booking.customer_id}:`,
+            error
+          );
+          message.warning("Không thể lấy thông tin khách hàng từ booking");
+        }
+      } else {
+        console.warn("⚠️ Booking không có customer_id");
+        message.warning("Booking này không có thông tin khách hàng");
+      }
+
       const newServiceItems: CartItem[] = [];
       let addedServicesCount = 0;
 
@@ -624,30 +519,34 @@ const POSPage = () => {
           continue; // Skip if already added
         }
 
-         // Get service price from price book (NO FALLBACK to tax_amount)
-         const servicePrice = await getServicePrice(bookingItem.service_id);
-         console.log(
-           `🔍 Service ${bookingItem.service_id} (${bookingItem.item_name}):`
-         );
-         console.log(`  - Price from price book: ${servicePrice}`);
-         console.log(`  - Booking tax_amount (IGNORED): ${bookingItem.tax_amount || 0}`);
+        // Get service price from price book (NO FALLBACK to tax_amount)
+        const servicePrice = await getServicePrice(bookingItem.service_id);
+        console.log(
+          `🔍 Service ${bookingItem.service_id} (${bookingItem.item_name}):`
+        );
+        console.log(`  - Price from price book: ${servicePrice}`);
+        console.log(
+          `  - Booking tax_amount (IGNORED): ${bookingItem.tax_amount || 0}`
+        );
 
-         if (servicePrice === 0) {
-           console.warn(
-             `No price found in price book for service ${bookingItem.service_id}, skipping this service`
-           );
-           continue; // Skip this service if no price in price book
-         }
+        if (servicePrice === 0) {
+          console.warn(
+            `No price found in price book for service ${bookingItem.service_id}, skipping this service`
+          );
+          continue; // Skip this service if no price in price book
+        }
 
-         // Use ONLY price from price book
-         const finalPrice = servicePrice;
-         console.log(`  - Final price used (from price book only): ${finalPrice}`);
+        // Use ONLY price from price book
+        const finalPrice = servicePrice;
+        console.log(
+          `  - Final price used (from price book only): ${finalPrice}`
+        );
 
         // Create service cart item
         const serviceCartItem: CartItem = {
           productId: bookingItem.service_id, // Use service_id as productId
           productName: bookingItem.item_name || service.service_name,
-          price: finalPrice, // Use price from price book or fallback to tax_amount
+          price: finalPrice, // Use price from price book only
           quantity: 1,
           total: finalPrice,
           categoryName: "Dịch vụ",
@@ -662,7 +561,7 @@ const POSPage = () => {
           // Booking context
           originalBookingId: booking.booking_id,
           originalBookingCode: booking.booking_code,
-          customerName: booking.customer_name,
+          customerName: customerInfo?.full_name || booking.customer_name,
           vehicleLicensePlate: booking.vehicle_license_plate,
         };
 
@@ -693,7 +592,14 @@ const POSPage = () => {
         return [...prevCart, ...newServiceItems];
       });
     },
-    [message, serviceLookup, cart, currentPriceBook, getServicePrice]
+    [
+      message,
+      serviceLookup,
+      cart,
+      currentPriceBook,
+      getServicePrice,
+      setSelectedCustomer,
+    ]
   );
 
   // Calculation Functions
@@ -806,21 +712,85 @@ const POSPage = () => {
 
   // Payment Success Handler
   const handlePaymentSuccess = useCallback(async () => {
+    console.log("🎉 handlePaymentSuccess: Starting payment success handling");
     setIsPolling(false);
     message.success("Thanh toán thành công!");
 
+    // Collect unique booking IDs from service items in cart
+    const bookingIds = new Set<string>();
+    console.log("🔍 handlePaymentSuccess: Analyzing cart items:", cart);
+
+    cart.forEach((item) => {
+      console.log("🔍 Cart item:", {
+        isServiceItem: item.isServiceItem,
+        originalBookingId: item.originalBookingId,
+        productName: item.productName,
+      });
+
+      if (item.isServiceItem && item.originalBookingId) {
+        bookingIds.add(item.originalBookingId);
+        console.log("✅ Added booking ID to set:", item.originalBookingId);
+      }
+    });
+
+    console.log(
+      "📊 handlePaymentSuccess: Collected booking IDs:",
+      Array.from(bookingIds)
+    );
+
+    // Mark bookings as paid
+    if (bookingIds.size > 0) {
+      try {
+        const hide = message.loading(
+          "Đang cập nhật trạng thái thanh toán booking...",
+          0
+        );
+
+        // Call mark-paid API for each unique booking
+        const markPaidPromises = Array.from(bookingIds).map((bookingId) =>
+          BookingService.markBookingAsPaid(bookingId)
+        );
+
+        await Promise.all(markPaidPromises);
+        hide();
+
+        console.log(
+          `✅ Successfully marked ${bookingIds.size} bookings as paid:`,
+          Array.from(bookingIds)
+        );
+        message.success(
+          `Đã cập nhật trạng thái thanh toán cho ${bookingIds.size} booking!`
+        );
+
+        // Refresh bookings list to remove paid bookings
+        refetchBookings();
+      } catch (error: unknown) {
+        console.error("❌ Error marking bookings as paid:", error);
+        message.error(
+          "Thanh toán thành công nhưng lỗi khi cập nhật trạng thái booking: " +
+            (error instanceof Error ? error.message : "")
+        );
+      }
+    }
+
+    console.log("🔍 handlePaymentSuccess: currentOrderId:", currentOrderId);
+
     if (currentOrderId) {
       try {
+        console.log("🔧 Fulfilling order:", currentOrderId);
         const hide = message.loading("Đang hoàn thành đơn hàng...", 0);
         await fulfillOrder(currentOrderId);
         hide();
         message.success("Thanh toán thành công và đã hoàn thành đơn hàng!");
       } catch (error: unknown) {
+        console.error("❌ Error fulfilling order:", error);
         message.error(
           "Thanh toán thành công nhưng lỗi khi hoàn thành đơn hàng: " +
             (error instanceof Error ? error.message : "")
         );
       }
+    } else {
+      console.log("⚠️ No currentOrderId to fulfill");
     }
 
     // Reset all states
@@ -834,15 +804,18 @@ const POSPage = () => {
     setPaymentUrl(null);
     setOrderCode(null);
     setCurrentOrderId(null);
+    setPaymentStartTime(null);
 
     // Refresh catalog and promotions
     refreshCatalog();
     refetchPromotions();
   }, [
+    cart,
     currentOrderId,
     fulfillOrder,
     refreshCatalog,
     refetchPromotions,
+    refetchBookings,
     message,
   ]);
 
@@ -854,6 +827,7 @@ const POSPage = () => {
     setPaymentQRCode(null);
     setPaymentUrl(null);
     setOrderCode(null);
+    setPaymentStartTime(null);
   }, []);
 
   // Checkout and Payment
@@ -876,16 +850,82 @@ const POSPage = () => {
   }, [cart.length, selectedBranch, getTotalAmount]);
 
   useEffect(() => {
+    console.log("🔄 Payment polling effect triggered:", {
+      paymentStatus,
+      isPolling,
+      orderCode,
+      hasPaymentStatus: !!paymentStatus,
+      status: paymentStatus?.status,
+      transactionId: paymentStatus?.transaction_id,
+    });
+
     if (!paymentStatus || !isPolling) return;
 
-    if (paymentStatus.status === "COMPLETED") {
+    // Check for completed payment
+    const isPaymentCompleted =
+      paymentStatus.status === "COMPLETED" ||
+      (paymentStatus.status === "PENDING" && paymentStatus.transaction_id);
+
+    console.log("🔍 Payment completion check:", {
+      status: paymentStatus.status,
+      transactionId: paymentStatus.transaction_id,
+      isPaymentCompleted,
+      isPolling,
+    });
+
+    if (isPaymentCompleted) {
+      console.log("✅ Payment completed, calling handlePaymentSuccess");
       handlePaymentSuccess();
     } else if (paymentStatus.status === "CANCELED") {
+      console.log("❌ Payment cancelled, calling handlePaymentCancelled");
       handlePaymentCancelled();
+    } else {
+      console.log("⏳ Payment still pending, continuing to poll...");
     }
-  }, [paymentStatus, isPolling, handlePaymentSuccess, handlePaymentCancelled]);
+  }, [
+    paymentStatus,
+    isPolling,
+    handlePaymentSuccess,
+    handlePaymentCancelled,
+    orderCode,
+  ]);
+
+  // Timeout effect for bank payment (auto-complete after 30 seconds)
+  useEffect(() => {
+    if (!isPolling || !paymentStartTime || paymentMethod !== "BANK") return;
+
+    const timeoutDuration = 30000; // 30 seconds
+    const elapsed = Date.now() - paymentStartTime;
+    const remaining = timeoutDuration - elapsed;
+
+    if (remaining <= 0) {
+      console.log("⏰ Payment timeout reached, assuming payment successful");
+      handlePaymentSuccess();
+      return;
+    }
+
+    console.log(
+      `⏰ Payment timeout in ${Math.round(remaining / 1000)} seconds`
+    );
+    const timeoutId = setTimeout(() => {
+      console.log(
+        "⏰ Payment timeout reached, assuming payment successful - calling handlePaymentSuccess"
+      );
+      handlePaymentSuccess();
+    }, remaining);
+
+    return () => clearTimeout(timeoutId);
+  }, [isPolling, paymentStartTime, paymentMethod, handlePaymentSuccess]);
 
   const handlePayment = useCallback(async () => {
+    console.log("🔧 handlePayment: Starting payment process", {
+      paymentMethod,
+      receivedAmount,
+      totalAmount: cartSummary?.finalTotal || getTotalAmount(),
+      cartItems: cart.length,
+      selectedBranch: selectedBranch?.branch_name,
+    });
+
     // Validation for cash payment
     if (
       paymentMethod === "CASH" &&
@@ -905,60 +945,54 @@ const POSPage = () => {
     try {
       const baseUrl = globalThis.location.origin;
 
-      // Only send purchased items (not free items) to backend
-      // Backend will calculate free items based on promotion_ids
-      // Send ALL cart items (purchased + free) with is_free_item flag
-      // Backend will save all items and create PromotionUsage records
-
-      // Calculate discount data
-      const originalAmount = cart.reduce(
-        (sum, item) => (item.isFreeItem ? sum : sum + item.total),
-        0
-      );
-      const discountAmount = cartSummary?.totalDiscount || 0;
-      const finalAmount = originalAmount - discountAmount;
-      const discountPercent =
-        originalAmount > 0 ? (discountAmount / originalAmount) * 100 : 0;
-
-      // Create promotion snapshot (preserve promotion details at order time)
-      const promotionSnapshot = selectedPromotions.map((promo) => ({
-        promotion_id: promo.promotion_id,
-        code: promo.promotion_code || "",
-        name: promo.name,
-        description: promo.description || "",
-        discount_lines: promo.promotion_lines.map((line) => ({
-          line_type: line.line_type,
-          discount_type: line.discount_type,
-          discount_value: line.discount_value,
-          buy_qty: line.buy_qty,
-          get_qty: line.get_qty,
-          free_product_name: line.free_product?.product_name,
-          free_quantity: line.free_quantity,
-        })),
-        priority: promo.priority,
-        is_stackable: promo.is_stackable,
-      }));
-
       const orderRequest = {
         branch_id: selectedBranch.branch_id,
         warehouse_id: selectedBranch.branch_id, // Using branch_id as warehouse_id
         customer_id: selectedCustomer?.user_id || undefined,
         promotion_ids: selectedPromotions.map((p) => p.promotion_id),
-        lines: cart.map((item) => ({
-          product_id: item.productId,
-          qty: item.quantity,
-          unit_price: item.price,
-          is_free_item: item.isFreeItem || false,
-        })),
+        lines: cart.map((item) => {
+          const lineItem: any = {
+            qty: item.quantity,
+            unit_price: item.price,
+            is_free_item: item.isFreeItem || false,
+          };
+
+          // Set product_id based on item type
+          if (item.isServiceItem) {
+            // For service items, set product_id to null (no foreign key constraint)
+            lineItem.product_id = null;
+            console.log(`🔧 Service item - ProductId set to NULL`);
+          } else {
+            // For product items, use the actual product_id
+            lineItem.product_id = item.productId;
+            console.log(`🔧 Product item - ProductId: ${item.productId}`);
+          }
+
+          // Add service item fields if present
+          if (item.isServiceItem && item.serviceId) {
+            lineItem.service_id = item.serviceId;
+            console.log(
+              `🔧 Adding service item to payment - ServiceId: ${item.serviceId}`
+            );
+          }
+          if (item.originalBookingId) {
+            lineItem.original_booking_id = item.originalBookingId;
+            console.log(
+              `🔧 Adding booking context to payment - BookingId: ${item.originalBookingId}`
+            );
+          }
+          if (item.originalBookingCode) {
+            lineItem.original_booking_code = item.originalBookingCode;
+            console.log(
+              `🔧 Adding booking code to payment - BookingCode: ${item.originalBookingCode}`
+            );
+          }
+
+          return lineItem;
+        }),
         payment_method: paymentMethod,
         return_url: `${baseUrl}/payment/success`,
         cancel_url: `${baseUrl}/payment/cancel`,
-        // Discount tracking with promotion snapshot
-        original_amount: originalAmount,
-        total_discount_amount: discountAmount,
-        final_amount: finalAmount,
-        discount_percentage: discountPercent,
-        promotion_snapshot: JSON.stringify(promotionSnapshot),
       };
 
       const response = await createAndPay(orderRequest);
@@ -966,12 +1000,75 @@ const POSPage = () => {
       hide();
 
       if (response.order?.id) {
+        console.log("🔧 Setting currentOrderId:", response.order.id);
         setCurrentOrderId(response.order.id);
+      } else {
+        console.log("⚠️ No order ID in response:", response);
       }
 
       // Handle CASH payment
       if (paymentMethod === "CASH") {
         message.success("Thanh toán tiền mặt thành công!");
+
+        // Collect unique booking IDs from service items in cart
+        const bookingIds = new Set<string>();
+        console.log("🔍 CASH Payment: Analyzing cart items:", cart);
+
+        cart.forEach((item) => {
+          console.log("🔍 CASH Cart item:", {
+            isServiceItem: item.isServiceItem,
+            originalBookingId: item.originalBookingId,
+            productName: item.productName,
+          });
+
+          if (item.isServiceItem && item.originalBookingId) {
+            bookingIds.add(item.originalBookingId);
+            console.log(
+              "✅ CASH Added booking ID to set:",
+              item.originalBookingId
+            );
+          }
+        });
+
+        console.log(
+          "📊 CASH Payment: Collected booking IDs:",
+          Array.from(bookingIds)
+        );
+
+        // Mark bookings as paid
+        if (bookingIds.size > 0) {
+          try {
+            const hide = message.loading(
+              "Đang cập nhật trạng thái thanh toán booking...",
+              0
+            );
+
+            // Call mark-paid API for each unique booking
+            const markPaidPromises = Array.from(bookingIds).map((bookingId) =>
+              BookingService.markBookingAsPaid(bookingId)
+            );
+
+            await Promise.all(markPaidPromises);
+            hide();
+
+            console.log(
+              `✅ CASH Successfully marked ${bookingIds.size} bookings as paid:`,
+              Array.from(bookingIds)
+            );
+            message.success(
+              `Đã cập nhật trạng thái thanh toán cho ${bookingIds.size} booking!`
+            );
+
+            // Refresh bookings list to remove paid bookings
+            refetchBookings();
+          } catch (error: unknown) {
+            console.error("❌ CASH Error marking bookings as paid:", error);
+            message.error(
+              "Thanh toán thành công nhưng lỗi khi cập nhật trạng thái booking: " +
+                (error instanceof Error ? error.message : "")
+            );
+          }
+        }
 
         if (response.order?.id) {
           try {
@@ -1001,6 +1098,7 @@ const POSPage = () => {
           setPaymentQRCode(response.payment.qr_code || null);
           setOrderCode(response.payment.order_code || null);
           setIsPolling(true); // Start polling
+          setPaymentStartTime(Date.now()); // Record payment start time
 
           message.success(
             "Đã tạo đơn hàng! Vui lòng quét mã QR hoặc truy cập link thanh toán"
@@ -1043,6 +1141,7 @@ const POSPage = () => {
     setOrderCode(null);
     setIsPolling(false);
     setCurrentOrderId(null);
+    setPaymentStartTime(null);
     message.info("Đã hủy thanh toán");
   }, []);
 

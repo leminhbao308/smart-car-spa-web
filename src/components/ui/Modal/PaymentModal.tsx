@@ -460,7 +460,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         <Button onClick={onCancel}>Hủy</Button>
         <Button
           type="primary"
-          onClick={onPayment}
+          onClick={() => {
+            console.log("🔧 PaymentModal: onPayment clicked", {
+              paymentMethod,
+              receivedAmount,
+              totalAmount,
+              isCreatingOrder
+            });
+            onPayment();
+          }}
           loading={isCreatingOrder}
           disabled={paymentMethod === "CASH" && receivedAmount < totalAmount}
         >

@@ -42,8 +42,19 @@ export const useVerifyPayment = (
   return useQuery({
     queryKey: ["payment", "verify", orderCode],
     queryFn: async () => {
-      if (!orderCode) return null;
-      return await PaymentService.verifyPayment(orderCode);
+      if (!orderCode) {
+        console.log("🚫 useVerifyPayment: No orderCode provided");
+        return null;
+      }
+      console.log(`🔍 useVerifyPayment: Verifying payment for orderCode: ${orderCode}`);
+      try {
+        const result = await PaymentService.verifyPayment(orderCode);
+        console.log(`📊 useVerifyPayment: Payment status result:`, result);
+        return result;
+      } catch (error) {
+        console.error(`❌ useVerifyPayment: Error verifying payment:`, error);
+        throw error;
+      }
     },
     enabled: options?.enabled !== false && !!orderCode,
     retry: 3,
@@ -51,12 +62,22 @@ export const useVerifyPayment = (
     // Polling configuration
     refetchInterval: (query) => {
       const data = query.state.data;
-      // Stop polling if payment is completed or cancelled
-      if (data?.status === "COMPLETED" || data?.status === "CANCELED") {
+      console.log(`⏰ useVerifyPayment: Refetch interval check - Status: ${data?.status}, TransactionId: ${data?.transaction_id}`);
+      
+      // Stop polling if payment is completed, cancelled, or has transaction_id (indicates successful payment)
+      const isPaymentCompleted = data?.status === "COMPLETED" || 
+        data?.status === "CANCELED" ||
+        (data?.status === "PENDING" && data?.transaction_id);
+        
+      if (isPaymentCompleted) {
+        console.log("🛑 useVerifyPayment: Stopping polling - payment completed/cancelled or has transaction_id");
         return false; // Dừng polling
       }
+      
       // Continue polling
-      return options?.refetchInterval || 3000;
+      const interval = options?.refetchInterval || 3000;
+      console.log(`🔄 useVerifyPayment: Continuing polling - next check in ${interval}ms`);
+      return interval;
     },
     refetchIntervalInBackground: true,
   });
