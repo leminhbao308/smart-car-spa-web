@@ -27,6 +27,7 @@ import type { Product } from "@/lib/api";
 import type { BranchDisplay } from "@/lib/api/types/branch.types";
 import type { UserManagementInfo } from "@/lib/api";
 import type { BookingInfoDto } from "@/lib/api/types/booking.types";
+import type { Service } from "@/lib/api/types/service.types";
 import BookingSection from "./BookingSection";
 
 const { Text } = Typography;
@@ -53,6 +54,18 @@ interface ProductSectionProps {
   bookingsError: string | null;
   onAddBookingToCart: (booking: BookingInfoDto) => void;
   onRefreshBookings: () => void;
+  // Services data for booking items
+  services: Service[];
+  isLoadingServices: boolean;
+  servicesError: string | null;
+  // Price books data
+  activePriceBooks: any[];
+  isLoadingPriceBooks: boolean;
+  priceBooksError: string | null;
+  // All price books data
+  allPriceBooks: any[];
+  isLoadingAllPriceBooks: boolean;
+  allPriceBooksError: string | null;
 }
 
 const ProductSection: React.FC<ProductSectionProps> = ({
@@ -71,6 +84,18 @@ const ProductSection: React.FC<ProductSectionProps> = ({
   bookingsError,
   onAddBookingToCart,
   onRefreshBookings,
+  // Services data for booking items
+  services,
+  isLoadingServices,
+  servicesError,
+  // Price books data
+  activePriceBooks,
+  isLoadingPriceBooks,
+  priceBooksError,
+  // All price books data
+  allPriceBooks,
+  isLoadingAllPriceBooks,
+  allPriceBooksError,
 }) => {
   const [searchText, setSearchText] = React.useState("");
   const [categoryFilter, setCategoryFilter] = React.useState("all");
@@ -380,6 +405,15 @@ const ProductSection: React.FC<ProductSectionProps> = ({
                   error={bookingsError}
                   onAddBookingToCart={onAddBookingToCart}
                   onRefresh={onRefreshBookings}
+                  services={services}
+                  isLoadingServices={isLoadingServices}
+                  servicesError={servicesError}
+                  activePriceBooks={activePriceBooks}
+                  isLoadingPriceBooks={isLoadingPriceBooks}
+                  priceBooksError={priceBooksError}
+                  allPriceBooks={allPriceBooks}
+                  isLoadingAllPriceBooks={isLoadingAllPriceBooks}
+                  allPriceBooksError={allPriceBooksError}
                 />
               ),
             },

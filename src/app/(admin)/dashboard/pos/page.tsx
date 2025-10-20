@@ -11,6 +11,9 @@ import {
   useUserManagement,
   useVerifyPayment,
   useBookingsPendingPayment,
+  useServicesForSale,
+  useActivePriceBooks,
+  useAllPriceBooks,
 } from "@/lib/api/hooks";
 import { Product, UserManagementInfo } from "@/lib/api";
 import { useCategories } from "@/lib/api/hooks/useCategory";
@@ -33,6 +36,8 @@ import {
   removeFreeItemsByPromotion,
 } from "@/lib/utils/free-item-manager";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
+import { Service } from "@/lib/api/types/service.types";
+import { PricingService } from "@/lib/api/services/pricing.service";
 
 interface ProductWithStock extends Product {
   sellingPrice: number;
@@ -82,15 +87,13 @@ const POSPage = () => {
     useFulfillSalesOrder();
 
   // Fetch active promotions (not filtered by branch since promotions can be global)
-  const {
-    data: promotionsData,
-    refetch: refetchPromotions,
-  } = useActivePromotions({
-    // Don't filter by branch_id - promotions with branch=null apply to all branches
-    is_active: true,
-    page: 0,
-    size: 100,
-  });
+  const { data: promotionsData, refetch: refetchPromotions } =
+    useActivePromotions({
+      // Don't filter by branch_id - promotions with branch=null apply to all branches
+      is_active: true,
+      page: 0,
+      size: 100,
+    });
 
   // Fetch bookings pending payment
   const {
@@ -100,24 +103,186 @@ const POSPage = () => {
     refetch: refetchBookings,
   } = useBookingsPendingPayment();
 
-  // Debug: Log promotions data
+  // Fetch services for sale by branch
+  const {
+    data: servicesForSale,
+    isLoading: isLoadingServices,
+    error: servicesError,
+  } = useServicesForSale(selectedBranch?.branch_id || "");
+
+  // Fetch active price books
+  const {
+    data: activePriceBooks,
+    isLoading: isLoadingPriceBooks,
+    error: priceBooksError,
+  } = useActivePriceBooks();
+
+  // Fetch all price books (including inactive ones)
+  const {
+    data: allPriceBooks,
+    isLoading: isLoadingAllPriceBooks,
+    error: allPriceBooksError,
+  } = useAllPriceBooks();
+
+  // Get current price book (system-wide, not branch-specific, not filtered by active)
+  const currentPriceBook = useMemo(() => {
+    if (!allPriceBooks) return null;
+
+    // Use the first price book (system-wide, regardless of active status)
+    // Price books are shared across the system, not branch-specific
+    return allPriceBooks[0] || null;
+  }, [allPriceBooks]);
+
+  // Debug: Log promotions, services, and price books data
   useEffect(() => {
     console.log("🎁 Promotions Data:", promotionsData);
     console.log("🏢 Selected Branch:", selectedBranch);
+    console.log("🔧 Services Data:", servicesForSale);
+    console.log("💰 All Price Books (System-wide):", allPriceBooks);
+    console.log("💰 Active Price Books (System-wide):", activePriceBooks);
+    console.log("💰 Current Price Book (System-wide):", currentPriceBook);
     console.log(
       "📦 Available Promotions Count:",
       promotionsData?.content?.length
     );
-  }, [promotionsData, selectedBranch]);
+    console.log("🔧 Available Services Count:", servicesForSale?.length);
+    console.log(
+      "💰 All Price Books Count (System-wide):",
+      allPriceBooks?.length
+    );
+    console.log(
+      "💰 Active Price Books Count (System-wide):",
+      activePriceBooks?.length
+    );
+
+    // Debug price book items if available
+    if (currentPriceBook) {
+      console.log("💰 Current Price Book ID:", currentPriceBook.id);
+      console.log("💰 Current Price Book Name:", currentPriceBook.name);
+      console.log("💰 Current Price Book Active:", currentPriceBook.active);
+      console.log(
+        "💰 Current Price Book Items Count:",
+        currentPriceBook.items?.length || 0
+      );
+    } else {
+      console.log("❌ No price book available for pricing");
+    }
+
+    // Log all price books and filter active ones
+    if (allPriceBooks && allPriceBooks.length > 0) {
+      console.log("=".repeat(80));
+      console.log("📊 COMPLETE PRICE BOOKS ANALYSIS (NO BRANCH FILTER, NO ACTIVE FILTER)");
+      console.log("=".repeat(80));
+
+      // Filter active price books from all price books (no branch filter)
+      const activePriceBooksFiltered = allPriceBooks.filter(
+        (book) => book.active === true
+      );
+      const inactivePriceBooks = allPriceBooks.filter(
+        (book) => book.active === false
+      );
+
+      console.log(`📊 Total Price Books: ${allPriceBooks.length}`);
+      console.log(`✅ Active Price Books: ${activePriceBooksFiltered.length}`);
+      console.log(`❌ Inactive Price Books: ${inactivePriceBooks.length}`);
+
+      // Log all price books first (no branch filter)
+      console.log("\n📋 ALL PRICE BOOKS (NO BRANCH FILTER):");
+      allPriceBooks.forEach((priceBook, index) => {
+        const status = priceBook.active ? "✅ ACTIVE" : "❌ INACTIVE";
+        console.log(
+          `  ${index + 1}. ${priceBook.name} (${priceBook.code}) - ${status}`
+        );
+        console.log(
+          `     ID: ${priceBook.id}, Branch ID: ${
+            priceBook.branch_id || "NULL"
+          }, Items: ${priceBook.items?.length || 0}`
+        );
+      });
+
+      // Log detailed analysis of ACTIVE price books only
+      if (activePriceBooksFiltered.length > 0) {
+        console.log("\n" + "=".repeat(60));
+        console.log(
+          "📊 DETAILED ANALYSIS OF ACTIVE PRICE BOOKS (NO BRANCH FILTER)"
+        );
+        console.log("=".repeat(60));
+
+        activePriceBooksFiltered.forEach((priceBook, index) => {
+          console.log(`\n📋 Active Price Book ${index + 1}:`);
+          console.log(`  - ID: ${priceBook.id}`);
+          console.log(`  - Name: ${priceBook.name}`);
+          console.log(`  - Code: ${priceBook.code}`);
+          console.log(`  - Active: ${priceBook.active}`);
+          console.log(`  - Currency: ${priceBook.currency}`);
+          console.log(`  - Valid From: ${priceBook.valid_from}`);
+          console.log(`  - Valid To: ${priceBook.valid_to}`);
+          console.log(`  - Branch ID: ${priceBook.branch_id}`);
+          console.log(`  - Items Count: ${priceBook.items?.length || 0}`);
+
+          if (priceBook.items && priceBook.items.length > 0) {
+            console.log(`\n  📦 Price Book Items:`);
+            priceBook.items.forEach((item, itemIndex) => {
+              console.log(`    ${itemIndex + 1}. Item ID: ${item.id}`);
+              console.log(`       - Item Type: ${item.item_type}`);
+              console.log(`       - Item ID: ${item.item_id}`);
+              console.log(`       - Item Name: ${item.item_name}`);
+              console.log(`       - Policy Type: ${item.policy_type}`);
+              console.log(`       - Fixed Price: ${item.fixed_price}`);
+              console.log(`       - Markup Percent: ${item.markup_percent}`);
+
+              // Log service details if it's a service item
+              if (item.item_type === "SERVICE" && item.service) {
+                console.log(`       - Service ID: ${item.service.service_id}`);
+                console.log(
+                  `       - Service Name: ${item.service.service_name}`
+                );
+                console.log(
+                  `       - Service Description: ${item.service.description}`
+                );
+              }
+
+              // Log product details if it's a product item
+              if (item.item_type === "PRODUCT" && item.product) {
+                console.log(`       - Product ID: ${item.product.product_id}`);
+                console.log(
+                  `       - Product Name: ${item.product.product_name}`
+                );
+                console.log(`       - Product SKU: ${item.product.sku}`);
+              }
+
+              console.log(`       - Created At: ${item.created_at}`);
+              console.log(`       - Updated At: ${item.updated_at}`);
+              console.log(`       ---`);
+            });
+          } else {
+            console.log(`  📦 No items found in this price book`);
+          }
+        });
+      } else {
+        console.log("\n❌ No active price books found in the system");
+      }
+
+      console.log("=".repeat(80));
+      console.log("📊 END OF COMPLETE PRICE BOOKS ANALYSIS (NO BRANCH FILTER, NO ACTIVE FILTER)");
+      console.log("=".repeat(80));
+    } else {
+      console.log("❌ No price books found in the system (no branch filter, no active filter)");
+    }
+  }, [
+    promotionsData,
+    selectedBranch,
+    servicesForSale,
+    allPriceBooks,
+    activePriceBooks,
+    currentPriceBook,
+  ]);
 
   // Payment verification with polling
-  const { data: paymentStatus } = useVerifyPayment(
-    orderCode,
-    {
-      enabled: isPolling && !!orderCode,
-      refetchInterval: 3000,
-    }
-  );
+  const { data: paymentStatus } = useVerifyPayment(orderCode, {
+    enabled: isPolling && !!orderCode,
+    refetchInterval: 3000,
+  });
 
   const {
     users,
@@ -183,6 +348,53 @@ const POSPage = () => {
 
     return map;
   }, [catalog]);
+
+  // Service lookup for booking items
+  const serviceLookup = useMemo(() => {
+    const lookup = new Map<string, Service>();
+    servicesForSale?.forEach((service) => {
+      lookup.set(service.service_id, service);
+    });
+    return lookup;
+  }, [servicesForSale]);
+
+  // Function to get service price from price book using fixed_price (NO FALLBACK)
+  const getServicePrice = useCallback(
+    async (serviceId: string): Promise<number> => {
+      try {
+        if (!currentPriceBook) {
+          console.warn("No price book found for service pricing");
+          return 0;
+        }
+
+        // Get detailed price book with items
+        const priceBookDetails = await PricingService.getPriceBookById(
+          currentPriceBook.id
+        );
+
+        // Find the service in price book items
+        const serviceItem = priceBookDetails.items?.find(
+          (item) => item.item_type === "SERVICE" && item.item_id === serviceId
+        );
+
+        if (serviceItem && serviceItem.fixed_price !== null && serviceItem.fixed_price > 0) {
+          console.log(
+            `💰 Found service ${serviceId} in price book with fixed_price: ${serviceItem.fixed_price}`
+          );
+          return serviceItem.fixed_price;
+        }
+
+        console.warn(
+          `Service ${serviceId} not found in price book or no valid fixed_price`
+        );
+        return 0;
+      } catch (error) {
+        console.error(`Failed to get pricing for service ${serviceId}:`, error);
+        return 0;
+      }
+    },
+    [currentPriceBook]
+  );
 
   // Calculate cart summary with promotions
   const cartSummary = useMemo(() => {
@@ -369,40 +581,120 @@ const POSPage = () => {
     });
   }, [message, modal]);
 
-  // Add booking to cart
-  const handleAddBookingToCart = useCallback((booking: BookingInfoDto) => {
-    // Create cart item for booking
-    const bookingCartItem: CartItem = {
-      productId: booking.booking_id, // Use booking_id as productId for booking items
-      productName: `Booking ${booking.booking_code}`,
-      price: booking.total_price || 0,
-      quantity: 1,
-      total: booking.total_price || 0,
-      categoryName: "Booking",
-      availableStock: 1,
-      maxQuantity: 1,
-      isBookingItem: true, // Flag to identify booking items
-      bookingId: booking.booking_id,
-      bookingCode: booking.booking_code,
-      customerName: booking.customer_name,
-      vehicleLicensePlate: booking.vehicle_license_plate,
-    };
-
-    setCart((prevCart) => {
-      // Check if booking already exists in cart
-      const existingItem = prevCart.find(
-        (item) => item.bookingId === booking.booking_id
-      );
-
-      if (existingItem) {
-        message.warning("Booking này đã có trong giỏ hàng");
-        return prevCart;
+  // Add booking to cart - now adds individual services from booking items
+  const handleAddBookingToCart = useCallback(
+    async (booking: BookingInfoDto) => {
+      if (!booking.booking_items || booking.booking_items.length === 0) {
+        message.warning("Booking này không có dịch vụ nào");
+        return;
       }
 
-      message.success(`Đã thêm booking ${booking.booking_code} vào giỏ hàng`);
-      return [...prevCart, bookingCartItem];
-    });
-  }, [message]);
+      if (!currentPriceBook) {
+        message.error(
+          "Không tìm thấy bảng giá hệ thống. Vui lòng thử lại sau."
+        );
+        return;
+      }
+
+      const newServiceItems: CartItem[] = [];
+      let addedServicesCount = 0;
+
+      // Process each booking item (service) and add to cart
+      for (const bookingItem of booking.booking_items) {
+        if (!bookingItem.service_id) continue;
+
+        // Find the service in our service lookup
+        const service = serviceLookup.get(bookingItem.service_id);
+        if (!service) {
+          console.warn(
+            `Service not found for service_id: ${bookingItem.service_id}`
+          );
+          continue;
+        }
+
+        // Check if this service is already in cart from this booking
+        const existingServiceItem = cart.find(
+          (item) =>
+            item.isServiceItem &&
+            item.serviceId === bookingItem.service_id &&
+            item.originalBookingId === booking.booking_id
+        );
+
+        if (existingServiceItem) {
+          continue; // Skip if already added
+        }
+
+         // Get service price from price book (NO FALLBACK to tax_amount)
+         const servicePrice = await getServicePrice(bookingItem.service_id);
+         console.log(
+           `🔍 Service ${bookingItem.service_id} (${bookingItem.item_name}):`
+         );
+         console.log(`  - Price from price book: ${servicePrice}`);
+         console.log(`  - Booking tax_amount (IGNORED): ${bookingItem.tax_amount || 0}`);
+
+         if (servicePrice === 0) {
+           console.warn(
+             `No price found in price book for service ${bookingItem.service_id}, skipping this service`
+           );
+           continue; // Skip this service if no price in price book
+         }
+
+         // Use ONLY price from price book
+         const finalPrice = servicePrice;
+         console.log(`  - Final price used (from price book only): ${finalPrice}`);
+
+        // Create service cart item
+        const serviceCartItem: CartItem = {
+          productId: bookingItem.service_id, // Use service_id as productId
+          productName: bookingItem.item_name || service.service_name,
+          price: finalPrice, // Use price from price book or fallback to tax_amount
+          quantity: 1,
+          total: finalPrice,
+          categoryName: "Dịch vụ",
+          availableStock: 1,
+          maxQuantity: 1,
+          isServiceItem: true, // Flag to identify service items
+          serviceId: bookingItem.service_id,
+          serviceName: bookingItem.item_name || service.service_name,
+          serviceDescription:
+            bookingItem.item_description || service.description,
+          estimatedDuration: service.estimated_duration,
+          // Booking context
+          originalBookingId: booking.booking_id,
+          originalBookingCode: booking.booking_code,
+          customerName: booking.customer_name,
+          vehicleLicensePlate: booking.vehicle_license_plate,
+        };
+
+        newServiceItems.push(serviceCartItem);
+        addedServicesCount++;
+      }
+
+      if (newServiceItems.length === 0) {
+        message.warning("Không tìm thấy dịch vụ phù hợp trong booking này");
+        return;
+      }
+
+      setCart((prevCart) => {
+        // Check if any services from this booking are already in cart
+        const existingServices = prevCart.filter(
+          (item) =>
+            item.isServiceItem && item.originalBookingId === booking.booking_id
+        );
+
+        if (existingServices.length > 0) {
+          message.warning("Các dịch vụ từ booking này đã có trong giỏ hàng");
+          return prevCart;
+        }
+
+        message.success(
+          `Đã thêm ${addedServicesCount} dịch vụ từ booking ${booking.booking_code} vào giỏ hàng`
+        );
+        return [...prevCart, ...newServiceItems];
+      });
+    },
+    [message, serviceLookup, cart, currentPriceBook, getServicePrice]
+  );
 
   // Calculation Functions
   const getSubtotal = useCallback(() => {
@@ -760,7 +1052,10 @@ const POSPage = () => {
     inventoryLoading ||
     branchesLoading ||
     isFulfilling ||
-    isLoadingBookings;
+    isLoadingBookings ||
+    isLoadingServices ||
+    isLoadingPriceBooks ||
+    isLoadingAllPriceBooks;
 
   return (
     <div
@@ -770,16 +1065,9 @@ const POSPage = () => {
         overflow: "hidden",
       }}
     >
-      <Row
-        gutter={[16, 16]}
-        style={{ height: "100%" }}
-      >
+      <Row gutter={[16, 16]} style={{ height: "100%" }}>
         {/* Products Section */}
-        <Col
-          xs={24}
-          lg={14}
-          style={{ height: "100%" }}
-        >
+        <Col xs={24} lg={14} style={{ height: "100%" }}>
           <ProductSection
             products={availableProducts}
             categories={categories}
@@ -796,15 +1084,23 @@ const POSPage = () => {
             bookingsError={bookingsError?.message || null}
             onAddBookingToCart={handleAddBookingToCart}
             onRefreshBookings={refetchBookings}
+            // Services data for booking items
+            services={servicesForSale || []}
+            isLoadingServices={isLoadingServices}
+            servicesError={servicesError?.message || null}
+            // Price books data
+            activePriceBooks={activePriceBooks || []}
+            isLoadingPriceBooks={isLoadingPriceBooks}
+            priceBooksError={priceBooksError?.message || null}
+            // All price books data
+            allPriceBooks={allPriceBooks || []}
+            isLoadingAllPriceBooks={isLoadingAllPriceBooks}
+            allPriceBooksError={allPriceBooksError?.message || null}
           />
         </Col>
 
         {/* Cart Section */}
-        <Col
-          xs={24}
-          lg={10}
-          style={{ height: "100%" }}
-        >
+        <Col xs={24} lg={10} style={{ height: "100%" }}>
           <CartSection
             cart={cart}
             selectedCustomer={selectedCustomer}

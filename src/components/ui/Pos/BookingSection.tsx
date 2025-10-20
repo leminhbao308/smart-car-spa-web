@@ -24,6 +24,7 @@ import {
 } from "@ant-design/icons";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
 import { BranchDisplay } from "@/lib/api/types/branch.types";
+import { Service } from "@/lib/api/types/service.types";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 import { formatTime } from "@/components/utils/helper/duration.format.helper";
 
@@ -36,6 +37,18 @@ interface BookingSectionProps {
   error: string | null;
   onAddBookingToCart: (booking: BookingInfoDto) => void;
   onRefresh: () => void;
+  // Services data for booking items
+  services: Service[];
+  isLoadingServices: boolean;
+  servicesError: string | null;
+  // Price books data
+  activePriceBooks: any[];
+  isLoadingPriceBooks: boolean;
+  priceBooksError: string | null;
+  // All price books data
+  allPriceBooks: any[];
+  isLoadingAllPriceBooks: boolean;
+  allPriceBooksError: string | null;
 }
 
 const BookingSection: React.FC<BookingSectionProps> = ({
@@ -45,6 +58,18 @@ const BookingSection: React.FC<BookingSectionProps> = ({
   error,
   onAddBookingToCart,
   onRefresh,
+  // Services data for booking items
+  services,
+  isLoadingServices,
+  servicesError,
+  // Price books data
+  activePriceBooks,
+  isLoadingPriceBooks,
+  priceBooksError,
+  // All price books data
+  allPriceBooks,
+  isLoadingAllPriceBooks,
+  allPriceBooksError,
 }) => {
   // Filter bookings by selected branch
   const filteredBookings = useMemo(() => {
@@ -106,12 +131,52 @@ const BookingSection: React.FC<BookingSectionProps> = ({
     );
   }
 
-  if (isLoading) {
+  if (servicesError) {
+    return (
+      <Alert
+        message="Lỗi tải dịch vụ"
+        description={servicesError}
+        type="error"
+        showIcon
+        action={
+          <Button size="small" onClick={onRefresh}>
+            Thử lại
+          </Button>
+        }
+      />
+    );
+  }
+
+  if (priceBooksError) {
+    return (
+      <Alert
+        message="Lỗi tải bảng giá"
+        description={priceBooksError}
+        type="error"
+        showIcon
+        action={
+          <Button size="small" onClick={onRefresh}>
+            Thử lại
+          </Button>
+        }
+      />
+    );
+  }
+
+  if (isLoading || isLoadingServices || isLoadingPriceBooks || isLoadingAllPriceBooks) {
     return (
       <div style={{ textAlign: "center", padding: "40px" }}>
         <Spin size="large" />
         <div style={{ marginTop: 16 }}>
-          <Text>Đang tải danh sách booking...</Text>
+          <Text>
+            {isLoading 
+              ? "Đang tải danh sách booking..." 
+              : isLoadingServices 
+              ? "Đang tải danh sách dịch vụ..." 
+              : isLoadingPriceBooks
+              ? "Đang tải bảng giá active..."
+              : "Đang tải tất cả bảng giá..."}
+          </Text>
         </div>
       </div>
     );
@@ -129,7 +194,11 @@ const BookingSection: React.FC<BookingSectionProps> = ({
   if (filteredBookings.length === 0) {
     return (
       <Empty
-        description={`Không có booking chờ thanh toán cho chi nhánh ${selectedBranch.branch_name}`}
+        description={
+          services.length === 0 || allPriceBooks.length === 0
+            ? `Không có booking, dịch vụ hoặc bảng giá hệ thống nào`
+            : `Không có booking chờ thanh toán cho chi nhánh ${selectedBranch.branch_name}`
+        }
         image={Empty.PRESENTED_IMAGE_SIMPLE}
       />
     );

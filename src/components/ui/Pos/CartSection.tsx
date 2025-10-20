@@ -48,6 +48,15 @@ export interface CartItem {
   bookingCode?: string; // Booking code for display
   customerName?: string; // Customer name for booking
   vehicleLicensePlate?: string; // Vehicle license plate for booking
+  // Service item properties (NEW)
+  isServiceItem?: boolean; // Is this a service item?
+  serviceId?: string; // Service ID for service items
+  serviceName?: string; // Service name for display
+  serviceDescription?: string; // Service description
+  estimatedDuration?: number; // Estimated duration in minutes
+  // Booking context for service items
+  originalBookingId?: string; // Original booking ID that this service belongs to
+  originalBookingCode?: string; // Original booking code for display
 }
 
 interface CartSectionProps {
@@ -101,9 +110,33 @@ const CartSection: React.FC<CartSectionProps> = ({
       key: "productName",
       ellipsis: true,
       render: (name: string, record: CartItem) => (
-        <Space>
-          <Text>{name}</Text>
-          {record.isFreeItem && <Tag color="green">TẶNG</Tag>}
+        <Space direction="vertical" size={2}>
+          <Space>
+            <Text>{name}</Text>
+            {record.isFreeItem && <Tag color="green">TẶNG</Tag>}
+            {record.isServiceItem && <Tag color="blue">DỊCH VỤ</Tag>}
+            {record.isBookingItem && <Tag color="orange">BOOKING</Tag>}
+          </Space>
+          {record.isServiceItem && record.originalBookingCode && (
+            <Text type="secondary" style={{ fontSize: "12px" }}>
+              Từ booking: {record.originalBookingCode}
+            </Text>
+          )}
+          {record.isServiceItem && record.estimatedDuration && (
+            <Text type="secondary" style={{ fontSize: "12px" }}>
+              Thời gian: {record.estimatedDuration} phút
+            </Text>
+          )}
+          {record.customerName && (
+            <Text type="secondary" style={{ fontSize: "12px" }}>
+              Khách: {record.customerName}
+            </Text>
+          )}
+          {record.vehicleLicensePlate && (
+            <Text type="secondary" style={{ fontSize: "12px" }}>
+              Xe: {record.vehicleLicensePlate}
+            </Text>
+          )}
         </Space>
       ),
     },
@@ -141,6 +174,28 @@ const CartSection: React.FC<CartSectionProps> = ({
         record.isFreeItem ? (
           // Free items: show quantity but disable controls
           <Tooltip title="Số lượng tặng tự động tính theo điều kiện khuyến mãi">
+            <Space>
+              <Button
+                size="small"
+                icon={<MinusOutlined />}
+                disabled
+              />
+              <InputNumber
+                size="small"
+                value={quantity}
+                disabled
+                style={{ width: 60 }}
+              />
+              <Button
+                size="small"
+                icon={<PlusOutlined />}
+                disabled
+              />
+            </Space>
+          </Tooltip>
+        ) : record.isServiceItem ? (
+          // Service items: fixed quantity = 1, no controls
+          <Tooltip title="Dịch vụ có số lượng cố định">
             <Space>
               <Button
                 size="small"
@@ -215,12 +270,14 @@ const CartSection: React.FC<CartSectionProps> = ({
             />
           </Tooltip>
         ) : (
-          <Button
-            type="text"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => onRemoveItem(record.productId)}
-          />
+          <Tooltip title={record.isServiceItem ? "Xóa dịch vụ khỏi giỏ hàng" : "Xóa sản phẩm khỏi giỏ hàng"}>
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => onRemoveItem(record.productId)}
+            />
+          </Tooltip>
         ),
     },
   ];
