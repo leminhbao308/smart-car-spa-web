@@ -27,6 +27,7 @@ import {
   useCheckInBooking,
   useStartService,
 } from "@/lib/api/hooks/useBooking";
+import { useBookingWithInventory } from "@/lib/api/hooks/useBookingWithInventory";
 import { useCustomersDropdown } from "@/lib/api/hooks/useUsers";
 import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
 import {
@@ -152,6 +153,13 @@ const BookingsPage = () => {
   const completeServiceMutation = useCompleteService();
   const checkInBookingMutation = useCheckInBooking();
   const startServiceMutation = useStartService();
+  
+  // Enhanced hooks with inventory management
+  const {
+    confirmBookingWithInventory,
+    cancelBookingWithInventory,
+    startServiceWithInventory,
+  } = useBookingWithInventory();
 
   // Fetch additional data for enrichment
   const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
@@ -547,20 +555,38 @@ const BookingsPage = () => {
       type: "error",
       onConfirm: async () => {
         try {
-          await cancelBookingMutation.mutateAsync({
+          console.log("🔄 Starting cancel booking with inventory release:", {
             bookingId: record.booking_id,
-            reason: "Hủy bởi admin",
-            cancelledBy: "admin",
+            bookingCode: record.booking_code,
+            branchId: record.branch_id,
+            status: record.status
           });
+          
+          // Use enhanced hook with inventory release
+          await cancelBookingWithInventory(
+            record, 
+            record.branch_id, 
+            "Hủy bởi admin", 
+            "admin"
+          );
+          
+          console.log("✅ Successfully cancelled booking and released inventory:", record.booking_id);
           notification.success({
             message: "Thành công",
-            description: "Hủy lịch đặt thành công",
+            description: "Hủy lịch đặt và hoàn trả sản phẩm thành công",
             placement: "topRight",
           });
-        } catch {
+        } catch (error) {
+          console.error("❌ Error cancelling booking with inventory:", error);
+          console.error("❌ Error details:", {
+            bookingId: record.booking_id,
+            error: error,
+            errorMessage: error?.message,
+            errorResponse: error?.response?.data
+          });
           notification.error({
             message: "Lỗi",
-            description: "Có lỗi xảy ra khi hủy lịch đặt",
+            description: "Có lỗi xảy ra khi hủy lịch đặt hoặc hoàn trả sản phẩm",
             placement: "topRight",
           });
         }
@@ -615,16 +641,18 @@ const BookingsPage = () => {
       type: "info",
       onConfirm: async () => {
         try {
-          await confirmBookingMutation.mutateAsync(record.booking_id);
+          // Use enhanced hook with inventory fulfillment
+          await confirmBookingWithInventory(record, record.branch_id);
           notification.success({
             message: "Thành công",
-            description: "Xác nhận lịch đặt thành công",
+            description: "Xác nhận lịch đặt và xuất sản phẩm thành công",
             placement: "topRight",
           });
-        } catch {
+        } catch (error) {
+          console.error("Error confirming booking with inventory:", error);
           notification.error({
             message: "Lỗi",
-            description: "Có lỗi xảy ra khi xác nhận lịch đặt",
+            description: "Có lỗi xảy ra khi xác nhận lịch đặt hoặc xuất sản phẩm",
             placement: "topRight",
           });
         }

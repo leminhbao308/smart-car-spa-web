@@ -417,36 +417,53 @@ const BookingModal: React.FC<BookingModalProps> = ({
     services: { item_type: string; item_id: string }[],
     bookingId: string
   ) => {
+    console.log("🎯 fetchRequiredProductsAndReserve called with:", { services, bookingId });
     try {
-      const allProducts: ServiceProcessStepProductInfoDto[] = [];
+      console.log("🔍 Starting fetchRequiredProductsAndReserve for booking:", bookingId);
+      console.log("🔍 Services to process:", services);
+      
+      const allProducts: any[] = [];
 
       for (const service of services) {
         if (service.item_type === "SERVICE") {
-          // Gọi trực tiếp service thay vì sử dụng hook
-          const { ServiceProcessService } = await import(
-            "@/lib/api/services/service-process.service"
+          console.log(`🔍 Processing service: ${service.item_id}`);
+          
+          // Import ServiceService để lấy service products trực tiếp
+          const { ServiceService } = await import(
+            "@/lib/api/services/service.service"
           );
 
-          // Lấy service process từ serviceId
-          const serviceProcess =
-            await ServiceProcessService.getServiceProcessByServiceId(
-              service.item_id
-            );
-
-          if (serviceProcess?.id) {
-            // Lấy products từ processId
-            const products =
-              await ServiceProcessService.getServiceProcessProducts(
-                serviceProcess.id
-              );
-            console.log(`Products for service ${service.item_id}:`, products);
-            if (products && products.length > 0) {
-              allProducts.push(...products);
+          try {
+            // Lấy service details với service_products
+            const serviceDetails = await ServiceService.getServiceById(service.item_id);
+            console.log(`📋 Service details for ${service.item_id}:`, serviceDetails);
+            
+            if (serviceDetails?.service_products && serviceDetails.service_products.length > 0) {
+              // Process service products
+              for (const serviceProduct of serviceDetails.service_products) {
+                if (serviceProduct.is_required) {
+                  const productInfo = {
+                    product_id: serviceProduct.product_id,
+                    product_name: serviceProduct.product_info.product_name,
+                    product_code: serviceProduct.product_info.sku || serviceProduct.product_id,
+                    quantity: serviceProduct.quantity,
+                    unit_of_measure: serviceProduct.unit,
+                    notes: serviceProduct.notes,
+                    service_id: serviceProduct.service_id,
+                    service_name: serviceDetails.service_name
+                  };
+                  allProducts.push(productInfo);
+                  console.log(`✅ Added required product: ${productInfo.product_name} (${productInfo.quantity} ${productInfo.unit_of_measure})`);
+                } else {
+                  console.log(`ℹ️ Skipping optional product: ${serviceProduct.product_info.product_name}`);
+                }
+              }
+            } else {
+              console.log(`ℹ️ Service ${serviceDetails.service_name} has no required products`);
             }
-          } else {
-            console.log(
-              `No service process found for service ${service.item_id}`
-            );
+          } catch (serviceError) {
+            console.error(`❌ Error fetching service ${service.item_id}:`, serviceError);
+            // Continue with other services
           }
         }
       }
@@ -472,12 +489,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       const uniqueProducts = Array.from(productMap.values());
 
-      console.log("All products before grouping:", allProducts);
-      console.log("Unique products after grouping:", uniqueProducts);
-      console.log("Required products for booking:", uniqueProducts);
+      console.log("📊 All products before grouping:", allProducts);
+      console.log("📊 Unique products after grouping:", uniqueProducts);
+      console.log("📊 Required products for booking:", uniqueProducts);
+      console.log("🏢 Selected branch:", selectedBranch?.branch_id);
+      console.log("📦 Products count:", uniqueProducts.length);
 
       // Reserve inventory nếu có branch và products
       if (selectedBranch?.branch_id && uniqueProducts.length > 0) {
+        console.log("🔒 Starting inventory reservation process...");
         try {
           // Validate products có productId
           const validProducts = uniqueProducts.filter(
@@ -500,26 +520,32 @@ const BookingModal: React.FC<BookingModalProps> = ({
             quantity: product.quantity,
           }));
 
-          console.log("Valid products to reserve:", productsToReserve);
-          console.log("Branch ID:", selectedBranch.branch_id);
-          console.log("Booking ID:", bookingId);
+          console.log("🔒 Valid products to reserve:", productsToReserve);
+          console.log("🏢 Branch ID:", selectedBranch.branch_id);
+          console.log("📋 Booking ID:", bookingId);
 
+          console.log("🚀 Calling InventoryService.reserveMultipleForBooking...");
           await InventoryService.reserveMultipleForBooking(
             selectedBranch.branch_id,
             productsToReserve,
             bookingId
           );
 
-          console.log(
-            "Successfully reserved inventory for booking:",
-            bookingId
-          );
+          console.log("✅ Successfully reserved inventory for booking:", bookingId);
         } catch (inventoryError) {
-          console.error("Error reserving inventory:", inventoryError);
+          console.error("❌ Error reserving inventory:", inventoryError);
           // Không throw error để không làm fail booking
+        }
+      } else {
+        if (!selectedBranch?.branch_id) {
+          console.warn("⚠️ No selected branch - cannot reserve inventory");
+        }
+        if (uniqueProducts.length === 0) {
+          console.warn("⚠️ No products to reserve - services may not have required products");
         }
       }
 
+      console.log("🏁 fetchRequiredProductsAndReserve completed for booking:", bookingId);
       return uniqueProducts;
     } catch (error) {
       console.error("Error fetching required products:", error);
@@ -577,22 +603,41 @@ const BookingModal: React.FC<BookingModalProps> = ({
       };
 
       // Use new integrated booking API
+      console.log("🚀 Creating booking with request:", createRequest);
       const createResponse = await createBookingWithSlotMutation.mutateAsync(
         createRequest as CreateBookingWithSlotRequest
       );
+      console.log("📋 Booking creation response:", createResponse);
+      console.log("📋 Response data structure:", createResponse?.data);
 
-      if (createResponse?.data?.bookingId) {
+      // Try different possible bookingId locations
+      const bookingId = createResponse?.data?.bookingId || 
+                       createResponse?.data?.id || 
+                       createResponse?.data?.booking_id ||
+                       createResponse?.bookingId ||
+                       createResponse?.id;
+
+      if (bookingId) {
         console.log(
-          "Booking created successfully:",
-          createResponse.data.bookingId
+          "✅ Booking created successfully:",
+          bookingId
         );
-        await fetchRequiredProductsAndReserve(
-          createRequest.booking_items.map((item) => ({
-            item_type: "SERVICE",
-            item_id: item.service_id,
-          })),
-          createResponse.data.bookingId
-        );
+        console.log("🔍 Starting inventory reservation process...");
+        try {
+          await fetchRequiredProductsAndReserve(
+            createRequest.booking_items.map((item) => ({
+              item_type: "SERVICE",
+              item_id: item.service_id,
+            })),
+            bookingId
+          );
+          console.log("✅ Inventory reservation process completed");
+        } catch (inventoryError) {
+          console.error("❌ Inventory reservation failed:", inventoryError);
+        }
+      } else {
+        console.warn("⚠️ No bookingId found in response:", createResponse);
+        console.warn("⚠️ Available fields in data:", Object.keys(createResponse?.data || {}));
       }
 
       onOk(createRequest);

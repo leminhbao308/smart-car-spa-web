@@ -35,6 +35,7 @@ import {
   useStartService,
   useCancelBooking,
 } from "@/lib/api/hooks/useBooking";
+import { useBookingWithInventory } from "@/lib/api/hooks/useBookingWithInventory";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookingInfoDto, BookingStatus } from "@/lib/api/types/booking.types";
 import { ServiceProcessTrackingInfoDto, CreateServiceProcessTrackingRequest, TrackingStatus } from "@/lib/api/types/service-process-tracking.types";
@@ -144,6 +145,12 @@ const VehiclesInCarePage = () => {
   const startServiceMutation = useStartService();
   const cancelBookingMutation = useCancelBooking();
   const queryClient = useQueryClient();
+  
+  // Enhanced hooks with inventory management
+  const {
+    startServiceWithInventory,
+    cancelBookingWithInventory,
+  } = useBookingWithInventory();
 
   // Combine bookings with their trackings
   const checkedInData = checkedInBookings?.data || [];
@@ -468,10 +475,11 @@ const VehiclesInCarePage = () => {
 
     try {
       if (confirmAction.type === "start") {
-        await startServiceMutation.mutateAsync(confirmAction.record.booking_id);
+        // Use enhanced hook with inventory fulfillment
+        await startServiceWithInventory(confirmAction.record, confirmAction.record.branch_id);
         notification.success({
           message: "Thành công",
-          description: "Bắt đầu chăm sóc thành công",
+          description: "Bắt đầu chăm sóc và xuất sản phẩm thành công",
           placement: "topRight",
         });
 
@@ -479,14 +487,16 @@ const VehiclesInCarePage = () => {
         console.log("🚀 Auto-creating tracking after start service");
         await autoCreateTrackingForBooking(confirmAction.record);
       } else if (confirmAction.type === "cancel") {
-        await cancelBookingMutation.mutateAsync({
-          bookingId: confirmAction.record.booking_id,
-          reason: "Hủy bởi admin",
-          cancelledBy: "admin",
-        });
+        // Use enhanced hook with inventory release
+        await cancelBookingWithInventory(
+          confirmAction.record,
+          confirmAction.record.branch_id,
+          "Hủy bởi admin",
+          "admin"
+        );
         notification.success({
           message: "Thành công",
-          description: "Hủy lịch đặt thành công",
+          description: "Hủy lịch đặt và hoàn trả sản phẩm thành công",
           placement: "topRight",
         });
       }
