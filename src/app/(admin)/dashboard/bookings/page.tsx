@@ -496,8 +496,8 @@ const BookingsPage = () => {
     },
     {
       title: "Thanh toán",
-      dataIndex: "paymentStatus",
-      key: "paymentStatus",
+      dataIndex: "payment_status",
+      key: "payment_status",
       width: 120,
       align: "center",
       render: (paymentStatus: string) => {
@@ -596,7 +596,6 @@ const BookingsPage = () => {
       },
     });
   };
-
 
   const handleModalOk = async () => {
     // This will be handled by the BookingModal component

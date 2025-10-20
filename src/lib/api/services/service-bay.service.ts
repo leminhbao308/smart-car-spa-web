@@ -75,7 +75,12 @@ export class ServiceBayService {
   static async getServiceBayById(bayId: string): Promise<ServiceBay> {
     try {
       const response = await apiClient.get(`/service-bays/${bayId}`);
-      return response.data.data;
+      console.log("ServiceBay API response:", response.data);
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data.message || "Failed to fetch service bay");
+      }
     } catch (error: unknown) {
       console.log("Get service bay by ID error:", error);
       throw error;
