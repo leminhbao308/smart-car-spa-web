@@ -541,16 +541,6 @@ const VehiclesInCarePage = () => {
           record.status
         ),
     },
-    {
-      key: "payment",
-      label: "Thanh toán",
-      icon: <CreditCardOutlined />,
-      type: "default" as const,
-      onClick: handlePayment,
-      condition: (record: BookingInfoDto) =>
-        record.status === BookingStatus.COMPLETED &&
-        record.payment_status === "PENDING",
-    },
   ];
 
   // Thống kê tổng quan
