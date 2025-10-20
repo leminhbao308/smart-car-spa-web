@@ -444,4 +444,19 @@ export class BookingService {
       throw error;
     }
   }
+
+  /**
+   * Get bookings pending payment
+   */
+  static async getBookingsPendingPayment(): Promise<BookingInfoDto[]> {
+    try {
+      console.log("Getting bookings pending payment");
+      const response = await apiClient.get("/bookings/pending-payment");
+      console.log("Get bookings pending payment API response:", response);
+      return response.data.data;
+    } catch (error: unknown) {
+      console.log("Get bookings pending payment error:", error);
+      throw error;
+    }
+  }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Card,
   Row,
@@ -14,6 +14,7 @@ import {
   Spin,
   Typography,
   Badge,
+  Tabs,
 } from "antd";
 import {
   SearchOutlined,
@@ -25,6 +26,8 @@ import {
 import type { Product } from "@/lib/api";
 import type { BranchDisplay } from "@/lib/api/types/branch.types";
 import type { UserManagementInfo } from "@/lib/api";
+import type { BookingInfoDto } from "@/lib/api/types/booking.types";
+import BookingSection from "./BookingSection";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -44,22 +47,34 @@ interface ProductSectionProps {
   onRefresh: () => void;
   onBranchClick: () => void;
   onCustomerClick: () => void;
+  // New props for booking integration
+  bookings: BookingInfoDto[];
+  isLoadingBookings: boolean;
+  bookingsError: string | null;
+  onAddBookingToCart: (booking: BookingInfoDto) => void;
+  onRefreshBookings: () => void;
 }
 
 const ProductSection: React.FC<ProductSectionProps> = ({
-                                                         products,
-                                                         categories,
-                                                         selectedBranch,
-                                                         selectedCustomer,
-                                                         isLoading,
-                                                         onAddToCart,
-                                                         onRefresh,
-                                                         onBranchClick,
-                                                         onCustomerClick,
-                                                       }) => {
+  products,
+  categories,
+  selectedBranch,
+  selectedCustomer,
+  isLoading,
+  onAddToCart,
+  onRefresh,
+  onBranchClick,
+  onCustomerClick,
+  // New props for booking integration
+  bookings,
+  isLoadingBookings,
+  bookingsError,
+  onAddBookingToCart,
+  onRefreshBookings,
+}) => {
   const [searchText, setSearchText] = React.useState("");
   const [categoryFilter, setCategoryFilter] = React.useState("all");
-  const [stockFilter, setStockFilter] = React.useState("all");
+  const [activeTab, setActiveTab] = useState<string>("products");
 
   // Filtered products
   const filteredProducts = useMemo(() => {
@@ -73,28 +88,12 @@ const ProductSection: React.FC<ProductSectionProps> = ({
         categoryFilter === "all" ||
         product.product_type_name === categoryFilter;
 
-      const matchesStock =
-        stockFilter === "all" ||
-        (stockFilter === "in_stock" && product.availableStock > 10) ||
-        (stockFilter === "low_stock" &&
-          product.availableStock > 0 &&
-          product.availableStock <= 10);
-
-      return matchesSearch && matchesCategory && matchesStock;
+      return matchesSearch && matchesCategory;
     });
-  }, [products, searchText, categoryFilter, stockFilter]);
+  }, [products, searchText, categoryFilter]);
 
   return (
     <Card
-      title={
-        <Space>
-          <ShopOutlined />
-          <span>Sản phẩm</span>
-          {selectedBranch && (
-            <Tag color="blue">{selectedBranch.branch_name}</Tag>
-          )}
-        </Space>
-      }
       extra={
         <Button
           icon={<ReloadOutlined />}
@@ -168,7 +167,7 @@ const ProductSection: React.FC<ProductSectionProps> = ({
         </Col>
       </Row>
 
-      {/* Product Grid */}
+      {/* Content with Tabs */}
       {!selectedBranch ? (
         <Empty
           style={{ marginTop: "100px" }}
@@ -176,179 +175,216 @@ const ProductSection: React.FC<ProductSectionProps> = ({
           description={
             <Space direction="vertical">
               <Text type="secondary">
-                Vui lòng chọn chi nhánh để xem sản phẩm
+                Vui lòng chọn chi nhánh để xem sản phẩm và booking
               </Text>
             </Space>
           }
         />
-      ) : isLoading ? (
-        <div style={{ textAlign: "center", padding: "80px 20px" }}>
-          <Spin size="large" />
-          <div style={{ marginTop: "16px" }}>Đang tải sản phẩm...</div>
-        </div>
-      ) : filteredProducts.length === 0 ? (
-        <Empty description="Không tìm thấy sản phẩm" />
       ) : (
-        <Row gutter={[16, 16]}>
-          {filteredProducts.map((product) => (
-            <Col
-              xs={12}
-              sm={8}
-              md={6}
-              lg={6}
-              xl={6}
-              key={product.product_id}
-            >
-              <Badge.Ribbon
-                text={
-                  product.availableStock === 0
-                    ? "Hết hàng"
-                    : `Còn ${product.availableStock}`
-                }
-                color={
-                  product.availableStock === 0
-                    ? "red"
-                    : product.availableStock <= 10
-                      ? "orange"
-                      : "green"
-                }
-              >
-                <Card
-                  hoverable={product.availableStock > 0}
-                  style={{
-                    borderRadius: "8px",
-                    opacity: product.availableStock === 0 ? 0.5 : 1,
-                    cursor:
-                      product.availableStock === 0
-                        ? "not-allowed"
-                        : "pointer",
-                    height: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                  }}
-                  styles={{
-                    body: {
-                      padding: "12px",
-                      flex: 1,
-                      display: "flex",
-                      flexDirection: "column",
-                      height: "100%",
-                    },
-                  }}
-                  onClick={() =>
-                    product.availableStock > 0 && onAddToCart(product)
-                  }
-                >
-                  <div
-                    style={{
-                      textAlign: "center",
-                      display: "flex",
-                      flexDirection: "column",
-                      height: "100%",
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: "80px",
-                        backgroundColor: "#f5f5f5",
-                        borderRadius: "4px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginBottom: "12px",
-                      }}
-                    >
-                      <BarcodeOutlined
-                        style={{ fontSize: "32px", color: "#999" }}
-                      />
-                    </div>
-                    <div
-                      style={{
-                        flex: 1,
-                        display: "flex",
-                        flexDirection: "column",
-                      }}
-                    >
-                      <Text
-                        strong
-                        style={{
-                          fontSize: "13px",
-                          display: "block",
-                          marginBottom: "8px",
-                          minHeight: "40px",
-                          lineHeight: "1.4",
-                        }}
-                        ellipsis={{
-                          tooltip: product.product_name,
-                        }}
-                      >
-                        {product.product_name}
-                      </Text>
-                      <Text
-                        style={{
-                          color: "#1890ff",
-                          fontSize: "16px",
-                          fontWeight: "bold",
-                          display: "block",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        ₫{product.sellingPrice?.toLocaleString()}
-                      </Text>
-                      <div
-                        style={{
-                          marginTop: "auto",
-                          marginBottom: "8px",
-                          display: "flex",
-                          flexWrap: "wrap",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {product.brand && (
-                          <Tag
-                            color="purple"
-                            style={{
-                              fontSize: "10px",
-                              margin: 0,
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: "4px",
-                              justifyContent: "center",
-                            }}
-                          >
-                            <Text ellipsis={{ tooltip: product.brand }}>
-                              {product.brand}
-                            </Text>
-                          </Tag>
-                        )}
-                      </div>
-                      <div
-                        style={{
-                          marginTop: "auto",
-                          marginBottom: "8px",
-                          display: "flex",
-                          flexWrap: "wrap",
-                          justifyContent: "center",
-                        }}
-                      >
-                        {product.sku && (
-                          <Tag
-                            color="blue"
-                            style={{ fontSize: "10px", margin: 0 }}
-                          >
-                            <Text ellipsis={{ tooltip: product.sku }}>
-                              {product.sku}
-                            </Text>
-                          </Tag>
-                        )}
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: "products",
+              label: "Sản phẩm",
+              children: (
+                <div>
+                  {isLoading ? (
+                    <div style={{ textAlign: "center", padding: "80px 20px" }}>
+                      <Spin size="large" />
+                      <div style={{ marginTop: "16px" }}>
+                        Đang tải sản phẩm...
                       </div>
                     </div>
-                  </div>
-                </Card>
-              </Badge.Ribbon>
-            </Col>
-          ))}
-        </Row>
+                  ) : filteredProducts.length === 0 ? (
+                    <Empty description="Không tìm thấy sản phẩm" />
+                  ) : (
+                    <Row gutter={[16, 16]}>
+                      {filteredProducts.map((product) => (
+                        <Col
+                          xs={12}
+                          sm={8}
+                          md={6}
+                          lg={6}
+                          xl={6}
+                          key={product.product_id}
+                        >
+                          <Badge.Ribbon
+                            text={
+                              product.availableStock === 0
+                                ? "Hết hàng"
+                                : `Còn ${product.availableStock}`
+                            }
+                            color={
+                              product.availableStock === 0
+                                ? "red"
+                                : product.availableStock <= 10
+                                ? "orange"
+                                : "green"
+                            }
+                          >
+                            <Card
+                              hoverable={product.availableStock > 0}
+                              style={{
+                                borderRadius: "8px",
+                                opacity: product.availableStock === 0 ? 0.5 : 1,
+                                cursor:
+                                  product.availableStock === 0
+                                    ? "not-allowed"
+                                    : "pointer",
+                                height: "100%",
+                                display: "flex",
+                                flexDirection: "column",
+                              }}
+                              styles={{
+                                body: {
+                                  padding: "12px",
+                                  flex: 1,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  height: "100%",
+                                },
+                              }}
+                              onClick={() =>
+                                product.availableStock > 0 &&
+                                onAddToCart(product)
+                              }
+                            >
+                              <div
+                                style={{
+                                  textAlign: "center",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  height: "100%",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    height: "80px",
+                                    backgroundColor: "#f5f5f5",
+                                    borderRadius: "4px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    marginBottom: "12px",
+                                  }}
+                                >
+                                  <BarcodeOutlined
+                                    style={{ fontSize: "32px", color: "#999" }}
+                                  />
+                                </div>
+                                <div
+                                  style={{
+                                    flex: 1,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                  }}
+                                >
+                                  <Text
+                                    strong
+                                    style={{
+                                      fontSize: "13px",
+                                      display: "block",
+                                      marginBottom: "8px",
+                                      minHeight: "40px",
+                                      lineHeight: "1.4",
+                                    }}
+                                    ellipsis={{
+                                      tooltip: product.product_name,
+                                    }}
+                                  >
+                                    {product.product_name}
+                                  </Text>
+                                  <Text
+                                    style={{
+                                      color: "#1890ff",
+                                      fontSize: "16px",
+                                      fontWeight: "bold",
+                                      display: "block",
+                                      marginBottom: "8px",
+                                    }}
+                                  >
+                                    ₫{product.sellingPrice?.toLocaleString()}
+                                  </Text>
+                                  <div
+                                    style={{
+                                      marginTop: "auto",
+                                      marginBottom: "8px",
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      justifyContent: "center",
+                                    }}
+                                  >
+                                    {product.brand && (
+                                      <Tag
+                                        color="purple"
+                                        style={{
+                                          fontSize: "10px",
+                                          margin: 0,
+                                          display: "flex",
+                                          flexWrap: "wrap",
+                                          gap: "4px",
+                                          justifyContent: "center",
+                                        }}
+                                      >
+                                        <Text
+                                          ellipsis={{ tooltip: product.brand }}
+                                        >
+                                          {product.brand}
+                                        </Text>
+                                      </Tag>
+                                    )}
+                                  </div>
+                                  <div
+                                    style={{
+                                      marginTop: "auto",
+                                      marginBottom: "8px",
+                                      display: "flex",
+                                      flexWrap: "wrap",
+                                      justifyContent: "center",
+                                    }}
+                                  >
+                                    {product.sku && (
+                                      <Tag
+                                        color="blue"
+                                        style={{ fontSize: "10px", margin: 0 }}
+                                      >
+                                        <Text
+                                          ellipsis={{ tooltip: product.sku }}
+                                        >
+                                          {product.sku}
+                                        </Text>
+                                      </Tag>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </Card>
+                          </Badge.Ribbon>
+                        </Col>
+                      ))}
+                    </Row>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: "bookings",
+              label: "Booking",
+              children: (
+                <BookingSection
+                  bookings={bookings}
+                  selectedBranch={selectedBranch}
+                  isLoading={isLoadingBookings}
+                  error={bookingsError}
+                  onAddBookingToCart={onAddBookingToCart}
+                  onRefresh={onRefreshBookings}
+                />
+              ),
+            },
+          ]}
+        />
       )}
     </Card>
   );

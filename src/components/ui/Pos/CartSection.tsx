@@ -42,6 +42,12 @@ export interface CartItem {
   isFreeItem?: boolean; // Is this a gift/free product?
   linkedPromotionId?: string; // Which promotion provides this free item?
   linkedProductId?: string; // Which purchased product triggers this free item? (for BUY_X_GET_Y)
+  // Booking item properties
+  isBookingItem?: boolean; // Is this a booking item?
+  bookingId?: string; // Booking ID for booking items
+  bookingCode?: string; // Booking code for display
+  customerName?: string; // Customer name for booking
+  vehicleLicensePlate?: string; // Vehicle license plate for booking
 }
 
 interface CartSectionProps {

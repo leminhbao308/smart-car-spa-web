@@ -1,6 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { App, Col, Form, Row, Select, Typography } from "antd";
+import { App, Col, Form, Row } from "antd";
 import {
   useBranches,
   useCatalogForSale,
@@ -10,6 +10,7 @@ import {
   usePricing,
   useUserManagement,
   useVerifyPayment,
+  useBookingsPendingPayment,
 } from "@/lib/api/hooks";
 import { Product, UserManagementInfo } from "@/lib/api";
 import { useCategories } from "@/lib/api/hooks/useCategory";
@@ -31,6 +32,7 @@ import {
   recalculateAllFreeItems,
   removeFreeItemsByPromotion,
 } from "@/lib/utils/free-item-manager";
+import { BookingInfoDto } from "@/lib/api/types/booking.types";
 
 interface ProductWithStock extends Product {
   sellingPrice: number;
@@ -72,8 +74,8 @@ const POSPage = () => {
     loading: catalogLoading,
     refresh: refreshCatalog,
   } = useCatalogForSale(selectedBranch?.branch_id || "");
-  const { previewBatch, loading: pricingLoading } = usePricing();
-  const { levelsBatch, loading: inventoryLoading } = useInventoryLevels();
+  const { loading: pricingLoading } = usePricing();
+  const { loading: inventoryLoading } = useInventoryLevels();
   const { mutateAsync: createAndPay, isPending: isCreatingOrder } =
     useCreateAndPay();
   const { mutateAsync: fulfillOrder, isPending: isFulfilling } =
@@ -82,7 +84,6 @@ const POSPage = () => {
   // Fetch active promotions (not filtered by branch since promotions can be global)
   const {
     data: promotionsData,
-    isLoading: isLoadingPromotions,
     refetch: refetchPromotions,
   } = useActivePromotions({
     // Don't filter by branch_id - promotions with branch=null apply to all branches
@@ -90,6 +91,14 @@ const POSPage = () => {
     page: 0,
     size: 100,
   });
+
+  // Fetch bookings pending payment
+  const {
+    data: bookingsPendingPayment,
+    isLoading: isLoadingBookings,
+    error: bookingsError,
+    refetch: refetchBookings,
+  } = useBookingsPendingPayment();
 
   // Debug: Log promotions data
   useEffect(() => {
@@ -102,7 +111,7 @@ const POSPage = () => {
   }, [promotionsData, selectedBranch]);
 
   // Payment verification with polling
-  const { data: paymentStatus, isLoading: isVerifying } = useVerifyPayment(
+  const { data: paymentStatus } = useVerifyPayment(
     orderCode,
     {
       enabled: isPolling && !!orderCode,
@@ -358,7 +367,42 @@ const POSPage = () => {
         message.success("Đã xóa toàn bộ giỏ hàng");
       },
     });
-  }, []);
+  }, [message, modal]);
+
+  // Add booking to cart
+  const handleAddBookingToCart = useCallback((booking: BookingInfoDto) => {
+    // Create cart item for booking
+    const bookingCartItem: CartItem = {
+      productId: booking.booking_id, // Use booking_id as productId for booking items
+      productName: `Booking ${booking.booking_code}`,
+      price: booking.total_price || 0,
+      quantity: 1,
+      total: booking.total_price || 0,
+      categoryName: "Booking",
+      availableStock: 1,
+      maxQuantity: 1,
+      isBookingItem: true, // Flag to identify booking items
+      bookingId: booking.booking_id,
+      bookingCode: booking.booking_code,
+      customerName: booking.customer_name,
+      vehicleLicensePlate: booking.vehicle_license_plate,
+    };
+
+    setCart((prevCart) => {
+      // Check if booking already exists in cart
+      const existingItem = prevCart.find(
+        (item) => item.bookingId === booking.booking_id
+      );
+
+      if (existingItem) {
+        message.warning("Booking này đã có trong giỏ hàng");
+        return prevCart;
+      }
+
+      message.success(`Đã thêm booking ${booking.booking_code} vào giỏ hàng`);
+      return [...prevCart, bookingCartItem];
+    });
+  }, [message]);
 
   // Calculation Functions
   const getSubtotal = useCallback(() => {
@@ -715,7 +759,8 @@ const POSPage = () => {
     pricingLoading ||
     inventoryLoading ||
     branchesLoading ||
-    isFulfilling;
+    isFulfilling ||
+    isLoadingBookings;
 
   return (
     <div
@@ -745,6 +790,12 @@ const POSPage = () => {
             onRefresh={refreshCatalog}
             onBranchClick={() => setIsBranchModalVisible(true)}
             onCustomerClick={() => setIsCustomerModalVisible(true)}
+            // New props for booking integration
+            bookings={bookingsPendingPayment || []}
+            isLoadingBookings={isLoadingBookings}
+            bookingsError={bookingsError?.message || null}
+            onAddBookingToCart={handleAddBookingToCart}
+            onRefreshBookings={refetchBookings}
           />
         </Col>
 
