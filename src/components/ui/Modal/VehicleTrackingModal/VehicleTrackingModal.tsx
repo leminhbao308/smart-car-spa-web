@@ -27,11 +27,13 @@ import TrackingDetailModal from "../TrackingDetailModal";
 import {
   ServiceProcessTrackingInfoDto,
   TrackingStatus,
+  CreateServiceProcessTrackingRequest,
 } from "@/lib/api/types/service-process-tracking.types";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
 import { ServiceProcessTrackingService } from "@/lib/api/services/service-process-tracking.service";
 import { ServiceBayService } from "@/lib/api/services/service-bay.service";
 import { TechnicianInfo } from "@/lib/api/types/service-bay.types";
+import { ServiceProcessService } from "@/lib/api/services/service-process.service";
 
 const { Text } = Typography;
 
@@ -77,6 +79,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
     useState<ServiceProcessTrackingInfoDto[]>(trackings);
   const hasCreatedTrackingRef = useRef(false);
   const [technicians, setTechnicians] = useState<TechnicianInfo[]>([]);
+  const [isCreatingTracking, setIsCreatingTracking] = useState(false);
 
   const { notification } = App.useApp();
 
@@ -239,7 +242,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
       }
     };
     if (open && booking.bay_id) loadTechnicians();
-  }, [open, booking.bay_id]);
+  }, [open, booking.bay_id, booking]);
 
   // Reset hasCreatedTrackingRef when modal closes
   useEffect(() => {
@@ -253,7 +256,126 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
     setTrackingsState(trackings);
   }, [trackings]);
 
+  // Auto-create tracking when shouldCreateTracking is true
+  useEffect(() => {
+    const autoCreateTracking = async () => {
+      if (!shouldCreateTracking || !open || hasCreatedTrackingRef.current || isCreatingTracking) {
+        console.log("🚫 Skipping auto-create tracking:", {
+          shouldCreateTracking,
+          open,
+          hasCreated: hasCreatedTrackingRef.current,
+          isCreating: isCreatingTracking
+        });
+        return;
+      }
+
+      try {
+        setIsCreatingTracking(true);
+        console.log("🚀 Auto-creating tracking for booking:", booking.booking_id);
+
+        // Get service steps for each service in booking - create tracking for each service separately
+        const serviceStepsByService = [];
+        for (const item of booking.booking_items || []) {
+          if (item.service_id) {
+            try {
+              console.log(`🔍 Processing service: ${item.service_id} - ${item.item_name}`);
+              // Get service process for this service
+              const serviceProcess = await ServiceProcessService.getServiceProcessByServiceId(item.service_id);
+              if (serviceProcess?.process_steps || serviceProcess?.processSteps) {
+                const steps = serviceProcess.process_steps || serviceProcess.processSteps || [];
+                console.log(`📋 Found ${steps.length} steps for service ${item.service_id}`);
+                
+                serviceStepsByService.push({
+                  service_id: item.service_id,
+                  service_name: item.item_name,
+                  steps: steps.map(step => ({
+                    ...step,
+                    service_id: item.service_id,
+                    service_name: item.item_name
+                  }))
+                });
+              }
+            } catch (error) {
+              console.warn(`Failed to get service process for service ${item.service_id}:`, error);
+            }
+          }
+        }
+
+        if (serviceStepsByService.length === 0) {
+          console.warn("No service steps found for booking services");
+          notification.warning({
+            message: "Cảnh báo",
+            description: "Không tìm thấy quy trình dịch vụ để tạo tracking",
+        placement: "topRight",
+      });
+          return;
+        }
+
+        // Create tracking for each step in each service
+        const createdTrackings = [];
+        for (const serviceData of serviceStepsByService) {
+          console.log(`🎯 Creating trackings for service: ${serviceData.service_name} (${serviceData.service_id})`);
+          
+          for (const step of serviceData.steps) {
+            try {
+              const trackingRequest: CreateServiceProcessTrackingRequest = {
+                booking_id: booking.booking_id,
+                service_step_id: step.id,
+                car_service_id: step.service_id, // ID của service mà booking đã đặt
+                bay_id: booking.bay_id || "",
+                status: TrackingStatus.PENDING,
+                notes: `Tự động tạo tracking cho bước: ${step.name} (${serviceData.service_name})`,
+              };
+
+              const createdTracking = await ServiceProcessTrackingService.createTracking(trackingRequest);
+              createdTrackings.push(createdTracking);
+              console.log(`✅ Created tracking for step: ${step.name} in service: ${serviceData.service_name}`);
+            } catch (error) {
+              console.error(`❌ Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`, error);
+            }
+          }
+        }
+
+        if (createdTrackings.length > 0) {
+          notification.success({
+            message: "Thành công",
+            description: `Đã tạo ${createdTrackings.length} tracking tự động`,
+            placement: "topRight",
+          });
+
+          // Mark as created and call callback
+          hasCreatedTrackingRef.current = true;
+                      if (onTrackingCreated) {
+                        onTrackingCreated();
+          }
+
+          // Refresh tracking data
+          const freshTrackings = await ServiceProcessTrackingService.getTrackingsByBooking(booking.booking_id);
+          setTrackingsState(freshTrackings);
+        } else {
+          notification.error({
+            message: "Lỗi",
+            description: "Không thể tạo tracking tự động",
+            placement: "topRight",
+          });
+        }
+    } catch (error) {
+        console.error("❌ Auto-create tracking error:", error);
+      notification.error({
+        message: "Lỗi",
+          description: "Có lỗi xảy ra khi tạo tracking tự động",
+        placement: "topRight",
+      });
+    } finally {
+        setIsCreatingTracking(false);
+    }
+  };
+
+    autoCreateTracking();
+  }, [shouldCreateTracking, open, booking.booking_id, booking.booking_items, booking.bay_id, technicians, onTrackingCreated, notification, isCreatingTracking]);
+
   const handleViewDetail = (tracking: ServiceProcessTrackingInfoDto) => {
+    console.log("🔍 Opening tracking detail modal for:", tracking.trackingId);
     setSelectedTracking(tracking);
     setDetailModalOpen(true);
   };
@@ -408,12 +530,17 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
           </Card>
 
           {/* Services with Steps */}
-          {isInitializing ? (
-            <Card size="small" title="Đang tải thông tin tracking...">
+          {isInitializing || isCreatingTracking ? (
+            <Card size="small" title={isCreatingTracking ? "Đang tạo tracking tự động..." : "Đang tải thông tin tracking..."}>
               <div style={{ textAlign: "center", padding: "20px" }}>
                 <Progress type="circle" percent={75} />
                 <div style={{ marginTop: 16 }}>
-                  <Text>Đang tải thông tin dịch vụ và tracking...</Text>
+                  <Text>
+                    {isCreatingTracking 
+                      ? "Đang tạo tracking tự động cho các bước dịch vụ..." 
+                      : "Đang tải thông tin dịch vụ và tracking..."
+                    }
+                  </Text>
                 </div>
               </div>
             </Card>
@@ -560,7 +687,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
                               ) : (
                                 <Button
                                   type="default"
-                                  size="small"
+              size="small"
                                   disabled
                                   style={{ color: "#999" }}
                                 >
@@ -573,7 +700,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
                       );
                     })}
                   </div>
-                </Card>
+          </Card>
               ))}
             </div>
           )}

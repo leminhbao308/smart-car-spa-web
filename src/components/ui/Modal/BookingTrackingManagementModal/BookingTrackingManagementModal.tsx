@@ -168,13 +168,15 @@ const BookingTrackingManagementModal: React.FC<
         console.log(`🔍 Processing tracking ${tracking.trackingId}:`, {
           serviceStepId: tracking.serviceStepId,
           carServiceId: tracking.carServiceId,
-          serviceStepName: tracking.serviceStepName
+          serviceStepName: tracking.serviceStepName,
         });
 
         // Priority 1: Use carServiceId if available and valid
         if (tracking.carServiceId && serviceMap.has(tracking.carServiceId)) {
           assignedServiceId = tracking.carServiceId;
-          console.log(`✅ Assigned tracking to service by carServiceId: ${assignedServiceId}`);
+          console.log(
+            `✅ Assigned tracking to service by carServiceId: ${assignedServiceId}`
+          );
         } else {
           // Priority 2: Try to find which service this tracking belongs to using cached data
           for (const [serviceId, cachedData] of serviceProcessCache.entries()) {
@@ -184,7 +186,9 @@ const BookingTrackingManagementModal: React.FC<
 
             if (stepBelongsToService) {
               assignedServiceId = serviceId;
-              console.log(`✅ Assigned tracking to service by step mapping: ${assignedServiceId}`);
+              console.log(
+                `✅ Assigned tracking to service by step mapping: ${assignedServiceId}`
+              );
               break; // Found the correct service, stop looking
             }
           }
@@ -192,38 +196,49 @@ const BookingTrackingManagementModal: React.FC<
           // Priority 3: If we couldn't determine the service, assign to the first available service
           if (!assignedServiceId && serviceMap.size > 0) {
             assignedServiceId = Array.from(serviceMap.keys())[0];
-            console.log(`⚠️ Fallback: Assigned tracking to first available service: ${assignedServiceId}`);
+            console.log(
+              `⚠️ Fallback: Assigned tracking to first available service: ${assignedServiceId}`
+            );
           }
         }
 
         if (assignedServiceId && serviceMap.has(assignedServiceId)) {
           const service = serviceMap.get(assignedServiceId)!;
           service.trackings.push(tracking);
-          console.log(`📝 Added tracking to service "${service.serviceName}" (${service.trackings.length} trackings)`);
+          console.log(
+            `📝 Added tracking to service "${service.serviceName}" (${service.trackings.length} trackings)`
+          );
         } else {
-          console.warn(`❌ Could not assign tracking ${tracking.trackingId} to any service`);
+          console.warn(
+            `❌ Could not assign tracking ${tracking.trackingId} to any service`
+          );
         }
       }
 
-      // Sort trackings by step order within each service
-      const services = Array.from(serviceMap.values()).map((service) => ({
-        ...service,
-        trackings: service.trackings.sort(
-          (a, b) => (a.serviceStepOrder || 0) - (b.serviceStepOrder || 0)
-        ),
-      }));
+      // Filter out services that have no trackings and sort trackings by step order
+      const services = Array.from(serviceMap.values())
+        .filter((service) => service.trackings.length > 0)
+        .map((service) => ({
+          ...service,
+          trackings: service.trackings.sort(
+            (a, b) => (a.serviceStepOrder || 0) - (b.serviceStepOrder || 0)
+          ),
+        }));
 
-      console.log("📊 Final grouped services:", services.map(service => ({
-        serviceName: service.serviceName,
-        serviceId: service.serviceId,
-        trackingCount: service.trackings.length,
-        trackings: service.trackings.map(t => ({
-          trackingId: t.trackingId,
-          serviceStepName: t.serviceStepName,
-          carServiceId: t.carServiceId,
-          status: t.status
+      console.log(
+        "📊 Final grouped services:",
+        services.map((service) => ({
+          serviceName: service.serviceName,
+          serviceId: service.serviceId,
+          trackingCount: service.trackings.length,
+          trackings: service.trackings.map((t) => ({
+            trackingId: t.trackingId,
+            serviceStepName: t.serviceStepName,
+            carServiceId: t.carServiceId,
+            status: t.status,
+          })),
         }))
-      })));
+      );
 
       setServicesWithTrackings(services);
     } catch (error) {
@@ -512,6 +527,67 @@ const BookingTrackingManagementModal: React.FC<
             </Row>
           </Card>
 
+          {/* Services Summary */}
+          {servicesWithTrackings.length > 0 && (
+            <Card size="small" title="Tổng quan dịch vụ">
+              <Row gutter={[16, 8]}>
+                {servicesWithTrackings.map((service, index) => {
+                  const completedInService = service.trackings.filter(
+                    (t) => t.status === TrackingStatus.COMPLETED
+                  ).length;
+                  const serviceProgress =
+                    service.trackings.length > 0
+                      ? Math.round(
+                          (completedInService / service.trackings.length) * 100
+                        )
+                      : 0;
+
+                  return (
+                    <Col span={12} key={service.serviceId}>
+                      <div
+                        style={{
+                          padding: "12px",
+                          backgroundColor: "#f8f9fa",
+                          borderRadius: "6px",
+                          border: "1px solid #e9ecef",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginBottom: 8,
+                          }}
+                        >
+                          <Tag color="blue" style={{ fontSize: 10 }}>
+                            Dịch vụ {index + 1}
+                          </Tag>
+                          <Text strong style={{ fontSize: 14 }}>
+                            {service.serviceName}
+                          </Text>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#666" }}>
+                          <div>
+                            Bước: {completedInService}/
+                            {service.trackings.length}
+                          </div>
+                          <Progress
+                            percent={serviceProgress}
+                            size="small"
+                            strokeColor={
+                              serviceProgress === 100 ? "#52c41a" : "#1890ff"
+                            }
+                          />
+                        </div>
+                      </div>
+                    </Col>
+                  );
+                })}
+              </Row>
+            </Card>
+          )}
+
           {/* Services and Trackings */}
           {loading ? (
             <div style={{ textAlign: "center", padding: "40px" }}>
@@ -522,7 +598,7 @@ const BookingTrackingManagementModal: React.FC<
             </div>
           ) : (
             <div>
-              {servicesWithTrackings.map((service) => (
+              {servicesWithTrackings.map((service, serviceIndex) => (
                 <Card
                   key={service.serviceId}
                   size="small"
@@ -533,9 +609,20 @@ const BookingTrackingManagementModal: React.FC<
                       <ToolOutlined style={{ color: "#1890ff" }} />
                       <span>{service.serviceName}</span>
                       <Tag color="blue">{service.trackings.length} bước</Tag>
+                      <Tag color="green" style={{ fontSize: 10 }}>
+                        Dịch vụ {serviceIndex + 1}
+                      </Tag>
                     </div>
                   }
-                  style={{ marginBottom: 16 }}
+                  style={{
+                    marginBottom: 16,
+                    border: "2px solid #e6f7ff",
+                    borderRadius: "8px",
+                  }}
+                  headStyle={{
+                    backgroundColor: "#f0f8ff",
+                    borderBottom: "1px solid #d6e4ff",
+                  }}
                 >
                   <div>
                     {service.trackings.map((tracking, index) => {
@@ -617,6 +704,13 @@ const BookingTrackingManagementModal: React.FC<
                                   >
                                     • Thời gian thực tế:{" "}
                                     {tracking.actualDuration} phút
+                                  </span>
+                                )}
+                                {tracking.carServiceId && (
+                                  <span
+                                    style={{ marginLeft: 8, color: "#1890ff" }}
+                                  >
+                                    • Service ID: {tracking.carServiceId}
                                   </span>
                                 )}
                               </div>

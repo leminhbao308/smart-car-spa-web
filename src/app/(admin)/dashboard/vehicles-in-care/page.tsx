@@ -37,7 +37,9 @@ import {
 } from "@/lib/api/hooks/useBooking";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookingInfoDto, BookingStatus } from "@/lib/api/types/booking.types";
-import { ServiceProcessTrackingInfoDto } from "@/lib/api/types/service-process-tracking.types";
+import { ServiceProcessTrackingInfoDto, CreateServiceProcessTrackingRequest, TrackingStatus } from "@/lib/api/types/service-process-tracking.types";
+import { ServiceProcessService } from "@/lib/api/services/service-process.service";
+import { ServiceProcessTrackingService } from "@/lib/api/services/service-process-tracking.service";
 
 const { Text } = Typography;
 
@@ -109,7 +111,6 @@ const VehiclesInCarePage = () => {
     useState<ServiceProcessTrackingInfoDto | null>(null);
   const [selectedStepName, setSelectedStepName] = useState<string>("");
   const [bookingTrackingModalOpen, setBookingTrackingModalOpen] = useState(false);
-  const [shouldCreateTracking, setShouldCreateTracking] = useState(false);
   const { notification } = App.useApp();
 
   // API hooks - Load bookings with multiple statuses
@@ -367,6 +368,101 @@ const VehiclesInCarePage = () => {
     setConfirmModalOpen(true);
   };
 
+  // Auto-create tracking function
+  const autoCreateTrackingForBooking = async (booking: BookingInfoDto) => {
+    try {
+      console.log("🔍 Auto-creating tracking for booking:", booking.booking_id);
+      console.log("📋 Booking items:", booking.booking_items);
+
+      if (!booking.booking_items || booking.booking_items.length === 0) {
+        console.log("⚠️ No booking items found, skipping auto-create");
+        return;
+      }
+
+      const createdTrackings: ServiceProcessTrackingInfoDto[] = [];
+      const serviceStepsByService: Array<{
+        service_id: string;
+        service_name: string;
+        steps: Array<{
+          id: string;
+          name: string;
+          service_id: string;
+          service_name: string;
+          [key: string]: unknown;
+        }>;
+      }> = [];
+
+      // Lấy process steps cho từng service trong booking
+      for (const item of booking.booking_items || []) {
+        if (item.service_id) {
+          try {
+            console.log(`🔍 Processing service: ${item.service_id} - ${item.item_name}`);
+            const serviceProcess = await ServiceProcessService.getServiceProcessByServiceId(item.service_id);
+            if (serviceProcess?.process_steps || serviceProcess?.processSteps) {
+              const steps = serviceProcess.process_steps || serviceProcess.processSteps || [];
+              console.log(`📋 Found ${steps.length} steps for service ${item.service_id}`);
+              
+              serviceStepsByService.push({
+                service_id: item.service_id,
+                service_name: item.item_name,
+                steps: steps.map(step => ({
+                  ...step,
+                  service_id: item.service_id!,
+                  service_name: item.item_name
+                }))
+              });
+            }
+          } catch (error) {
+            console.warn(`Failed to get service process for service ${item.service_id}:`, error);
+          }
+        }
+      }
+
+      console.log("📊 Service steps by service:", serviceStepsByService);
+
+      // Tạo tracking cho từng step trong từng service
+      for (const serviceData of serviceStepsByService) {
+        console.log(`🎯 Creating trackings for service: ${serviceData.service_name} (${serviceData.service_id})`);
+        
+        for (const step of serviceData.steps) {
+          try {
+            const trackingRequest: CreateServiceProcessTrackingRequest = {
+              booking_id: booking.booking_id,
+              service_step_id: step.id,
+              car_service_id: step.service_id, // ID của service mà booking đã đặt
+              bay_id: booking.bay_id || "",
+              status: TrackingStatus.PENDING,
+              notes: `Tự động tạo tracking cho bước: ${step.name} (${serviceData.service_name})`,
+            };
+            const createdTracking = await ServiceProcessTrackingService.createTracking(trackingRequest);
+            createdTrackings.push(createdTracking);
+            console.log(`✅ Created tracking for step: ${step.name} in service: ${serviceData.service_name}`);
+          } catch (error) {
+            console.error(`❌ Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`, error);
+          }
+        }
+      }
+
+      console.log(`🎉 Auto-created ${createdTrackings.length} tracking records`);
+      
+      if (createdTrackings.length > 0) {
+        notification.success({
+          message: "Thành công",
+          description: `Đã tự động tạo ${createdTrackings.length} tracking records`,
+          placement: "topRight",
+        });
+      }
+
+    } catch (error) {
+      console.error("❌ Error in auto-create tracking:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Có lỗi xảy ra khi tự động tạo tracking",
+        placement: "topRight",
+      });
+    }
+  };
+
   const handleConfirmAction = async () => {
     if (!confirmAction.record) return;
 
@@ -379,11 +475,9 @@ const VehiclesInCarePage = () => {
           placement: "topRight",
         });
 
-        // Auto-open tracking modal to create tracking records
-        console.log("🚀 Auto-opening tracking modal after start service");
-        setSelectedVehicle(confirmAction.record);
-        setShouldCreateTracking(true);
-        setDetailModalOpen(true);
+        // Auto-create tracking records directly here
+        console.log("🚀 Auto-creating tracking after start service");
+        await autoCreateTrackingForBooking(confirmAction.record);
       } else if (confirmAction.type === "cancel") {
         await cancelBookingMutation.mutateAsync({
           bookingId: confirmAction.record.booking_id,
@@ -609,18 +703,14 @@ const VehiclesInCarePage = () => {
             onCancel={() => {
               setDetailModalOpen(false);
               setSelectedVehicle(null);
-              setShouldCreateTracking(false);
             }}
             booking={selectedVehicle}
             trackings={trackingData || []}
-            shouldCreateTracking={shouldCreateTracking}
             onTrackingCreated={() => {
               // Refresh tracking data when new tracking is created
               if (selectedVehicle) {
                 handleUpdateTracking(selectedVehicle);
               }
-              // Reset shouldCreateTracking after tracking is created
-              setShouldCreateTracking(false);
             }}
           />
         )}
