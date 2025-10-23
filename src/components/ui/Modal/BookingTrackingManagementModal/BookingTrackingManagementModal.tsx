@@ -31,10 +31,12 @@ import {
 } from "@/lib/api/types/service-process-tracking.types";
 import { ServiceProcessTrackingService } from "@/lib/api/services/service-process-tracking.service";
 import { useQueryClient } from "@tanstack/react-query";
+import { BookingService, ServiceProcessService } from "@/lib/api";
 
 const { Text } = Typography;
 const { TextArea } = Input;
 
+// Prop types
 interface BookingTrackingManagementModalProps {
   open: boolean;
   onCancel: () => void;
@@ -55,7 +57,9 @@ const BookingTrackingManagementModal: React.FC<
   >([]);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
-  const [editingTracking, setEditingTracking] = useState<string | null>(null);
+  const [completingTracking, setCompletingTracking] = useState<string | null>(
+    null
+  );
   const [form] = Form.useForm();
 
   const { notification } = App.useApp();
@@ -135,9 +139,7 @@ const BookingTrackingManagementModal: React.FC<
       >();
 
       // Pre-load service process data for all services
-      const { ServiceProcessService } = await import(
-        "@/lib/api/services/service-process.service"
-      );
+
       for (const [serviceId] of serviceMap.entries()) {
         try {
           const serviceProcess =
@@ -165,18 +167,9 @@ const BookingTrackingManagementModal: React.FC<
       for (const tracking of trackings) {
         let assignedServiceId: string | null = null;
 
-        console.log(`🔍 Processing tracking ${tracking.trackingId}:`, {
-          serviceStepId: tracking.serviceStepId,
-          carServiceId: tracking.carServiceId,
-          serviceStepName: tracking.serviceStepName,
-        });
-
         // Priority 1: Use carServiceId if available and valid
         if (tracking.carServiceId && serviceMap.has(tracking.carServiceId)) {
           assignedServiceId = tracking.carServiceId;
-          console.log(
-            `✅ Assigned tracking to service by carServiceId: ${assignedServiceId}`
-          );
         } else {
           // Priority 2: Try to find which service this tracking belongs to using cached data
           for (const [serviceId, cachedData] of serviceProcessCache.entries()) {
@@ -186,9 +179,6 @@ const BookingTrackingManagementModal: React.FC<
 
             if (stepBelongsToService) {
               assignedServiceId = serviceId;
-              console.log(
-                `✅ Assigned tracking to service by step mapping: ${assignedServiceId}`
-              );
               break; // Found the correct service, stop looking
             }
           }
@@ -196,18 +186,12 @@ const BookingTrackingManagementModal: React.FC<
           // Priority 3: If we couldn't determine the service, assign to the first available service
           if (!assignedServiceId && serviceMap.size > 0) {
             assignedServiceId = Array.from(serviceMap.keys())[0];
-            console.log(
-              `⚠️ Fallback: Assigned tracking to first available service: ${assignedServiceId}`
-            );
           }
         }
 
         if (assignedServiceId && serviceMap.has(assignedServiceId)) {
           const service = serviceMap.get(assignedServiceId)!;
           service.trackings.push(tracking);
-          console.log(
-            `📝 Added tracking to service "${service.serviceName}" (${service.trackings.length} trackings)`
-          );
         } else {
           console.warn(
             `❌ Could not assign tracking ${tracking.trackingId} to any service`
@@ -225,24 +209,9 @@ const BookingTrackingManagementModal: React.FC<
           ),
         }));
 
-      console.log(
-        "📊 Final grouped services:",
-        services.map((service) => ({
-          serviceName: service.serviceName,
-          serviceId: service.serviceId,
-          trackingCount: service.trackings.length,
-          trackings: service.trackings.map((t) => ({
-            trackingId: t.trackingId,
-            serviceStepName: t.serviceStepName,
-            carServiceId: t.carServiceId,
-            status: t.status,
-          })),
-        }))
-      );
-
       setServicesWithTrackings(services);
     } catch (error) {
-      console.error("Error loading tracking data:", error);
+      console.log("Error loading tracking data:", error);
       notification.error({
         message: "Lỗi",
         description: "Không thể tải dữ liệu tracking",
@@ -299,49 +268,17 @@ const BookingTrackingManagementModal: React.FC<
     }
   };
 
-  const handleUpdateTracking = async (
-    tracking: ServiceProcessTrackingInfoDto
-  ) => {
-    try {
-      const values = await form.validateFields();
-
-      setUpdating(tracking.trackingId);
-
-      await ServiceProcessTrackingService.updateProgress(tracking.trackingId, {
-        notes: values.notes || undefined,
-        media_url: values.evidence_media_urls || undefined,
-        progress_percent: values.progress_percent || 90.0,
-      });
-
-      notification.success({
-        message: "Thành công",
-        description: "Đã cập nhật tracking",
-        placement: "topRight",
-      });
-
-      setEditingTracking(null);
-      form.resetFields();
-      await loadTrackingData();
-      queryClient.invalidateQueries({ queryKey: ["bookings"] });
-    } catch (error) {
-      console.error("Error updating tracking:", error);
-      notification.error({
-        message: "Lỗi",
-        description: "Không thể cập nhật tracking",
-        placement: "topRight",
-      });
-    } finally {
-      setUpdating(null);
-    }
-  };
-
   const handleCompleteTracking = async (
     tracking: ServiceProcessTrackingInfoDto
   ) => {
+    const values = await form.validateFields();
+
     setUpdating(tracking.trackingId);
+
     try {
       await ServiceProcessTrackingService.completeStep(tracking.trackingId, {
-        notes: "Hoàn thành bước",
+        notes: values.notes || "Hoàn thành bước",
+        evidence_media_urls: values.evidence_media_urls || undefined,
       });
 
       notification.success({
@@ -350,11 +287,13 @@ const BookingTrackingManagementModal: React.FC<
         placement: "topRight",
       });
 
+      setCompletingTracking(null);
+      form.resetFields();
       // Refresh data
       await loadTrackingData();
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
     } catch (error) {
-      console.error("Error completing tracking:", error);
+      console.log("Error completing tracking:", error);
       notification.error({
         message: "Lỗi",
         description: "Không thể hoàn thành bước",
@@ -365,28 +304,26 @@ const BookingTrackingManagementModal: React.FC<
     }
   };
 
-  const handleEditTracking = (tracking: ServiceProcessTrackingInfoDto) => {
-    setEditingTracking(tracking.trackingId);
+  // handle open form complete tracking ----- form complete tracking
+  const handleOpenFormCompleteTracking = (
+    tracking: ServiceProcessTrackingInfoDto
+  ) => {
+    setCompletingTracking(tracking.trackingId);
     form.setFieldsValue({
       notes: tracking.notes || "",
       evidence_media_urls: tracking.evidenceMediaUrls || "",
-      progress_percent: tracking.progressPercent || 0,
     });
   };
 
-  const handleCancelEdit = () => {
-    setEditingTracking(null);
+  // handle close form complete tracking ----- form complete tracking
+  const handleCloseFormCompleteTracking = () => {
+    setCompletingTracking(null);
     form.resetFields();
   };
 
   const handleCompleteBooking = async () => {
     setUpdating("complete-booking");
     try {
-      // Import booking service to complete booking
-      const { BookingService } = await import(
-        "@/lib/api/services/booking.service"
-      );
-
       await BookingService.completeService(booking.booking_id);
 
       notification.success({
@@ -407,7 +344,7 @@ const BookingTrackingManagementModal: React.FC<
         onCancel();
       }, 2000);
     } catch (error) {
-      console.error("Error completing booking:", error);
+      console.log("Error completing booking:", error);
       notification.error({
         message: "Lỗi",
         description: "Không thể hoàn thành booking",
@@ -470,7 +407,7 @@ const BookingTrackingManagementModal: React.FC<
                   type="primary"
                   icon={<CheckCircleOutlined />}
                   loading={updating === "complete-booking"}
-                  onClick={handleCompleteBooking}
+                  onClick={() => handleCompleteBooking}
                   style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
                 >
                   Hoàn thành booking
@@ -631,7 +568,6 @@ const BookingTrackingManagementModal: React.FC<
                         tracking,
                         service.trackings
                       );
-                      const isEditing = editingTracking === tracking.trackingId;
                       const isUpdating = updating === tracking.trackingId;
 
                       return (
@@ -746,29 +682,17 @@ const BookingTrackingManagementModal: React.FC<
 
                                 {tracking.status ===
                                   TrackingStatus.IN_PROGRESS && (
-                                  <>
-                                    <Button
-                                      type="default"
-                                      size="small"
-                                      icon={<EditOutlined />}
-                                      onClick={() =>
-                                        handleEditTracking(tracking)
-                                      }
-                                    >
-                                      Cập nhật
-                                    </Button>
-                                    <Button
-                                      type="primary"
-                                      size="small"
-                                      icon={<CheckCircleOutlined />}
-                                      loading={isUpdating}
-                                      onClick={() =>
-                                        handleCompleteTracking(tracking)
-                                      }
-                                    >
-                                      Hoàn thành
-                                    </Button>
-                                  </>
+                                  <Button
+                                    type="primary"
+                                    size="small"
+                                    icon={<CheckCircleOutlined />}
+                                    loading={isUpdating}
+                                    onClick={() =>
+                                      handleOpenFormCompleteTracking(tracking)
+                                    }
+                                  >
+                                    Hoàn thành
+                                  </Button>
                                 )}
 
                                 {tracking.status ===
@@ -784,8 +708,8 @@ const BookingTrackingManagementModal: React.FC<
                             </div>
                           </div>
 
-                          {/* Edit Form */}
-                          {isEditing && (
+                          {/* Confirm Form */}
+                          {completingTracking === tracking.trackingId && (
                             <Card
                               size="small"
                               style={{
@@ -806,7 +730,9 @@ const BookingTrackingManagementModal: React.FC<
                                 </Row>
                                 <div style={{ textAlign: "right" }}>
                                   <Space>
-                                    <Button onClick={handleCancelEdit}>
+                                    <Button
+                                      onClick={handleCloseFormCompleteTracking}
+                                    >
                                       Hủy
                                     </Button>
                                     <Button
@@ -814,10 +740,10 @@ const BookingTrackingManagementModal: React.FC<
                                       icon={<SaveOutlined />}
                                       loading={isUpdating}
                                       onClick={() =>
-                                        handleUpdateTracking(tracking)
+                                        handleCompleteTracking(tracking)
                                       }
                                     >
-                                      Lưu
+                                      Hoàn thành
                                     </Button>
                                   </Space>
                                 </div>

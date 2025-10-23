@@ -624,7 +624,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const renderCustomerVehicleStep = () => (
     <div>
-      <Row gutter={16}>
+      <Row gutter={16}> 
         <Col span={12}>
           <Card
             size="small"
