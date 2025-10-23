@@ -158,7 +158,6 @@ const BookingsPage = () => {
   const {
     confirmBookingWithInventory,
     cancelBookingWithInventory,
-    startServiceWithInventory,
   } = useBookingWithInventory();
 
   // Fetch additional data for enrichment
@@ -554,14 +553,7 @@ const BookingsPage = () => {
       content: `Bạn có chắc chắn muốn hủy lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
       type: "error",
       onConfirm: async () => {
-        try {
-          console.log("🔄 Starting cancel booking with inventory release:", {
-            bookingId: record.booking_id,
-            bookingCode: record.booking_code,
-            branchId: record.branch_id,
-            status: record.status
-          });
-          
+        try {          
           // Use enhanced hook with inventory release
           await cancelBookingWithInventory(
             record, 
@@ -569,8 +561,6 @@ const BookingsPage = () => {
             "Hủy bởi admin", 
             "admin"
           );
-          
-          console.log("✅ Successfully cancelled booking and released inventory:", record.booking_id);
           notification.success({
             message: "Thành công",
             description: "Hủy lịch đặt và hoàn trả sản phẩm thành công",
@@ -578,12 +568,6 @@ const BookingsPage = () => {
           });
         } catch (error) {
           console.error("❌ Error cancelling booking with inventory:", error);
-          console.error("❌ Error details:", {
-            bookingId: record.booking_id,
-            error: error,
-            errorMessage: error?.message,
-            errorResponse: error?.response?.data
-          });
           notification.error({
             message: "Lỗi",
             description: "Có lỗi xảy ra khi hủy lịch đặt hoặc hoàn trả sản phẩm",

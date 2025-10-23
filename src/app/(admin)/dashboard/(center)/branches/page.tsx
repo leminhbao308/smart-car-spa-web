@@ -34,10 +34,6 @@ const BranchesPage = () => {
   const [editData, setEditData] = useState<BranchDisplay | null>(null);
   const { showModal } = useConfirmationModalContext();
 
-  useEffect(() => {
-    console.log(centers);
-  }, [centers]);
-
   // Mock pagination for now
   const pagination = {
     page: 0,

@@ -461,12 +461,6 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         <Button
           type="primary"
           onClick={() => {
-            console.log("🔧 PaymentModal: onPayment clicked", {
-              paymentMethod,
-              receivedAmount,
-              totalAmount,
-              isCreatingOrder
-            });
             onPayment();
           }}
           loading={isCreatingOrder}

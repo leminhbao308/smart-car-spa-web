@@ -58,17 +58,6 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
   const deleteCategoryMutation = useDeleteCategory();
   const updateStatusMutation = useUpdateCategoryStatus();
 
-  // Debug: Log tree data structure
-  React.useEffect(() => {
-    if (treeData.length > 0) {
-      console.log("Tree Data Structure:", treeData);
-      console.log("First root category:", treeData[0]);
-      if (treeData[0]?.children) {
-        console.log("First root children:", treeData[0].children);
-      }
-    }
-  }, [treeData]);
-
   // Filter data based on search and filters
   const filteredData = React.useMemo(() => {
     let filtered = treeData;

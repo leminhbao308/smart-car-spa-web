@@ -13,14 +13,6 @@ const GeneralInformationPage = () => {
   // Get the first center (assuming single center for now)
   const centerInfo = centers.length > 0 ? centers[0] : null;
 
-  // Debug: Log centers data changes
-  useEffect(() => {
-    console.log("Centers data changed:", centers);
-    if (centers.length > 0) {
-      console.log("Current center info:", centers[0]);
-    }
-  }, [centers]);
-
   const handleEdit = () => {
     setEditModalOpen(true);
   };
@@ -33,9 +25,7 @@ const GeneralInformationPage = () => {
       // We just need to refresh data first, then close modal and show success message
 
       // Refresh data from API to get updated information
-      console.log("Refreshing centers data...");
       await refreshCenters();
-      console.log("Centers data refreshed successfully");
 
       // Force re-render by updating refresh key
       setRefreshKey((prev) => prev + 1);

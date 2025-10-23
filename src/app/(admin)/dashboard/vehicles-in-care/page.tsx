@@ -345,21 +345,6 @@ const VehiclesInCarePage = () => {
     },
   ];
 
-  const handlePayment = (record: BookingInfoDto) => {
-    const bookingId = record.booking_id;
-    const totalPrice = record.total_price || 0;
-
-    // TODO: Implement payment processing logic
-    console.log("Booking ID:", bookingId);
-    console.log("Total Price:", totalPrice);
-
-    notification.success({
-      message: "Thành công",
-      description: "Xử lý thanh toán thành công",
-      placement: "topRight",
-    });
-  };
-
   const handleUpdateTracking = async (record: BookingInfoDto) => {
     setSelectedVehicle(record);
     setBookingTrackingModalOpen(true);
@@ -378,11 +363,8 @@ const VehiclesInCarePage = () => {
   // Auto-create tracking function
   const autoCreateTrackingForBooking = async (booking: BookingInfoDto) => {
     try {
-      console.log("🔍 Auto-creating tracking for booking:", booking.booking_id);
-      console.log("📋 Booking items:", booking.booking_items);
 
       if (!booking.booking_items || booking.booking_items.length === 0) {
-        console.log("⚠️ No booking items found, skipping auto-create");
         return;
       }
 
@@ -403,11 +385,9 @@ const VehiclesInCarePage = () => {
       for (const item of booking.booking_items || []) {
         if (item.service_id) {
           try {
-            console.log(`🔍 Processing service: ${item.service_id} - ${item.item_name}`);
             const serviceProcess = await ServiceProcessService.getServiceProcessByServiceId(item.service_id);
             if (serviceProcess?.process_steps || serviceProcess?.processSteps) {
               const steps = serviceProcess.process_steps || serviceProcess.processSteps || [];
-              console.log(`📋 Found ${steps.length} steps for service ${item.service_id}`);
               
               serviceStepsByService.push({
                 service_id: item.service_id,
@@ -425,12 +405,8 @@ const VehiclesInCarePage = () => {
         }
       }
 
-      console.log("📊 Service steps by service:", serviceStepsByService);
-
       // Tạo tracking cho từng step trong từng service
       for (const serviceData of serviceStepsByService) {
-        console.log(`🎯 Creating trackings for service: ${serviceData.service_name} (${serviceData.service_id})`);
-        
         for (const step of serviceData.steps) {
           try {
             const trackingRequest: CreateServiceProcessTrackingRequest = {
@@ -443,14 +419,11 @@ const VehiclesInCarePage = () => {
             };
             const createdTracking = await ServiceProcessTrackingService.createTracking(trackingRequest);
             createdTrackings.push(createdTracking);
-            console.log(`✅ Created tracking for step: ${step.name} in service: ${serviceData.service_name}`);
           } catch (error) {
             console.error(`❌ Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`, error);
           }
         }
       }
-
-      console.log(`🎉 Auto-created ${createdTrackings.length} tracking records`);
       
       if (createdTrackings.length > 0) {
         notification.success({
@@ -484,7 +457,6 @@ const VehiclesInCarePage = () => {
         });
 
         // Auto-create tracking records directly here
-        console.log("🚀 Auto-creating tracking after start service");
         await autoCreateTrackingForBooking(confirmAction.record);
       } else if (confirmAction.type === "cancel") {
         // Use enhanced hook with inventory release

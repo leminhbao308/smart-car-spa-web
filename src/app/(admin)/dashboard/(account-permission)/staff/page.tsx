@@ -183,10 +183,8 @@ const StaffPage = () => {
 
   const handleStaffModalSuccess = async () => {
     // Refresh the data after successful operation
-    console.log("StaffPage: Refreshing data after modal success...");
     try {
       await refreshUsers();
-      console.log("StaffPage: Data refreshed successfully");
     } catch (error) {
       console.error("StaffPage: Error refreshing data:", error);
     }
@@ -232,7 +230,6 @@ const StaffPage = () => {
             `${range[0]}-${range[1]} của ${total} nhân viên`,
           pageSizeOptions: ["10", "20", "50", "100"],
           onChange: (page: number, pageSize: number) => {
-            console.log("Staff Page: Pagination changed", { page, pageSize });
             if (pageSize !== pagination?.size) {
               changePageSize(pageSize || 10);
             } else {
@@ -240,7 +237,6 @@ const StaffPage = () => {
             }
           },
           onShowSizeChange: (current: number, size: number) => {
-            console.log("Staff Page: Page size changed", { current, size });
             changePageSize(size);
           },
         }}

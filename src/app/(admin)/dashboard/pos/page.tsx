@@ -240,9 +240,6 @@ const POSPage = () => {
           serviceItem.fixed_price !== null &&
           serviceItem.fixed_price > 0
         ) {
-          console.log(
-            `💰 Found service ${serviceId} in price book with fixed_price: ${serviceItem.fixed_price}`
-          );
           return serviceItem.fixed_price;
         }
 
@@ -462,17 +459,7 @@ const POSPage = () => {
       let customerInfo: UserManagementInfo | null = null;
       if (booking.customer_id) {
         try {
-          console.log(
-            `🔍 Fetching customer info for customer_id: ${booking.customer_id}`
-          );
           customerInfo = await UserService.getUserById(booking.customer_id);
-          console.log(`✅ Customer info fetched:`, {
-            user_id: customerInfo.user_id,
-            full_name: customerInfo.full_name,
-            phone_number: customerInfo.phone_number,
-            email: customerInfo.email,
-            user_type: customerInfo.user_type,
-          });
 
           // Auto-set selected customer
           setSelectedCustomer(customerInfo);
@@ -521,26 +508,13 @@ const POSPage = () => {
 
         // Get service price from price book (NO FALLBACK to tax_amount)
         const servicePrice = await getServicePrice(bookingItem.service_id);
-        console.log(
-          `🔍 Service ${bookingItem.service_id} (${bookingItem.item_name}):`
-        );
-        console.log(`  - Price from price book: ${servicePrice}`);
-        console.log(
-          `  - Booking tax_amount (IGNORED): ${bookingItem.tax_amount || 0}`
-        );
 
         if (servicePrice === 0) {
-          console.warn(
-            `No price found in price book for service ${bookingItem.service_id}, skipping this service`
-          );
           continue; // Skip this service if no price in price book
         }
 
         // Use ONLY price from price book
         const finalPrice = servicePrice;
-        console.log(
-          `  - Final price used (from price book only): ${finalPrice}`
-        );
 
         // Create service cart item
         const serviceCartItem: CartItem = {
@@ -712,31 +686,17 @@ const POSPage = () => {
 
   // Payment Success Handler
   const handlePaymentSuccess = useCallback(async () => {
-    console.log("🎉 handlePaymentSuccess: Starting payment success handling");
     setIsPolling(false);
     message.success("Thanh toán thành công!");
 
     // Collect unique booking IDs from service items in cart
     const bookingIds = new Set<string>();
-    console.log("🔍 handlePaymentSuccess: Analyzing cart items:", cart);
 
     cart.forEach((item) => {
-      console.log("🔍 Cart item:", {
-        isServiceItem: item.isServiceItem,
-        originalBookingId: item.originalBookingId,
-        productName: item.productName,
-      });
-
       if (item.isServiceItem && item.originalBookingId) {
         bookingIds.add(item.originalBookingId);
-        console.log("✅ Added booking ID to set:", item.originalBookingId);
       }
     });
-
-    console.log(
-      "📊 handlePaymentSuccess: Collected booking IDs:",
-      Array.from(bookingIds)
-    );
 
     // Mark bookings as paid
     if (bookingIds.size > 0) {
@@ -754,10 +714,6 @@ const POSPage = () => {
         await Promise.all(markPaidPromises);
         hide();
 
-        console.log(
-          `✅ Successfully marked ${bookingIds.size} bookings as paid:`,
-          Array.from(bookingIds)
-        );
         message.success(
           `Đã cập nhật trạng thái thanh toán cho ${bookingIds.size} booking!`
         );
@@ -773,11 +729,8 @@ const POSPage = () => {
       }
     }
 
-    console.log("🔍 handlePaymentSuccess: currentOrderId:", currentOrderId);
-
     if (currentOrderId) {
       try {
-        console.log("🔧 Fulfilling order:", currentOrderId);
         const hide = message.loading("Đang hoàn thành đơn hàng...", 0);
         await fulfillOrder(currentOrderId);
         hide();
@@ -850,15 +803,6 @@ const POSPage = () => {
   }, [cart.length, selectedBranch, getTotalAmount]);
 
   useEffect(() => {
-    console.log("🔄 Payment polling effect triggered:", {
-      paymentStatus,
-      isPolling,
-      orderCode,
-      hasPaymentStatus: !!paymentStatus,
-      status: paymentStatus?.status,
-      transactionId: paymentStatus?.transaction_id,
-    });
-
     if (!paymentStatus || !isPolling) return;
 
     // Check for completed payment
@@ -866,18 +810,9 @@ const POSPage = () => {
       paymentStatus.status === "COMPLETED" ||
       (paymentStatus.status === "PENDING" && paymentStatus.transaction_id);
 
-    console.log("🔍 Payment completion check:", {
-      status: paymentStatus.status,
-      transactionId: paymentStatus.transaction_id,
-      isPaymentCompleted,
-      isPolling,
-    });
-
     if (isPaymentCompleted) {
-      console.log("✅ Payment completed, calling handlePaymentSuccess");
       handlePaymentSuccess();
     } else if (paymentStatus.status === "CANCELED") {
-      console.log("❌ Payment cancelled, calling handlePaymentCancelled");
       handlePaymentCancelled();
     } else {
       console.log("⏳ Payment still pending, continuing to poll...");
@@ -899,18 +834,11 @@ const POSPage = () => {
     const remaining = timeoutDuration - elapsed;
 
     if (remaining <= 0) {
-      console.log("⏰ Payment timeout reached, assuming payment successful");
       handlePaymentSuccess();
       return;
     }
 
-    console.log(
-      `⏰ Payment timeout in ${Math.round(remaining / 1000)} seconds`
-    );
     const timeoutId = setTimeout(() => {
-      console.log(
-        "⏰ Payment timeout reached, assuming payment successful - calling handlePaymentSuccess"
-      );
       handlePaymentSuccess();
     }, remaining);
 
@@ -918,14 +846,6 @@ const POSPage = () => {
   }, [isPolling, paymentStartTime, paymentMethod, handlePaymentSuccess]);
 
   const handlePayment = useCallback(async () => {
-    console.log("🔧 handlePayment: Starting payment process", {
-      paymentMethod,
-      receivedAmount,
-      totalAmount: cartSummary?.finalTotal || getTotalAmount(),
-      cartItems: cart.length,
-      selectedBranch: selectedBranch?.branch_name,
-    });
-
     // Validation for cash payment
     if (
       paymentMethod === "CASH" &&
@@ -961,31 +881,20 @@ const POSPage = () => {
           if (item.isServiceItem) {
             // For service items, set product_id to null (no foreign key constraint)
             lineItem.product_id = null;
-            console.log(`🔧 Service item - ProductId set to NULL`);
           } else {
             // For product items, use the actual product_id
             lineItem.product_id = item.productId;
-            console.log(`🔧 Product item - ProductId: ${item.productId}`);
           }
 
           // Add service item fields if present
           if (item.isServiceItem && item.serviceId) {
             lineItem.service_id = item.serviceId;
-            console.log(
-              `🔧 Adding service item to payment - ServiceId: ${item.serviceId}`
-            );
           }
           if (item.originalBookingId) {
             lineItem.original_booking_id = item.originalBookingId;
-            console.log(
-              `🔧 Adding booking context to payment - BookingId: ${item.originalBookingId}`
-            );
           }
           if (item.originalBookingCode) {
             lineItem.original_booking_code = item.originalBookingCode;
-            console.log(
-              `🔧 Adding booking code to payment - BookingCode: ${item.originalBookingCode}`
-            );
           }
 
           return lineItem;
@@ -1000,7 +909,6 @@ const POSPage = () => {
       hide();
 
       if (response.order?.id) {
-        console.log("🔧 Setting currentOrderId:", response.order.id);
         setCurrentOrderId(response.order.id);
       } else {
         console.log("⚠️ No order ID in response:", response);
@@ -1012,28 +920,13 @@ const POSPage = () => {
 
         // Collect unique booking IDs from service items in cart
         const bookingIds = new Set<string>();
-        console.log("🔍 CASH Payment: Analyzing cart items:", cart);
 
         cart.forEach((item) => {
-          console.log("🔍 CASH Cart item:", {
-            isServiceItem: item.isServiceItem,
-            originalBookingId: item.originalBookingId,
-            productName: item.productName,
-          });
-
           if (item.isServiceItem && item.originalBookingId) {
             bookingIds.add(item.originalBookingId);
-            console.log(
-              "✅ CASH Added booking ID to set:",
-              item.originalBookingId
-            );
+
           }
         });
-
-        console.log(
-          "📊 CASH Payment: Collected booking IDs:",
-          Array.from(bookingIds)
-        );
 
         // Mark bookings as paid
         if (bookingIds.size > 0) {
@@ -1051,10 +944,6 @@ const POSPage = () => {
             await Promise.all(markPaidPromises);
             hide();
 
-            console.log(
-              `✅ CASH Successfully marked ${bookingIds.size} bookings as paid:`,
-              Array.from(bookingIds)
-            );
             message.success(
               `Đã cập nhật trạng thái thanh toán cho ${bookingIds.size} booking!`
             );

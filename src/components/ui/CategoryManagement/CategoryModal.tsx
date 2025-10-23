@@ -65,7 +65,6 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
           parent_category_id: category.parent_category_id || null,
           is_active: category.is_active,
         };
-        console.log("Setting edit values:", editValues);
         form.setFieldsValue(editValues);
       } else if (isSubCategory && parentCategory) {
         const subCategoryValues = {
@@ -73,7 +72,6 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
           category_type: parentCategory.category_type, // Inherit type from parent
           is_active: true,
         };
-        console.log("Setting sub-category values:", subCategoryValues);
         form.setFieldsValue(subCategoryValues);
       } else {
         form.resetFields();
@@ -81,7 +79,6 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
           parent_category_id: null, // Root category
           is_active: true,
         };
-        console.log("Setting new category values:", newCategoryValues);
         form.setFieldsValue(newCategoryValues);
       }
     }
@@ -91,7 +88,6 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
     try {
       // Debug: Log current form values before validation
       const currentValues = form.getFieldsValue();
-      console.log("Current form values:", currentValues);
 
       // Check if form is properly initialized
       if (!form) {
@@ -99,7 +95,6 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
       }
 
       const values = await form.validateFields();
-      console.log("Validated form values:", values);
 
       // Additional validation checks
       if (!values.category_name || values.category_name.trim() === "") {

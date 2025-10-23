@@ -143,10 +143,6 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
       if (initialData) {
         const data = initialData as CenterDisplay;
 
-        // Debug log to check data structure
-        console.log("Initial data:", data);
-        console.log("Business hours:", data.business_hours);
-
         // Parse business hours with safe fallback - handle both CenterDisplay and Record types
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const businessHours = (data as any).business_hours || {};

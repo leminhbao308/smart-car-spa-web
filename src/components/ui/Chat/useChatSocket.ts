@@ -34,7 +34,6 @@ const useChatSocket = ({
     // Simulate connection
     const connect = () => {
       setIsConnected(true);
-      console.log("Mock WebSocket connected");
     };
 
     connect();
@@ -58,7 +57,6 @@ const useChatSocket = ({
     };
 
     // In real app, send via WebSocket
-    console.log("Sending message:", message);
 
     // Simulate receiving the message back (echo)
     setTimeout(() => {
@@ -85,8 +83,6 @@ const useChatSocket = ({
       fileSize: file.size,
     };
 
-    console.log("Sending file:", message);
-
     // Simulate receiving the message back
     setTimeout(() => {
       onNewMessage?.(message);
@@ -102,7 +98,6 @@ const useChatSocket = ({
     }
 
     // Send typing status
-    console.log("Typing:", isTyping);
     onTyping?.(userId, isTyping);
 
     // Auto-stop typing after 3 seconds
@@ -116,14 +111,11 @@ const useChatSocket = ({
   const joinRoom = (newRoomId: string) => {
     if (!isConnected) return;
 
-    console.log("Joining room:", newRoomId);
     // In real app, emit 'join-room' event
   };
 
   const leaveRoom = (roomIdToLeave: string) => {
     if (!isConnected) return;
-
-    console.log("Leaving room:", roomIdToLeave);
     // In real app, emit 'leave-room' event
   };
 

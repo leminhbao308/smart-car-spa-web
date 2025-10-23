@@ -178,13 +178,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
       return [];
     }
 
-    if (!priceBooksData) {
-      console.log("No priceBooksData available");
+    if (!priceBooksData) { 
       return [];
     }
 
-    if (!Array.isArray(priceBooksData)) {
-      console.error("PriceBooksData is not an array:", priceBooksData);
+    if (!Array.isArray(priceBooksData)) { 
       return [];
     }
 
@@ -194,8 +192,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         priceBook.items.forEach((item) => {
           // Filter for services only: serviceId != null AND servicePackageId == null
           if (item.service && !item.servicePackage) {
-            allItems.push(item);
-            console.log(`✓ Added service: ${item.item_name} (${item.item_id})`);
+            allItems.push(item); 
           } else {
             console.log(
               `✗ Skipped item: ${item.item_name} - ${
@@ -211,8 +208,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
         );
       }
     });
-
-    console.log(`Total services found: ${allItems.length}`);
     return allItems;
   }, [priceBooksData, priceBooksError]);
 
@@ -230,17 +225,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
         date: bookingDate,
         serviceDurationMinutes: totalDuration,
         bayId: selectedBay.bay_id,
-      });
-      console.log("Available slots from API:", slots);
+      }); 
       
       // Remove duplicate slots based on startTime and endTime
       const uniqueSlots = slots.filter((slot, index, self) => 
         index === self.findIndex(s => 
           s.startTime === slot.startTime && s.endTime === slot.endTime
         )
-      );
-      
-      console.log("Unique slots after deduplication:", uniqueSlots);
+      ); 
       setAvailableSlots(uniqueSlots);
     } catch (error) {
       console.error("Error loading available slots:", error);
@@ -416,17 +408,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const fetchRequiredProductsAndReserve = async (
     services: { item_type: string; item_id: string }[],
     bookingId: string
-  ) => {
-    console.log("🎯 fetchRequiredProductsAndReserve called with:", { services, bookingId });
-    try {
-      console.log("🔍 Starting fetchRequiredProductsAndReserve for booking:", bookingId);
-      console.log("🔍 Services to process:", services);
+  ) => { 
+    try { 
       
       const allProducts: any[] = [];
 
       for (const service of services) {
-        if (service.item_type === "SERVICE") {
-          console.log(`🔍 Processing service: ${service.item_id}`);
+        if (service.item_type === "SERVICE") { 
           
           // Import ServiceService để lấy service products trực tiếp
           const { ServiceService } = await import(
@@ -435,8 +423,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
           try {
             // Lấy service details với service_products
-            const serviceDetails = await ServiceService.getServiceById(service.item_id);
-            console.log(`📋 Service details for ${service.item_id}:`, serviceDetails);
+            const serviceDetails = await ServiceService.getServiceById(service.item_id); 
             
             if (serviceDetails?.service_products && serviceDetails.service_products.length > 0) {
               // Process service products
@@ -452,8 +439,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     service_id: serviceProduct.service_id,
                     service_name: serviceDetails.service_name
                   };
-                  allProducts.push(productInfo);
-                  console.log(`✅ Added required product: ${productInfo.product_name} (${productInfo.quantity} ${productInfo.unit_of_measure})`);
+                  allProducts.push(productInfo); 
                 } else {
                   console.log(`ℹ️ Skipping optional product: ${serviceProduct.product_info.product_name}`);
                 }
@@ -487,27 +473,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }
       });
 
-      const uniqueProducts = Array.from(productMap.values());
-
-      console.log("📊 All products before grouping:", allProducts);
-      console.log("📊 Unique products after grouping:", uniqueProducts);
-      console.log("📊 Required products for booking:", uniqueProducts);
-      console.log("🏢 Selected branch:", selectedBranch?.branch_id);
-      console.log("📦 Products count:", uniqueProducts.length);
-
+      const uniqueProducts = Array.from(productMap.values()); 
       // Reserve inventory nếu có branch và products
-      if (selectedBranch?.branch_id && uniqueProducts.length > 0) {
-        console.log("🔒 Starting inventory reservation process...");
+      if (selectedBranch?.branch_id && uniqueProducts.length > 0) { 
         try {
           // Validate products có productId
           const validProducts = uniqueProducts.filter(
             (product) => product.productId
           );
           if (validProducts.length === 0) {
-            console.error(
-              "No valid products with productId found:",
-              uniqueProducts
-            );
             return uniqueProducts;
           }
 
@@ -519,19 +493,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
             productId: product.productId,
             quantity: product.quantity,
           }));
-
-          console.log("🔒 Valid products to reserve:", productsToReserve);
-          console.log("🏢 Branch ID:", selectedBranch.branch_id);
-          console.log("📋 Booking ID:", bookingId);
-
-          console.log("🚀 Calling InventoryService.reserveMultipleForBooking...");
+ 
           await InventoryService.reserveMultipleForBooking(
             selectedBranch.branch_id,
             productsToReserve,
             bookingId
-          );
-
-          console.log("✅ Successfully reserved inventory for booking:", bookingId);
+          ); 
         } catch (inventoryError) {
           console.error("❌ Error reserving inventory:", inventoryError);
           // Không throw error để không làm fail booking
@@ -543,9 +510,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         if (uniqueProducts.length === 0) {
           console.warn("⚠️ No products to reserve - services may not have required products");
         }
-      }
-
-      console.log("🏁 fetchRequiredProductsAndReserve completed for booking:", bookingId);
+      } 
       return uniqueProducts;
     } catch (error) {
       console.error("Error fetching required products:", error);
@@ -618,11 +583,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                        createResponse?.id;
 
       if (bookingId) {
-        console.log(
-          "✅ Booking created successfully:",
-          bookingId
-        );
-        console.log("🔍 Starting inventory reservation process...");
+ 
         try {
           await fetchRequiredProductsAndReserve(
             createRequest.booking_items.map((item) => ({
@@ -630,8 +591,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
               item_id: item.service_id,
             })),
             bookingId
-          );
-          console.log("✅ Inventory reservation process completed");
+          ); 
         } catch (inventoryError) {
           console.error("❌ Inventory reservation failed:", inventoryError);
         }

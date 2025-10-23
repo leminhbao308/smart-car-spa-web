@@ -245,10 +245,8 @@ const MembersPage = () => {
 
   const handleCustomerModalSuccess = async () => {
     // Refresh the data after successful operation
-    console.log("MembersPage: Refreshing data after modal success...");
     try {
       await refreshUsers();
-      console.log("MembersPage: Data refreshed successfully");
     } catch (error) {
       console.error("MembersPage: Error refreshing data:", error);
     }
@@ -280,7 +278,6 @@ const MembersPage = () => {
             `${range[0]}-${range[1]} của ${total} khách hàng`,
           pageSizeOptions: ["10", "20", "50", "100"],
           onChange: (page: number, pageSize: number) => {
-            console.log("Members Page: Pagination changed", { page, pageSize });
             if (pageSize !== pagination?.size) {
               changePageSize(pageSize || 10);
             } else {
@@ -288,7 +285,6 @@ const MembersPage = () => {
             }
           },
           onShowSizeChange: (current: number, size: number) => {
-            console.log("Members Page: Page size changed", { current, size });
             changePageSize(size);
           },
         }}
