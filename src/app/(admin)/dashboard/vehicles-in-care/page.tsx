@@ -198,6 +198,18 @@ const VehiclesInCarePage = () => {
 
   const columns = [
     {
+      title: "STT",
+      dataIndex: "index",
+      key: "index",
+      width: 60,
+      align: "center" as const,
+      render: (_: unknown, __: unknown, index: number) => (
+        <Text style={{ fontSize: 12, fontWeight: 500 }}>
+          {index + 1}
+        </Text>
+      ),
+    },
+    {
       title: "Thông tin xe",
       dataIndex: "vehicleInfo",
       key: "vehicleInfo",

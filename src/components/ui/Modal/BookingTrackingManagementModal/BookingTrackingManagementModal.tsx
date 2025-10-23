@@ -230,12 +230,8 @@ const BookingTrackingManagementModal: React.FC<
       (t) => t.trackingId === tracking.trackingId
     );
 
-    // First tracking can always start
-    if (currentIndex === 0) return true;
-
-    // Check if previous tracking is completed
-    const previousTracking = serviceTrackings[currentIndex - 1];
-    return previousTracking?.status === TrackingStatus.COMPLETED;
+    // Only the first tracking of service can start
+    return currentIndex === 0;
   };
 
   const handleStartTracking = async (
@@ -286,11 +282,18 @@ const BookingTrackingManagementModal: React.FC<
         description: "Đã hoàn thành bước",
         placement: "topRight",
       });
+      const currentService = servicesWithTrackings.find((service) =>
+        service.trackings.some((t) => t.trackingId === tracking.trackingId)
+      );
+      if (currentService) {
+        // Auto start next tracking in Current Service
+        await autoStartNextTracking(tracking, currentService.trackings);
+      }
 
+      await loadTrackingData();
       setCompletingTracking(null);
       form.resetFields();
       // Refresh data
-      await loadTrackingData();
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
     } catch (error) {
       console.log("Error completing tracking:", error);
@@ -301,6 +304,31 @@ const BookingTrackingManagementModal: React.FC<
       });
     } finally {
       setUpdating(null);
+    }
+  };
+
+  const autoStartNextTracking = async (
+    completedTracking: ServiceProcessTrackingInfoDto,
+    serviceTrackings: ServiceProcessTrackingInfoDto[]
+  ) => {
+    try {
+      // 1. Tìm index của tracking vừa hoàn thành
+      const currentIndex = serviceTrackings.findIndex(
+        (t) => t.trackingId === completedTracking.trackingId
+      );
+
+      // 2. Kiểm tra có tracking tiếp theo không
+      const nextTracking = serviceTrackings[currentIndex + 1];
+
+      // 3. Nếu có tracking tiếp theo và đang ở trạng thái PENDING
+      if (nextTracking && nextTracking.status === TrackingStatus.PENDING) {
+        // 4. Tự động gọi API start tracking tiếp theo
+        await ServiceProcessTrackingService.startStep(nextTracking.trackingId, {
+          notes: `Bắt đầu thực hiện bước ${nextTracking.serviceStepOrder}`,
+        });
+      }
+    } catch (error) {
+      console.log("Auto-start next tracking failed:", error);
     }
   };
 
@@ -323,6 +351,7 @@ const BookingTrackingManagementModal: React.FC<
 
   const handleCompleteBooking = async () => {
     setUpdating("complete-booking");
+    console.log("handleCompleteBooking");
     try {
       await BookingService.completeService(booking.booking_id);
 
@@ -407,7 +436,7 @@ const BookingTrackingManagementModal: React.FC<
                   type="primary"
                   icon={<CheckCircleOutlined />}
                   loading={updating === "complete-booking"}
-                  onClick={() => handleCompleteBooking}
+                  onClick={() => handleCompleteBooking()}
                   style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
                 >
                   Hoàn thành booking
@@ -599,7 +628,7 @@ const BookingTrackingManagementModal: React.FC<
                                   : canStart
                                   ? "1px solid #d6e4ff"
                                   : "1px solid #d9d9d9",
-                              opacity: canStart ? 1 : 0.6,
+                              opacity: canStart || tracking.status === TrackingStatus.IN_PROGRESS ? 1 : 0.6,
                             }}
                           >
                             <div style={{ marginRight: 16 }}>
@@ -617,21 +646,24 @@ const BookingTrackingManagementModal: React.FC<
                                 style={{
                                   fontWeight: 500,
                                   marginBottom: 4,
-                                  color: canStart ? "#000" : "#999",
+                                  color: canStart || tracking.status === TrackingStatus.IN_PROGRESS ? "#000" : "#999",
                                 }}
                               >
                                 {tracking.serviceStepName}
-                                {!canStart && (
-                                  <Text
-                                    style={{
-                                      fontSize: 11,
-                                      color: "#999",
-                                      marginLeft: 8,
-                                    }}
-                                  >
-                                    (Chờ bước trước hoàn thành)
-                                  </Text>
-                                )}
+                                {!canStart &&
+                                  tracking.status ===
+                                    TrackingStatus.PENDING && (
+                                    <Text
+                                      style={{
+                                        fontSize: 11,
+                                        color: "#999",
+                                        marginLeft: 8,
+                                      }}
+                                    >
+                                      (Tự động bắt đầu khi bước trước hoàn
+                                      thành)
+                                    </Text>
+                                  )}
                               </div>
                               <div style={{ fontSize: 12, color: "#666" }}>
                                 {tracking.actualDuration && (
