@@ -37,69 +37,83 @@ export const adminMenuItems: MenuItem[] = [
     icon: React.createElement(DashboardOutlined),
   },
   {
-    key: "transactions",
-    label: "Quản Lý Transactions",
-    icon: React.createElement(ThunderboltOutlined),
+    key: "car-service-management",
+    label: "Chăm sóc xe",
+    icon: React.createElement(CarOutlined),
     children: [
       {
-        key: "car-service-management",
-        label: "Chăm sóc xe",
+        key: "bookings",
+        label: "Quản Lý Đặt Lịch Chăm Sóc Xe",
+        icon: React.createElement(ContainerOutlined),
+      },
+      {
+        key: "vehicles-in-care",
+        label: "Quản Lý Chăm Sóc Xe",
         icon: React.createElement(CarOutlined),
-        children: [
-          {
-            key: "bookings",
-            label: "Quản Lý Đặt Lịch Chăm Sóc Xe",
-            icon: React.createElement(ContainerOutlined),
-          },
-          {
-            key: "vehicles-in-care",
-            label: "Quản Lý Chăm Sóc Xe",
-            icon: React.createElement(CarOutlined),
-          },
-        ],
-      },
-      {
-        key: "sales-management",
-        label: "Quản lý bán hàng",
-        icon: React.createElement(ShoppingCartOutlined),
-        children: [
-          {
-            key: "pos",
-            label: "Bán hàng (POS)",
-            icon: React.createElement(BarcodeOutlined),
-          },
-          {
-            key: "invoices",
-            label: "Hóa đơn",
-            icon: React.createElement(FileTextOutlined),
-          },
-          {
-            key: "returns",
-            label: "Hoàn trả hàng",
-            icon: React.createElement(UndoOutlined),
-          },
-        ],
-      },
-      {
-        key: "inventory-management",
-        label: "Quản lý kho",
-        icon: React.createElement(DatabaseOutlined),
-        children: [
-          {
-            key: "import-inventory",
-            label: "Nhập kho",
-            icon: React.createElement(ImportOutlined),
-          },
-          {
-            key: "stock-inventory",
-            label: "Tồn kho",
-            icon: React.createElement(HomeOutlined),
-          },
-        ],
       },
     ],
   },
-
+        {
+        key: "pos",
+        label: "Bán hàng (POS)",
+        icon: React.createElement(BarcodeOutlined),
+      },
+  {
+    key: "sales-management",
+    label: "Quản lý hóa đơn",
+    icon: React.createElement(ShoppingCartOutlined),
+    children: [
+      {
+        key: "invoices",
+        label: "Hóa đơn bán",
+        icon: React.createElement(FileTextOutlined),
+      },
+      {
+        key: "returns",
+        label: "Hóa đơn trả",
+        icon: React.createElement(UndoOutlined),
+      },
+    ],
+  },
+  {
+    key: "pricing",
+    label: "Quản Lý Bảng Giá",
+    icon: React.createElement(DollarOutlined),
+  },
+  {
+    key: "promotions",
+    label: "Quản Lý Chương Trình Khuyến Mãi",
+    icon: React.createElement(GiftOutlined),
+    children: [
+      {
+        key: "promotions-list",
+        label: "Danh Sách Khuyến Mãi",
+        icon: React.createElement(GiftOutlined),
+      },
+      {
+        key: "promotions-history",
+        label: "Lịch Sử Sử Dụng Khuyến Mãi",
+        icon: React.createElement(ClockCircleOutlined),
+      },
+    ],
+  },
+  {
+    key: "inventory-management",
+    label: "Quản lý kho",
+    icon: React.createElement(DatabaseOutlined),
+    children: [
+      {
+        key: "import-inventory",
+        label: "Nhập kho",
+        icon: React.createElement(ImportOutlined),
+      },
+      {
+        key: "stock-inventory",
+        label: "Tồn kho",
+        icon: React.createElement(HomeOutlined),
+      },
+    ],
+  },
   {
     key: "masterdata",
     label: "Quản Lý Masterdata",
@@ -131,28 +145,6 @@ export const adminMenuItems: MenuItem[] = [
         key: "category-management",
         label: "Quản Lý Danh Mục",
         icon: React.createElement(AppstoreOutlined),
-      },
-      {
-        key: "pricing",
-        label: "Quản Lý Bảng Giá",
-        icon: React.createElement(DollarOutlined),
-      },
-      {
-        key: "promotions",
-        label: "Quản Lý Chương Trình Khuyến Mãi",
-        icon: React.createElement(GiftOutlined),
-        children: [
-          {
-            key: "promotions-list",
-            label: "Danh Sách Khuyến Mãi",
-            icon: React.createElement(GiftOutlined),
-          },
-          {
-            key: "promotions-history",
-            label: "Lịch Sử Sử Dụng Khuyến Mãi",
-            icon: React.createElement(ClockCircleOutlined),
-          },
-        ],
       },
       {
         key: "product-management",
