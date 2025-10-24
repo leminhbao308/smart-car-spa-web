@@ -147,12 +147,18 @@ const ServiceBayCard: React.FC<ServiceBayCardProps> = ({
       {/* Status and Branch */}
       <div style={{ marginBottom: "16px" }}>
         <Space direction="vertical" size="small" style={{ width: "100%" }}>
-          <Space size="small">
+          <Space size="small" wrap>
             <Tag
               color={statusInfo.color}
               style={{ fontSize: "12px", padding: "4px 8px" }}
             >
               {statusInfo.label}
+            </Tag>
+            <Tag
+              color={bay.allow_booking ? "green" : "orange"}
+              style={{ fontSize: "12px", padding: "4px 8px" }}
+            >
+              {bay.allow_booking ? "📅 Cho đặt lịch" : "🔧 Xử lý tại chỗ"}
             </Tag>
           </Space>
           <Text type="secondary" style={{ fontSize: "12px" }}>

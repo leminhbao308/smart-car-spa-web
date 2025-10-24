@@ -22,6 +22,7 @@ import {
   Spin,
   Tooltip,
   Divider,
+  Tabs,
 } from "antd";
 import {
   CalendarOutlined,
@@ -152,8 +153,20 @@ const BookingModal: React.FC<BookingModalProps> = ({
     isLoading: isLoadingPriceBooks,
     error: priceBooksError,
   } = useAllPriceBooks();
-  const { data: serviceBays, isLoading: isLoadingServiceBays } =
+  const { data: allServiceBays, isLoading: isLoadingServiceBays } =
     useActiveServiceBays(selectedBranch?.branch_id);
+
+  // Filter service bays to only show those that allow booking
+  const serviceBays = useMemo(() => {
+    if (!allServiceBays) return [];
+    return allServiceBays.filter((bay) => bay.allow_booking === true);
+  }, [allServiceBays]);
+
+  // Filter service bays for on-site processing (allow_booking: false)
+  const onSiteBays = useMemo(() => {
+    if (!allServiceBays) return [];
+    return allServiceBays.filter((bay) => bay.allow_booking === false);
+  }, [allServiceBays]);
 
   // Filter vehicles by selected customer
   const vehicles = React.useMemo(() => {
@@ -976,11 +989,64 @@ const BookingModal: React.FC<BookingModalProps> = ({
     </div>
   );
 
+  // Render on-site processing bays (Tab 2)
+  const renderOnSiteBays = () => (
+    <div>
+      <Text strong style={{ marginBottom: 16, display: "block" }}>
+        Các khu vực xử lý tại chỗ (Không cho phép đặt lịch):
+      </Text>
+      {isLoadingServiceBays ? (
+        <div style={{ textAlign: "center", padding: "20px" }}>
+          <Spin />
+          <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
+            Đang tải danh sách khu vực...
+          </div>
+        </div>
+      ) : onSiteBays.length === 0 ? (
+        <Alert
+          message="Không có khu vực xử lý tại chỗ"
+          description="Tất cả khu vực đều cho phép đặt lịch"
+          type="info"
+          showIcon
+        />
+      ) : (
+        <Row gutter={8}>
+          {onSiteBays.map((bay) => (
+            <Col span={6} key={bay.bay_id}>
+              <Card
+                size="small"
+                style={{
+                  textAlign: "center",
+                  border: "1px solid #fa8c16",
+                  backgroundColor: "#fff7e6",
+                  opacity: 0.8,
+                }}
+              >
+                <ShopOutlined style={{ fontSize: 24, color: "#fa8c16" }} />
+                <div style={{ marginTop: 8 }}>
+                  <Text strong style={{ color: "#fa8c16" }}>
+                    {bay.bay_name}
+                  </Text>
+                </div>
+                <div style={{ fontSize: 12, color: "#666" }}>
+                  {bay.bay_code || `Bay ${bay.bay_id.slice(-2)}`}
+                </div>
+                <div style={{ fontSize: 10, color: "#fa8c16", marginTop: 4 }}>
+                  🔧 Xử lý tại chỗ
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      )}
+    </div>
+  );
+
   const renderSlotSelectionStep = () => (
     <div>
       <Card
         size="small"
-        title="Chọn Service Bay và Slot"
+        title="Chọn Khu Vực Chăm Sóc Và Slot"
         style={{ marginBottom: 16 }}
       >
         {!selectedBranch || !bookingDate ? (
@@ -991,221 +1057,258 @@ const BookingModal: React.FC<BookingModalProps> = ({
             showIcon
           />
         ) : (
-          <div>
-            <Row gutter={16} style={{ marginBottom: 16 }}>
-              <Col span={24}>
-                <Text strong>Chọn Service Bay (8 khu vực):</Text>
-                <div style={{ marginTop: 8 }}>
-                  {isLoadingServiceBays ? (
-                    <Spin />
-                  ) : (
-                    <Row gutter={8}>
-                      {serviceBays?.slice(0, 8).map((bay) => (
-                        <Col span={6} key={bay.bay_id}>
-                          <Card
-                            size="small"
-                            hoverable
-                            style={{
-                              textAlign: "center",
-                              border:
-                                selectedBay?.bay_id === bay.bay_id
-                                  ? "2px solid #1890ff"
-                                  : "1px solid #d9d9d9",
-                              backgroundColor:
-                                selectedBay?.bay_id === bay.bay_id
-                                  ? "#e6f7ff"
-                                  : "#fff",
-                            }}
-                            onClick={() => handleBayChange(bay.bay_id)}
-                          >
-                            <ShopOutlined
-                              style={{ fontSize: 24, color: "#1890ff" }}
-                            />
-                            <div style={{ marginTop: 8 }}>
-                              <Text strong>{bay.bay_name}</Text>
-                            </div>
-                            <div style={{ fontSize: 12, color: "#666" }}>
-                              {bay.bay_code || `Bay ${bay.bay_id.slice(-2)}`} •
-                              60 phút/slot
-                            </div>
-                          </Card>
-                        </Col>
-                      ))}
+          <Tabs
+            defaultActiveKey="booking"
+            items={[
+              {
+                key: "booking",
+                label: <span>📅 Đặt lịch ({serviceBays.length})</span>,
+                children: (
+                  <div>
+                    <Row gutter={16} style={{ marginBottom: 16 }}>
+                      <Col span={24}>
+                        <Text strong>Chọn Service Bay cho đặt lịch:</Text>
+                        <div style={{ marginTop: 8 }}>
+                          {isLoadingServiceBays ? (
+                            <Spin />
+                          ) : (
+                            <Row gutter={8}>
+                              {serviceBays?.slice(0, 8).map((bay) => (
+                                <Col span={6} key={bay.bay_id}>
+                                  <Card
+                                    size="small"
+                                    hoverable
+                                    style={{
+                                      textAlign: "center",
+                                      border:
+                                        selectedBay?.bay_id === bay.bay_id
+                                          ? "2px solid #1890ff"
+                                          : "1px solid #d9d9d9",
+                                      backgroundColor:
+                                        selectedBay?.bay_id === bay.bay_id
+                                          ? "#e6f7ff"
+                                          : "#fff",
+                                    }}
+                                    onClick={() => handleBayChange(bay.bay_id)}
+                                  >
+                                    <ShopOutlined
+                                      style={{ fontSize: 24, color: "#1890ff" }}
+                                    />
+                                    <div style={{ marginTop: 8 }}>
+                                      <Text strong>{bay.bay_name}</Text>
+                                    </div>
+                                    <div
+                                      style={{ fontSize: 12, color: "#666" }}
+                                    >
+                                      {bay.bay_code ||
+                                        `Bay ${bay.bay_id.slice(-2)}`}{" "}
+                                      • 60 phút/slot
+                                    </div>
+                                  </Card>
+                                </Col>
+                              ))}
+                            </Row>
+                          )}
+                        </div>
+                      </Col>
                     </Row>
-                  )}
-                </div>
-              </Col>
-            </Row>
 
-            {selectedBay && (
-              <div>
-                <Divider />
-                <Text strong>Chọn Slot trong {selectedBay.bay_name}:</Text>
-                <div style={{ marginTop: 8 }}>
-                  {loadingSlots ? (
-                    <div style={{ textAlign: "center", padding: "20px" }}>
-                      <Spin />
-                      <div
-                        style={{ marginTop: 8, fontSize: 12, color: "#666" }}
-                      >
-                        Đang tải slot...
-                      </div>
-                    </div>
-                  ) : availableSlots.length === 0 ? (
-                    <Alert
-                      message="Không có slot khả dụng"
-                      description="Không có slot nào phù hợp với thời gian dịch vụ đã chọn"
-                      type="warning"
-                      showIcon
-                    />
-                  ) : (
-                    <Row gutter={8}>
-                      {availableSlots.map((slot, index) => {
-                        const canSelect = canSelectSlot(slot);
-                        const isSelected =
-                          selectedSlot?.startTime === slot.startTime;
-
-                        return (
-                          <Col
-                            span={4}
-                            key={`${slot.startTime}-${slot.endTime}-${index}`}
-                          >
-                            <Tooltip
-                              title={
-                                canSelect
-                                  ? totalDuration > 60
-                                    ? `Chọn ${Math.ceil(
-                                        totalDuration / 60
-                                      )} slot liên tiếp từ ${
-                                        slot.startTime
-                                      } (${totalDuration} phút)`
-                                    : `Chọn slot ${slot.startTime} - ${slot.endTime}`
-                                  : slot.status === "BOOKED"
-                                  ? "Slot đã được đặt"
-                                  : slot.status === "IN_PROGRESS"
-                                  ? "Slot đang được sử dụng"
-                                  : slot.status === "COMPLETED"
-                                  ? "Slot đã hoàn thành"
-                                  : slot.status === "CANCELLED"
-                                  ? "Slot đã bị hủy"
-                                  : totalDuration > 60
-                                  ? `Cần ${Math.ceil(
-                                      totalDuration / 60
-                                    )} slot liên tiếp - không đủ`
-                                  : "Slot không khả dụng"
-                              }
+                    {selectedBay && (
+                      <div>
+                        <Divider />
+                        <Text strong>
+                          Chọn Slot trong {selectedBay.bay_name}:
+                        </Text>
+                        <div style={{ marginTop: 8 }}>
+                          {loadingSlots ? (
+                            <div
+                              style={{ textAlign: "center", padding: "20px" }}
                             >
-                              <Card
-                                size="small"
-                                hoverable={canSelect}
+                              <Spin />
+                              <div
                                 style={{
-                                  textAlign: "center",
-                                  border: isSelected
-                                    ? "2px solid #52c41a"
-                                    : canSelect
-                                    ? "1px solid #d9d9d9"
-                                    : "1px solid #ff4d4f",
-                                  backgroundColor: isSelected
-                                    ? "#f6ffed"
-                                    : canSelect
-                                    ? "#fff"
-                                    : slot.status === "BOOKED"
-                                    ? "#fff2f0"
-                                    : slot.status === "IN_PROGRESS"
-                                    ? "#e6f7ff"
-                                    : "#f5f5f5",
-                                  cursor: canSelect ? "pointer" : "not-allowed",
-                                  opacity: canSelect ? 1 : 0.6,
+                                  marginTop: 8,
+                                  fontSize: 12,
+                                  color: "#666",
                                 }}
-                                onClick={() =>
-                                  canSelect && handleSlotSelect(slot)
-                                }
                               >
-                                <div
-                                  style={{
-                                    color:
-                                      slotStatusColors[
-                                        slot.status as keyof typeof slotStatusColors
-                                      ],
-                                    fontSize: 16,
-                                  }}
-                                >
-                                  {
-                                    slotStatusIcons[
-                                      slot.status as keyof typeof slotStatusIcons
-                                    ]
-                                  }
-                                </div>
-                                <div
-                                  style={{
-                                    marginTop: 4,
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    color: canSelect ? "#000" : "#999",
-                                  }}
-                                >
-                                  {slot.startTime}
-                                </div>
-                                <div style={{ fontSize: 10, color: "#666" }}>
-                                  {slot.endTime}
-                                </div>
-                                {totalDuration > 60 && canSelect && (
-                                  <div
-                                    style={{
-                                      fontSize: 8,
-                                      color: "#52c41a",
-                                      marginTop: 2,
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    {Math.ceil(totalDuration / 60)} slot
-                                  </div>
-                                )}
-                                {!canSelect && (
-                                  <div
-                                    style={{
-                                      fontSize: 8,
-                                      color: "#ff4d4f",
-                                      marginTop: 2,
-                                    }}
-                                  >
-                                    {slot.status === "BOOKED"
-                                      ? "Đã đặt"
-                                      : slot.status === "IN_PROGRESS"
-                                      ? "Đang dùng"
-                                      : slot.status === "CANCELLED"
-                                      ? "Đã hủy"
-                                      : totalDuration > 60
-                                      ? "Không đủ slot"
-                                      : "Không khả dụng"}
-                                  </div>
-                                )}
-                              </Card>
-                            </Tooltip>
-                          </Col>
-                        );
-                      })}
-                    </Row>
-                  )}
-                </div>
+                                Đang tải slot...
+                              </div>
+                            </div>
+                          ) : availableSlots.length === 0 ? (
+                            <Alert
+                              message="Không có slot khả dụng"
+                              description="Không có slot nào phù hợp với thời gian dịch vụ đã chọn"
+                              type="warning"
+                              showIcon
+                            />
+                          ) : (
+                            <Row gutter={8}>
+                              {availableSlots.map((slot, index) => {
+                                const canSelect = canSelectSlot(slot);
+                                const isSelected =
+                                  selectedSlot?.startTime === slot.startTime;
 
-                {selectedSlot && (
-                  <Alert
-                    message={`Slot đã chọn: ${selectedSlot.startTime} - ${dayjs(
-                      selectedSlot.startTime,
-                      "HH:mm"
-                    )
-                      .add(selectedSlot.serviceDurationMinutes, "minute")
-                      .format("HH:mm")}`}
-                    description={`Service Bay: ${selectedSlot.bayName} • Ngày: ${selectedSlot.date}`}
-                    type="success"
-                    showIcon
-                    style={{ marginTop: 16 }}
-                  />
-                )}
-              </div>
-            )}
-          </div>
+                                return (
+                                  <Col
+                                    span={4}
+                                    key={`${slot.startTime}-${slot.endTime}-${index}`}
+                                  >
+                                    <Tooltip
+                                      title={
+                                        canSelect
+                                          ? totalDuration > 60
+                                            ? `Chọn ${Math.ceil(
+                                                totalDuration / 60
+                                              )} slot liên tiếp từ ${
+                                                slot.startTime
+                                              } (${totalDuration} phút)`
+                                            : `Chọn slot ${slot.startTime} - ${slot.endTime}`
+                                          : slot.status === "BOOKED"
+                                          ? "Slot đã được đặt"
+                                          : slot.status === "IN_PROGRESS"
+                                          ? "Slot đang được sử dụng"
+                                          : slot.status === "COMPLETED"
+                                          ? "Slot đã hoàn thành"
+                                          : slot.status === "CANCELLED"
+                                          ? "Slot đã bị hủy"
+                                          : totalDuration > 60
+                                          ? `Cần ${Math.ceil(
+                                              totalDuration / 60
+                                            )} slot liên tiếp - không đủ`
+                                          : "Slot không khả dụng"
+                                      }
+                                    >
+                                      <Card
+                                        size="small"
+                                        hoverable={canSelect}
+                                        style={{
+                                          textAlign: "center",
+                                          border: isSelected
+                                            ? "2px solid #52c41a"
+                                            : canSelect
+                                            ? "1px solid #d9d9d9"
+                                            : "1px solid #ff4d4f",
+                                          backgroundColor: isSelected
+                                            ? "#f6ffed"
+                                            : canSelect
+                                            ? "#fff"
+                                            : slot.status === "BOOKED"
+                                            ? "#fff2f0"
+                                            : slot.status === "IN_PROGRESS"
+                                            ? "#e6f7ff"
+                                            : "#f5f5f5",
+                                          cursor: canSelect
+                                            ? "pointer"
+                                            : "not-allowed",
+                                          opacity: canSelect ? 1 : 0.6,
+                                          marginBottom: 8,
+                                        }}
+                                        onClick={() =>
+                                          canSelect && handleSlotSelect(slot)
+                                        }
+                                      >
+                                        <div
+                                          style={{
+                                            color:
+                                              slotStatusColors[
+                                                slot.status as keyof typeof slotStatusColors
+                                              ],
+                                            fontSize: 16,
+                                          }}
+                                        >
+                                          {
+                                            slotStatusIcons[
+                                              slot.status as keyof typeof slotStatusIcons
+                                            ]
+                                          }
+                                        </div>
+                                        <div
+                                          style={{
+                                            marginTop: 4,
+                                            fontSize: 12,
+                                            fontWeight: 500,
+                                            color: canSelect ? "#000" : "#999",
+                                          }}
+                                        >
+                                          {slot.startTime}
+                                        </div>
+                                        <div
+                                          style={{
+                                            fontSize: 10,
+                                            color: "#666",
+                                          }}
+                                        >
+                                          {slot.endTime}
+                                        </div>
+                                        {totalDuration > 60 && canSelect && (
+                                          <div
+                                            style={{
+                                              fontSize: 8,
+                                              color: "#52c41a",
+                                              marginTop: 2,
+                                              fontWeight: 500,
+                                            }}
+                                          >
+                                            {Math.ceil(totalDuration / 60)} slot
+                                          </div>
+                                        )}
+                                        {!canSelect && (
+                                          <div
+                                            style={{
+                                              fontSize: 8,
+                                              color: "#ff4d4f",
+                                              marginTop: 2,
+                                            }}
+                                          >
+                                            {slot.status === "BOOKED"
+                                              ? "Đã đặt"
+                                              : slot.status === "IN_PROGRESS"
+                                              ? "Đang dùng"
+                                              : slot.status === "CANCELLED"
+                                              ? "Đã hủy"
+                                              : totalDuration > 60
+                                              ? "Không đủ slot"
+                                              : "Không khả dụng"}
+                                          </div>
+                                        )}
+                                      </Card>
+                                    </Tooltip>
+                                  </Col>
+                                );
+                              })}
+                            </Row>
+                          )}
+                        </div>
+
+                        {selectedSlot && (
+                          <Alert
+                            message={`Slot đã chọn: ${
+                              selectedSlot.startTime
+                            } - ${dayjs(selectedSlot.startTime, "HH:mm")
+                              .add(
+                                selectedSlot.serviceDurationMinutes,
+                                "minute"
+                              )
+                              .format("HH:mm")}`}
+                            description={`Service Bay: ${selectedSlot.bayName} • Ngày: ${selectedSlot.date}`}
+                            type="success"
+                            showIcon
+                            style={{ marginTop: 16 }}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                key: "onsite",
+                label: <span>🔧 Xử lý tại chỗ ({onSiteBays.length})</span>,
+                children: renderOnSiteBays(),
+              },
+            ]}
+          />
         )}
       </Card>
 
