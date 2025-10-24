@@ -132,21 +132,6 @@ const UpdateTrackingModal: React.FC<UpdateTrackingModalProps> = ({
           />
         </Form.Item>
 
-        <Form.Item
-          name="evidence_media_urls"
-          label="URL bằng chứng (tùy chọn)"
-          rules={[
-            {
-              type: "url",
-              message: "Vui lòng nhập URL hợp lệ",
-            },
-          ]}
-        >
-          <Input
-            placeholder="https://example.com/evidence.jpg"
-            addonBefore="URL"
-          />
-        </Form.Item>
 
         <div
           style={{

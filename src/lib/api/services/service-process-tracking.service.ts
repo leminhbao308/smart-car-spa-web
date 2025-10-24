@@ -56,17 +56,14 @@ export class ServiceProcessTrackingService {
         if (filterParam.technicianId) {
           queryParams.append("technicianId", filterParam.technicianId);
         }
-        if (filterParam.bayId) {
-          queryParams.append("bayId", filterParam.bayId);
-        }
         if (filterParam.status) {
           queryParams.append("status", filterParam.status);
         }
-        if (filterParam.dateFrom) {
-          queryParams.append("dateFrom", filterParam.dateFrom);
+        if (filterParam.serviceStepId) {
+          queryParams.append("serviceStepId", filterParam.serviceStepId);
         }
-        if (filterParam.dateTo) {
-          queryParams.append("dateTo", filterParam.dateTo);
+        if (filterParam.slotId) {
+          queryParams.append("slotId", filterParam.slotId);
         }
       }
 

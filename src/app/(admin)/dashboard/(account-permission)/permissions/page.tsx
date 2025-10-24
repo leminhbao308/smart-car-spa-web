@@ -40,9 +40,7 @@ const PermissionPage = () => {
   const fetchRoles = useCallback(async () => {
     setLoading(true);
     try {
-      console.log("Fetching roles from API...");
       const response = await RoleService.getAllRoles();
-      console.log("Roles API response:", response);
 
       if (response.success && response.data) {
         setRolesData(response.data);

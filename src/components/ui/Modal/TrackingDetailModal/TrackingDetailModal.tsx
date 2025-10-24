@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   Card,
@@ -8,10 +8,8 @@ import {
   Tag,
   Typography,
   Timeline,
-  Progress,
   Space,
   Avatar,
-  Statistic,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -28,6 +26,8 @@ import {
   TrackingStatus,
 } from "@/lib/api/types/service-process-tracking.types";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
+import { ServiceBayService } from "@/lib/api/services/service-bay.service";
+import { TechnicianInfo } from "@/lib/api/types/service-bay.types";
 
 const { Text } = Typography;
 
@@ -42,6 +42,32 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
   onCancel,
   tracking,
 }) => {
+  const [technicians, setTechnicians] = useState<TechnicianInfo[]>([]);
+
+  // Load technicians by bay when modal opens
+  useEffect(() => {
+    const loadTechnicians = async () => {
+      if (!tracking?.bayId) {
+        console.log("No bayId found in tracking:", tracking);
+        setTechnicians([]);
+        return;
+      }
+      try {
+        console.log("Loading technicians for bay_id:", tracking.bayId);
+        const bay = await ServiceBayService.getServiceBayById(tracking.bayId);
+        console.log("Bay data received:", bay);
+        console.log("Technicians from bay:", bay?.technicians);
+        const techArray = bay?.technicians || [];
+        console.log("Setting technicians array:", techArray);
+        setTechnicians(techArray);
+      } catch (e) {
+        console.error("Failed to load bay technicians:", e);
+        setTechnicians([]);
+      }
+    };
+    if (open && tracking?.bayId) loadTechnicians();
+  }, [open, tracking?.bayId, tracking]);
+
   if (!tracking) return null;
 
   const getStatusConfig = (status: TrackingStatus) => {
@@ -77,20 +103,6 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
   };
 
   const statusConfig = getStatusConfig(tracking.status);
-
-  const getEfficiencyColor = (efficiency: number) => {
-    if (efficiency >= 2) return "#52c41a"; // Green - Very efficient
-    if (efficiency >= 1.5) return "#faad14"; // Orange - Good
-    if (efficiency >= 1) return "#fa8c16"; // Orange - Average
-    return "#f5222d"; // Red - Poor
-  };
-
-  const getEfficiencyLabel = (efficiency: number) => {
-    if (efficiency >= 2) return "Rất hiệu quả";
-    if (efficiency >= 1.5) return "Hiệu quả";
-    if (efficiency >= 1) return "Trung bình";
-    return "Cần cải thiện";
-  };
 
   return (
     <Modal
@@ -159,10 +171,6 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
                   <Text strong>Mô tả:</Text> {tracking.serviceStepDescription}
                 </div>
                 <div>
-                  <Text strong>Thời gian ước tính:</Text>{" "}
-                  {tracking.estimatedTime} phút
-                </div>
-                <div>
                   <Text strong>Bắt buộc:</Text>
                   <Tag
                     color={tracking.isRequired ? "red" : "blue"}
@@ -176,43 +184,7 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
           </Row>
         </Card>
 
-        {/* Progress and Status */}
-        <Card size="small" title="Tiến độ và trạng thái">
-          <Row gutter={[16, 16]}>
-            <Col span={12}>
-              <Statistic
-                title="Tiến độ"
-                value={tracking.progressPercent || 0}
-                precision={1}
-                suffix="%"
-                valueStyle={{ color: "#1890ff" }}
-              />
-              <Progress
-                percent={tracking.progressPercent || 0}
-                size="small"
-                status={
-                  tracking.status === TrackingStatus.COMPLETED
-                    ? "success"
-                    : "active"
-                }
-              />
-            </Col>
-            
-            <Col span={12}>
-              <Statistic
-                title="Thời gian thực tế"
-                value={tracking.actualDuration || 0}
-                suffix="phút"
-                valueStyle={{ color: "#52c41a" }}
-              />
-              <Text style={{ fontSize: 12, color: "#666" }}>
-                Ước tính: {tracking.estimatedDuration} phút
-              </Text>
-            </Col>
-          </Row>
-        </Card>
-
-        {/* Technician and Bay Information */}
+        {/* Bay Information */}
         <Card size="small" title="Thông tin nhân viên và khu vực">
           <Row gutter={[16, 16]}>
             <Col span={12}>
@@ -227,11 +199,12 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
                 <Text strong>Kỹ thuật viên</Text>
               </div>
               <div style={{ marginLeft: 24 }}>
+                {/* Current technician from tracking */}
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    marginBottom: 4,
+                    marginBottom: 8,
                   }}
                 >
                   <Avatar
@@ -242,6 +215,12 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
                   <div>
                     <div>
                       <Text strong>{tracking.technicianName}</Text>
+                      <Tag
+                        color="green"
+                        style={{ marginLeft: 8, fontSize: 10 }}
+                      >
+                        Đang thực hiện
+                      </Tag>
                     </div>
                     <div>
                       <Text style={{ fontSize: 12, color: "#666" }}>
@@ -250,6 +229,30 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* All technicians in bay */}
+                {technicians && technicians.length > 0 && (
+                  <div>
+                    <Text strong style={{ fontSize: 12, color: "#666" }}>
+                      Tất cả kỹ thuật viên trong bay:
+                    </Text>
+                    <div style={{ marginTop: 4 }}>
+                      {technicians.map((t) => (
+                        <Tag
+                          key={t.technician_id}
+                          color={
+                            t.technician_id === tracking.technicianId
+                              ? "green"
+                              : "blue"
+                          }
+                          style={{ marginBottom: 2, fontSize: 10 }}
+                        >
+                          {t.technician_name}
+                        </Tag>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </Col>
             <Col span={12}>
@@ -274,6 +277,13 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
                     Mã: {tracking.bayCode}
                   </Text>
                 </div>
+                {technicians && technicians.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <Text style={{ fontSize: 12, color: "#666" }}>
+                      Số kỹ thuật viên: {technicians.length}
+                    </Text>
+                  </div>
+                )}
               </div>
             </Col>
           </Row>

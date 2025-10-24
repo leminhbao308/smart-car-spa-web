@@ -40,12 +40,12 @@ export class BookingService {
   /**
    * Get booking by code
    */
-  static async getBookingByCode(bookingCode: string) {
-    const response = await apiClient.get(
-      `${this.BASE_URL}/code/${bookingCode}`
-    );
-    return response.data;
-  }
+  // static async getBookingByCode(bookingCode: string) {
+  //   const response = await apiClient.get(
+  //     `${this.BASE_URL}/code/${bookingCode}`
+  //   );
+  //   return response.data;
+  // }
 
   /**
    * Get bookings by customer
@@ -58,22 +58,22 @@ export class BookingService {
   /**
    * Get upcoming bookings by customer
    */
-  static async getUpcomingBookingsByCustomer(customerId: string) {
-    const response = await apiClient.get(
-      `/customers/${customerId}/bookings/upcoming`
-    );
-    return response.data;
-  }
+  // static async getUpcomingBookingsByCustomer(customerId: string) {
+  //   const response = await apiClient.get(
+  //     `/customers/${customerId}/bookings/upcoming`
+  //   );
+  //   return response.data;
+  // }
 
   /**
    * Get past bookings by customer
    */
-  static async getPastBookingsByCustomer(customerId: string) {
-    const response = await apiClient.get(
-      `/customers/${customerId}/bookings/past`
-    );
-    return response.data;
-  }
+  // static async getPastBookingsByCustomer(customerId: string) {
+  //   const response = await apiClient.get(
+  //     `/customers/${customerId}/bookings/past`
+  //   );
+  //   return response.data;
+  // }
 
   /**
    * Get bookings by branch
@@ -107,38 +107,38 @@ export class BookingService {
   /**
    * Search bookings by customer name
    */
-  static async searchBookingsByCustomerName(customerName: string) {
-    const response = await apiClient.get(
-      `${this.BASE_URL}/search/customer-name`,
-      {
-        params: { customerName },
-      }
-    );
-    return response.data;
-  }
+  // static async searchBookingsByCustomerName(customerName: string) {
+  //   const response = await apiClient.get(
+  //     `${this.BASE_URL}/search/customer-name`,
+  //     {
+  //       params: { customerName },
+  //     }
+  //   );
+  //   return response.data;
+  // }
 
   /**
    * Search bookings by phone number
    */
-  static async searchBookingsByPhone(phoneNumber: string) {
-    const response = await apiClient.get(`${this.BASE_URL}/search/phone`, {
-      params: { phoneNumber },
-    });
-    return response.data;
-  }
+  // static async searchBookingsByPhone(phoneNumber: string) {
+  //   const response = await apiClient.get(`${this.BASE_URL}/search/phone`, {
+  //     params: { phoneNumber },
+  //   });
+  //   return response.data;
+  // }
 
   /**
    * Search bookings by license plate
    */
-  static async searchBookingsByLicensePlate(licensePlate: string) {
-    const response = await apiClient.get(
-      `${this.BASE_URL}/search/license-plate`,
-      {
-        params: { licensePlate },
-      }
-    );
-    return response.data;
-  }
+  // static async searchBookingsByLicensePlate(licensePlate: string) {
+  //   const response = await apiClient.get(
+  //     `${this.BASE_URL}/search/license-plate`,
+  //     {
+  //       params: { licensePlate },
+  //     }
+  //   );
+  //   return response.data;
+  // }
 
   /**
    * Get booking statistics
@@ -162,7 +162,10 @@ export class BookingService {
    * Create new booking with slot assignment (Integrated API)
    */
   static async createBookingWithSlot(request: CreateBookingWithSlotRequest) {
-    const response = await apiClient.post("/integrated-booking/create-with-slot", request);
+    const response = await apiClient.post(
+      "/integrated-booking/create-with-slot",
+      request
+    );
     return response.data;
   }
 

@@ -14,8 +14,15 @@ export const PaymentService = {
    * Verify payment status
    */
   async verifyPayment(orderCode: number): Promise<PaymentStatusResponse> {
-    const response = await api.get(`/payment/verify/${orderCode}`);
-    return response.data.data;
+    console.log(`🔍 PaymentService.verifyPayment: Calling /payment/verify/${orderCode}`);
+    try {
+      const response = await api.get(`/payment/verify/${orderCode}`);
+      console.log(`📊 PaymentService.verifyPayment: API response:`, response.data);
+      return response.data.data;
+    } catch (error) {
+      console.error(`❌ PaymentService.verifyPayment: API error:`, error);
+      throw error;
+    }
   },
 
   /**

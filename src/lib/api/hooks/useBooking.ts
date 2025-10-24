@@ -45,13 +45,13 @@ export const useBooking = (bookingId: string) => {
   });
 };
 
-export const useBookingByCode = (bookingCode: string) => {
-  return useQuery({
-    queryKey: bookingKeys.byCode(bookingCode),
-    queryFn: () => BookingService.getBookingByCode(bookingCode),
-    enabled: !!bookingCode,
-  });
-};
+// export const useBookingByCode = (bookingCode: string) => {
+//   return useQuery({
+//     queryKey: bookingKeys.byCode(bookingCode),
+//     queryFn: () => BookingService.getBookingByCode(bookingCode),
+//     enabled: !!bookingCode,
+//   });
+// };
 
 export const useBookingsByCustomer = (customerId: string) => {
   return useQuery({

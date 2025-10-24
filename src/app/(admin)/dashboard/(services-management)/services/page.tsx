@@ -71,13 +71,11 @@ const ServicesPage = () => {
     async (page: number = 0, size: number = 10) => {
       try {
         setLoading(true);
-        console.log("Loading services...", { page, size });
         const response = await ServiceService.getAllServices({ page, size });
 
         // Handle both Service[] and ServicePageResponse
         if (Array.isArray(response.data)) {
           // Direct array response
-          console.log("Services loaded:", response.data.length, "items");
           setServiceData(response.data);
           setPagination({
             current: 1,
@@ -86,11 +84,6 @@ const ServicesPage = () => {
           });
         } else {
           // Paginated response
-          console.log(
-            "Services loaded:",
-            response.data.content?.length,
-            "items"
-          );
           setServiceData(response.data.content || []);
           setPagination({
             current: response.data.number + 1,
@@ -111,13 +104,8 @@ const ServicesPage = () => {
   // Refresh data function
   const refreshData = async () => {
     try {
-      console.log("Refreshing data...", {
-        current: pagination.current,
-        pageSize: pagination.pageSize,
-      });
       await loadServices(pagination.current - 1, pagination.pageSize);
       setTableKey((prev) => prev + 1); // Force table re-render
-      console.log("Data refreshed successfully");
     } catch (error) {
       console.error("Error refreshing data:", error);
       message.error("Không thể làm mới dữ liệu");

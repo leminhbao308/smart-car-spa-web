@@ -92,7 +92,6 @@ const ReturnsPage = () => {
   };
 
   const getStatusText = (status: string) => {
-    console.log(status);
     switch (status) {
       case "FULFILLED":
         return "Hoàn thành";

@@ -66,7 +66,6 @@ const LoginForm = () => {
           const redirectPath = redirectCookie.split("=")[1];
           // Xóa cookie sau khi đọc
           document.cookie = "redirect_after_login=; max-age=0; path=/";
-          console.log("redirectPath - login page", redirectPath);
           return redirectPath;
         }
       }

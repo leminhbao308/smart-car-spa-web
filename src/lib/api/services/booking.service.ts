@@ -21,7 +21,7 @@ export class BookingService {
   ): Promise<BookingInfoDto[]> {
     try {
       const queryParams = new URLSearchParams();
-      
+
       if (filterParam) {
         if (filterParam.page !== undefined) {
           queryParams.append("page", filterParam.page.toString());
@@ -46,7 +46,9 @@ export class BookingService {
         }
       }
 
-      const url = `/bookings${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const url = `/bookings${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`;
       const response = await apiClient.get(url);
 
       if (response.data.success) {
@@ -81,32 +83,36 @@ export class BookingService {
   /**
    * Get booking by code
    */
-  static async getBookingByCode(bookingCode: string): Promise<BookingInfoDto> {
-    try {
-      const response = await apiClient.get(`/bookings/code/${bookingCode}`);
+  // static async getBookingByCode(bookingCode: string): Promise<BookingInfoDto> {
+  //   try {
+  //     const response = await apiClient.get(`/bookings/code/${bookingCode}`);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
-      } else {
-        throw new Error(response.data.message || "Failed to fetch booking");
-      }
-    } catch (error) {
-      console.error("Get booking by code error:", error);
-      throw error;
-    }
-  }
+  //     if (response.data.success && response.data.data) {
+  //       return response.data.data;
+  //     } else {
+  //       throw new Error(response.data.message || "Failed to fetch booking");
+  //     }
+  //   } catch (error) {
+  //     console.error("Get booking by code error:", error);
+  //     throw error;
+  //   }
+  // }
 
   /**
    * Get bookings by customer
    */
-  static async getBookingsByCustomer(customerId: string): Promise<BookingInfoDto[]> {
+  static async getBookingsByCustomer(
+    customerId: string
+  ): Promise<BookingInfoDto[]> {
     try {
       const response = await apiClient.get(`/customers/${customerId}/bookings`);
 
       if (response.data.success && response.data.data) {
         return response.data.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch customer bookings");
+        throw new Error(
+          response.data.message || "Failed to fetch customer bookings"
+        );
       }
     } catch (error) {
       console.error("Get bookings by customer error:", error);
@@ -117,50 +123,54 @@ export class BookingService {
   /**
    * Get upcoming bookings by customer
    */
-  static async getUpcomingBookingsByCustomer(customerId: string): Promise<BookingInfoDto[]> {
-    try {
-      const response = await apiClient.get(`/customers/${customerId}/bookings/upcoming`);
+  // static async getUpcomingBookingsByCustomer(customerId: string): Promise<BookingInfoDto[]> {
+  //   try {
+  //     const response = await apiClient.get(`/customers/${customerId}/bookings/upcoming`);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
-      } else {
-        throw new Error(response.data.message || "Failed to fetch upcoming bookings");
-      }
-    } catch (error) {
-      console.error("Get upcoming bookings error:", error);
-      throw error;
-    }
-  }
+  //     if (response.data.success && response.data.data) {
+  //       return response.data.data;
+  //     } else {
+  //       throw new Error(response.data.message || "Failed to fetch upcoming bookings");
+  //     }
+  //   } catch (error) {
+  //     console.error("Get upcoming bookings error:", error);
+  //     throw error;
+  //   }
+  // }
 
   /**
    * Get past bookings by customer
    */
-  static async getPastBookingsByCustomer(customerId: string): Promise<BookingInfoDto[]> {
-    try {
-      const response = await apiClient.get(`/customers/${customerId}/bookings/past`);
+  // static async getPastBookingsByCustomer(customerId: string): Promise<BookingInfoDto[]> {
+  //   try {
+  //     const response = await apiClient.get(`/customers/${customerId}/bookings/past`);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
-      } else {
-        throw new Error(response.data.message || "Failed to fetch past bookings");
-      }
-    } catch (error) {
-      console.error("Get past bookings error:", error);
-      throw error;
-    }
-  }
+  //     if (response.data.success && response.data.data) {
+  //       return response.data.data;
+  //     } else {
+  //       throw new Error(response.data.message || "Failed to fetch past bookings");
+  //     }
+  //   } catch (error) {
+  //     console.error("Get past bookings error:", error);
+  //     throw error;
+  //   }
+  // }
 
   /**
    * Get bookings by branch
    */
-  static async getBookingsByBranch(branchId: string): Promise<BookingInfoDto[]> {
+  static async getBookingsByBranch(
+    branchId: string
+  ): Promise<BookingInfoDto[]> {
     try {
       const response = await apiClient.get(`/branches/${branchId}/bookings`);
 
       if (response.data.success && response.data.data) {
         return response.data.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch branch bookings");
+        throw new Error(
+          response.data.message || "Failed to fetch branch bookings"
+        );
       }
     } catch (error) {
       console.error("Get bookings by branch error:", error);
@@ -172,16 +182,20 @@ export class BookingService {
    * Get bookings by branch and date
    */
   static async getBookingsByBranchAndDate(
-    branchId: string, 
+    branchId: string,
     bookingDate: string
   ): Promise<BookingInfoDto[]> {
     try {
-      const response = await apiClient.get(`/branches/${branchId}/bookings/date/${bookingDate}`);
+      const response = await apiClient.get(
+        `/branches/${branchId}/bookings/date/${bookingDate}`
+      );
 
       if (response.data.success && response.data.data) {
         return response.data.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch bookings by date");
+        throw new Error(
+          response.data.message || "Failed to fetch bookings by date"
+        );
       }
     } catch (error) {
       console.error("Get bookings by branch and date error:", error);
@@ -199,7 +213,9 @@ export class BookingService {
       if (response.data.success && response.data.data) {
         return response.data.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch bookings by status");
+        throw new Error(
+          response.data.message || "Failed to fetch bookings by status"
+        );
       }
     } catch (error) {
       console.error("Get bookings by status error:", error);
@@ -210,68 +226,89 @@ export class BookingService {
   /**
    * Search bookings by customer name
    */
-  static async searchBookingsByCustomerName(customerName: string): Promise<BookingInfoDto[]> {
-    try {
-      const response = await apiClient.get(`/bookings/search/customer-name?customerName=${encodeURIComponent(customerName)}`);
+  // static async searchBookingsByCustomerName(
+  //   customerName: string
+  // ): Promise<BookingInfoDto[]> {
+  //   try {
+  //     const response = await apiClient.get(
+  //       `/bookings/search/customer-name?customerName=${encodeURIComponent(
+  //         customerName
+  //       )}`
+  //     );
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
-      } else {
-        throw new Error(response.data.message || "Failed to search bookings by customer name");
-      }
-    } catch (error) {
-      console.error("Search bookings by customer name error:", error);
-      throw error;
-    }
-  }
+  //     if (response.data.success && response.data.data) {
+  //       return response.data.data;
+  //     } else {
+  //       throw new Error(
+  //         response.data.message || "Failed to search bookings by customer name"
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error("Search bookings by customer name error:", error);
+  //     throw error;
+  //   }
+  // }
 
   /**
    * Search bookings by phone number
    */
-  static async searchBookingsByPhone(phoneNumber: string): Promise<BookingInfoDto[]> {
-    try {
-      const response = await apiClient.get(`/bookings/search/phone?phoneNumber=${encodeURIComponent(phoneNumber)}`);
+  // static async searchBookingsByPhone(
+  //   phoneNumber: string
+  // ): Promise<BookingInfoDto[]> {
+  //   try {
+  //     const response = await apiClient.get(
+  //       `/bookings/search/phone?phoneNumber=${encodeURIComponent(phoneNumber)}`
+  //     );
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
-      } else {
-        throw new Error(response.data.message || "Failed to search bookings by phone");
-      }
-    } catch (error) {
-      console.error("Search bookings by phone error:", error);
-      throw error;
-    }
-  }
+  //     if (response.data.success && response.data.data) {
+  //       return response.data.data;
+  //     } else {
+  //       throw new Error(
+  //         response.data.message || "Failed to search bookings by phone"
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error("Search bookings by phone error:", error);
+  //     throw error;
+  //   }
+  // }
 
   /**
    * Search bookings by license plate
    */
-  static async searchBookingsByLicensePlate(licensePlate: string): Promise<BookingInfoDto[]> {
-    try {
-      const response = await apiClient.get(`/bookings/search/license-plate?licensePlate=${encodeURIComponent(licensePlate)}`);
+  // static async searchBookingsByLicensePlate(licensePlate: string): Promise<BookingInfoDto[]> {
+  //   try {
+  //     const response = await apiClient.get(`/bookings/search/license-plate?licensePlate=${encodeURIComponent(licensePlate)}`);
 
-      if (response.data.success && response.data.data) {
-        return response.data.data;
-      } else {
-        throw new Error(response.data.message || "Failed to search bookings by license plate");
-      }
-    } catch (error) {
-      console.error("Search bookings by license plate error:", error);
-      throw error;
-    }
-  }
+  //     if (response.data.success && response.data.data) {
+  //       return response.data.data;
+  //     } else {
+  //       throw new Error(response.data.message || "Failed to search bookings by license plate");
+  //     }
+  //   } catch (error) {
+  //     console.error("Search bookings by license plate error:", error);
+  //     throw error;
+  //   }
+  // }
 
   /**
    * Get booking statistics
    */
-  static async getBookingStatistics(branchId: string, date: string): Promise<BookingStatisticsDto> {
+  static async getBookingStatistics(
+    branchId: string,
+    date: string
+  ): Promise<BookingStatisticsDto> {
     try {
-      const response = await apiClient.get(`/branches/${branchId}/bookings/statistics/date/${date}`);
+      const response = await apiClient.get(
+        `/branches/${branchId}/bookings/statistics/date/${date}`
+      );
 
       if (response.data.success && response.data.data) {
         return response.data.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch booking statistics");
+        throw new Error(
+          response.data.message || "Failed to fetch booking statistics"
+        );
       }
     } catch (error) {
       console.error("Get booking statistics error:", error);
@@ -282,7 +319,9 @@ export class BookingService {
   /**
    * Create new booking
    */
-  static async createBooking(bookingData: CreateBookingRequest): Promise<BookingInfoDto> {
+  static async createBooking(
+    bookingData: CreateBookingRequest
+  ): Promise<BookingInfoDto> {
     try {
       console.log("Creating booking with data:", bookingData);
 
@@ -310,7 +349,10 @@ export class BookingService {
     try {
       console.log("Updating booking with data:", bookingData);
 
-      const response = await apiClient.post(`/bookings/${bookingId}/update`, bookingData);
+      const response = await apiClient.post(
+        `/bookings/${bookingId}/update`,
+        bookingData
+      );
       console.log("Update booking API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -356,7 +398,7 @@ export class BookingService {
 
       const response = await apiClient.post(`/bookings/${bookingId}/cancel`, {
         reason,
-        cancelledBy
+        cancelledBy,
       });
       console.log("Cancel booking API response:", response);
 
@@ -441,6 +483,41 @@ export class BookingService {
       }
     } catch (error) {
       console.error("Complete service error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get bookings pending payment
+   */
+  static async getBookingsPendingPayment(): Promise<BookingInfoDto[]> {
+    try {
+      console.log("Getting bookings pending payment");
+      const response = await apiClient.get("/bookings/pending-payment");
+      console.log("Get bookings pending payment API response:", response);
+      return response.data.data;
+    } catch (error: unknown) {
+      console.log("Get bookings pending payment error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark booking as paid
+   */
+  static async markBookingAsPaid(bookingId: string): Promise<void> {
+    try {
+      console.log(`Marking booking as paid - BookingId: ${bookingId}`);
+      const response = await apiClient.post(`/bookings/${bookingId}/mark-paid`);
+      console.log("Mark booking as paid API response:", response);
+
+      if (!response.data.success) {
+        throw new Error(
+          response.data.message || "Failed to mark booking as paid"
+        );
+      }
+    } catch (error: unknown) {
+      console.error("Mark booking as paid error:", error);
       throw error;
     }
   }

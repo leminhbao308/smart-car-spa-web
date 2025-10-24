@@ -22,60 +22,62 @@ export class ServiceProcessService {
   /**
    * Get all service processes with pagination and filtering
    */
-  static async getAllServiceProcesses(
-    filterParam?: ServiceProcessFilterParam,
-    pageable?: { page: number; size: number; sort?: string; direction?: string }
-  ): Promise<ServiceProcessInfoDto[]> {
-    try {
-      const queryParams = new URLSearchParams();
-      
-      if (filterParam) {
-        if (filterParam.search) {
-          queryParams.append("search", filterParam.search);
-        }
-        if (filterParam.branchId) {
-          queryParams.append("branchId", filterParam.branchId);
-        }
-        if (filterParam.isActive !== undefined) {
-          queryParams.append("isActive", filterParam.isActive.toString());
-        }
-        if (filterParam.isDefault !== undefined) {
-          queryParams.append("isDefault", filterParam.isDefault.toString());
-        }
-      }
+  // static async getAllServiceProcesses(
+  //   filterParam?: ServiceProcessFilterParam,
+  //   pageable?: { page: number; size: number; sort?: string; direction?: string }
+  // ): Promise<ServiceProcessInfoDto[]> {
+  //   try {
+  //     const queryParams = new URLSearchParams();
 
-      if (pageable) {
-        queryParams.append("page", pageable.page.toString());
-        queryParams.append("size", pageable.size.toString());
-        if (pageable.sort) {
-          queryParams.append("sort", pageable.sort);
-        }
-        if (pageable.direction) {
-          queryParams.append("direction", pageable.direction);
-        }
-      }
+  //     if (filterParam) {
+  //       if (filterParam.search) {
+  //         queryParams.append("search", filterParam.search);
+  //       }
+  //       if (filterParam.branchId) {
+  //         queryParams.append("branchId", filterParam.branchId);
+  //       }
+  //       if (filterParam.isActive !== undefined) {
+  //         queryParams.append("isActive", filterParam.isActive.toString());
+  //       }
+  //       if (filterParam.isDefault !== undefined) {
+  //         queryParams.append("isDefault", filterParam.isDefault.toString());
+  //       }
+  //     }
 
-      const url = `/service-processes${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const response = await apiClient.get(url);
+  //     if (pageable) {
+  //       queryParams.append("page", pageable.page.toString());
+  //       queryParams.append("size", pageable.size.toString());
+  //       if (pageable.sort) {
+  //         queryParams.append("sort", pageable.sort);
+  //       }
+  //       if (pageable.direction) {
+  //         queryParams.append("direction", pageable.direction);
+  //       }
+  //     }
 
-      // Backend returns Page<ServiceProcessInfoDto> directly
-      if (response.data && Array.isArray(response.data)) {
-        return response.data;
-      } else if (response.data && response.data.content) {
-        return response.data.content;
-      } else {
-        throw new Error("Invalid response format");
-      }
-    } catch (error) {
-      console.error("Get all service processes error:", error);
-      throw error;
-    }
-  }
+  //     const url = `/service-processes${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+  //     const response = await apiClient.get(url);
+
+  //     // Backend returns Page<ServiceProcessInfoDto> directly
+  //     if (response.data && Array.isArray(response.data)) {
+  //       return response.data;
+  //     } else if (response.data && response.data.content) {
+  //       return response.data.content;
+  //     } else {
+  //       throw new Error("Invalid response format");
+  //     }
+  //   } catch (error) {
+  //     console.error("Get all service processes error:", error);
+  //     throw error;
+  //   }
+  // }
 
   /**
    * Get service process by ID
    */
-  static async getServiceProcessById(processId: string): Promise<ServiceProcessInfoDto> {
+  static async getServiceProcessById(
+    processId: string
+  ): Promise<ServiceProcessInfoDto> {
     try {
       const response = await apiClient.get(`/service-processes/${processId}`);
 
@@ -94,7 +96,9 @@ export class ServiceProcessService {
   /**
    * Get service process by code
    */
-  static async getServiceProcessByCode(code: string): Promise<ServiceProcessInfoDto> {
+  static async getServiceProcessByCode(
+    code: string
+  ): Promise<ServiceProcessInfoDto> {
     try {
       const response = await apiClient.get(`/service-processes/code/${code}`);
 
@@ -113,9 +117,13 @@ export class ServiceProcessService {
   /**
    * Get service process by service ID
    */
-  static async getServiceProcessByServiceId(serviceId: string): Promise<ServiceProcessInfoDto> {
+  static async getServiceProcessByServiceId(
+    serviceId: string
+  ): Promise<ServiceProcessInfoDto> {
     try {
-      const response = await apiClient.get(`/service-processes/service/${serviceId}`);
+      const response = await apiClient.get(
+        `/service-processes/service/${serviceId}`
+      );
 
       // Backend returns ServiceProcessInfoDto directly
       if (response.data) {
@@ -140,7 +148,9 @@ export class ServiceProcessService {
       if (response.data) {
         return response.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch default service process");
+        throw new Error(
+          response.data.message || "Failed to fetch default service process"
+        );
       }
     } catch (error) {
       console.error("Get default service process error:", error);
@@ -151,30 +161,30 @@ export class ServiceProcessService {
   /**
    * Get all active service processes
    */
-  static async getAllActiveServiceProcesses(): Promise<ServiceProcessInfoDto[]> {
-    try {
-      // Use the main endpoint and filter for active processes
-      const response = await apiClient.get("/service-processes");
+  // static async getAllActiveServiceProcesses(): Promise<ServiceProcessInfoDto[]> {
+  //   try {
+  //     // Use the main endpoint and filter for active processes
+  //     const response = await apiClient.get("/service-processes");
 
-      // Backend returns Page<ServiceProcessInfoDto> directly
-      if (response.data && Array.isArray(response.data)) {
-        // Filter for active processes
-        const activeProcesses = response.data.filter((process: ServiceProcessInfoDto) => process.isActive);
-        return activeProcesses;
-      } else if (response.data && response.data.content) {
-        // If response is paginated, filter for active processes
-        const activeProcesses = response.data.content.filter((process: ServiceProcessInfoDto) => process.isActive);
-        return activeProcesses;
-      } else {
-        console.warn("Unexpected response format for service processes:", response.data);
-        return []; // Return empty array instead of throwing error
-      }
-    } catch (error) {
-      console.error("Get active service processes error:", error);
-      // Return empty array instead of throwing error to prevent UI crashes
-      return [];
-    }
-  }
+  //     // Backend returns Page<ServiceProcessInfoDto> directly
+  //     if (response.data && Array.isArray(response.data)) {
+  //       // Filter for active processes
+  //       const activeProcesses = response.data.filter((process: ServiceProcessInfoDto) => process.isActive);
+  //       return activeProcesses;
+  //     } else if (response.data && response.data.content) {
+  //       // If response is paginated, filter for active processes
+  //       const activeProcesses = response.data.content.filter((process: ServiceProcessInfoDto) => process.isActive);
+  //       return activeProcesses;
+  //     } else {
+  //       console.warn("Unexpected response format for service processes:", response.data);
+  //       return []; // Return empty array instead of throwing error
+  //     }
+  //   } catch (error) {
+  //     console.error("Get active service processes error:", error);
+  //     // Return empty array instead of throwing error to prevent UI crashes
+  //     return [];
+  //   }
+  // }
 
   /**
    * Create new service process
@@ -204,7 +214,10 @@ export class ServiceProcessService {
     processData: UpdateServiceProcessRequest
   ): Promise<ServiceProcessInfoDto> {
     try {
-      const response = await apiClient.post(`/service-processes/${processId}/update`, processData);
+      const response = await apiClient.post(
+        `/service-processes/${processId}/update`,
+        processData
+      );
 
       // Backend returns ServiceProcessInfoDto directly
       if (response.data) {
@@ -225,11 +238,15 @@ export class ServiceProcessService {
     try {
       console.log("Deleting service process with ID:", processId);
 
-      const response = await apiClient.post(`/service-processes/${processId}/delete`);
+      const response = await apiClient.post(
+        `/service-processes/${processId}/delete`
+      );
       console.log("Delete service process API response:", response);
 
       if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to delete service process");
+        throw new Error(
+          response.data.message || "Failed to delete service process"
+        );
       }
     } catch (error) {
       console.error("Delete service process error:", error);
@@ -240,11 +257,15 @@ export class ServiceProcessService {
   /**
    * Set default service process
    */
-  static async setDefaultServiceProcess(processId: string): Promise<ServiceProcessInfoDto> {
+  static async setDefaultServiceProcess(
+    processId: string
+  ): Promise<ServiceProcessInfoDto> {
     try {
       console.log("Setting default service process with ID:", processId);
 
-      const response = await apiClient.post(`/service-processes/${processId}/set-default`);
+      const response = await apiClient.post(
+        `/service-processes/${processId}/set-default`
+      );
       console.log("Set default service process API response:", response);
 
       // Backend returns ServiceProcessInfoDto directly
@@ -264,9 +285,13 @@ export class ServiceProcessService {
   /**
    * Get service process steps
    */
-  static async getServiceProcessSteps(processId: string): Promise<ServiceProcessStepInfoDto[]> {
+  static async getServiceProcessSteps(
+    processId: string
+  ): Promise<ServiceProcessStepInfoDto[]> {
     try {
-      const response = await apiClient.get(`/service-processes/${processId}/steps`);
+      const response = await apiClient.get(
+        `/service-processes/${processId}/steps`
+      );
 
       // Backend returns List<ServiceProcessStepInfoDto> directly
       if (response.data && Array.isArray(response.data)) {
@@ -283,9 +308,13 @@ export class ServiceProcessService {
   /**
    * Get service process step by ID
    */
-  static async getServiceProcessStepById(stepId: string): Promise<ServiceProcessStepInfoDto> {
+  static async getServiceProcessStepById(
+    stepId: string
+  ): Promise<ServiceProcessStepInfoDto> {
     try {
-      const response = await apiClient.get(`/service-processes/steps/${stepId}`);
+      const response = await apiClient.get(
+        `/service-processes/steps/${stepId}`
+      );
 
       // Backend returns ServiceProcessStepInfoDto directly
       if (response.data) {
@@ -309,7 +338,10 @@ export class ServiceProcessService {
     try {
       console.log("Adding step to service process with data:", stepData);
 
-      const response = await apiClient.post(`/service-processes/${processId}/steps`, stepData);
+      const response = await apiClient.post(
+        `/service-processes/${processId}/steps`,
+        stepData
+      );
       console.log("Add step to service process API response:", response);
 
       // Backend returns ServiceProcessStepInfoDto directly
@@ -334,7 +366,10 @@ export class ServiceProcessService {
     try {
       console.log("Updating service process step with data:", stepData);
 
-      const response = await apiClient.post(`/service-processes/steps/${stepId}/update`, stepData);
+      const response = await apiClient.post(
+        `/service-processes/steps/${stepId}/update`,
+        stepData
+      );
       console.log("Update service process step API response:", response);
 
       // Backend returns ServiceProcessStepInfoDto directly
@@ -356,11 +391,15 @@ export class ServiceProcessService {
     try {
       console.log("Deleting service process step with ID:", stepId);
 
-      const response = await apiClient.post(`/service-processes/steps/${stepId}/delete`);
+      const response = await apiClient.post(
+        `/service-processes/steps/${stepId}/delete`
+      );
       console.log("Delete service process step API response:", response);
 
       if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to delete service process step");
+        throw new Error(
+          response.data.message || "Failed to delete service process step"
+        );
       }
     } catch (error) {
       console.error("Delete service process step error:", error);
@@ -373,9 +412,13 @@ export class ServiceProcessService {
   /**
    * Get service process step products
    */
-  static async getServiceProcessStepProducts(stepId: string): Promise<ServiceProcessStepProductInfoDto[]> {
+  static async getServiceProcessStepProducts(
+    stepId: string
+  ): Promise<ServiceProcessStepProductInfoDto[]> {
     try {
-      const response = await apiClient.get(`/service-processes/steps/${stepId}/products`);
+      const response = await apiClient.get(
+        `/service-processes/steps/${stepId}/products`
+      );
 
       // Backend returns List<ServiceProcessStepProductInfoDto> directly
       if (response.data && Array.isArray(response.data)) {
@@ -392,9 +435,13 @@ export class ServiceProcessService {
   /**
    * Get all products for service process
    */
-  static async getServiceProcessProducts(processId: string): Promise<ServiceProcessStepProductInfoDto[]> {
+  static async getServiceProcessProducts(
+    processId: string
+  ): Promise<ServiceProcessStepProductInfoDto[]> {
     try {
-      const response = await apiClient.get(`/service-processes/${processId}/products`);
+      const response = await apiClient.get(
+        `/service-processes/${processId}/products`
+      );
 
       // Backend returns List<ServiceProcessStepProductInfoDto> directly
       if (response.data && Array.isArray(response.data)) {
@@ -411,9 +458,13 @@ export class ServiceProcessService {
   /**
    * Get service process step product by ID
    */
-  static async getServiceProcessStepProductById(productId: string): Promise<ServiceProcessStepProductInfoDto> {
+  static async getServiceProcessStepProductById(
+    productId: string
+  ): Promise<ServiceProcessStepProductInfoDto> {
     try {
-      const response = await apiClient.get(`/service-processes/step-products/${productId}`);
+      const response = await apiClient.get(
+        `/service-processes/step-products/${productId}`
+      );
 
       // Backend returns ServiceProcessStepProductInfoDto directly
       if (response.data) {
@@ -437,7 +488,10 @@ export class ServiceProcessService {
     try {
       console.log("Adding product to step with data:", productData);
 
-      const response = await apiClient.post(`/service-processes/steps/${stepId}/products`, productData);
+      const response = await apiClient.post(
+        `/service-processes/steps/${stepId}/products`,
+        productData
+      );
       console.log("Add product to step API response:", response);
 
       // Backend returns ServiceProcessStepProductInfoDto directly
@@ -460,10 +514,19 @@ export class ServiceProcessService {
     productData: UpdateServiceProcessStepProductRequest
   ): Promise<ServiceProcessStepProductInfoDto> {
     try {
-      console.log("Updating service process step product with data:", productData);
+      console.log(
+        "Updating service process step product with data:",
+        productData
+      );
 
-      const response = await apiClient.post(`/service-processes/step-products/${productId}/update`, productData);
-      console.log("Update service process step product API response:", response);
+      const response = await apiClient.post(
+        `/service-processes/step-products/${productId}/update`,
+        productData
+      );
+      console.log(
+        "Update service process step product API response:",
+        response
+      );
 
       // Backend returns ServiceProcessStepProductInfoDto directly
       if (response.data) {
@@ -480,15 +543,25 @@ export class ServiceProcessService {
   /**
    * Delete service process step product
    */
-  static async deleteServiceProcessStepProduct(productId: string): Promise<void> {
+  static async deleteServiceProcessStepProduct(
+    productId: string
+  ): Promise<void> {
     try {
       console.log("Deleting service process step product with ID:", productId);
 
-      const response = await apiClient.post(`/service-processes/step-products/${productId}/delete`);
-      console.log("Delete service process step product API response:", response);
+      const response = await apiClient.post(
+        `/service-processes/step-products/${productId}/delete`
+      );
+      console.log(
+        "Delete service process step product API response:",
+        response
+      );
 
       if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to delete service process step product");
+        throw new Error(
+          response.data.message ||
+            "Failed to delete service process step product"
+        );
       }
     } catch (error) {
       console.error("Delete service process step product error:", error);

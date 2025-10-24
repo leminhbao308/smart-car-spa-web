@@ -9,11 +9,11 @@ const { Title } = Typography;
 
 const InputOTP = ({ length }: { length: number }) => {
   const onChange: OTPProps["onChange"] = (text) => {
-    console.log("onChange:", text);
+
   };
 
   const onInput: OTPProps["onInput"] = (value) => {
-    console.log("onInput:", value);
+
   };
 
   const sharedProps: OTPProps = {

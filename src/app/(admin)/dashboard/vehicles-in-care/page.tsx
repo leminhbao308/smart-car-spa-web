@@ -25,16 +25,22 @@ import {
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
 import VehicleTrackingModal from "@/components/ui/Modal/VehicleTrackingModal";
+import UpdateTrackingModal from "@/components/ui/Modal/UpdateTrackingModal";
+import BookingTrackingManagementModal from "@/components/ui/Modal/BookingTrackingManagementModal";
 import { useVehicleTracking } from "@/lib/api/hooks/useVehicleTracking";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 import { formatTime } from "@/components/utils/helper/duration.format.helper";
-import { 
+import {
   useBookingsByStatus,
   useStartService,
-  useCancelBooking
+  useCancelBooking,
 } from "@/lib/api/hooks/useBooking";
+import { useBookingWithInventory } from "@/lib/api/hooks/useBookingWithInventory";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookingInfoDto, BookingStatus } from "@/lib/api/types/booking.types";
+import { ServiceProcessTrackingInfoDto, CreateServiceProcessTrackingRequest, TrackingStatus } from "@/lib/api/types/service-process-tracking.types";
+import { ServiceProcessService } from "@/lib/api/services/service-process.service";
+import { ServiceProcessTrackingService } from "@/lib/api/services/service-process-tracking.service";
 
 const { Text } = Typography;
 
@@ -98,9 +104,14 @@ const VehiclesInCarePage = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{
-    type: 'start' | 'cancel';
+    type: "start" | "cancel";
     record: BookingInfoDto | null;
-  }>({ type: 'start', record: null });
+  }>({ type: "start", record: null });
+  const [updateTrackingModalOpen, setUpdateTrackingModalOpen] = useState(false);
+  const [selectedTracking, setSelectedTracking] =
+    useState<ServiceProcessTrackingInfoDto | null>(null);
+  const [selectedStepName, setSelectedStepName] = useState<string>("");
+  const [bookingTrackingModalOpen, setBookingTrackingModalOpen] = useState(false);
   const { notification } = App.useApp();
 
   // API hooks - Load bookings with multiple statuses
@@ -134,6 +145,12 @@ const VehiclesInCarePage = () => {
   const startServiceMutation = useStartService();
   const cancelBookingMutation = useCancelBooking();
   const queryClient = useQueryClient();
+  
+  // Enhanced hooks with inventory management
+  const {
+    startServiceWithInventory,
+    cancelBookingWithInventory,
+  } = useBookingWithInventory();
 
   // Combine bookings with their trackings
   const checkedInData = checkedInBookings?.data || [];
@@ -156,7 +173,13 @@ const VehiclesInCarePage = () => {
         placement: "topRight",
       });
     }
-  }, [checkedInError, inProgressError, cancelledError, completedError, notification]);
+  }, [
+    checkedInError,
+    inProgressError,
+    cancelledError,
+    completedError,
+    notification,
+  ]);
 
   const getStatusIcon = (status: BookingStatus) => {
     switch (status) {
@@ -174,6 +197,18 @@ const VehiclesInCarePage = () => {
   };
 
   const columns = [
+    {
+      title: "STT",
+      dataIndex: "index",
+      key: "index",
+      width: 60,
+      align: "center" as const,
+      render: (_: unknown, __: unknown, index: number) => (
+        <Text style={{ fontSize: 12, fontWeight: 500 }}>
+          {index + 1}
+        </Text>
+      ),
+    },
     {
       title: "Thông tin xe",
       dataIndex: "vehicleInfo",
@@ -293,66 +328,174 @@ const VehiclesInCarePage = () => {
         );
       },
     },
+    {
+      title: "Chăm sóc xe",
+      dataIndex: "careActions",
+      key: "careActions",
+      width: 150,
+      align: "center" as const,
+      render: (_: unknown, record: BookingInfoDto) => {
+        const isBookingInProgress = record.status === BookingStatus.IN_PROGRESS;
+
+        // Only show care buttons when booking is IN_PROGRESS
+        if (!isBookingInProgress) {
+          return <span style={{ color: "#999", fontSize: 12 }}>-</span>;
+        }
+
+        return (
+          <Button
+            type="primary"
+            size="small"
+            icon={<CheckCircleOutlined />}
+            onClick={() => handleUpdateTracking(record)}
+            style={{ fontSize: 11 }}
+          >
+            Chăm sóc xe
+          </Button>
+        );
+      },
+    },
   ];
 
-  const handlePayment = (record: BookingInfoDto) => {
-    const bookingId = record.booking_id;
-    const totalPrice = record.total_price || 0;
-
-    // TODO: Implement payment processing logic
-    console.log("Booking ID:", bookingId);
-    console.log("Total Price:", totalPrice);
-
-    notification.success({
-      message: "Thành công",
-      description: "Xử lý thanh toán thành công",
-      placement: "topRight",
-    });
+  const handleUpdateTracking = async (record: BookingInfoDto) => {
+    setSelectedVehicle(record);
+    setBookingTrackingModalOpen(true);
   };
 
   const handleStartService = (record: BookingInfoDto) => {
-    setConfirmAction({ type: 'start', record });
+    setConfirmAction({ type: "start", record });
     setConfirmModalOpen(true);
   };
 
   const handleCancelBooking = (record: BookingInfoDto) => {
-    setConfirmAction({ type: 'cancel', record });
+    setConfirmAction({ type: "cancel", record });
     setConfirmModalOpen(true);
+  };
+
+  // Auto-create tracking function
+  const autoCreateTrackingForBooking = async (booking: BookingInfoDto) => {
+    try {
+
+      if (!booking.booking_items || booking.booking_items.length === 0) {
+        return;
+      }
+
+      const createdTrackings: ServiceProcessTrackingInfoDto[] = [];
+      const serviceStepsByService: Array<{
+        service_id: string;
+        service_name: string;
+        steps: Array<{
+          id: string;
+          name: string;
+          service_id: string;
+          service_name: string;
+          [key: string]: unknown;
+        }>;
+      }> = [];
+
+      // Lấy process steps cho từng service trong booking
+      for (const item of booking.booking_items || []) {
+        if (item.service_id) {
+          try {
+            const serviceProcess = await ServiceProcessService.getServiceProcessByServiceId(item.service_id);
+            if (serviceProcess?.process_steps || serviceProcess?.processSteps) {
+              const steps = serviceProcess.process_steps || serviceProcess.processSteps || [];
+              
+              serviceStepsByService.push({
+                service_id: item.service_id,
+                service_name: item.item_name,
+                steps: steps.map(step => ({
+                  ...step,
+                  service_id: item.service_id!,
+                  service_name: item.item_name
+                }))
+              });
+            }
+          } catch (error) {
+            console.warn(`Failed to get service process for service ${item.service_id}:`, error);
+          }
+        }
+      }
+
+      // Tạo tracking cho từng step trong từng service
+      for (const serviceData of serviceStepsByService) {
+        for (const step of serviceData.steps) {
+          try {
+            const trackingRequest: CreateServiceProcessTrackingRequest = {
+              booking_id: booking.booking_id,
+              service_step_id: step.id,
+              car_service_id: step.service_id, // ID của service mà booking đã đặt
+              bay_id: booking.bay_id || "",
+              status: TrackingStatus.PENDING,
+              notes: `Tự động tạo tracking cho bước: ${step.name} (${serviceData.service_name})`,
+            };
+            const createdTracking = await ServiceProcessTrackingService.createTracking(trackingRequest);
+            createdTrackings.push(createdTracking);
+          } catch (error) {
+            console.error(`❌ Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`, error);
+          }
+        }
+      }
+      
+      if (createdTrackings.length > 0) {
+        notification.success({
+          message: "Thành công",
+          description: `Đã tự động tạo ${createdTrackings.length} tracking records`,
+          placement: "topRight",
+        });
+      }
+
+    } catch (error) {
+      console.error("❌ Error in auto-create tracking:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Có lỗi xảy ra khi tự động tạo tracking",
+        placement: "topRight",
+      });
+    }
   };
 
   const handleConfirmAction = async () => {
     if (!confirmAction.record) return;
 
     try {
-      if (confirmAction.type === 'start') {
-        await startServiceMutation.mutateAsync(confirmAction.record.booking_id);
+      if (confirmAction.type === "start") {
+        // Use enhanced hook with inventory fulfillment
+        await startServiceWithInventory(confirmAction.record, confirmAction.record.branch_id);
         notification.success({
           message: "Thành công",
-          description: "Bắt đầu chăm sóc thành công",
+          description: "Bắt đầu chăm sóc và xuất sản phẩm thành công",
           placement: "topRight",
         });
-      } else if (confirmAction.type === 'cancel') {
-        await cancelBookingMutation.mutateAsync({
-          bookingId: confirmAction.record.booking_id,
-          reason: "Hủy bởi admin",
-          cancelledBy: "admin",
-        });
+
+        // Auto-create tracking records directly here
+        await autoCreateTrackingForBooking(confirmAction.record);
+      } else if (confirmAction.type === "cancel") {
+        // Use enhanced hook with inventory release
+        await cancelBookingWithInventory(
+          confirmAction.record,
+          confirmAction.record.branch_id,
+          "Hủy bởi admin",
+          "admin"
+        );
         notification.success({
           message: "Thành công",
-          description: "Hủy lịch đặt thành công",
+          description: "Hủy lịch đặt và hoàn trả sản phẩm thành công",
           placement: "topRight",
         });
       }
 
       // Refresh data
-      await queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      
+      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+
       setConfirmModalOpen(false);
-      setConfirmAction({ type: 'start', record: null });
+      setConfirmAction({ type: "start", record: null });
     } catch {
       notification.error({
         message: "Lỗi",
-        description: `Có lỗi xảy ra khi ${confirmAction.type === 'start' ? 'bắt đầu chăm sóc' : 'hủy lịch đặt'}`,
+        description: `Có lỗi xảy ra khi ${
+          confirmAction.type === "start" ? "bắt đầu chăm sóc" : "hủy lịch đặt"
+        }`,
         placement: "topRight",
       });
     }
@@ -380,7 +523,7 @@ const VehiclesInCarePage = () => {
     },
     {
       key: "tracking",
-      label: "Chăm sóc xe",
+      label: "Xem tiến độ chăm sóc",
       icon: <EyeOutlined />,
       type: "primary" as const,
       onClick: (record: BookingInfoDto) => {
@@ -388,17 +531,9 @@ const VehiclesInCarePage = () => {
         setDetailModalOpen(true);
       },
       condition: (record: BookingInfoDto) =>
-        [BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED].includes(record.status),
-    },
-    {
-      key: "payment",
-      label: "Thanh toán",
-      icon: <CreditCardOutlined />,
-      type: "default" as const,
-      onClick: handlePayment,
-      condition: (record: BookingInfoDto) =>
-        record.status === BookingStatus.COMPLETED &&
-        record.payment_status === "PENDING",
+        [BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED].includes(
+          record.status
+        ),
     },
   ];
 
@@ -429,196 +564,253 @@ const VehiclesInCarePage = () => {
       <div>
         {/* Thống kê tổng quan */}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tổng xe đang chăm sóc và đã hoàn thành"
-              value={totalVehicles}
-              valueStyle={{ color: "#1890ff" }}
-              prefix={<CarOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Đã check-in"
-              value={checkedInVehicles}
-              valueStyle={{ color: "#13c2c2" }}
-              prefix={<CheckCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Đang thực hiện"
-              value={inProgressVehicles}
-              valueStyle={{ color: "#52c41a" }}
-              prefix={<PlayCircleOutlined />}
-            />
-            <Progress
-              percent={Math.round((inProgressVehicles / totalVehicles) * 100)}
-              size="small"
-              strokeColor="#52c41a"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Hoàn thành"
-              value={completedVehicles}
-              valueStyle={{ color: "#13c2c2" }}
-              prefix={<CheckCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Đã hủy"
-              value={cancelledVehicles}
-              valueStyle={{ color: "#f5222d" }}
-              prefix={<ExclamationCircleOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Tổng xe đang chăm sóc và đã hoàn thành"
+                value={totalVehicles}
+                valueStyle={{ color: "#1890ff" }}
+                prefix={<CarOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Đã check-in"
+                value={checkedInVehicles}
+                valueStyle={{ color: "#13c2c2" }}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Đang thực hiện"
+                value={inProgressVehicles}
+                valueStyle={{ color: "#52c41a" }}
+                prefix={<PlayCircleOutlined />}
+              />
+              <Progress
+                percent={Math.round((inProgressVehicles / totalVehicles) * 100)}
+                size="small"
+                strokeColor="#52c41a"
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Hoàn thành"
+                value={completedVehicles}
+                valueStyle={{ color: "#13c2c2" }}
+                prefix={<CheckCircleOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Đã hủy"
+                value={cancelledVehicles}
+                valueStyle={{ color: "#f5222d" }}
+                prefix={<ExclamationCircleOutlined />}
+              />
+            </Card>
+          </Col>
+        </Row>
 
-      {/* Thống kê bổ sung */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Tiến độ TB"
-              value={averageProgress}
-              precision={1}
-              valueStyle={{ color: "#722ed1" }}
-              prefix={<ClockCircleOutlined />}
-              suffix="%"
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Khẩn cấp"
-              value={urgentVehicles}
-              valueStyle={{ color: "#f5222d" }}
-              prefix={<ExclamationCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Ưu tiên cao"
-              value={highPriorityVehicles}
-              valueStyle={{ color: "#fa8c16" }}
-              prefix={<StarOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+        {/* Thống kê bổ sung */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Tiến độ TB"
+                value={averageProgress}
+                precision={1}
+                valueStyle={{ color: "#722ed1" }}
+                prefix={<ClockCircleOutlined />}
+                suffix="%"
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Khẩn cấp"
+                value={urgentVehicles}
+                valueStyle={{ color: "#f5222d" }}
+                prefix={<ExclamationCircleOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Ưu tiên cao"
+                value={highPriorityVehicles}
+                valueStyle={{ color: "#fa8c16" }}
+                prefix={<StarOutlined />}
+              />
+            </Card>
+          </Col>
+        </Row>
 
-      <AdminTable
-        title="Danh sách xe đang chăm sóc và đã hoàn thành"
-        dataSource={data}
-        columns={columns}
-        actions={actions}
-        loading={
-          isLoadingCheckedIn ||
-          isLoadingInProgress ||
-          isLoadingCancelled ||
-          isLoadingCompleted ||
-          startServiceMutation.isPending ||
-          cancelBookingMutation.isPending
-        }
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total: number, range: [number, number]) =>
-            `${range[0]}-${range[1]} của ${total} xe`,
-        }}
-      />
-
-      {/* Modal theo dõi quá trình chăm sóc xe */}
-      {selectedVehicle && (
-        <VehicleTrackingModal
-          open={detailModalOpen}
-          onCancel={() => {
-            setDetailModalOpen(false);
-            setSelectedVehicle(null);
+        <AdminTable
+          title="Danh sách xe đang chăm sóc và đã hoàn thành"
+          dataSource={data}
+          columns={columns}
+          actions={actions}
+          rowKey="booking_id"
+          loading={
+            isLoadingCheckedIn ||
+            isLoadingInProgress ||
+            isLoadingCancelled ||
+            isLoadingCompleted ||
+            startServiceMutation.isPending ||
+            cancelBookingMutation.isPending
+          }
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total: number, range: [number, number]) =>
+              `${range[0]}-${range[1]} của ${total} xe`,
           }}
-          booking={selectedVehicle}
-          trackings={trackingData || []}
         />
-      )}
 
-      {/* Modal xác nhận */}
-      <Modal
-        title={
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {confirmAction.type === 'start' ? (
-              <PlayCircleOutlined style={{ color: "#1890ff" }} />
-            ) : (
-              <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
-            )}
-            <span>
-              {confirmAction.type === 'start' ? 'Bắt đầu chăm sóc' : 'Hủy lịch đặt'}
-            </span>
-          </div>
-        }
-        open={confirmModalOpen}
-        onCancel={() => {
-          setConfirmModalOpen(false);
-          setConfirmAction({ type: 'start', record: null });
-        }}
-        footer={[
-          <Button
-            key="cancel"
-            onClick={() => {
-              setConfirmModalOpen(false);
-              setConfirmAction({ type: 'start', record: null });
+        {/* Modal theo dõi quá trình chăm sóc xe */}
+        {selectedVehicle && (
+          <VehicleTrackingModal
+            open={detailModalOpen}
+            onCancel={() => {
+              setDetailModalOpen(false);
+              setSelectedVehicle(null);
             }}
-          >
-            Hủy
-          </Button>,
-          <Button
-            key="confirm"
-            type="primary"
-            danger={confirmAction.type === 'cancel'}
-            loading={startServiceMutation.isPending || cancelBookingMutation.isPending}
-            onClick={handleConfirmAction}
-          >
-            {confirmAction.type === 'start' ? 'Bắt đầu chăm sóc' : 'Hủy lịch đặt'}
-          </Button>,
-        ]}
-        width={500}
-      >
-        <div style={{ padding: '16px 0' }}>
-          <p style={{ fontSize: 16, marginBottom: 16 }}>
-            {confirmAction.type === 'start' 
-              ? `Bạn có chắc chắn muốn bắt đầu chăm sóc cho xe ${confirmAction.record?.vehicle_license_plate}?`
-              : `Bạn có chắc chắn muốn hủy lịch đặt cho xe ${confirmAction.record?.vehicle_license_plate}?`
-            }
-          </p>
-          {confirmAction.record && (
-            <div style={{ 
-              backgroundColor: '#f5f5f5', 
-              padding: 12, 
-              borderRadius: 6,
-              fontSize: 14 
-            }}>
-              <div><strong>Khách hàng:</strong> {confirmAction.record.customer_name}</div>
-              <div><strong>Biển số:</strong> {confirmAction.record.vehicle_license_plate}</div>
-              <div><strong>Dịch vụ:</strong> {confirmAction.record.booking_items?.length || 0} dịch vụ</div>
+            booking={selectedVehicle}
+            trackings={trackingData || []}
+            onTrackingCreated={() => {
+              // Refresh tracking data when new tracking is created
+              if (selectedVehicle) {
+                handleUpdateTracking(selectedVehicle);
+              }
+            }}
+          />
+        )}
+
+        {/* Update Tracking Modal */}
+        {selectedTracking && (
+          <UpdateTrackingModal
+            open={updateTrackingModalOpen}
+            onCancel={() => {
+              setUpdateTrackingModalOpen(false);
+              setSelectedTracking(null);
+              setSelectedStepName("");
+            }}
+            onSuccess={() => {
+              setUpdateTrackingModalOpen(false);
+              setSelectedTracking(null);
+              setSelectedStepName("");
+              // Refresh all booking data
+              queryClient.invalidateQueries({ queryKey: ["bookings"] });
+            }}
+            tracking={selectedTracking}
+            stepName={selectedStepName}
+          />
+        )}
+
+        {/* Booking Tracking Management Modal */}
+        {selectedVehicle && (
+          <BookingTrackingManagementModal
+            open={bookingTrackingModalOpen}
+            onCancel={() => {
+              setBookingTrackingModalOpen(false);
+              setSelectedVehicle(null);
+            }}
+            booking={selectedVehicle}
+          />
+        )}
+
+        {/* Modal xác nhận */}
+        <Modal
+          title={
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {confirmAction.type === "start" ? (
+                <PlayCircleOutlined style={{ color: "#1890ff" }} />
+              ) : (
+                <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
+              )}
+              <span>
+                {confirmAction.type === "start"
+                  ? "Bắt đầu chăm sóc"
+                  : "Hủy lịch đặt"}
+              </span>
             </div>
-          )}
-        </div>
-      </Modal>
+          }
+          open={confirmModalOpen}
+          onCancel={() => {
+            setConfirmModalOpen(false);
+            setConfirmAction({ type: "start", record: null });
+          }}
+          footer={[
+            <Button
+              key="cancel"
+              onClick={() => {
+                setConfirmModalOpen(false);
+                setConfirmAction({ type: "start", record: null });
+              }}
+            >
+              Hủy
+            </Button>,
+            <Button
+              key="confirm"
+              type="primary"
+              danger={confirmAction.type === "cancel"}
+              loading={
+                startServiceMutation.isPending ||
+                cancelBookingMutation.isPending
+              }
+              onClick={handleConfirmAction}
+            >
+              {confirmAction.type === "start"
+                ? "Bắt đầu chăm sóc"
+                : "Hủy lịch đặt"}
+            </Button>,
+          ]}
+          width={500}
+        >
+          <div style={{ padding: "16px 0" }}>
+            <p style={{ fontSize: 16, marginBottom: 16 }}>
+              {confirmAction.type === "start"
+                ? `Bạn có chắc chắn muốn bắt đầu chăm sóc cho xe ${confirmAction.record?.vehicle_license_plate}?`
+                : `Bạn có chắc chắn muốn hủy lịch đặt cho xe ${confirmAction.record?.vehicle_license_plate}?`}
+            </p>
+            {confirmAction.record && (
+              <div
+                style={{
+                  backgroundColor: "#f5f5f5",
+                  padding: 12,
+                  borderRadius: 6,
+                  fontSize: 14,
+                }}
+              >
+                <div>
+                  <strong>Khách hàng:</strong>{" "}
+                  {confirmAction.record.customer_name}
+                </div>
+                <div>
+                  <strong>Biển số:</strong>{" "}
+                  {confirmAction.record.vehicle_license_plate}
+                </div>
+                <div>
+                  <strong>Dịch vụ:</strong>{" "}
+                  {confirmAction.record.booking_items?.length || 0} dịch vụ
+                </div>
+              </div>
+            )}
+          </div>
+        </Modal>
       </div>
     </App>
   );

@@ -47,7 +47,6 @@ const ForgotPasswordPage: React.FC = () => {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
       
-      console.log("Send OTP to:", contactMethod, values.emailOrPhone);
       setEmailOrPhone(values.emailOrPhone);
       setCurrentStep(2);
       setOtpTimer(60); // 60 seconds countdown
@@ -68,7 +67,6 @@ const ForgotPasswordPage: React.FC = () => {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500));
       
-      console.log("Verify OTP:", values.otp);
       setOtp(values.otp);
       setCurrentStep(3);
       message.success("Xác thực OTP thành công!");
@@ -85,7 +83,6 @@ const ForgotPasswordPage: React.FC = () => {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 2000));
       
-      console.log("Reset password:", { emailOrPhone, contactMethod, otp, newPassword: values.newPassword });
       setCurrentStep(4);
       message.success("Đặt lại mật khẩu thành công!");
     } catch {

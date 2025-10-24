@@ -69,7 +69,6 @@ const SignupPage = () => {
         `Mã OTP đã được gửi đến email ${values.emailOrPhone}! Vui lòng kiểm tra hộp thư.`
       );
     } catch (error: unknown) {
-      console.log("Error sending OTP:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -91,7 +90,6 @@ const SignupPage = () => {
       message.success("Đăng ký với Google thành công!");
       router.push("/auth/login");
     } catch (error) {
-      console.log("Google signup error:", error);
       message.error("Đăng ký với Google thất bại!");
     } finally {
       setLoading(false);
