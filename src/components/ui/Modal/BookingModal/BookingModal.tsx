@@ -23,6 +23,7 @@ import {
   Tooltip,
   Divider,
   Tabs,
+  Input,
 } from "antd";
 import {
   CalendarOutlined,
@@ -126,6 +127,24 @@ const BookingModal: React.FC<BookingModalProps> = ({
     useState<UserManagementInfo | null>(null);
   const [selectedVehicle, setSelectedVehicle] =
     useState<VehicleProfileDisplay | null>(null);
+  
+  // New customer states
+  const [newCustomer, setNewCustomer] = useState<{
+    full_name: string;
+    phone_number: string;
+    email?: string;
+  } | null>(null);
+  const [newVehicle, setNewVehicle] = useState<{
+    license_plate: string;
+    brand_name: string;
+    model_name: string;
+    type_name: string;
+    color: string;
+    year?: number;
+  } | null>(null);
+  
+  // Track customer type (existing vs new)
+  const [customerType, setCustomerType] = useState<'existing' | 'new'>('existing');
   const [selectedBranch, setSelectedBranch] = useState<BranchDisplay | null>(
     null
   );
@@ -312,6 +331,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
       form.resetFields();
       setSelectedCustomer(null);
       setSelectedVehicle(null);
+      setNewCustomer(null);
+      setNewVehicle(null);
+      setCustomerType('existing');
       setSelectedBranch(null);
       setSelectedItems([]);
       setSelectedBay(null);
@@ -412,7 +434,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
     bookingId: string
   ) => {
     try {
-      const allProducts: any[] = [];
+      const allProducts: Array<{
+        product_id: string;
+        product_name: string;
+        product_code: string;
+        quantity: number;
+        unit_of_measure: string;
+        notes?: string;
+        service_id: string;
+        service_name: string;
+      }> = [];
 
       for (const service of services) {
         if (service.item_type === "SERVICE") {
@@ -536,31 +567,77 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
+      console.log("🚀 Starting handleSubmit...");
+      console.log("Current state:", {
+        customerType,
+        selectedCustomer: !!selectedCustomer,
+        selectedVehicle: !!selectedVehicle,
+        newCustomer: !!newCustomer,
+        newVehicle: !!newVehicle,
+        selectedBranch: !!selectedBranch,
+        selectedSlot: !!selectedSlot,
+        selectedItems: selectedItems.length
+      });
 
-      if (
-        !selectedCustomer ||
-        !selectedVehicle ||
-        !selectedBranch ||
-        !selectedSlot
-      ) {
-        console.error("Missing required information for booking");
+      const values = await form.validateFields();
+      console.log("Form values:", values);
+
+      // Check if using new customer or existing customer
+      const isNewCustomer = customerType === 'new' && newCustomer && newVehicle;
+      const isExistingCustomer = customerType === 'existing' && selectedCustomer && selectedVehicle;
+
+      console.log("Customer checks:", { isNewCustomer, isExistingCustomer });
+
+      if (!isNewCustomer && !isExistingCustomer) {
+        console.error("❌ Missing required information for booking");
+        console.error("isNewCustomer:", isNewCustomer, "isExistingCustomer:", isExistingCustomer);
+        return;
+      }
+
+      // For new customers, they can only use onsite processing (no slot selection)
+      if (isNewCustomer) {
+        if (!selectedBranch) {
+          console.error("Missing branch information for new customer");
+          return;
+        }
+        // New customers don't need slot selection - they use onsite processing
+        console.log("New customer - using onsite processing");
+        // Handle new customer submission here
+        onOk({
+          customerType: 'new',
+          customer: newCustomer,
+          vehicle: newVehicle,
+          branch: selectedBranch,
+          services: selectedItems,
+          totalPrice,
+          totalDuration,
+          notes: values.notes || ""
+        });
+        return;
+      }
+
+      // For existing customers, they need slot selection
+      if (!selectedBranch || !selectedSlot) {
+        console.error("Missing branch or slot information for existing customer");
         return;
       }
 
       // Create request for new integrated API
       const createRequest = {
-        customer_id: selectedCustomer.user_id,
-        customer_name: selectedCustomer.full_name,
-        customer_phone: selectedCustomer.phone_number,
-        customer_email: selectedCustomer.email,
-        vehicle_id: selectedVehicle.vehicle_id,
-        vehicle_license_plate: selectedVehicle.license_plate,
-        vehicle_brand_name: selectedVehicle.brand_name || "",
-        vehicle_model_name: selectedVehicle.model_name || "",
-        vehicle_type_name: selectedVehicle.type_name || "",
-        vehicle_year: selectedVehicle.model_year || new Date().getFullYear(),
-        vehicle_color: selectedVehicle.color || "",
+        // Customer information
+        customer_id: isNewCustomer ? null : selectedCustomer?.user_id,
+        customer_name: isNewCustomer ? newCustomer!.full_name : selectedCustomer!.full_name,
+        customer_phone: isNewCustomer ? newCustomer!.phone_number : selectedCustomer!.phone_number,
+        customer_email: isNewCustomer ? newCustomer!.email : selectedCustomer!.email,
+        
+        // Vehicle information
+        vehicle_id: isNewCustomer ? null : selectedVehicle?.vehicle_id,
+        vehicle_license_plate: isNewCustomer ? newVehicle!.license_plate : selectedVehicle!.license_plate,
+        vehicle_brand_name: isNewCustomer ? newVehicle!.brand_name : (selectedVehicle!.brand_name || ""),
+        vehicle_model_name: isNewCustomer ? newVehicle!.model_name : (selectedVehicle!.model_name || ""),
+        vehicle_type_name: isNewCustomer ? newVehicle!.type_name : (selectedVehicle!.type_name || ""),
+        vehicle_year: isNewCustomer ? (newVehicle!.year || new Date().getFullYear()) : (selectedVehicle!.model_year || new Date().getFullYear()),
+        vehicle_color: isNewCustomer ? newVehicle!.color : (selectedVehicle!.color || ""),
         branch_id: selectedBranch.branch_id,
         selected_slot: {
           bay_id: selectedSlot.bayId,
@@ -622,6 +699,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
       onOk(createRequest);
     } catch (error) {
       console.error("Booking submission failed:", error);
+      
+      // Debug form validation errors
+      if (error && typeof error === 'object' && 'errorFields' in error) {
+        console.error("Validation errors:", error.errorFields);
+        error.errorFields.forEach((field: any, index: number) => {
+          console.error(`Field ${index + 1}:`, {
+            name: field.name,
+            errors: field.errors,
+            warnings: field.warnings
+          });
+        });
+      }
     }
   };
 
@@ -642,20 +731,270 @@ const BookingModal: React.FC<BookingModalProps> = ({
     </div>
   );
 
-  const renderCustomerVehicleStep = () => (
+  // Render new customer form (Tab 2)
+  const renderNewCustomerForm = () => (
     <div>
       <Row gutter={16}>
         <Col span={12}>
           <Card
             size="small"
-            title="Thông tin khách hàng"
+            title="Thông tin khách hàng mới"
             style={{ marginBottom: 16 }}
           >
             <Form.Item
-              name="customerId"
-              label="Chọn khách hàng"
-              rules={[{ required: true, message: "Vui lòng chọn khách hàng" }]}
+              name="newCustomerName"
+              label="Họ và tên"
+              rules={[{ required: customerType === 'new', message: "Vui lòng nhập họ và tên" }]}
             >
+              <Input
+                placeholder="Nhập họ và tên khách hàng"
+                onChange={(e) => {
+                  setNewCustomer(prev => ({
+                    ...prev,
+                    full_name: e.target.value,
+                    phone_number: prev?.phone_number || "",
+                    email: prev?.email || ""
+                  }));
+                }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="newCustomerPhone"
+              label="Số điện thoại"
+              rules={[
+                { required: customerType === 'new', message: "Vui lòng nhập số điện thoại" },
+                { pattern: /^[0-9]{10,11}$/, message: "Số điện thoại không hợp lệ" }
+              ]}
+            >
+              <Input
+                placeholder="Nhập số điện thoại"
+                onChange={(e) => {
+                  setNewCustomer(prev => ({
+                    ...prev,
+                    full_name: prev?.full_name || "",
+                    phone_number: e.target.value,
+                    email: prev?.email || ""
+                  }));
+                }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="newCustomerEmail"
+              label="Email (tùy chọn)"
+            >
+              <Input
+                placeholder="Nhập email (tùy chọn)"
+                onChange={(e) => {
+                  setNewCustomer(prev => ({
+                    ...prev,
+                    full_name: prev?.full_name || "",
+                    phone_number: prev?.phone_number || "",
+                    email: e.target.value
+                  }));
+                }}
+              />
+            </Form.Item>
+
+            {newCustomer && (
+              <Alert
+                message={`Khách hàng mới: ${newCustomer.full_name}`}
+                description={`SĐT: ${newCustomer.phone_number}${newCustomer.email ? ` • Email: ${newCustomer.email}` : ''}`}
+                type="success"
+                showIcon
+                style={{ marginTop: 8 }}
+              />
+            )}
+          </Card>
+        </Col>
+
+        <Col span={12}>
+          <Card size="small" title="Thông tin xe mới" style={{ marginBottom: 16 }}>
+            <Form.Item
+              name="newVehicleLicensePlate"
+              label="Biển số xe"
+              rules={[{ required: customerType === 'new', message: "Vui lòng nhập biển số xe" }]}
+            >
+              <Input
+                placeholder="Nhập biển số xe"
+                onChange={(e) => {
+                  setNewVehicle(prev => ({
+                    ...prev,
+                    license_plate: e.target.value,
+                    brand_name: prev?.brand_name || "",
+                    model_name: prev?.model_name || "",
+                    type_name: prev?.type_name || "",
+                    color: prev?.color || "",
+                    year: prev?.year || new Date().getFullYear()
+                  }));
+                }}
+              />
+            </Form.Item>
+
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item
+                  name="newVehicleBrand"
+                  label="Hãng xe"
+                  rules={[{ required: customerType === 'new', message: "Vui lòng nhập hãng xe" }]}
+                >
+                  <Input
+                    placeholder="VD: Toyota, Honda"
+                    onChange={(e) => {
+                      setNewVehicle(prev => ({
+                        ...prev,
+                        license_plate: prev?.license_plate || "",
+                        brand_name: e.target.value,
+                        model_name: prev?.model_name || "",
+                        type_name: prev?.type_name || "",
+                        color: prev?.color || "",
+                        year: prev?.year || new Date().getFullYear()
+                      }));
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="newVehicleModel"
+                  label="Model xe"
+                  rules={[{ required: customerType === 'new', message: "Vui lòng nhập model xe" }]}
+                >
+                  <Input
+                    placeholder="VD: Camry, Civic"
+                    onChange={(e) => {
+                      setNewVehicle(prev => ({
+                        ...prev,
+                        license_plate: prev?.license_plate || "",
+                        brand_name: prev?.brand_name || "",
+                        model_name: e.target.value,
+                        type_name: prev?.type_name || "",
+                        color: prev?.color || "",
+                        year: prev?.year || new Date().getFullYear()
+                      }));
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Row gutter={8}>
+              <Col span={12}>
+                <Form.Item
+                  name="newVehicleType"
+                  label="Loại xe"
+                  rules={[{ required: customerType === 'new', message: "Vui lòng nhập loại xe" }]}
+                >
+                  <Input
+                    placeholder="VD: Sedan, SUV"
+                    onChange={(e) => {
+                      setNewVehicle(prev => ({
+                        ...prev,
+                        license_plate: prev?.license_plate || "",
+                        brand_name: prev?.brand_name || "",
+                        model_name: prev?.model_name || "",
+                        type_name: e.target.value,
+                        color: prev?.color || "",
+                        year: prev?.year || new Date().getFullYear()
+                      }));
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="newVehicleColor"
+                  label="Màu sắc"
+                  rules={[{ required: customerType === 'new', message: "Vui lòng nhập màu sắc" }]}
+                >
+                  <Input
+                    placeholder="VD: Đen, Trắng, Xám"
+                    onChange={(e) => {
+                      setNewVehicle(prev => ({
+                        ...prev,
+                        license_plate: prev?.license_plate || "",
+                        brand_name: prev?.brand_name || "",
+                        model_name: prev?.model_name || "",
+                        type_name: prev?.type_name || "",
+                        color: e.target.value,
+                        year: prev?.year || new Date().getFullYear()
+                      }));
+                    }}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            {newVehicle && (
+              <Alert
+                message={`Xe mới: ${newVehicle.license_plate}`}
+                description={`${newVehicle.brand_name} ${newVehicle.model_name} • ${newVehicle.type_name} • ${newVehicle.color}`}
+                type="info"
+                showIcon
+                style={{ marginTop: 8 }}
+              />
+            )}
+          </Card>
+        </Col>
+      </Row>
+    </div>
+  );
+
+  const renderCustomerVehicleStep = () => (
+    <div>
+      <Card
+        size="small"
+        title="Thông tin khách hàng và xe"
+        style={{ marginBottom: 16 }}
+      >
+        <Tabs
+          defaultActiveKey="existing"
+          onChange={(key) => {
+            setCustomerType(key as 'existing' | 'new');
+            // Reset all customer and vehicle data when switching tabs
+            setSelectedCustomer(null);
+            setSelectedVehicle(null);
+            setNewCustomer(null);
+            setNewVehicle(null);
+            
+            // Reset slot selection when switching customer types
+            setSelectedBay(null);
+            setSelectedSlot(null);
+            setAvailableSlots([]);
+            
+            // Reset form fields for customer/vehicle sections
+            form.setFieldsValue({
+              customerId: undefined,
+              vehicleId: undefined,
+              newCustomerName: '',
+              newCustomerPhone: '',
+              newCustomerEmail: '',
+              newVehicleLicensePlate: '',
+              newVehicleBrand: '',
+              newVehicleModel: '',
+              newVehicleType: '',
+              newVehicleColor: ''
+            });
+          }}
+          items={[
+            {
+              key: "existing",
+              label: <span>👤 Khách hàng có sẵn</span>,
+              children: (
+                <div>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Card
+                        size="small"
+                        title="Thông tin khách hàng"
+                        style={{ marginBottom: 16 }}
+                      >
+                        <Form.Item
+                          name="customerId"
+                          label="Chọn khách hàng"
+                          rules={[{ required: customerType === 'existing', message: "Vui lòng chọn khách hàng" }]}
+                        >
               <Select
                 placeholder="Tìm kiếm theo tên hoặc số điện thoại"
                 showSearch
@@ -691,80 +1030,91 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     </div>
                   </Option>
                 ))}
-              </Select>
-            </Form.Item>
+                        </Select>
+                        </Form.Item>
 
-            {selectedCustomer && (
-              <Alert
-                message={`Khách hàng: ${selectedCustomer.full_name}`}
-                description={`SĐT: ${selectedCustomer.phone_number} • Email: ${selectedCustomer.email}`}
-                type="success"
-                showIcon
-                style={{ marginTop: 8 }}
-              />
-            )}
-          </Card>
-        </Col>
+                        {selectedCustomer && (
+                          <Alert
+                            message={`Khách hàng: ${selectedCustomer.full_name}`}
+                            description={`SĐT: ${selectedCustomer.phone_number} • Email: ${selectedCustomer.email}`}
+                            type="success"
+                            showIcon
+                            style={{ marginTop: 8 }}
+                          />
+                        )}
+                      </Card>
+                    </Col>
 
-        <Col span={12}>
-          <Card size="small" title="Thông tin xe" style={{ marginBottom: 16 }}>
-            <Form.Item
-              name="vehicleId"
-              label="Chọn xe"
-              rules={[{ required: true, message: "Vui lòng chọn xe" }]}
-            >
-              <Select
-                placeholder={
-                  selectedCustomer
-                    ? "Chọn xe của khách hàng"
-                    : "Vui lòng chọn khách hàng trước"
-                }
-                loading={isLoadingVehicles}
-                onChange={handleVehicleChange}
-                disabled={!selectedCustomer}
-                optionLabelProp="label"
-                notFoundContent={
-                  !selectedCustomer
-                    ? "Vui lòng chọn khách hàng trước"
-                    : isLoadingVehicles
-                    ? "Đang tải danh sách xe..."
-                    : vehicles.length === 0
-                    ? `Khách hàng "${selectedCustomer.full_name}" chưa có xe nào trong hệ thống`
-                    : "Không tìm thấy xe phù hợp"
-                }
-              >
-                {vehicles.map((vehicle: VehicleProfileDisplay) => (
-                  <Option
-                    key={vehicle.vehicle_id}
-                    value={vehicle.vehicle_id}
-                    label={vehicle.license_plate}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 500 }}>
-                        {vehicle.license_plate}
-                      </div>
-                      <div style={{ fontSize: 12, color: "#666" }}>
-                        {vehicle.brand_name} {vehicle.model_name} •{" "}
-                        {vehicle.type_name}
-                      </div>
-                    </div>
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
+                    <Col span={12}>
+                      <Card size="small" title="Thông tin xe" style={{ marginBottom: 16 }}>
+                        <Form.Item
+                          name="vehicleId"
+                          label="Chọn xe"
+                          rules={[{ required: customerType === 'existing', message: "Vui lòng chọn xe" }]}
+                        >
+                          <Select
+                            placeholder={
+                              selectedCustomer
+                                ? "Chọn xe của khách hàng"
+                                : "Vui lòng chọn khách hàng trước"
+                            }
+                            loading={isLoadingVehicles}
+                            onChange={handleVehicleChange}
+                            disabled={!selectedCustomer}
+                            optionLabelProp="label"
+                            notFoundContent={
+                              !selectedCustomer
+                                ? "Vui lòng chọn khách hàng trước"
+                                : isLoadingVehicles
+                                ? "Đang tải danh sách xe..."
+                                : vehicles.length === 0
+                                ? `Khách hàng "${selectedCustomer.full_name}" chưa có xe nào trong hệ thống`
+                                : "Không tìm thấy xe phù hợp"
+                            }
+                          >
+                            {vehicles.map((vehicle: VehicleProfileDisplay) => (
+                              <Option
+                                key={vehicle.vehicle_id}
+                                value={vehicle.vehicle_id}
+                                label={vehicle.license_plate}
+                              >
+                                <div>
+                                  <div style={{ fontWeight: 500 }}>
+                                    {vehicle.license_plate}
+                                  </div>
+                                  <div style={{ fontSize: 12, color: "#666" }}>
+                                    {vehicle.brand_name} {vehicle.model_name} •{" "}
+                                    {vehicle.type_name}
+                                  </div>
+                                </div>
+                              </Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
 
-            {selectedVehicle && (
-              <Alert
-                message={`Xe: ${selectedVehicle.license_plate}`}
-                description={`${selectedVehicle.brand_name} ${selectedVehicle.model_name} • ${selectedVehicle.type_name}`}
-                type="info"
-                showIcon
-                style={{ marginTop: 8 }}
-              />
-            )}
-          </Card>
-        </Col>
-      </Row>
+                        {selectedVehicle && (
+                          <Alert
+                            message={`Xe: ${selectedVehicle.license_plate}`}
+                            description={`${selectedVehicle.brand_name} ${selectedVehicle.model_name} • ${selectedVehicle.type_name}`}
+                            type="info"
+                            showIcon
+                            style={{ marginTop: 8 }}
+                          />
+                        )}
+                      </Card>
+                    </Col>
+                  </Row>
+                </div>
+              ),
+            },
+            {
+              key: "new",
+              label: <span>➕ Khách hàng mới</span>,
+              children: renderNewCustomerForm(),
+            },
+          ]}
+        />
+      </Card>
     </div>
   );
 
@@ -1058,9 +1408,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
           />
         ) : (
           <Tabs
-            defaultActiveKey="booking"
+            defaultActiveKey={customerType === 'new' ? "onsite" : "booking"}
+            onChange={(key) => {
+              // Reset slot selection when switching between booking and onsite tabs
+              if (key === 'onsite') {
+                setSelectedBay(null);
+                setSelectedSlot(null);
+                setAvailableSlots([]);
+              }
+            }}
             items={[
-              {
+              // Only show booking tab for existing customers
+              ...(customerType === 'existing' ? [{
                 key: "booking",
                 label: <span>📅 Đặt lịch ({serviceBays.length})</span>,
                 children: (
@@ -1301,7 +1660,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     )}
                   </div>
                 ),
-              },
+              }] : []),
+              // Always show onsite tab
               {
                 key: "onsite",
                 label: <span>🔧 Xử lý tại chỗ ({onSiteBays.length})</span>,
@@ -1320,6 +1680,33 @@ const BookingModal: React.FC<BookingModalProps> = ({
           />
         </Form.Item>
       </Card>
+    </div>
+  );
+
+  // Debug component to show current state
+  const DebugInfo = () => (
+    <div style={{ 
+      position: 'fixed', 
+      top: 10, 
+      right: 10, 
+      background: '#f0f0f0', 
+      padding: '10px', 
+      borderRadius: '5px', 
+      fontSize: '12px',
+      zIndex: 9999,
+      maxWidth: '300px'
+    }}>
+      <div><strong>Debug Info:</strong></div>
+      <div>Customer Type: {customerType}</div>
+      <div>Selected Customer: {selectedCustomer ? 'Yes' : 'No'}</div>
+      <div>Selected Vehicle: {selectedVehicle ? 'Yes' : 'No'}</div>
+      <div>New Customer: {newCustomer ? 'Yes' : 'No'}</div>
+      <div>New Vehicle: {newVehicle ? 'Yes' : 'No'}</div>
+      <div>Selected Branch: {selectedBranch ? 'Yes' : 'No'}</div>
+      <div>Selected Slot: {selectedSlot ? 'Yes' : 'No'}</div>
+      <div>Selected Items: {selectedItems.length}</div>
+      <div>Total Price: {totalPrice}</div>
+      <div>Total Duration: {totalDuration}</div>
     </div>
   );
 
@@ -1344,11 +1731,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
           loading={loading || createBookingWithSlotMutation.isPending}
           onClick={handleSubmit}
           disabled={
-            !selectedSlot ||
-            !selectedCustomer ||
-            !selectedVehicle ||
             !selectedBranch ||
-            selectedItems.length === 0
+            selectedItems.length === 0 ||
+            (customerType === 'existing' && (!selectedCustomer || !selectedVehicle || !selectedSlot)) ||
+            (customerType === 'new' && (!newCustomer || !newVehicle))
           }
         >
           Đặt lịch
@@ -1365,6 +1751,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         {/* All Content */}
         {renderAllContent()}
       </Form>
+      {/* Debug Info */}
+      <DebugInfo />
     </Modal>
   );
 };
