@@ -13,6 +13,7 @@ export interface BayRecommendationRequest {
   service_type?: string;
   service_duration_minutes: number;
   priority?: 'NORMAL' | 'HIGH' | 'URGENT';
+  booking_date?: string;
 }
 
 /**

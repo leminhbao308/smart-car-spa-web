@@ -94,7 +94,8 @@ export const useWalkInBooking = () => {
     branchId: string,
     serviceDuration: number,
     serviceType?: string,
-    priority?: Priority
+    priority?: Priority,
+    bookingDate?: string
   ) => {
     try {
       setLoading(true);
@@ -105,6 +106,7 @@ export const useWalkInBooking = () => {
         service_duration_minutes: serviceDuration,
         service_type: serviceType,
         priority,
+        booking_date: bookingDate,
       };
 
       const response = await walkInBookingService.recommendBay(request);
@@ -201,12 +203,12 @@ export const useWalkInBooking = () => {
   /**
    * Lấy hàng chờ của bay
    */
-  const getBayQueue = useCallback(async (bayId: string) => {
+  const getBayQueue = useCallback(async (bayId: string, queueDate?: string) => {
     try {
       setLoading(true);
       setError(undefined);
 
-      const response = await walkInBookingService.getBayQueue(bayId);
+      const response = await walkInBookingService.getBayQueue(bayId, queueDate);
       updateQueueItems(response);
       
       return response;
@@ -358,7 +360,8 @@ export const useBayRecommendation = () => {
     branchId: string,
     serviceDuration: number,
     serviceType?: string,
-    priority?: Priority
+    priority?: Priority,
+    bookingDate?: string
   ) => {
     try {
       setState(prev => ({ ...prev, loading: true, error: undefined }));
@@ -368,6 +371,7 @@ export const useBayRecommendation = () => {
         service_duration_minutes: serviceDuration,
         service_type: serviceType,
         priority,
+        booking_date: bookingDate,
       };
 
       const response = await walkInBookingService.recommendBay(request);

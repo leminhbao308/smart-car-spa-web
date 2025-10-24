@@ -23,6 +23,7 @@ import {
   Divider,
   Tabs,
   Input,
+  Table,
 } from "antd";
 import {
   CalendarOutlined,
@@ -154,6 +155,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [selectedWalkInBay, setSelectedWalkInBay] = useState<string | null>(
     null
   );
+  const [manualBaySelection, setManualBaySelection] = useState(false);
   const [selectedItems, setSelectedItems] = useState<PriceBookItem[]>([]);
   const [selectedBay, setSelectedBay] = useState<ServiceBay | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot | null>(null);
@@ -172,6 +174,17 @@ const BookingModal: React.FC<BookingModalProps> = ({
       bay_name: string;
       bay_code?: string;
     }>;
+    queue?: Array<{
+      queue_id?: string;
+      queue_position?: number;
+      booking_customer_name?: string;
+      booking_vehicle_license_plate?: string;
+      booking_service_names?: string[];
+      booking_total_price?: number;
+      estimated_start_time?: string;
+      estimated_completion_time?: string;
+      [key: string]: unknown;
+    }>;
   } | null>(null);
   const [queueItems, setQueueItems] = useState<
     Array<{
@@ -187,6 +200,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }>
   >([]);
   const [isLoadingRecommendation, setIsLoadingRecommendation] = useState(false);
+  const [isLoadingQueue, setIsLoadingQueue] = useState(false);
 
   // Data states
   const [totalPrice, setTotalPrice] = useState(0);
@@ -351,7 +365,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
           selectedBranch.branch_id,
           totalDuration,
           "GENERAL",
-          "NORMAL"
+          "NORMAL",
+          bookingDate
         );
 
         console.log("✅ Bay recommendation received:", recommendation);
@@ -363,8 +378,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
           queueLength: recommendation?.queue?.length,
         });
 
-        setBayRecommendation(recommendation);
+        setBayRecommendation(
+          recommendation as unknown as typeof bayRecommendation
+        );
         setSelectedWalkInBay(recommendation?.recommended_bay?.bay_id || null);
+        setManualBaySelection(false); // Reset manual selection flag
 
         // Use queue from recommendation first, then load from API if needed
         if (recommendation?.queue && Array.isArray(recommendation.queue)) {
@@ -379,7 +397,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
             recommendation.recommended_bay.bay_id
           );
           const queue = await getBayQueue(
-            recommendation.recommended_bay.bay_id
+            recommendation.recommended_bay.bay_id,
+            bookingDate
           );
           console.log("✅ Queue loaded:", queue);
           console.log("🔍 Queue structure:", {
@@ -403,7 +422,28 @@ const BookingModal: React.FC<BookingModalProps> = ({
     };
 
     getBayRecommendation();
-  }, [selectedBranch, selectedItems, totalDuration, recommendBay, getBayQueue]);
+  }, [
+    selectedBranch,
+    selectedItems,
+    totalDuration,
+    bookingDate,
+    recommendBay,
+    getBayQueue,
+  ]);
+
+  // Reset bay recommendation when booking date changes
+  useEffect(() => {
+    if (bookingDate) {
+      console.log(
+        "📅 Booking date changed, resetting bay recommendation:",
+        bookingDate
+      );
+      setBayRecommendation(null);
+      setSelectedWalkInBay(null);
+      setQueueItems([]);
+      setManualBaySelection(false);
+    }
+  }, [bookingDate]);
 
   // Check if slot is suitable for service duration
   const isSlotSuitable = useCallback(
@@ -463,6 +503,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       setSelectedBay(null);
       setSelectedSlot(null);
       setSelectedWalkInBay(null);
+      setManualBaySelection(false);
       setTotalPrice(0);
       setTotalDuration(0);
       setBookingDate("");
@@ -590,42 +631,32 @@ const BookingModal: React.FC<BookingModalProps> = ({
         return;
       }
 
-      // For both new and existing customers, use walk-in booking (no slot selection)
-      if (isNewCustomer || isExistingCustomer) {
+      // Handle new customer (walk-in booking)
+      if (isNewCustomer) {
         if (!selectedBranch) {
           console.error("Missing branch information for new customer");
           return;
         }
 
-        // Create Walk-in Booking for both new and existing customers
-        console.log(
-          "Creating walk-in booking for customer type:",
-          customerType
-        );
+        console.log("Creating walk-in booking for new customer");
         try {
           const walkInData = {
-            customerType: isNewCustomer
-              ? ("NEW" as const)
-              : ("EXISTING" as const),
-            customerId: isNewCustomer ? undefined : selectedCustomer?.user_id,
-            vehicleId: isNewCustomer ? undefined : selectedVehicle?.vehicle_id,
-            newCustomer: isNewCustomer
-              ? {
-                  name: newCustomer!.full_name,
-                  phone: newCustomer!.phone_number,
-                  email: newCustomer!.email || "",
-                }
-              : undefined,
-            newVehicle: isNewCustomer
-              ? {
-                  licensePlate: newVehicle!.license_plate,
-                  brand: newVehicle!.brand_name,
-                  model: newVehicle!.model_name,
-                  type: newVehicle!.type_name,
-                  color: newVehicle!.color,
-                  year: newVehicle!.year || new Date().getFullYear(),
-                }
-              : undefined,
+            customerType: "NEW" as const,
+            customerId: undefined,
+            vehicleId: undefined,
+            newCustomer: {
+              name: newCustomer!.full_name,
+              phone: newCustomer!.phone_number,
+              email: newCustomer!.email || "",
+            },
+            newVehicle: {
+              licensePlate: newVehicle!.license_plate,
+              brand: newVehicle!.brand_name,
+              model: newVehicle!.model_name,
+              type: newVehicle!.type_name,
+              color: newVehicle!.color,
+              year: newVehicle!.year || new Date().getFullYear(),
+            },
             services: selectedItems.map((item) => ({
               service_id: item.service?.service_id || item.item_id,
               service_name: item.item_name,
@@ -648,12 +679,83 @@ const BookingModal: React.FC<BookingModalProps> = ({
           return;
         } catch (walkInError) {
           console.error("Error creating walk-in booking:", walkInError);
-          // Fallback to regular booking
           onOk({
             customerType: "new",
             customer: newCustomer,
             vehicle: newVehicle,
             branch: selectedBranch,
+            services: selectedItems,
+            totalPrice,
+            totalDuration,
+            notes: values.notes || "",
+          });
+          return;
+        }
+      }
+
+      // Handle existing customer (slot booking)
+      if (isExistingCustomer) {
+        if (!selectedBranch || !selectedSlot) {
+          console.error(
+            "Missing branch or slot information for existing customer"
+          );
+          return;
+        }
+
+        console.log("Creating slot booking for existing customer");
+        try {
+          const createRequest = {
+            customer_id: selectedCustomer?.user_id,
+            customer_name: selectedCustomer!.full_name,
+            customer_phone: selectedCustomer!.phone_number,
+            customer_email: selectedCustomer!.email,
+            vehicle_id: selectedVehicle?.vehicle_id,
+            vehicle_license_plate: selectedVehicle!.license_plate,
+            vehicle_brand_name: selectedVehicle!.brand_name || "",
+            vehicle_model_name: selectedVehicle!.model_name || "",
+            vehicle_type_name: selectedVehicle!.type_name || "",
+            vehicle_year:
+              selectedVehicle!.model_year || new Date().getFullYear(),
+            vehicle_color: selectedVehicle!.color || "",
+            branch_id: selectedBranch.branch_id,
+            selected_slot: {
+              bay_id: selectedSlot.bayId,
+              date: selectedSlot.date,
+              start_time: selectedSlot.startTime,
+              service_duration_minutes: selectedSlot.serviceDurationMinutes,
+            },
+            booking_items: selectedItems.map((item) => ({
+              service_id: item.service?.service_id || item.item_id,
+              item_name: item.item_name,
+              item_description: item.service?.description || "",
+              discount_amount: 0,
+              tax_amount: Math.round((item.fixed_price || 0) * 0.1),
+            })),
+            total_price: totalPrice,
+            currency: "VND",
+            deposit_amount: 0,
+            coupon_code: values.couponCode || undefined,
+            notes: values.notes || "",
+            special_requests: values.specialRequests || [],
+          };
+
+          console.log(
+            "🚀 Creating regular booking with request:",
+            createRequest
+          );
+          const createResponse =
+            await createBookingWithSlotMutation.mutateAsync(createRequest);
+          console.log("📋 Booking creation response:", createResponse);
+          onOk(createRequest);
+          return;
+        } catch (bookingError) {
+          console.error("Error creating slot booking:", bookingError);
+          onOk({
+            customerType: "existing",
+            customer: selectedCustomer,
+            vehicle: selectedVehicle,
+            branch: selectedBranch,
+            slot: selectedSlot,
             services: selectedItems,
             totalPrice,
             totalDuration,
@@ -1035,6 +1137,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             setSelectedSlot(null);
             setAvailableSlots([]);
             setSelectedWalkInBay(null);
+            setManualBaySelection(false);
 
             // Reset form fields for customer/vehicle sections
             form.setFieldsValue({
@@ -1449,10 +1552,26 @@ const BookingModal: React.FC<BookingModalProps> = ({
               <Col span={12}>
                 <div style={{ textAlign: "center", padding: "16px" }}>
                   <ShopOutlined
-                    style={{ fontSize: 32, color: "#52c41a", marginBottom: 8 }}
+                    style={{
+                      fontSize: 32,
+                      color:
+                        selectedWalkInBay ===
+                        bayRecommendation.recommended_bay?.bay_id
+                          ? "#52c41a"
+                          : "#d9d9d9",
+                      marginBottom: 8,
+                    }}
                   />
                   <div
-                    style={{ fontWeight: 600, fontSize: 18, color: "#52c41a" }}
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 18,
+                      color:
+                        selectedWalkInBay ===
+                        bayRecommendation.recommended_bay?.bay_id
+                          ? "#52c41a"
+                          : "#d9d9d9",
+                    }}
                   >
                     {bayRecommendation.recommended_bay?.bay_name}
                   </div>
@@ -1463,12 +1582,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   <div
                     style={{
                       fontSize: 10,
-                      color: "#52c41a",
+                      color:
+                        selectedWalkInBay ===
+                        bayRecommendation.recommended_bay?.bay_id
+                          ? "#52c41a"
+                          : "#d9d9d9",
                       marginTop: 4,
                       fontWeight: 500,
                     }}
                   >
-                    Được đề xuất
+                    {selectedWalkInBay ===
+                    bayRecommendation.recommended_bay?.bay_id
+                      ? "Đã chọn"
+                      : "Được đề xuất"}
                   </div>
                 </div>
               </Col>
@@ -1495,134 +1621,79 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     >
                       {queueItems.length} khách hàng
                     </div>
+                    {manualBaySelection && (
+                      <div
+                        style={{ fontSize: 10, color: "#1890ff", marginTop: 2 }}
+                      >
+                        Bay:{" "}
+                        {onSiteBays.find(
+                          (bay: ServiceBay) => bay.bay_id === selectedWalkInBay
+                        )?.bay_name || "Đã chọn"}
+                      </div>
+                    )}
                   </div>
+                  {manualBaySelection && (
+                    <div style={{ marginTop: 12 }}>
+                      <Button
+                        size="small"
+                        type="primary"
+                        onClick={async () => {
+                          setSelectedWalkInBay(
+                            bayRecommendation.recommended_bay?.bay_id || null
+                          );
+                          setManualBaySelection(false);
+
+                          // Restore original queue from recommendation
+                          setIsLoadingQueue(true);
+                          try {
+                            if (
+                              bayRecommendation?.queue &&
+                              Array.isArray(bayRecommendation.queue)
+                            ) {
+                              console.log(
+                                "🔄 Restoring original queue from recommendation"
+                              );
+                              setQueueItems(
+                                bayRecommendation.queue as unknown as typeof queueItems
+                              );
+                            } else if (
+                              bayRecommendation?.recommended_bay?.bay_id
+                            ) {
+                              console.log(
+                                "🔄 Loading queue for recommended bay:",
+                                bayRecommendation.recommended_bay.bay_id
+                              );
+                              const queue = await getBayQueue(
+                                bayRecommendation.recommended_bay.bay_id,
+                                bookingDate
+                              );
+                              console.log(
+                                "✅ Queue loaded for recommended bay:",
+                                queue
+                              );
+                              setQueueItems(
+                                queue as unknown as typeof queueItems
+                              );
+                            }
+                          } catch (error) {
+                            console.error(
+                              "❌ Error loading queue for recommended bay:",
+                              error
+                            );
+                            setQueueItems([]);
+                          } finally {
+                            setIsLoadingQueue(false);
+                          }
+                        }}
+                      >
+                        Quay lại bay đề xuất
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </Col>
             </Row>
           </Card>
-
-          {/* Queue Information */}
-          {(() => {
-            const safeQueueItems = getSafeQueueItems();
-            console.log("🔍 Queue items debug:", {
-              queueItems,
-              safeQueueItems,
-              isArray: Array.isArray(queueItems),
-              length: queueItems?.length,
-              source: "Bay Recommendation Queue Data",
-            });
-            return safeQueueItems.length > 0;
-          })() && (
-            <Card
-              title={`Hàng chờ hiện tại (${
-                getSafeQueueItems().length
-              } khách hàng)`}
-              style={{ marginBottom: 16 }}
-            >
-              <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-                {getSafeQueueItems().map((item, index) => {
-                  console.log("🔍 Queue item data:", {
-                    index,
-                    item,
-                    keys: Object.keys(item),
-                  });
-                  return (
-                    <div
-                      key={item.queue_id || `queue-${index}`}
-                      style={{
-                        padding: "8px",
-                        border: "1px solid #f0f0f0",
-                        borderRadius: "4px",
-                        marginBottom: "8px",
-                        backgroundColor: index === 0 ? "#f6ffed" : "#fff",
-                      }}
-                    >
-                      <Row gutter={8}>
-                        <Col span={2}>
-                          <div
-                            style={{
-                              textAlign: "center",
-                              fontWeight: 600,
-                              color: index === 0 ? "#52c41a" : "#1890ff",
-                            }}
-                          >
-                            #{item.queue_position}
-                          </div>
-                        </Col>
-                        <Col span={8}>
-                          <div style={{ fontWeight: 500 }}>
-                            {String(
-                              item.booking_customer_name ||
-                                item.customer_name ||
-                                item.customerName ||
-                                "N/A"
-                            )}
-                          </div>
-                          <div style={{ fontSize: 12, color: "#666" }}>
-                            {String(
-                              item.booking_vehicle_license_plate ||
-                                item.vehicle_license_plate ||
-                                item.vehicleLicensePlate ||
-                                "N/A"
-                            )}
-                          </div>
-                          <div style={{ fontSize: 10, color: "#999" }}>
-                            {String(
-                              item.booking_code ||
-                                item.booking_id ||
-                                item.bookingId ||
-                                "N/A"
-                            )}
-                          </div>
-                        </Col>
-                        <Col span={8}>
-                          <div style={{ fontSize: 12, color: "#666" }}>
-                            Bắt đầu:{" "}
-                            {item.estimated_start_time ||
-                            item.estimatedStartTime
-                              ? new Date(
-                                  String(
-                                    item.estimated_start_time ||
-                                      item.estimatedStartTime
-                                  )
-                                ).toLocaleTimeString("vi-VN", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : "Đang tính toán..."}
-                          </div>
-                          <div style={{ fontSize: 12, color: "#1890ff" }}>
-                            Hoàn thành:{" "}
-                            {item.estimated_completion_time ||
-                            item.estimatedCompletionTime
-                              ? new Date(
-                                  String(
-                                    item.estimated_completion_time ||
-                                      item.estimatedCompletionTime
-                                  )
-                                ).toLocaleTimeString("vi-VN", {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : "Đang tính toán..."}
-                          </div>
-                          <div style={{ fontSize: 10, color: "#999" }}>
-                            Vị trí: #
-                            {String(
-                              item.queue_position ||
-                                item.queuePosition ||
-                                index + 1
-                            )}
-                          </div>
-                        </Col>
-                      </Row>
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          )}
-
           {/* Alternative Bays */}
           {bayRecommendation.alternative_bays &&
             bayRecommendation.alternative_bays.length > 0 && (
@@ -1630,6 +1701,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 <Text strong style={{ marginBottom: 8, display: "block" }}>
                   Các bay khác có thể chọn:
                 </Text>
+                {manualBaySelection && (
+                  <Alert
+                    message="Bạn đã chọn bay khác với đề xuất"
+                    description="Thông tin hàng chờ và thời gian chờ có thể thay đổi. Bạn có thể quay lại bay được đề xuất bằng nút bên trên."
+                    type="warning"
+                    style={{ marginBottom: 16 }}
+                  />
+                )}
                 <Row gutter={8}>
                   {bayRecommendation.alternative_bays.map((bay) => (
                     <Col span={6} key={bay.bay_id}>
@@ -1647,7 +1726,35 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               ? "#e6f7ff"
                               : "#fff",
                         }}
-                        onClick={() => setSelectedWalkInBay(bay.bay_id)}
+                        onClick={async () => {
+                          setSelectedWalkInBay(bay.bay_id);
+                          setManualBaySelection(true);
+
+                          // Load queue for the selected bay
+                          setIsLoadingQueue(true);
+                          try {
+                            console.log(
+                              "🔄 Loading queue for selected bay:",
+                              bay.bay_id
+                            );
+                            const queue = await getBayQueue(
+                              bay.bay_id,
+                              bookingDate
+                            );
+                            console.log("✅ Queue loaded for bay:", queue);
+                            setQueueItems(
+                              queue as unknown as typeof queueItems
+                            );
+                          } catch (error) {
+                            console.error(
+                              "❌ Error loading queue for bay:",
+                              error
+                            );
+                            setQueueItems([]);
+                          } finally {
+                            setIsLoadingQueue(false);
+                          }
+                        }}
                       >
                         <ShopOutlined
                           style={{ fontSize: 20, color: "#1890ff" }}
@@ -1678,6 +1785,252 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 </Row>
               </Card>
             )}
+          {/* Queue Information */}
+          {isLoadingQueue ? (
+            <Card title="Đang tải hàng chờ..." style={{ marginBottom: 16 }}>
+              <div style={{ textAlign: "center", padding: "20px" }}>
+                <Spin />
+                <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
+                  Đang tải thông tin hàng chờ...
+                </div>
+              </div>
+            </Card>
+          ) : (
+            (() => {
+              const safeQueueItems = getSafeQueueItems();
+              console.log("🔍 Queue items debug:", {
+                queueItems,
+                safeQueueItems,
+                isArray: Array.isArray(queueItems),
+                length: queueItems?.length,
+                source: "Bay Recommendation Queue Data",
+              });
+              return safeQueueItems.length > 0;
+            })() && (
+              <Card
+                title={`Hàng chờ hiện tại (${
+                  getSafeQueueItems().length
+                } khách hàng)`}
+                style={{ marginBottom: 16 }}
+              >
+                <style>
+                  {`
+                  .queue-first-row {
+                    background-color: #f6ffed !important;
+                  }
+                  .queue-even-row {
+                    background-color: #fafafa !important;
+                  }
+                  .queue-odd-row {
+                    background-color: #ffffff !important;
+                  }
+                `}
+                </style>
+                <Table
+                  dataSource={getSafeQueueItems()}
+                  columns={[
+                    {
+                      title: "STT",
+                      dataIndex: "queue_position",
+                      key: "queue_position",
+                      width: 60,
+                      align: "center",
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (value: number, record: any, index: number) => (
+                        <span
+                          style={{
+                            fontWeight: "600",
+                            color: index === 0 ? "#52c41a" : "#1890ff",
+                          }}
+                        >
+                          #{value || index + 1}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Khách hàng",
+                      key: "customer",
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (record: any) => (
+                        <div>
+                          <div style={{ fontWeight: "500", color: "#262626" }}>
+                            {String(
+                              record.booking_customer_name ||
+                                record.customer_name ||
+                                record.customerName ||
+                                "N/A"
+                            )}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: "10px",
+                              color: "#999",
+                              marginTop: "2px",
+                            }}
+                          >
+                            {String(
+                              record.booking_code ||
+                                record.booking_id ||
+                                record.bookingId ||
+                                ""
+                            )}
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      title: "Biển số",
+                      key: "license_plate",
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (record: any) => (
+                        <span
+                          style={{
+                            color: "#666",
+                            fontFamily: "monospace",
+                            fontSize: "11px",
+                          }}
+                        >
+                          {String(
+                            record.booking_vehicle_license_plate ||
+                              record.vehicle_license_plate ||
+                              record.vehicleLicensePlate ||
+                              "N/A"
+                          )}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Dịch vụ",
+                      key: "services",
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (record: any) => (
+                        <div>
+                          {record.booking_service_names &&
+                          record.booking_service_names.length > 0 ? (
+                            <>
+                              <div style={{ marginBottom: "2px" }}>
+                                {record.booking_service_names
+                                  .slice(0, 1)
+                                  .join(", ")}
+                              </div>
+                              {record.booking_service_names.length > 1 && (
+                                <div
+                                  style={{ fontSize: "10px", color: "#999" }}
+                                >
+                                  +{record.booking_service_names.length - 1}{" "}
+                                  dịch vụ khác
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            "N/A"
+                          )}
+                        </div>
+                      ),
+                    },
+                    {
+                      title: "Giá",
+                      key: "price",
+                      align: "right",
+                      width: 100,
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (record: any) => (
+                        <span
+                          style={{
+                            fontWeight: "500",
+                            color: "#fa8c16",
+                          }}
+                        >
+                          {record.booking_total_price
+                            ? `${record.booking_total_price.toLocaleString()} VND`
+                            : "N/A"}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Thời gian",
+                      key: "time",
+                      align: "center",
+                      width: 120,
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (record: any) => (
+                        <div style={{ fontSize: "10px" }}>
+                          {record.estimated_start_time ||
+                          record.estimatedStartTime ? (
+                            <div>
+                              <div
+                                style={{
+                                  color: "#52c41a",
+                                  marginBottom: "2px",
+                                }}
+                              >
+                                Bắt đầu:{" "}
+                                {new Date(
+                                  String(
+                                    record.estimated_start_time ||
+                                      record.estimatedStartTime
+                                  )
+                                ).toLocaleTimeString("vi-VN", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </div>
+                              {record.estimated_completion_time ||
+                              record.estimatedCompletionTime ? (
+                                <div style={{ color: "#1890ff" }}>
+                                  Hoàn thành:{" "}
+                                  {new Date(
+                                    String(
+                                      record.estimated_completion_time ||
+                                        record.estimatedCompletionTime
+                                    )
+                                  ).toLocaleTimeString("vi-VN", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div style={{ color: "#999" }}>
+                              Đang tính toán...
+                            </div>
+                          )}
+                        </div>
+                      ),
+                    },
+                  ]}
+                  pagination={false}
+                  size="small"
+                  scroll={{ y: 200 }}
+                  rowKey={(record: any, index?: number) =>
+                    (record as any).queue_id || `queue-${index || 0}`
+                  }
+                  rowClassName={(record: any, index?: number) =>
+                    (index || 0) === 0
+                      ? "queue-first-row"
+                      : (index || 0) % 2 === 0
+                      ? "queue-even-row"
+                      : "queue-odd-row"
+                  }
+                  locale={{
+                    emptyText: (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "40px 20px",
+                          color: "#999",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Không có khách hàng nào trong hàng chờ
+                      </div>
+                    ),
+                  }}
+                />
+              </Card>
+            )
+          )}
         </div>
       ) : (
         <div>
@@ -1726,7 +2079,35 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               : "#fff7e6",
                           opacity: 0.9,
                         }}
-                        onClick={() => setSelectedWalkInBay(bay.bay_id)}
+                        onClick={async () => {
+                          setSelectedWalkInBay(bay.bay_id);
+                          setManualBaySelection(true);
+
+                          // Load queue for the selected bay
+                          setIsLoadingQueue(true);
+                          try {
+                            console.log(
+                              "🔄 Loading queue for selected bay:",
+                              bay.bay_id
+                            );
+                            const queue = await getBayQueue(
+                              bay.bay_id,
+                              bookingDate
+                            );
+                            console.log("✅ Queue loaded for bay:", queue);
+                            setQueueItems(
+                              queue as unknown as typeof queueItems
+                            );
+                          } catch (error) {
+                            console.error(
+                              "❌ Error loading queue for bay:",
+                              error
+                            );
+                            setQueueItems([]);
+                          } finally {
+                            setIsLoadingQueue(false);
+                          }
+                        }}
                       >
                         <ShopOutlined
                           style={{ fontSize: 24, color: "#fa8c16" }}
@@ -1781,8 +2162,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       >
         {!selectedBranch || !bookingDate ? (
           <Alert
-            message="Vui lòng chọn chi nhánh và ngày trước"
-            description="Bạn cần chọn chi nhánh và ngày để xem các slot có sẵn"
+            message="Vui lòng chọn dịch vụ, chi nhánh và ngày trước"
+            description="Bạn cần chọn dịch vụ, chi nhánh và ngày để xem các slot có sẵn"
             type="warning"
             showIcon
           />

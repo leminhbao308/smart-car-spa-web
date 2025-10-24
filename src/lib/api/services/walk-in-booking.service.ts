@@ -120,11 +120,13 @@ export class WalkInBookingService {
   /**
    * Đề xuất bay tốt nhất cho walk-in booking
    */
-  async recommendBay(request: BayRecommendationRequest): Promise<BayRecommendationResponse> {
+  async recommendBay(request: BayRecommendationRequest, queueDate?: string): Promise<BayRecommendationResponse> {
     try {
+      const params = queueDate ? { queueDate } : {};
       const response = await apiClient.post<BayRecommendationResponse>(
         '/walk-in/recommend-bay',
-        request
+        request,
+        { params }
       );
       return response.data;
     } catch (error) {
@@ -152,10 +154,12 @@ export class WalkInBookingService {
   /**
    * Lấy thông tin hàng chờ của một bay
    */
-  async getBayQueue(bayId: string): Promise<BookingQueueItem[]> {
+  async getBayQueue(bayId: string, queueDate?: string): Promise<BookingQueueItem[]> {
     try {
+      const params = queueDate ? { queueDate } : {};
       const response = await apiClient.get<BookingQueueItem[]>(
-        `/walk-in/bay-queue/${bayId}`
+        `/walk-in/bay-queue/${bayId}`,
+        { params }
       );
       return response.data;
     } catch (error) {
