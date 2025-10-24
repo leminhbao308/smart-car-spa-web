@@ -25,6 +25,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSiderContext } from "@/components/providers/SiderContext";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { ROUTES } from "@/components/utils/constant/path.route";
+import { useEffect, useRef } from "react";
 
 const { Title, Text } = Typography;
 
@@ -34,6 +35,41 @@ const AdminHeader = () => {
   const { collapsed, toggleCollapsed } = useSiderContext();
   const { user, logout, isLoading } = useAuth();
   const { modal, message: messageApi } = App.useApp();
+  
+  // State to track logout status and messages
+  const logoutStatusRef = useRef<{
+    isLoggingOut: boolean;
+    success: boolean;
+    error: string | null;
+  }>({
+    isLoggingOut: false,
+    success: false,
+    error: null,
+  });
+
+  // Handle logout messages in useEffect to avoid React 18 concurrent mode warning
+  useEffect(() => {
+    if (logoutStatusRef.current.isLoggingOut) {
+      if (logoutStatusRef.current.success) {
+        messageApi.success("Đăng xuất thành công!");
+        router.push(ROUTES.HOME);
+        // Reset status
+        logoutStatusRef.current = {
+          isLoggingOut: false,
+          success: false,
+          error: null,
+        };
+      } else if (logoutStatusRef.current.error) {
+        messageApi.error(logoutStatusRef.current.error);
+        // Reset status
+        logoutStatusRef.current = {
+          isLoggingOut: false,
+          success: false,
+          error: null,
+        };
+      }
+    }
+  }, [messageApi, router]);
 
   // Function to generate breadcrumb items based on pathname
   const generateBreadcrumbItems = () => {
@@ -162,17 +198,13 @@ const AdminHeader = () => {
       okType: "danger",
       onOk: async () => {
         try {
+          logoutStatusRef.current.isLoggingOut = true;
           await logout();
-          // Use setTimeout to avoid React 18 concurrent mode warning
-          setTimeout(() => {
-            messageApi.success("Đăng xuất thành công!");
-            router.push(ROUTES.HOME);
-          }, 0);
+          logoutStatusRef.current.success = true;
         } catch (error) {
           console.log("Logout error:", error);
-          setTimeout(() => {
-            messageApi.error("Có lỗi xảy ra khi đăng xuất. Vui lòng thử lại.");
-          }, 0);
+          logoutStatusRef.current.isLoggingOut = true;
+          logoutStatusRef.current.error = "Có lỗi xảy ra khi đăng xuất. Vui lòng thử lại.";
         }
       },
     });

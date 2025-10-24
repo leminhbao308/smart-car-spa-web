@@ -1,5 +1,11 @@
 ﻿"use client";
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import {
   Modal,
   Form,
@@ -12,15 +18,12 @@ import {
   Row,
   Col,
   Typography,
-  Steps,
   Alert,
   Spin,
   Tooltip,
   Divider,
-  // message, // Removed to avoid static function warning
 } from "antd";
 import {
-  UserOutlined,
   CalendarOutlined,
   ClockCircleOutlined,
   DollarOutlined,
@@ -33,9 +36,7 @@ import {
 import dayjs from "dayjs";
 import { formatDurationVer01 } from "@/components/utils/helper/duration.format.helper";
 import { MemoizedTextArea } from "@/components/ui/MemoizedComponents";
-import {
-  useCreateBookingWithSlot,
-} from "@/lib/api/hooks/useBooking";
+import { useCreateBookingWithSlot } from "@/lib/api/hooks/useBooking";
 import { useCustomersDropdown } from "@/lib/api/hooks/useUsers";
 import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
 import { useBranches } from "@/lib/api/hooks/useBranches";
@@ -45,20 +46,16 @@ import {
   BookingScheduleService,
   TimeSlotDto,
 } from "@/lib/api/services/booking-schedule.service";
-import {
-  CreateBookingWithSlotRequest,
-} from "@/lib/api/types/booking.types";
+import { CreateBookingWithSlotRequest } from "@/lib/api/types/booking.types";
 import { UserManagementInfo } from "@/lib/api/types/user.types";
 import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
 import { BranchDisplay } from "@/lib/api/types/branch.types";
 import { PriceBookItem } from "@/lib/api/types/price-book.types";
 // import { SkillLevel } from "@/lib/api/types/service.types"; // Removed unused import
-import { ServiceProcessStepProductInfoDto } from "@/lib/api/types/service-process.types";
 import { ServiceBay } from "@/lib/api/types/service-bay.types";
 
 const { Option } = Select;
 const { Text } = Typography;
-const { Step } = Steps;
 
 // Priority levels
 const priorityLevels = [
@@ -116,9 +113,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
   loading = false,
 }) => {
   const [form] = Form.useForm();
+  const formRef = useRef(form);
 
-  // Step management
-  const [currentStep, setCurrentStep] = useState(0);
+  // Update form ref when form changes
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
 
   // Selection states
   const [selectedCustomer, setSelectedCustomer] =
@@ -178,11 +178,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
       return [];
     }
 
-    if (!priceBooksData) { 
+    if (!priceBooksData) {
       return [];
     }
 
-    if (!Array.isArray(priceBooksData)) { 
+    if (!Array.isArray(priceBooksData)) {
       return [];
     }
 
@@ -192,7 +192,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         priceBook.items.forEach((item) => {
           // Filter for services only: serviceId != null AND servicePackageId == null
           if (item.service && !item.servicePackage) {
-            allItems.push(item); 
+            allItems.push(item);
           } else {
             console.log(
               `✗ Skipped item: ${item.item_name} - ${
@@ -225,14 +225,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
         date: bookingDate,
         serviceDurationMinutes: totalDuration,
         bayId: selectedBay.bay_id,
-      }); 
-      
+      });
+
       // Remove duplicate slots based on startTime and endTime
-      const uniqueSlots = slots.filter((slot, index, self) => 
-        index === self.findIndex(s => 
-          s.startTime === slot.startTime && s.endTime === slot.endTime
-        )
-      ); 
+      const uniqueSlots = slots.filter(
+        (slot, index, self) =>
+          index ===
+          self.findIndex(
+            (s) => s.startTime === slot.startTime && s.endTime === slot.endTime
+          )
+      );
       setAvailableSlots(uniqueSlots);
     } catch (error) {
       console.error("Error loading available slots:", error);
@@ -254,25 +256,27 @@ const BookingModal: React.FC<BookingModalProps> = ({
       if (totalDuration <= 60) {
         return slot.isAvailable && slot.durationMinutes >= totalDuration;
       }
-      
+
       // For multi-slot services (> 60 minutes)
       // Check if this slot and consecutive slots are available
       const requiredSlots = Math.ceil(totalDuration / 60);
-      const currentSlotIndex = availableSlots.findIndex(s => s.startTime === slot.startTime);
-      
+      const currentSlotIndex = availableSlots.findIndex(
+        (s) => s.startTime === slot.startTime
+      );
+
       if (currentSlotIndex === -1) return false;
-      
+
       // Check if we have enough consecutive available slots
       for (let i = 0; i < requiredSlots; i++) {
         const checkSlotIndex = currentSlotIndex + i;
         if (checkSlotIndex >= availableSlots.length) return false;
-        
+
         const checkSlot = availableSlots[checkSlotIndex];
         if (!checkSlot.isAvailable || checkSlot.status !== "AVAILABLE") {
           return false;
         }
       }
-      
+
       return true;
     },
     [totalDuration, availableSlots]
@@ -281,7 +285,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Check if slot can be selected (available and suitable)
   const canSelectSlot = useCallback(
     (slot: SlotInfo) => {
-      return slot.isAvailable && slot.status === "AVAILABLE" && isSlotSuitable(slot);
+      return (
+        slot.isAvailable && slot.status === "AVAILABLE" && isSlotSuitable(slot)
+      );
     },
     [isSlotSuitable]
   );
@@ -291,7 +297,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
     if (open) {
       // Reset everything for create mode
       form.resetFields();
-      setCurrentStep(0);
       setSelectedCustomer(null);
       setSelectedVehicle(null);
       setSelectedBranch(null);
@@ -318,32 +323,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
     setTotalDuration(duration);
   }, []);
 
-  // Step navigation handlers
-  const handleNext = () => {
-    if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
   // Selection handlers
   const handleCustomerChange = useCallback(
     (customerId: string) => {
       const customer = customers.find((c) => c.user_id === customerId);
       setSelectedCustomer(customer || null);
       setSelectedVehicle(null);
-      // Use setTimeout to avoid circular reference with form
-      setTimeout(() => {
-        form.setFieldValue("vehicleId", undefined);
-      }, 0);
+      // Use formRef to avoid circular reference
+      formRef.current.setFieldValue("vehicleId", undefined);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [customers] // Remove form from dependencies to avoid circular reference
+    [customers]
   );
 
   const handleVehicleChange = useCallback(
@@ -408,14 +397,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const fetchRequiredProductsAndReserve = async (
     services: { item_type: string; item_id: string }[],
     bookingId: string
-  ) => { 
-    try { 
-      
+  ) => {
+    try {
       const allProducts: any[] = [];
 
       for (const service of services) {
-        if (service.item_type === "SERVICE") { 
-          
+        if (service.item_type === "SERVICE") {
           // Import ServiceService để lấy service products trực tiếp
           const { ServiceService } = await import(
             "@/lib/api/services/service.service"
@@ -423,32 +410,46 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
           try {
             // Lấy service details với service_products
-            const serviceDetails = await ServiceService.getServiceById(service.item_id); 
-            
-            if (serviceDetails?.service_products && serviceDetails.service_products.length > 0) {
+            const serviceDetails = await ServiceService.getServiceById(
+              service.item_id
+            );
+
+            if (
+              serviceDetails?.service_products &&
+              serviceDetails.service_products.length > 0
+            ) {
               // Process service products
               for (const serviceProduct of serviceDetails.service_products) {
                 if (serviceProduct.is_required) {
                   const productInfo = {
                     product_id: serviceProduct.product_id,
                     product_name: serviceProduct.product_info.product_name,
-                    product_code: serviceProduct.product_info.sku || serviceProduct.product_id,
+                    product_code:
+                      serviceProduct.product_info.sku ||
+                      serviceProduct.product_id,
                     quantity: serviceProduct.quantity,
                     unit_of_measure: serviceProduct.unit,
                     notes: serviceProduct.notes,
                     service_id: serviceProduct.service_id,
-                    service_name: serviceDetails.service_name
+                    service_name: serviceDetails.service_name,
                   };
-                  allProducts.push(productInfo); 
+                  allProducts.push(productInfo);
                 } else {
-                  console.log(`ℹ️ Skipping optional product: ${serviceProduct.product_info.product_name}`);
+                  console.log(
+                    `ℹ️ Skipping optional product: ${serviceProduct.product_info.product_name}`
+                  );
                 }
               }
             } else {
-              console.log(`ℹ️ Service ${serviceDetails.service_name} has no required products`);
+              console.log(
+                `ℹ️ Service ${serviceDetails.service_name} has no required products`
+              );
             }
           } catch (serviceError) {
-            console.error(`❌ Error fetching service ${service.item_id}:`, serviceError);
+            console.error(
+              `❌ Error fetching service ${service.item_id}:`,
+              serviceError
+            );
             // Continue with other services
           }
         }
@@ -473,9 +474,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }
       });
 
-      const uniqueProducts = Array.from(productMap.values()); 
+      const uniqueProducts = Array.from(productMap.values());
       // Reserve inventory nếu có branch và products
-      if (selectedBranch?.branch_id && uniqueProducts.length > 0) { 
+      if (selectedBranch?.branch_id && uniqueProducts.length > 0) {
         try {
           // Validate products có productId
           const validProducts = uniqueProducts.filter(
@@ -493,12 +494,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
             productId: product.productId,
             quantity: product.quantity,
           }));
- 
+
           await InventoryService.reserveMultipleForBooking(
             selectedBranch.branch_id,
             productsToReserve,
             bookingId
-          ); 
+          );
         } catch (inventoryError) {
           console.error("❌ Error reserving inventory:", inventoryError);
           // Không throw error để không làm fail booking
@@ -508,9 +509,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
           console.warn("⚠️ No selected branch - cannot reserve inventory");
         }
         if (uniqueProducts.length === 0) {
-          console.warn("⚠️ No products to reserve - services may not have required products");
+          console.warn(
+            "⚠️ No products to reserve - services may not have required products"
+          );
         }
-      } 
+      }
       return uniqueProducts;
     } catch (error) {
       console.error("Error fetching required products:", error);
@@ -576,14 +579,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
       console.log("📋 Response data structure:", createResponse?.data);
 
       // Try different possible bookingId locations
-      const bookingId = createResponse?.data?.bookingId || 
-                       createResponse?.data?.id || 
-                       createResponse?.data?.booking_id ||
-                       createResponse?.bookingId ||
-                       createResponse?.id;
+      const bookingId =
+        createResponse?.data?.bookingId ||
+        createResponse?.data?.id ||
+        createResponse?.data?.booking_id ||
+        createResponse?.bookingId ||
+        createResponse?.id;
 
       if (bookingId) {
- 
         try {
           await fetchRequiredProductsAndReserve(
             createRequest.booking_items.map((item) => ({
@@ -591,13 +594,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
               item_id: item.service_id,
             })),
             bookingId
-          ); 
+          );
         } catch (inventoryError) {
           console.error("❌ Inventory reservation failed:", inventoryError);
         }
       } else {
         console.warn("⚠️ No bookingId found in response:", createResponse);
-        console.warn("⚠️ Available fields in data:", Object.keys(createResponse?.data || {}));
+        console.warn(
+          "⚠️ Available fields in data:",
+          Object.keys(createResponse?.data || {})
+        );
       }
 
       onOk(createRequest);
@@ -606,25 +612,26 @@ const BookingModal: React.FC<BookingModalProps> = ({
     }
   };
 
-  // Step content components
-  const renderStepContent = () => {
-    switch (currentStep) {
-      case 0:
-        return renderCustomerVehicleStep();
-      case 1:
-        return renderServiceSelectionStep();
-      case 2:
-        return renderDateTimeBranchStep();
-      case 3:
-        return renderSlotSelectionStep();
-      default:
-        return null;
-    }
-  };
+  // Render all content in single form
+  const renderAllContent = () => (
+    <div>
+      {/* Customer & Vehicle Section */}
+      {renderCustomerVehicleStep()}
+
+      {/* Service Selection Section */}
+      {renderServiceSelectionStep()}
+
+      {/* Date, Time & Branch Section */}
+      {renderDateTimeBranchStep()}
+
+      {/* Slot Selection Section */}
+      {renderSlotSelectionStep()}
+    </div>
+  );
 
   const renderCustomerVehicleStep = () => (
     <div>
-      <Row gutter={16}> 
+      <Row gutter={16}>
         <Col span={12}>
           <Card
             size="small"
@@ -889,9 +896,20 @@ const BookingModal: React.FC<BookingModalProps> = ({
               <DatePicker
                 style={{ width: "100%" }}
                 placeholder="Chọn ngày"
-                disabledDate={(current) =>
-                  current && current < dayjs().startOf("day")
-                }
+                disabledDate={(current) => {
+                  const today = dayjs();
+                  const currentHour = today.hour();
+
+                  // Nếu hiện tại >= 17h, disable ngày hôm nay
+                  if (currentHour >= 17) {
+                    return (
+                      current && current < today.add(1, "day").startOf("day")
+                    );
+                  }
+
+                  // Nếu hiện tại < 17h, chỉ disable các ngày trong quá khứ
+                  return current && current < today.startOf("day");
+                }}
                 onChange={(date) => {
                   setBookingDate(date ? date.format("YYYY-MM-DD") : "");
                 }}
@@ -1048,12 +1066,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
                           selectedSlot?.startTime === slot.startTime;
 
                         return (
-                          <Col span={4} key={`${slot.startTime}-${slot.endTime}-${index}`}>
+                          <Col
+                            span={4}
+                            key={`${slot.startTime}-${slot.endTime}-${index}`}
+                          >
                             <Tooltip
                               title={
                                 canSelect
                                   ? totalDuration > 60
-                                    ? `Chọn ${Math.ceil(totalDuration / 60)} slot liên tiếp từ ${slot.startTime} (${totalDuration} phút)`
+                                    ? `Chọn ${Math.ceil(
+                                        totalDuration / 60
+                                      )} slot liên tiếp từ ${
+                                        slot.startTime
+                                      } (${totalDuration} phút)`
                                     : `Chọn slot ${slot.startTime} - ${slot.endTime}`
                                   : slot.status === "BOOKED"
                                   ? "Slot đã được đặt"
@@ -1064,7 +1089,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
                                   : slot.status === "CANCELLED"
                                   ? "Slot đã bị hủy"
                                   : totalDuration > 60
-                                  ? `Cần ${Math.ceil(totalDuration / 60)} slot liên tiếp - không đủ`
+                                  ? `Cần ${Math.ceil(
+                                      totalDuration / 60
+                                    )} slot liên tiếp - không đủ`
                                   : "Slot không khả dụng"
                               }
                             >
@@ -1183,31 +1210,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
       </Card>
 
       <Card size="small" title="Thông tin bổ sung">
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="priority"
-              label="Mức độ ưu tiên"
-              initialValue="NORMAL"
-            >
-              <Select placeholder="Chọn mức độ ưu tiên">
-                {priorityLevels.map((priority) => (
-                  <Option key={priority.value} value={priority.value}>
-                    <Space>
-                      <span>{priority.icon}</span>
-                      <span>{priority.label}</span>
-                    </Space>
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="couponCode" label="Mã giảm giá">
-              <Select placeholder="Nhập mã giảm giá (tùy chọn)" allowClear />
-            </Form.Item>
-          </Col>
-        </Row>
         <Form.Item name="notes" label="Ghi chú">
           <MemoizedTextArea
             rows={3}
@@ -1233,35 +1235,21 @@ const BookingModal: React.FC<BookingModalProps> = ({
         <Button key="cancel" onClick={onCancel}>
           Hủy
         </Button>,
-        ...(currentStep > 0
-          ? [
-              <Button key="prev" onClick={handlePrev}>
-                Quay lại
-              </Button>,
-            ]
-          : []),
-        ...(currentStep < 3
-          ? [
-              <Button key="next" type="primary" onClick={handleNext}>
-                Tiếp theo
-              </Button>,
-            ]
-          : []),
-        ...(currentStep === 3
-          ? [
-              <Button
-                key="submit"
-                type="primary"
-                loading={
-                  loading || createBookingWithSlotMutation.isPending
-                }
-                onClick={handleSubmit}
-                disabled={!selectedSlot}
-              >
-                Đặt lịch
-              </Button>,
-            ]
-          : []),
+        <Button
+          key="submit"
+          type="primary"
+          loading={loading || createBookingWithSlotMutation.isPending}
+          onClick={handleSubmit}
+          disabled={
+            !selectedSlot ||
+            !selectedCustomer ||
+            !selectedVehicle ||
+            !selectedBranch ||
+            selectedItems.length === 0
+          }
+        >
+          Đặt lịch
+        </Button>,
       ]}
     >
       <Form
@@ -1271,16 +1259,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
           priority: "NORMAL",
         }}
       >
-        {/* Steps Navigation */}
-        <Steps current={currentStep} style={{ marginBottom: 24 }}>
-          <Step title="Khách hàng & Xe" icon={<UserOutlined />} />
-          <Step title="Dịch vụ" icon={<ShopOutlined />} />
-          <Step title="Thời gian & Chi nhánh" icon={<CalendarOutlined />} />
-          <Step title="Chọn Slot" icon={<ClockCircleOutlined />} />
-        </Steps>
-
-        {/* Step Content */}
-        {renderStepContent()}
+        {/* All Content */}
+        {renderAllContent()}
       </Form>
     </Modal>
   );
