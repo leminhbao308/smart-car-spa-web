@@ -1,4 +1,4 @@
-import {BaseAuditEntity, Branch, Product, Supplier} from "@/lib/api";
+import { BaseAuditEntity, Branch, Product, Supplier } from "@/lib/api";
 
 export interface PurchaseOrder extends BaseAuditEntity {
   id: string;
@@ -33,4 +33,41 @@ export interface CreatePOLineRequest {
 export interface PurchaseHistory {
   peak_unit_cost: number;
   lines: PurchaseOrderLine[];
+}
+
+// Excel Import/Export Types
+export interface ExcelImportPreviewRow {
+  product_code: string;
+  product_name: string;
+  supplier_name: string;
+  quantity: number;
+  unit_cost: number;
+  lot_code?: string;
+  expiry_date?: string;
+}
+
+export interface ExcelImportError {
+  row: number;
+  field: string;
+  message: string;
+}
+
+export interface ExcelImportPreviewResponse {
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  errors: ExcelImportError[];
+  preview_data: ExcelImportPreviewRow[];
+}
+
+export interface ConfirmImportRequest {
+  branch_id: string;
+  lines: Array<{
+    product_code: string;
+    supplier_name: string;
+    quantity: number;
+    unit_cost: number;
+    lot_code?: string;
+    expiry_date?: string;
+  }>;
 }
