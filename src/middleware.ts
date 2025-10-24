@@ -48,17 +48,38 @@ function getRouteGroup(pathname: string): string | null {
  * Lấy thông tin user từ token trong cookie hoặc header
  * Trong middleware, chúng ta không thể access localStorage
  * Nên cần sử dụng cookie hoặc header
+ *
+ * NOTE: Middleware chỉ kiểm tra xem token có tồn tại hay không,
+ * KHÔNG kiểm tra token hết hạn. Việc xử lý token expiry và refresh
+ * được thực hiện hoàn toàn ở client side (axios interceptor)
  */
 function getUserFromRequest(
   request: NextRequest
-): { role: string; isAuthenticated: boolean } | null {
+): { role: string; isAuthenticated: boolean; hasRefreshToken: boolean } | null {
   try {
-    // Lấy token từ cookie
-    const accessToken = request.cookies.get("access_token")?.value;
+    // Lấy token từ cookie - KHÔNG kiểm tra expiry
+    const refreshToken = request.cookies.get("refresh_token")?.value;
     const userInfoCookie = request.cookies.get("user_info")?.value;
 
-    if (!accessToken || !userInfoCookie) {
+    // Nếu có refresh token, coi như user vẫn authenticated
+    // (access token có thể hết hạn nhưng refresh token còn → cho phép vào để axios interceptor xử lý)
+    if (!refreshToken) {
       return null;
+    }
+
+    // Nếu không có userInfo nhưng có refresh token
+    // → Vẫn cho vào để client-side xử lý (có thể đang trong quá trình refresh)
+    if (!userInfoCookie) {
+      console.log(
+        "No userInfo cookie but refresh token exists - allowing access for client-side handling"
+      );
+      // Trả về role mặc định để middleware cho phép vào
+      // Client side sẽ xử lý việc refresh token và lấy user info
+      return {
+        role: null,
+        isAuthenticated: true, // Coi như authenticated vì có refresh token
+        hasRefreshToken: true,
+      };
     }
 
     // Parse user info từ cookie
@@ -67,6 +88,7 @@ function getUserFromRequest(
     return {
       role: userInfo?.role?.role_code || null,
       isAuthenticated: true,
+      hasRefreshToken: true,
     };
   } catch (error) {
     console.log("Error parsing user info from cookie:", error);
@@ -76,13 +98,24 @@ function getUserFromRequest(
 
 /**
  * Kiểm tra quyền truy cập
+ * NOTE: Nếu user có refresh token nhưng không có role (đang refresh),
+ * middleware sẽ cho phép vào và để client-side xử lý
  */
 function hasPermission(
   userRole: string | null,
-  requiredGroup: string
+  requiredGroup: string,
+  hasRefreshToken: boolean
 ): boolean {
   // Nếu không có user role, chỉ cho phép truy cập public routes
   if (!userRole) {
+    // Nếu có refresh token, tạm thời cho phép vào protected routes
+    // Client-side sẽ refresh token và re-validate
+    if (hasRefreshToken && requiredGroup !== "PUBLIC") {
+      console.log(
+        "No role but has refresh token - allowing access for client-side refresh"
+      );
+      return true;
+    }
     return requiredGroup === "PUBLIC";
   }
 
@@ -151,7 +184,11 @@ export function middleware(request: NextRequest) {
   const userInfo = getUserFromRequest(request);
 
   // Kiểm tra quyền truy cập
-  const hasAccess = hasPermission(userInfo?.role || null, routeGroup);
+  const hasAccess = hasPermission(
+    userInfo?.role || null,
+    routeGroup,
+    userInfo?.hasRefreshToken || false
+  );
 
   if (!hasAccess) {
     // Tạo redirect URL
