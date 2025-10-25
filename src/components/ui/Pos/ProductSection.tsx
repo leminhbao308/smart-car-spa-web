@@ -21,7 +21,6 @@ import {
   ReloadOutlined,
   ShopOutlined,
   UserOutlined,
-  BarcodeOutlined,
 } from "@ant-design/icons";
 import type { Product } from "@/lib/api";
 import type { BranchDisplay } from "@/lib/api/types/branch.types";
@@ -29,6 +28,7 @@ import type { UserManagementInfo } from "@/lib/api";
 import type { BookingInfoDto } from "@/lib/api/types/booking.types";
 import type { Service } from "@/lib/api/types/service.types";
 import BookingSection from "./BookingSection";
+import ProductImageThumbnail from "./ProductImageThumbnail";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -134,7 +134,10 @@ const ProductSection: React.FC<ProductSectionProps> = ({
       }}
     >
       {/* Filters */}
-      <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
+      <Row
+        gutter={[16, 16]}
+        style={{ marginBottom: "16px" }}
+      >
         <Col span={8}>
           <Input
             placeholder="Tìm kiếm sản phẩm, mã SKU..."
@@ -155,7 +158,10 @@ const ProductSection: React.FC<ProductSectionProps> = ({
           >
             <Option value="all">Tất cả</Option>
             {categories.map((cat) => (
-              <Option key={cat} value={cat}>
+              <Option
+                key={cat}
+                value={cat}
+              >
                 {cat}
               </Option>
             ))}
@@ -170,7 +176,10 @@ const ProductSection: React.FC<ProductSectionProps> = ({
             type={selectedBranch ? "primary" : "default"}
           >
             {selectedBranch ? (
-              <Text ellipsis={{ tooltip: true }} style={{ color: "white" }}>
+              <Text
+                ellipsis={{ tooltip: true }}
+                style={{ color: "white" }}
+              >
                 {selectedBranch.branch_name}
               </Text>
             ) : (
@@ -228,11 +237,11 @@ const ProductSection: React.FC<ProductSectionProps> = ({
                     <Row gutter={[16, 16]}>
                       {filteredProducts.map((product) => (
                         <Col
-                          xs={12}
-                          sm={8}
-                          md={6}
-                          lg={6}
-                          xl={6}
+                          xs={24}
+                          sm={12}
+                          md={8}
+                          lg={8}
+                          xl={8}
                           key={product.product_id}
                         >
                           <Badge.Ribbon
@@ -284,21 +293,10 @@ const ProductSection: React.FC<ProductSectionProps> = ({
                                   height: "100%",
                                 }}
                               >
-                                <div
-                                  style={{
-                                    height: "80px",
-                                    backgroundColor: "#f5f5f5",
-                                    borderRadius: "4px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    marginBottom: "12px",
-                                  }}
-                                >
-                                  <BarcodeOutlined
-                                    style={{ fontSize: "32px", color: "#999" }}
-                                  />
-                                </div>
+                                <ProductImageThumbnail
+                                  productId={product.product_id}
+                                  productName={product.product_name}
+                                />
                                 <div
                                   style={{
                                     flex: 1,
@@ -347,14 +345,12 @@ const ProductSection: React.FC<ProductSectionProps> = ({
                                         style={{
                                           fontSize: "10px",
                                           margin: 0,
-                                          display: "flex",
-                                          flexWrap: "wrap",
-                                          gap: "4px",
-                                          justifyContent: "center",
+                                          maxWidth: "100%",
                                         }}
                                       >
                                         <Text
                                           ellipsis={{ tooltip: product.brand }}
+                                          style={{ maxWidth: "100%" }}
                                         >
                                           {product.brand}
                                         </Text>
@@ -373,10 +369,15 @@ const ProductSection: React.FC<ProductSectionProps> = ({
                                     {product.sku && (
                                       <Tag
                                         color="blue"
-                                        style={{ fontSize: "10px", margin: 0 }}
+                                        style={{
+                                          fontSize: "10px",
+                                          margin: 0,
+                                          maxWidth: "100%",
+                                        }}
                                       >
                                         <Text
                                           ellipsis={{ tooltip: product.sku }}
+                                          style={{ maxWidth: "100%" }}
                                         >
                                           {product.sku}
                                         </Text>

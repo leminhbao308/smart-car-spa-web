@@ -217,7 +217,7 @@ const BookingSection: React.FC<BookingSectionProps> = ({
 
       <Row gutter={[16, 16]}>
         {filteredBookings.map((booking) => (
-          <Col xs={24} sm={12} lg={8} xl={6} key={booking.booking_id}>
+          <Col xs={24} sm={12} lg={12} xl={12} key={booking.booking_id}>
             <Card
               hoverable
               style={{ height: "100%" }}

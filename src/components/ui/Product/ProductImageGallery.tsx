@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Card,
   Image,
@@ -263,45 +263,43 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editingImage, setEditingImage] = useState<ProductMedia | null>(null);
-  
+
+  // Memoize upload config to prevent infinite re-renders
+  const uploadConfig = useMemo(() => ({ maxSize: 10 * 1024 * 1024 }), []);
+
   // Use custom hook for upload management
-  const addImageUpload = useImageUpload({ maxSize: 10 * 1024 * 1024 });
-  const editImageUpload = useImageUpload({ maxSize: 10 * 1024 * 1024 });
-  
+  const addImageUpload = useImageUpload(uploadConfig);
+  const editImageUpload = useImageUpload(uploadConfig);
+
   const [addForm] = Form.useForm();
   const [editForm] = Form.useForm();
   const [localImages, setLocalImages] = useState<ProductMedia[]>([]);
 
-  // Track main image ID for re-sorting when it changes
-  // Update local images when images data changes
-  // Sort: main image first, then by sort_order
+  // Memoize sorted images to prevent infinite re-renders
+  // Create a stable key based on actual image data
+  const imagesKey = useMemo(() => {
+    if (!images || images.length === 0) return "empty";
+    return images
+      .map((img) => `${img.media_id}-${img.is_main}-${img.sort_order}`)
+      .join("|");
+  }, [images]);
+
+  // Sort images: main first, then by sort_order
+  const sortedImages = useMemo(() => {
+    if (!images || images.length === 0) return [];
+
+    return [...images].sort((a, b) => {
+      if (a.is_main && !b.is_main) return -1;
+      if (!a.is_main && b.is_main) return 1;
+      return a.sort_order - b.sort_order;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imagesKey]);
+
+  // Update local images when sorted images change
   React.useEffect(() => {
-    if (images && images.length > 0) {
-      const sortedImages = [...images].sort((a, b) => {
-        // Main image always comes first
-        if (a.is_main && !b.is_main) return -1;
-        if (!a.is_main && b.is_main) return 1;
-        // Otherwise sort by sort_order
-        return a.sort_order - b.sort_order;
-      });
-
-      // Only update if the sorted result is actually different
-      setLocalImages((prev) => {
-        if (prev.length !== sortedImages.length) return sortedImages;
-
-        const isDifferent = sortedImages.some(
-          (img, idx) =>
-            img.media_id !== prev[idx]?.media_id ||
-            img.is_main !== prev[idx]?.is_main ||
-            img.sort_order !== prev[idx]?.sort_order
-        );
-
-        return isDifferent ? sortedImages : prev;
-      });
-    } else if (!images || images.length === 0) {
-      setLocalImages([]);
-    }
-  }, [images]); // Re-sort when images change
+    setLocalImages(sortedImages);
+  }, [sortedImages]);
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -329,7 +327,9 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
 
       // Prevent dropping on the main image position (index 0)
       if (newIndex === 0) {
-        Modal.warning({ title: "Không thể di chuyển ảnh lên vị trí của ảnh chính" });
+        Modal.warning({
+          title: "Không thể di chuyển ảnh lên vị trí của ảnh chính",
+        });
         return;
       }
 
