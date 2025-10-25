@@ -15,6 +15,7 @@ import {
   Typography,
   Badge,
   Tabs,
+  message,
 } from "antd";
 import {
   SearchOutlined,
@@ -66,6 +67,10 @@ interface ProductSectionProps {
   allPriceBooks: any[];
   isLoadingAllPriceBooks: boolean;
   allPriceBooksError: string | null;
+  // Cart items (to check if contains products or bookings)
+  cart?: any[];
+  // Selected booking ID
+  selectedBookingId?: string | null;
 }
 
 const ProductSection: React.FC<ProductSectionProps> = ({
@@ -96,10 +101,42 @@ const ProductSection: React.FC<ProductSectionProps> = ({
   allPriceBooks,
   isLoadingAllPriceBooks,
   allPriceBooksError,
+  // Cart and selected booking
+  cart = [],
+  selectedBookingId,
 }) => {
   const [searchText, setSearchText] = React.useState("");
   const [categoryFilter, setCategoryFilter] = React.useState("all");
   const [activeTab, setActiveTab] = useState<string>("products");
+
+  // Check if cart has products (not service items)
+  const hasProducts = useMemo(() => {
+    return cart.some((item) => !item.isServiceItem && !item.isFreeItem);
+  }, [cart]);
+
+  // Check if cart has booking services
+  const hasBookingServices = useMemo(() => {
+    return cart.some((item) => item.isServiceItem && item.originalBookingId);
+  }, [cart]);
+
+  // Handle tab change with validation
+  const handleTabChange = (key: string) => {
+    if (key === "bookings" && hasProducts) {
+      message.warning(
+        "Giỏ hàng đang chứa sản phẩm. Vui lòng hoàn tất hoặc xóa giỏ hàng trước khi chuyển sang tab Booking."
+      );
+      return;
+    }
+
+    if (key === "products" && hasBookingServices) {
+      message.warning(
+        "Giỏ hàng đang chứa dịch vụ từ Booking. Vui lòng hoàn tất hoặc hủy thanh toán Booking trước khi chuyển sang tab Sản phẩm."
+      );
+      return;
+    }
+
+    setActiveTab(key);
+  };
 
   // Filtered products
   const filteredProducts = useMemo(() => {
@@ -217,7 +254,7 @@ const ProductSection: React.FC<ProductSectionProps> = ({
       ) : (
         <Tabs
           activeKey={activeTab}
-          onChange={setActiveTab}
+          onChange={handleTabChange}
           items={[
             {
               key: "products",
@@ -415,6 +452,7 @@ const ProductSection: React.FC<ProductSectionProps> = ({
                   allPriceBooks={allPriceBooks}
                   isLoadingAllPriceBooks={isLoadingAllPriceBooks}
                   allPriceBooksError={allPriceBooksError}
+                  selectedBookingId={selectedBookingId}
                 />
               ),
             },

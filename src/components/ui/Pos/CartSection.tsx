@@ -77,6 +77,8 @@ interface CartSectionProps {
   onClearCart: () => void;
   onCheckout: () => void;
   onOpenPromotions?: () => void;
+  onCancelBookingPayment?: () => void; // New: Cancel booking payment
+  hasBookingInCart?: boolean; // New: Check if cart has booking services
 }
 
 const CartSection: React.FC<CartSectionProps> = ({
@@ -91,6 +93,8 @@ const CartSection: React.FC<CartSectionProps> = ({
   onClearCart,
   onCheckout,
   onOpenPromotions,
+  onCancelBookingPayment,
+  hasBookingInCart = false,
 }) => {
   // Calculation Functions
   const getTotalItems = () => {
@@ -111,7 +115,7 @@ const CartSection: React.FC<CartSectionProps> = ({
   // Cart Table Columns
   const cartColumns = [
     {
-      title: "Sản phẩm",
+      title: hasBookingInCart ? "Dịch vụ" : "Sản phẩm",
       dataIndex: "productName",
       key: "productName",
       ellipsis: true,
@@ -290,6 +294,16 @@ const CartSection: React.FC<CartSectionProps> = ({
               disabled
             />
           </Tooltip>
+        ) : record.isServiceItem && record.originalBookingId ? (
+          // Booking service items: cannot delete individually
+          <Tooltip title="Không thể xóa từng dịch vụ. Sử dụng nút 'Hủy thanh toán' để hủy toàn bộ booking.">
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              disabled
+            />
+          </Tooltip>
         ) : (
           <Tooltip
             title={
@@ -342,7 +356,7 @@ const CartSection: React.FC<CartSectionProps> = ({
               )}
             </Button>
           )}
-          {cart.length > 0 && (
+          {cart.length > 0 && !hasBookingInCart && (
             <Button
               size="small"
               danger
@@ -393,7 +407,9 @@ const CartSection: React.FC<CartSectionProps> = ({
               justify="space-between"
               style={{ marginBottom: "8px" }}
             >
-              <Text>Tổng sản phẩm:</Text>
+              <Text>
+                {hasBookingInCart ? "Tổng dịch vụ:" : "Tổng sản phẩm:"}
+              </Text>
               <Text strong>{getTotalItems()}</Text>
             </Row>
             <Row
@@ -509,6 +525,7 @@ const CartSection: React.FC<CartSectionProps> = ({
           <Space
             direction="vertical"
             style={{ width: "100%" }}
+            size="small"
           >
             <Button
               type="primary"
@@ -521,6 +538,18 @@ const CartSection: React.FC<CartSectionProps> = ({
             >
               Thanh toán
             </Button>
+
+            {hasBookingInCart && onCancelBookingPayment && (
+              <Button
+                danger
+                size="large"
+                onClick={onCancelBookingPayment}
+                disabled={isCreatingOrder}
+                style={{ width: "100%" }}
+              >
+                Hủy thanh toán Booking
+              </Button>
+            )}
           </Space>
         </>
       )}

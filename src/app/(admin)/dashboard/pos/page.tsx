@@ -72,6 +72,11 @@ const POSPage = () => {
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [form] = Form.useForm();
 
+  // Booking state
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
+    null
+  );
+
   // PayOS State
   const [paymentQRCode, setPaymentQRCode] = useState<string | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
@@ -568,6 +573,10 @@ const POSPage = () => {
         message.success(
           `Đã thêm ${addedServicesCount} dịch vụ từ booking ${booking.booking_code} vào giỏ hàng`
         );
+
+        // Set selected booking ID to hide the card
+        setSelectedBookingId(booking.booking_id);
+
         return [...prevCart, ...newServiceItems];
       });
     },
@@ -578,6 +587,7 @@ const POSPage = () => {
       currentPriceBook,
       getServicePrice,
       setSelectedCustomer,
+      setSelectedBookingId,
     ]
   );
 
@@ -592,6 +602,11 @@ const POSPage = () => {
 
   const getTotalItems = useCallback(() => {
     return cart.reduce((total, item) => total + item.quantity, 0);
+  }, [cart]);
+
+  // Check if cart has booking services
+  const hasBookingInCart = useMemo(() => {
+    return cart.some((item) => item.isServiceItem && item.originalBookingId);
   }, [cart]);
 
   // Branch Management
@@ -1112,6 +1127,26 @@ const POSPage = () => {
     message.info("Đã hủy thanh toán");
   }, [message]);
 
+  // Cancel booking payment - clear cart and reset booking selection
+  const handleCancelBookingPayment = useCallback(() => {
+    modal.confirm({
+      title: "Hủy thanh toán Booking",
+      content:
+        "Bạn có chắc muốn hủy thanh toán booking này? Giỏ hàng sẽ được xóa và booking sẽ hiển thị lại.",
+      okText: "Hủy thanh toán",
+      cancelText: "Quay lại",
+      okButtonProps: { danger: true },
+      onOk: () => {
+        setCart([]);
+        setSelectedBookingId(null);
+        refetchBookings();
+        message.success(
+          "Đã hủy thanh toán booking. Booking đã được hiển thị lại."
+        );
+      },
+    });
+  }, [modal, message, refetchBookings]);
+
   const isLoading =
     catalogLoading ||
     pricingLoading ||
@@ -1169,6 +1204,9 @@ const POSPage = () => {
             allPriceBooks={allPriceBooks || []}
             isLoadingAllPriceBooks={isLoadingAllPriceBooks}
             allPriceBooksError={allPriceBooksError?.message || null}
+            // Cart and selected booking
+            cart={cart}
+            selectedBookingId={selectedBookingId}
           />
         </Col>
 
@@ -1190,6 +1228,8 @@ const POSPage = () => {
             onClearCart={clearCart}
             onCheckout={handleCheckout}
             onOpenPromotions={() => setIsPromotionModalVisible(true)}
+            onCancelBookingPayment={handleCancelBookingPayment}
+            hasBookingInCart={hasBookingInCart}
           />
         </Col>
 
