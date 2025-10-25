@@ -2748,7 +2748,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             const newCustomerValid = customerType === "new" ? (
               newCustomer?.full_name && 
               newCustomer?.phone_number && 
-              newCustomer?.email &&
+              // Email is optional, not required
               newVehicle?.license_plate &&
               newVehicle?.brand_name &&
               newVehicle?.model_name &&
