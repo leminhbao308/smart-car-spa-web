@@ -61,13 +61,8 @@ const InvoicesPage = () => {
   const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
 
   // Data fetching hooks with pagination
-  const {
-    orders,
-    loading,
-    refetch,
-    totalElements,
-    totalPages,
-  } = usePagedSalesOrders(currentPage, pageSize, sortBy, sortDirection);
+  const { orders, loading, refetch, totalElements, totalPages } =
+    usePagedSalesOrders(currentPage, pageSize, sortBy, sortDirection);
   const confirmMutation = useConfirmSalesOrder();
   const fulfillMutation = useFulfillSalesOrder();
   const returnMutation = useCreateReturn();
