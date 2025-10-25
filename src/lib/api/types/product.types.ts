@@ -2,7 +2,11 @@
  * Product API Types
  */
 
-import { BaseAuditEntity, BasePaginationResponse, ApiResponse } from './common.types';
+import {
+  BaseAuditEntity,
+  BasePaginationResponse,
+  ApiResponse,
+} from "./common.types";
 
 export interface ProductSpecifications {
   [key: string]: string;
@@ -41,7 +45,14 @@ export interface ProductAttributeValue {
   attribute_name: string;
   attribute_code: string;
   unit?: string | null;
-  data_type: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+  data_type:
+    | "STRING"
+    | "NUMBER"
+    | "BOOLEAN"
+    | "DATE"
+    | "DECIMAL"
+    | "INTEGER"
+    | "TEXT";
   value_text?: string | null;
   value_number?: number | null;
   display_value?: string;
@@ -58,7 +69,7 @@ export interface Product extends BaseAuditEntity {
   brand: string;
   model: string;
   sku: string;
-  barcode: string; 
+  barcode: string;
   supplier_id: string;
   is_featured: boolean;
   is_active: boolean;
@@ -98,7 +109,7 @@ export interface CreateProductAttributeValueRequest {
   attribute_id: string;
   value_text?: string | null;
   value_number?: number | null;
-  operation?: 'DELETE'; // Chỉ sử dụng cho DELETE
+  operation?: "DELETE"; // Chỉ sử dụng cho DELETE
   id?: string; // ID của attribute value hiện tại (nếu có)
 }
 
@@ -118,7 +129,7 @@ export interface ProductAttributeValueUpdateRequest {
   attribute_id: string;
   value_text?: string | null;
   value_number?: number | null;
-  operation?: 'DELETE'; // Chỉ hỗ trợ DELETE
+  operation?: "DELETE"; // Chỉ hỗ trợ DELETE
 }
 
 export interface BulkUpdateProductAttributeValuesRequest {
@@ -132,7 +143,6 @@ export interface CreateProductRequest extends BaseProductData {
 export interface UpdateProductRequest extends BaseProductData {
   is_active?: boolean;
 }
-
 
 // Form data interface for UI (camelCase)
 export interface ProductFormData {
@@ -169,7 +179,7 @@ export interface ProductSearchParams {
   page?: number;
   size?: number;
   sort?: string;
-  direction?: 'ASC' | 'DESC';
+  direction?: "ASC" | "DESC";
   filters?: ProductFilters;
 }
 
@@ -226,7 +236,7 @@ export interface ProductTypeSearchParams {
   page?: number;
   size?: number;
   sort?: string;
-  direction?: 'ASC' | 'DESC';
+  direction?: "ASC" | "DESC";
   filters?: ProductTypeFilters;
 }
 
@@ -237,7 +247,14 @@ export interface ProductAttribute {
   attribute_code: string;
   unit?: string | null;
   is_required: boolean;
-  data_type: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+  data_type:
+    | "STRING"
+    | "NUMBER"
+    | "BOOLEAN"
+    | "DATE"
+    | "DECIMAL"
+    | "INTEGER"
+    | "TEXT";
   display_name?: string;
   is_active: boolean;
   created_date: string;
@@ -252,14 +269,22 @@ export interface ProductAttributePaginationData extends BasePaginationResponse {
   content: ProductAttribute[];
 }
 
-export type ProductAttributeResponse = ApiResponse<ProductAttributePaginationData>;
+export type ProductAttributeResponse =
+  ApiResponse<ProductAttributePaginationData>;
 
 export interface CreateProductAttributeRequest {
   attribute_name: string;
   attribute_code: string;
   unit?: string;
   is_required?: boolean;
-  data_type?: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+  data_type?:
+    | "STRING"
+    | "NUMBER"
+    | "BOOLEAN"
+    | "DATE"
+    | "DECIMAL"
+    | "INTEGER"
+    | "TEXT";
   is_active?: boolean;
 }
 
@@ -268,7 +293,14 @@ export interface UpdateProductAttributeRequest {
   attribute_code?: string;
   unit?: string;
   is_required?: boolean;
-  data_type?: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'DATE' | 'DECIMAL' | 'INTEGER' | 'TEXT';
+  data_type?:
+    | "STRING"
+    | "NUMBER"
+    | "BOOLEAN"
+    | "DATE"
+    | "DECIMAL"
+    | "INTEGER"
+    | "TEXT";
   is_active?: boolean;
 }
 
@@ -287,6 +319,49 @@ export interface ProductAttributeSearchParams {
   page?: number;
   size?: number;
   sort?: string;
-  direction?: 'ASC' | 'DESC';
+  direction?: "ASC" | "DESC";
   filters?: ProductAttributeFilters;
+}
+
+// Product Media/Image Types
+export interface ProductMedia {
+  media_id: string;
+  entity_type:
+    | "PRODUCT"
+    | "SERVICE"
+    | "PACKAGE"
+    | "BRANCH"
+    | "PROMOTION"
+    | "CATEGORY";
+  entity_id: string;
+  media_url: string;
+  media_type: "IMAGE" | "VIDEO" | "FILE" | "DOCUMENT" | "AUDIO";
+  is_main: boolean;
+  sort_order: number;
+  alt_text?: string;
+  created_date: string;
+  modified_date: string;
+}
+
+export interface AddProductImageRequest {
+  media_url: string;
+  alt_text?: string;
+  is_main?: boolean;
+  sort_order?: number;
+}
+
+export interface UpdateProductImageRequest {
+  media_url?: string;
+  alt_text?: string;
+  is_main?: boolean;
+  sort_order?: number;
+}
+
+export interface ReorderProductImagesRequest {
+  media_orders: MediaOrderDto[];
+}
+
+export interface MediaOrderDto {
+  media_id: string;
+  sort_order: number;
 }
