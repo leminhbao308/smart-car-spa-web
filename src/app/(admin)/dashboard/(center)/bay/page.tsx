@@ -19,6 +19,7 @@ import {
   ToolOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import {
   ServiceBay,
@@ -101,6 +102,8 @@ const ServiceBayManagementPage = () => {
     ).length;
     const closed = bays.filter((bay) => bay.status === BayStatus.CLOSED).length;
     const available = bays.filter((bay) => bay.is_available).length;
+    const allowBooking = bays.filter((bay) => bay.allow_booking).length;
+    const onSiteProcessing = bays.filter((bay) => !bay.allow_booking).length;
     const totalBookings = bays.reduce(
       (sum, bay) => sum + bay.total_bookings,
       0
@@ -116,6 +119,8 @@ const ServiceBayManagementPage = () => {
       maintenance,
       closed,
       available,
+      allowBooking,
+      onSiteProcessing,
       totalBookings,
       activeBookings,
     };
@@ -220,6 +225,50 @@ const ServiceBayManagementPage = () => {
               title="Đang bảo trì"
               value={statistics.maintenance}
               prefix={<ExclamationCircleOutlined />}
+              valueStyle={{ color: "#faad14" }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Additional Statistics Row */}
+      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Cho đặt lịch"
+              value={statistics.allowBooking}
+              prefix="📅"
+              valueStyle={{ color: "#52c41a" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Xử lý tại chỗ"
+              value={statistics.onSiteProcessing}
+              prefix="🔧"
+              valueStyle={{ color: "#fa8c16" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Tổng đặt lịch"
+              value={statistics.totalBookings}
+              prefix={<CheckCircleOutlined />}
+              valueStyle={{ color: "#1890ff" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Đang sử dụng"
+              value={statistics.activeBookings}
+              prefix={<ClockCircleOutlined />}
               valueStyle={{ color: "#faad14" }}
             />
           </Card>

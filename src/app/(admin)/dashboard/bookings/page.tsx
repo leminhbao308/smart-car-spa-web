@@ -296,19 +296,6 @@ const BookingsPage = () => {
             }}
           >
             {record.customer_name || "N/A"}
-            {record.isCustomerEnriched && (
-              <Badge
-                count="✓"
-                style={{
-                  backgroundColor: "#52c41a",
-                  fontSize: 10,
-                  minWidth: 14,
-                  height: 14,
-                  lineHeight: "14px",
-                }}
-                title="Dữ liệu đã được bổ sung từ hệ thống"
-              />
-            )}
           </div>
           <div
             style={{
@@ -347,19 +334,6 @@ const BookingsPage = () => {
             }}
           >
             {record.vehicle_license_plate || "N/A"}
-            {record.isVehicleEnriched && (
-              <Badge
-                count="✓"
-                style={{
-                  backgroundColor: "#52c41a",
-                  fontSize: 10,
-                  minWidth: 14,
-                  height: 14,
-                  lineHeight: "14px",
-                }}
-                title="Dữ liệu đã được bổ sung từ hệ thống"
-              />
-            )}
           </div>
           <div style={{ fontSize: 13, color: "#666" }}>
             {record.vehicle_brand_name || "N/A"}{" "}
@@ -894,13 +868,6 @@ const BookingsPage = () => {
                   >
                     <PhoneOutlined style={{ color: "#1890ff" }} />
                     Thông tin khách hàng
-                    {(selectedBooking as EnrichedBookingInfoDto)
-                      .isCustomerEnriched && (
-                      <Badge
-                        count="✓"
-                        style={{ backgroundColor: "#52c41a", fontSize: 8 }}
-                      />
-                    )}
                   </div>
                   <div
                     style={{
@@ -945,13 +912,6 @@ const BookingsPage = () => {
                   >
                     <span>🚗</span>
                     Thông tin xe
-                    {(selectedBooking as EnrichedBookingInfoDto)
-                      .isVehicleEnriched && (
-                      <Badge
-                        count="✓"
-                        style={{ backgroundColor: "#52c41a", fontSize: 8 }}
-                      />
-                    )}
                   </div>
                   <div
                     style={{

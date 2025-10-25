@@ -14,7 +14,7 @@ export enum TechnicianStatus {
   ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
   BUSY = "BUSY",
-  ON_BREAK = "ON_BREAK"
+  ON_BREAK = "ON_BREAK",
 }
 
 // Service Bay Types
@@ -26,19 +26,19 @@ export interface ServiceBay extends BaseAuditEntity {
   status: BayStatus;
   display_order: number;
   notes?: string;
-  
+
   // Branch information
   branch_id: string;
   branch_name: string;
   branch_code: string;
-  
+
   // Statistics
   total_bookings: number;
   active_bookings: number;
   is_available: boolean;
   is_maintenance: boolean;
   is_closed: boolean;
-  
+  allow_booking: boolean;
   // Technician fields
   technicians?: TechnicianInfo[];
   technician_count?: number;
@@ -51,7 +51,7 @@ export enum BayStatus {
   ACTIVE = "ACTIVE",
   MAINTENANCE = "MAINTENANCE",
   CLOSED = "CLOSED",
-  INACTIVE = "INACTIVE"
+  INACTIVE = "INACTIVE",
 }
 
 // API Request/Response Types
@@ -106,7 +106,7 @@ export interface UpdateServiceBayRequest {
   display_order?: number;
   status: BayStatus;
   notes?: string;
-  
+
   // Technician management fields
   technician_ids?: string[];
   default_technician_status?: TechnicianStatus;
@@ -145,7 +145,7 @@ export const BAY_STATUS_OPTIONS = [
   { value: BayStatus.ACTIVE, label: "Hoạt động", color: "success" },
   { value: BayStatus.MAINTENANCE, label: "Bảo trì", color: "warning" },
   { value: BayStatus.CLOSED, label: "Tạm đóng", color: "error" },
-  { value: BayStatus.INACTIVE, label: "Không hoạt động", color: "default" }
+  { value: BayStatus.INACTIVE, label: "Không hoạt động", color: "default" },
 ];
 
 // Technician Management Types
@@ -187,7 +187,15 @@ export interface ServiceBayStatistics {
 // Constants for Technician Status
 export const TECHNICIAN_STATUS_OPTIONS = [
   { value: TechnicianStatus.ACTIVE, label: "Hoạt động", color: "success" },
-  { value: TechnicianStatus.INACTIVE, label: "Không hoạt động", color: "default" },
+  {
+    value: TechnicianStatus.INACTIVE,
+    label: "Không hoạt động",
+    color: "default",
+  },
   { value: TechnicianStatus.BUSY, label: "Bận", color: "processing" },
-  { value: TechnicianStatus.ON_BREAK, label: "Nghỉ giải lao", color: "warning" }
+  {
+    value: TechnicianStatus.ON_BREAK,
+    label: "Nghỉ giải lao",
+    color: "warning",
+  },
 ];

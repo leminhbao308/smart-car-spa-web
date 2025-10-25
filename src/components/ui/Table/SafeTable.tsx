@@ -85,11 +85,8 @@ const SafeTable = <T = unknown,>(props: SafeTableProps<T>) => {
   return (
     <Table 
       {...props} 
-      // Ensure unique keys by adding index if needed
-      rowKey={props.rowKey ? (record: T, index?: number) => {
-        const key = (record as Record<string, unknown>)[props.rowKey! as string];
-        return key ? `${key}-${index || 0}` : `row-${index || 0}`;
-      } : 'id'}
+      // Use rowKey as string or function without index parameter
+      rowKey={props.rowKey || 'id'}
     />
   );
 };
