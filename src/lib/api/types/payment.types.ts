@@ -59,6 +59,8 @@ export interface CreateAndPayRequest {
   final_amount?: number;
   discount_percentage?: number;
   promotion_snapshot?: string; // JSON string of applied promotions
+  // Loyalty points field
+  earned_points?: number; // Points earned from this purchase (10,000 VNĐ = 1 point)
 }
 
 export interface CreateAndPayResponse {

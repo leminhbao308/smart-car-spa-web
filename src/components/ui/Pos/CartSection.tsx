@@ -22,10 +22,16 @@ import {
   PlusOutlined,
   DeleteOutlined,
   GiftOutlined,
+  TrophyOutlined,
 } from "@ant-design/icons";
 import type { UserManagementInfo } from "@/lib/api";
 import type { BranchDisplay } from "@/lib/api/types/branch.types";
 import type { CartSummary } from "@/lib/utils/promotion-calculator";
+import {
+  calculatePointsToEarn,
+  isEligibleForPoints,
+  formatPoints,
+} from "@/lib/utils/loyalty-points";
 
 const { Text, Title } = Typography;
 
@@ -110,7 +116,10 @@ const CartSection: React.FC<CartSectionProps> = ({
       key: "productName",
       ellipsis: true,
       render: (name: string, record: CartItem) => (
-        <Space direction="vertical" size={2}>
+        <Space
+          direction="vertical"
+          size={2}
+        >
           <Space>
             <Text>{name}</Text>
             {record.isFreeItem && <Tag color="green">TẶNG</Tag>}
@@ -118,22 +127,34 @@ const CartSection: React.FC<CartSectionProps> = ({
             {record.isBookingItem && <Tag color="orange">BOOKING</Tag>}
           </Space>
           {record.isServiceItem && record.originalBookingCode && (
-            <Text type="secondary" style={{ fontSize: "12px" }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: "12px" }}
+            >
               Từ booking: {record.originalBookingCode}
             </Text>
           )}
           {record.isServiceItem && record.estimatedDuration && (
-            <Text type="secondary" style={{ fontSize: "12px" }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: "12px" }}
+            >
               Thời gian: {record.estimatedDuration} phút
             </Text>
           )}
           {record.customerName && (
-            <Text type="secondary" style={{ fontSize: "12px" }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: "12px" }}
+            >
               Khách: {record.customerName}
             </Text>
           )}
           {record.vehicleLicensePlate && (
-            <Text type="secondary" style={{ fontSize: "12px" }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: "12px" }}
+            >
               Xe: {record.vehicleLicensePlate}
             </Text>
           )}
@@ -270,7 +291,13 @@ const CartSection: React.FC<CartSectionProps> = ({
             />
           </Tooltip>
         ) : (
-          <Tooltip title={record.isServiceItem ? "Xóa dịch vụ khỏi giỏ hàng" : "Xóa sản phẩm khỏi giỏ hàng"}>
+          <Tooltip
+            title={
+              record.isServiceItem
+                ? "Xóa dịch vụ khỏi giỏ hàng"
+                : "Xóa sản phẩm khỏi giỏ hàng"
+            }
+          >
             <Button
               type="text"
               danger
@@ -447,6 +474,36 @@ const CartSection: React.FC<CartSectionProps> = ({
                 {(cartSummary?.finalTotal || getTotalAmount()).toLocaleString()}
               </Title>
             </Row>
+
+            {/* Loyalty Points Display */}
+            {isEligibleForPoints(selectedCustomer?.user_id) && (
+              <Row
+                justify="space-between"
+                style={{
+                  marginTop: "12px",
+                  padding: "8px 12px",
+                  backgroundColor: "#fff7e6",
+                  borderRadius: "4px",
+                  border: "1px solid #ffd591",
+                }}
+              >
+                <Space>
+                  <TrophyOutlined style={{ color: "#fa8c16" }} />
+                  <Text style={{ color: "#ad6800" }}>Điểm tích lũy:</Text>
+                </Space>
+                <Text
+                  strong
+                  style={{ color: "#ad6800" }}
+                >
+                  +
+                  {formatPoints(
+                    calculatePointsToEarn(
+                      cartSummary?.finalTotal || getTotalAmount()
+                    )
+                  )}
+                </Text>
+              </Row>
+            )}
           </div>
 
           <Space

@@ -40,6 +40,10 @@ import { BookingInfoDto } from "@/lib/api/types/booking.types";
 import { Service } from "@/lib/api/types/service.types";
 import { PricingService } from "@/lib/api/services/pricing.service";
 import { UserService } from "@/lib/api/services/user.service";
+import {
+  calculatePointsToEarn,
+  isEligibleForPoints,
+} from "@/lib/utils/loyalty-points";
 
 interface ProductWithStock extends Product {
   sellingPrice: number;
@@ -74,6 +78,7 @@ const POSPage = () => {
   const [orderCode, setOrderCode] = useState<number | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const [paymentStartTime, setPaymentStartTime] = useState<number | null>(null);
+  const [earnedPointsForOrder, setEarnedPointsForOrder] = useState<number>(0); // Store earned points for current order
 
   // API Hooks
   const { branches, loading: branchesLoading } = useBranches({});
@@ -687,7 +692,15 @@ const POSPage = () => {
   // Payment Success Handler
   const handlePaymentSuccess = useCallback(async () => {
     setIsPolling(false);
-    message.success("Thanh toán thành công!");
+
+    // Show success message with loyalty points if applicable
+    if (earnedPointsForOrder > 0) {
+      message.success(
+        `Thanh toán thành công! Bạn đã tích được ${earnedPointsForOrder} điểm.`
+      );
+    } else {
+      message.success("Thanh toán thành công!");
+    }
 
     // Collect unique booking IDs from service items in cart
     const bookingIds = new Set<string>();
@@ -758,6 +771,7 @@ const POSPage = () => {
     setOrderCode(null);
     setCurrentOrderId(null);
     setPaymentStartTime(null);
+    setEarnedPointsForOrder(0); // Reset earned points
 
     // Refresh catalog and promotions
     refreshCatalog();
@@ -765,6 +779,7 @@ const POSPage = () => {
   }, [
     cart,
     currentOrderId,
+    earnedPointsForOrder,
     fulfillOrder,
     refreshCatalog,
     refetchPromotions,
@@ -903,6 +918,15 @@ const POSPage = () => {
         })),
       }));
 
+      // Calculate loyalty points (10,000 VNĐ = 1 point)
+      const finalAmount = cartSummary?.finalTotal || 0;
+      const earnedPoints = isEligibleForPoints(selectedCustomer?.user_id)
+        ? calculatePointsToEarn(finalAmount)
+        : 0;
+
+      // Store earned points for later use in success handler
+      setEarnedPointsForOrder(earnedPoints);
+
       const orderRequest = {
         branch_id: selectedBranch.branch_id,
         warehouse_id: selectedBranch.branch_id, // Using branch_id as warehouse_id
@@ -911,11 +935,12 @@ const POSPage = () => {
         promotion_snapshot: JSON.stringify(promotionSnapshot),
         original_amount: cartSummary?.subtotal || 0,
         total_discount_amount: cartSummary?.totalDiscount || 0,
-        final_amount: cartSummary?.finalTotal || 0,
+        final_amount: finalAmount,
         discount_percentage:
           cartSummary?.subtotal && cartSummary.subtotal > 0
             ? (cartSummary.totalDiscount / cartSummary.subtotal) * 100
             : 0,
+        earned_points: earnedPoints, // Loyalty points earned from this purchase
         lines: cart.map((item) => {
           const lineItem: any = {
             qty: item.quantity,
@@ -962,7 +987,14 @@ const POSPage = () => {
 
       // Handle CASH payment
       if (paymentMethod === "CASH") {
-        message.success("Thanh toán tiền mặt thành công!");
+        // Show success message with loyalty points if applicable
+        if (earnedPoints > 0) {
+          message.success(
+            `Thanh toán thành công! Bạn đã tích được ${earnedPoints} điểm.`
+          );
+        } else {
+          message.success("Thanh toán tiền mặt thành công!");
+        }
 
         // Collect unique booking IDs from service items in cart
         const bookingIds = new Set<string>();
@@ -1076,8 +1108,9 @@ const POSPage = () => {
     setIsPolling(false);
     setCurrentOrderId(null);
     setPaymentStartTime(null);
+    setEarnedPointsForOrder(0); // Reset earned points
     message.info("Đã hủy thanh toán");
-  }, []);
+  }, [message]);
 
   const isLoading =
     catalogLoading ||
