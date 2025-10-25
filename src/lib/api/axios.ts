@@ -108,13 +108,19 @@ const refreshToken = async (): Promise<string | null> => {
       url: error.config?.url,
     });
 
-    // Clear all tokens on refresh failure
-    TokenManager.clearAll();
-
-    // Redirect to login if on client side
-    if (typeof window !== "undefined") {
-      console.log("Redirecting to login due to token refresh failure");
-      window.location.href = "/auth/login";
+    // Check if it's a 401 error (refresh token expired/invalid)
+    if (error.response?.status === 401) {
+      console.log("Refresh token is invalid or expired, clearing all tokens");
+      TokenManager.clearAll();
+      
+      // Redirect to login if on client side
+      if (typeof window !== "undefined") {
+        console.log("Redirecting to login due to invalid refresh token");
+        window.location.href = "/auth/login";
+      }
+    } else {
+      // For other errors, don't clear tokens immediately
+      console.log("Non-401 error during token refresh, keeping tokens for retry");
     }
 
     throw error;
@@ -146,6 +152,17 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Skip refresh for auth endpoints
       if (originalRequest.url?.includes("/auth/")) {
+        return Promise.reject(error);
+      }
+
+      // Check if we have refresh token before attempting refresh
+      const refreshTokenValue = TokenManager.getRefreshToken();
+      if (!refreshTokenValue) {
+        console.log("No refresh token available, redirecting to login");
+        TokenManager.clearAll();
+        if (typeof window !== "undefined") {
+          window.location.href = "/auth/login";
+        }
         return Promise.reject(error);
       }
 

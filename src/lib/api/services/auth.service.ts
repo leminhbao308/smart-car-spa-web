@@ -96,7 +96,7 @@ export class AuthService {
   static async refreshToken(refreshToken: string): Promise<LoginResponse> {
     try {
       const response = await apiClient.post("/auth/refresh-token", {
-        refresh_token: refreshToken,
+        refreshToken: refreshToken, // Use correct field name to match backend
       });
 
       if (response.data.success && response.data.data) {

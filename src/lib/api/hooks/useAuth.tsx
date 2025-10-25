@@ -56,26 +56,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Token refresh is now handled automatically by axios interceptor
         } else {
           // Try to get user info from API
-          const userFromAPI = await AuthService.getCurrentUser();
+          try {
+            const userFromAPI = await AuthService.getCurrentUser();
 
-          if (userFromAPI) {
-            setState((prev) => ({
-              ...prev,
-              user: userFromAPI,
-              isAuthenticated: true,
-              isLoading: false,
-            }));
+            if (userFromAPI) {
+              setState((prev) => ({
+                ...prev,
+                user: userFromAPI,
+                isAuthenticated: true,
+                isLoading: false,
+              }));
 
-            // Token refresh is now handled automatically by axios interceptor
-          } else {
-            // Clear auth if user info not available
-            AuthService.clearAuth();
-            setState((prev) => ({
-              ...prev,
-              user: null,
-              isAuthenticated: false,
-              isLoading: false,
-            }));
+              // Token refresh is now handled automatically by axios interceptor
+            } else {
+              // Clear auth if user info not available
+              AuthService.clearAuth();
+              setState((prev) => ({
+                ...prev,
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+              }));
+            }
+          } catch (apiError) {
+            console.log("Failed to get user from API:", apiError);
+            // If API call fails, check if we have valid tokens
+            const hasRefreshToken = AuthService.getRefreshToken();
+            if (hasRefreshToken) {
+              // Keep user authenticated, let axios interceptor handle token refresh
+              setState((prev) => ({
+                ...prev,
+                user: userFromStorage,
+                isAuthenticated: true,
+                isLoading: false,
+              }));
+            } else {
+              // No valid tokens, clear auth
+              AuthService.clearAuth();
+              setState((prev) => ({
+                ...prev,
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+              }));
+            }
           }
         }
       } else {
