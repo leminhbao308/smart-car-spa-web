@@ -53,6 +53,7 @@ export interface WalkInBookingRequest {
   notes?: string;
   priority?: 'NORMAL' | 'HIGH' | 'URGENT';
   special_requests?: string[];
+  booking_date?: string; // YYYY-MM-DD format
 }
 
 /**
@@ -302,6 +303,15 @@ export interface WalkInBookingFormData {
   vehicleId?: string;
   newCustomer?: NewCustomerFormData;
   newVehicle?: NewVehicleFormData;
+  // For existing customer vehicle info
+  existingVehicle?: {
+    license_plate: string;
+    brand_name: string;
+    model_name: string;
+    type_name: string;
+    color: string;
+    year: number;
+  };
   services: ServiceRequest[];
   assignedBayId: string;
   notes?: string;
@@ -315,6 +325,7 @@ export interface WalkInBookingFormData {
   scheduled_end_at?: string;
   slot_start_time?: string;
   slot_end_time?: string;
+  booking_date?: string; // YYYY-MM-DD format
 }
 
 // ==================== API RESPONSE TYPES ====================

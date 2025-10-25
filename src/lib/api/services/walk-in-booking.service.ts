@@ -157,10 +157,21 @@ export class WalkInBookingService {
   async getBayQueue(bayId: string, queueDate?: string): Promise<BookingQueueItem[]> {
     try {
       const params = queueDate ? { queueDate } : {};
+      console.log('🔍 DEBUG: getBayQueue called with:', { bayId, queueDate, params });
+      
       const response = await apiClient.get<BookingQueueItem[]>(
         `/walk-in/bay-queue/${bayId}`,
         { params }
       );
+      
+      console.log('🔍 DEBUG: getBayQueue response:', {
+        status: response.status,
+        data: response.data,
+        dataType: typeof response.data,
+        isArray: Array.isArray(response.data),
+        length: response.data?.length
+      });
+      
       return response.data;
     } catch (error) {
       console.error('Error getting bay queue:', error);

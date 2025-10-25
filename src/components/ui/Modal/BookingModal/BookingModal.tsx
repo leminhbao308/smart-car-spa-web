@@ -748,10 +748,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
         console.log("Creating walk-in booking for new customer");
         try {
-          // Calculate current time for walk-in booking
-          const now = new Date();
-          const currentTime = now.toISOString();
-          const estimatedEndTime = new Date(now.getTime() + totalDuration * 60000).toISOString();
+          // For walk-in booking, let backend calculate the timing based on queue
+          // Don't send specific times, let backend handle queue-based scheduling
 
           const walkInData = {
             customerType: "NEW" as const,
@@ -777,23 +775,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
               price: item.fixed_price || 0,
             })),
             assignedBayId: selectedWalkInBay,
-            branchId: selectedBranch.branch_id,
             notes: values.notes || "",
             priority: "NORMAL" as const,
             specialRequests: [],
             // Add missing fields for walk-in booking
             estimated_duration_minutes: totalDuration,
-            preferent_start_at: currentTime,
-            schedule_start_at: currentTime,
-            schedule_end_at: estimatedEndTime,
+            // Let backend calculate timing based on queue position
             deposit_amount: Math.round(totalPrice * 0.1), // 10% deposit
-            vehicle_brand_name: newVehicle!.brand_name,
-            vehicle_color: newVehicle!.color,
-            vehicle_type_name: newVehicle!.type_name,
-            vehicle_year: newVehicle!.year || new Date().getFullYear(),
-            slot_start_time: now.toTimeString().slice(0, 5), // HH:mm format
-            slot_end_time: new Date(now.getTime() + totalDuration * 60000).toTimeString().slice(0, 5), // HH:mm format
+            booking_date: bookingDate, // Send the selected date
           };
+
+          console.log("🔍 DEBUG: Final walkInData payload:", walkInData);
+          console.log("🔍 DEBUG: bookingDate being sent:", bookingDate);
 
           const walkInResponse = await createWalkInBooking(
             walkInData,
@@ -834,11 +827,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }
 
         console.log("Creating walk-in booking for existing customer");
+        console.log("🔍 DEBUG: Selected vehicle data:", {
+          vehicle_id: selectedVehicle!.vehicle_id,
+          license_plate: selectedVehicle!.license_plate,
+          brand_name: selectedVehicle!.brand_name,
+          model_name: selectedVehicle!.model_name,
+          type_name: selectedVehicle!.type_name,
+          color: selectedVehicle!.color,
+          model_year: selectedVehicle!.model_year
+        });
+        
         try {
-          // Calculate current time for walk-in booking
-          const now = new Date();
-          const currentTime = now.toISOString();
-          const estimatedEndTime = new Date(now.getTime() + totalDuration * 60000).toISOString();
+          // For walk-in booking, let backend calculate the timing based on queue
+          // Don't send specific times, let backend handle queue-based scheduling
 
           const walkInData = {
             customerType: "EXISTING" as const,
@@ -846,6 +847,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
             vehicleId: selectedVehicle!.vehicle_id,
             newCustomer: undefined,
             newVehicle: undefined,
+            // Send vehicle info in existingVehicle object (as expected by hook)
+            existingVehicle: {
+              license_plate: selectedVehicle!.license_plate,
+              brand_name: selectedVehicle!.brand_name || "",
+              model_name: selectedVehicle!.model_name || "",
+              type_name: selectedVehicle!.type_name || "",
+              color: selectedVehicle!.color || "",
+              year: selectedVehicle!.model_year || new Date().getFullYear(),
+            },
             services: selectedItems.map((item) => ({
               service_id: item.service?.service_id || item.item_id,
               service_name: item.item_name,
@@ -853,23 +863,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
               price: item.fixed_price || 0,
             })),
             assignedBayId: selectedWalkInBay,
-            branchId: selectedBranch.branch_id,
             notes: values.notes || "",
             priority: "NORMAL" as const,
             specialRequests: [],
             // Add missing fields for walk-in booking
             estimated_duration_minutes: totalDuration,
-            preferent_start_at: currentTime,
-            schedule_start_at: currentTime,
-            schedule_end_at: estimatedEndTime,
+            // Let backend calculate timing based on queue position
             deposit_amount: 0, // No deposit for walk-in booking
-            vehicle_brand_name: selectedVehicle!.brand_name || "",
-            vehicle_color: selectedVehicle!.color || "",
-            vehicle_type_name: selectedVehicle!.type_name || "",
-            vehicle_year: selectedVehicle!.model_year || new Date().getFullYear(),
-            slot_start_time: now.toTimeString().slice(0, 5), // HH:mm format
-            slot_end_time: new Date(now.getTime() + totalDuration * 60000).toTimeString().slice(0, 5), // HH:mm format
+            booking_date: bookingDate, // Send the selected date
           };
+
+          console.log("🔍 DEBUG: Final walkInData payload for existing customer:", walkInData);
+          console.log("🔍 DEBUG: bookingDate being sent:", bookingDate);
 
           const walkInResponse = await createWalkInBooking(
             walkInData,
@@ -967,7 +972,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             await createBookingWithSlotMutation.mutateAsync(createRequest);
       console.log("📋 Booking creation response:", createResponse);
           onOk(createRequest);
-          return;
+          return; 
         } catch (bookingError) {
           console.error("Error creating slot booking:", bookingError);
           onOk({
@@ -1964,9 +1969,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
                           // Load queue for the selected bay
                           setIsLoadingQueue(true);
                           try {
+                            // Use the date selected by user
                             console.log(
                               "🔄 Loading queue for selected bay:",
-                              bay.bay_id
+                              bay.bay_id,
+                              "using selected date:",
+                              bookingDate
                             );
                             const queue = await getBayQueue(
                               bay.bay_id,
@@ -2234,10 +2242,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   pagination={false}
                   size="small"
                   scroll={{ y: 200 }}
-                  rowKey={(record: any, index?: number) =>
-                    (record as any).queue_id || `queue-${index || 0}`
+                  rowKey={(record: unknown, index?: number) =>
+                    (record as { queue_id?: string }).queue_id || `queue-${index || 0}`
                   }
-                  rowClassName={(record: any, index?: number) =>
+                  rowClassName={(record: unknown, index?: number) =>
                     (index || 0) === 0
                       ? "queue-first-row"
                       : (index || 0) % 2 === 0

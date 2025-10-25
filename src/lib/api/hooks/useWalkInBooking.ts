@@ -109,7 +109,7 @@ export const useWalkInBooking = () => {
         booking_date: bookingDate,
       };
 
-      const response = await walkInBookingService.recommendBay(request);
+      const response = await walkInBookingService.recommendBay(request, bookingDate);
       updateBayRecommendation(response);
       
       return response;
@@ -131,24 +131,22 @@ export const useWalkInBooking = () => {
       setError(undefined);
 
       // Use provided data or calculate defaults
-      const now = new Date();
-      const currentTime = formData.preferred_start_at || now.toISOString();
       const totalDuration = formData.estimated_duration_minutes || formData.services.reduce((sum, service) => sum + service.duration_minutes, 0);
-      const estimatedEndTime = formData.scheduled_end_at || new Date(now.getTime() + totalDuration * 60000).toISOString();
 
       const request: WalkInBookingRequest = {
         customer_type: formData.customerType,
         customer_id: formData.customerId,
         vehicle_id: formData.vehicleId,
-        customer_name: formData.newCustomer?.name,
-        customer_phone: formData.newCustomer?.phone,
-        customer_email: formData.newCustomer?.email,
-        vehicle_license_plate: formData.newVehicle?.licensePlate,
-        vehicle_brand: formData.newVehicle?.brand,
-        vehicle_model: formData.newVehicle?.model,
-        vehicle_type: formData.newVehicle?.type,
-        vehicle_color: formData.newVehicle?.color,
-        vehicle_year: formData.newVehicle?.year,
+        // For existing customer, use existingVehicle info; for new customer, use newVehicle info
+        customer_name: formData.customerType === 'EXISTING' ? undefined : formData.newCustomer?.name,
+        customer_phone: formData.customerType === 'EXISTING' ? undefined : formData.newCustomer?.phone,
+        customer_email: formData.customerType === 'EXISTING' ? undefined : formData.newCustomer?.email,
+        vehicle_license_plate: formData.customerType === 'EXISTING' ? formData.existingVehicle?.license_plate : formData.newVehicle?.licensePlate,
+        vehicle_brand: formData.customerType === 'EXISTING' ? formData.existingVehicle?.brand_name : formData.newVehicle?.brand,
+        vehicle_model: formData.customerType === 'EXISTING' ? formData.existingVehicle?.model_name : formData.newVehicle?.model,
+        vehicle_type: formData.customerType === 'EXISTING' ? formData.existingVehicle?.type_name : formData.newVehicle?.type,
+        vehicle_color: formData.customerType === 'EXISTING' ? formData.existingVehicle?.color : formData.newVehicle?.color,
+        vehicle_year: formData.customerType === 'EXISTING' ? formData.existingVehicle?.year : formData.newVehicle?.year,
         assigned_bay_id: formData.assignedBayId,
         branch_id: branchId,
         services: formData.services,
@@ -156,14 +154,11 @@ export const useWalkInBooking = () => {
         currency: 'VND',
         deposit_amount: formData.deposit_amount || 0, // No deposit for walk-in booking
         estimated_duration_minutes: totalDuration,
-        preferred_start_at: currentTime,
-        scheduled_start_at: formData.scheduled_start_at || currentTime,
-        scheduled_end_at: estimatedEndTime,
-        slot_start_time: formData.slot_start_time || now.toTimeString().slice(0, 5), // HH:mm format
-        slot_end_time: formData.slot_end_time || new Date(now.getTime() + totalDuration * 60000).toTimeString().slice(0, 5), // HH:mm format
+        // Let backend calculate timing based on queue position
         notes: formData.notes,
         priority: formData.priority,
         special_requests: formData.specialRequests,
+        booking_date: formData['booking_date'], // Add booking_date field
       };
 
       const response = await walkInBookingService.createWalkInBooking(request);
