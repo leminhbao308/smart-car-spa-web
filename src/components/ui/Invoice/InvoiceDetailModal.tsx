@@ -9,12 +9,14 @@ import {
   Divider,
   Table,
   Tabs,
+  Card,
 } from "antd";
 import {
   FileTextOutlined,
   PrinterOutlined,
   DownloadOutlined,
   GiftOutlined,
+  CarOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { SaleOrderLineResponse, SaleOrderResponse } from "@/lib/api";
@@ -43,6 +45,28 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   getStatusText,
   calculateTotal,
 }) => {
+  // Check if this is a booking invoice
+  const isBookingInvoice = order?.lines.some(
+    (line) => line.is_service_item && line.original_booking_id
+  );
+
+  // Get booking info from order
+  const bookingInfo = order?.booking_info;
+  const bookingCode =
+    bookingInfo?.booking_code ||
+    order?.lines.find((line) => line.original_booking_code)
+      ?.original_booking_code;
+
+  // Debug: Log booking info
+  React.useEffect(() => {
+    if (isBookingInvoice && visible) {
+      console.log("📋 Booking Invoice Detected");
+      console.log("Booking Info:", bookingInfo);
+      console.log("Booking Code:", bookingCode);
+      console.log("Full Order:", order);
+    }
+  }, [isBookingInvoice, bookingInfo, bookingCode, visible, order]);
+
   if (!order) return null;
 
   // Build footer buttons based on order status
@@ -154,6 +178,7 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
             </Tag>
           </Descriptions.Item>
 
+
           {/* Pricing Information */}
           {order.total_discount_amount && order.total_discount_amount > 0 ? (
             <>
@@ -212,29 +237,152 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
           )}
         </Descriptions>
 
+        {/* Booking Information Card - Show detailed info if available */}
+        {isBookingInvoice && bookingInfo && (
+          <>
+            <Divider style={{ margin: "16px 0" }}>
+              <Space>
+                <CarOutlined />
+                <Text strong>Thông tin Booking</Text>
+              </Space>
+            </Divider>
+            <Descriptions
+              column={2}
+              bordered
+              size="small"
+            >
+              <Descriptions.Item
+                label="Mã Booking"
+                span={1}
+              >
+                <Text
+                  strong
+                  copyable
+                  style={{ color: "#1890ff" }}
+                >
+                  {bookingCode}
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item
+                label="Biển số xe"
+                span={1}
+              >
+                <Text strong>{bookingInfo.vehicle_license_plate}</Text>
+              </Descriptions.Item>
+              {bookingInfo.vehicle_brand_name && (
+                <Descriptions.Item
+                  label="Xe"
+                  span={2}
+                >
+                  <Text>
+                    {bookingInfo.vehicle_brand_name}
+                    {bookingInfo.vehicle_model_name &&
+                      ` ${bookingInfo.vehicle_model_name}`}
+                    {bookingInfo.vehicle_year &&
+                      ` (${bookingInfo.vehicle_year})`}
+                  </Text>
+                </Descriptions.Item>
+              )}
+              {bookingInfo.scheduled_start_at && (
+                <Descriptions.Item
+                  label="Thời gian hẹn"
+                  span={1}
+                >
+                  {dayjs(bookingInfo.scheduled_start_at).format(
+                    "DD/MM/YYYY HH:mm"
+                  )}
+                </Descriptions.Item>
+              )}
+              {bookingInfo.actual_check_in_at && (
+                <Descriptions.Item
+                  label="Check-in"
+                  span={1}
+                >
+                  {dayjs(bookingInfo.actual_check_in_at).format(
+                    "DD/MM/YYYY HH:mm"
+                  )}
+                </Descriptions.Item>
+              )}
+              {bookingInfo.notes && (
+                <Descriptions.Item
+                  label="Ghi chú"
+                  span={2}
+                >
+                  <Text type="secondary">{bookingInfo.notes}</Text>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          </>
+        )}
+
         <Divider style={{ margin: "16px 0" }} />
 
-        {/* Tabs for Promotions, Products and Cancellation Reason */}
+        {/* Tabs for Promotions, Products/Services and Cancellation Reason */}
         <Tabs
-          defaultActiveKey="products"
+          defaultActiveKey={isBookingInvoice ? "services" : "products"}
           items={[
             {
-              key: "products",
-              label: "Chi tiết sản phẩm",
+              key: isBookingInvoice ? "services" : "products",
+              label: isBookingInvoice
+                ? "Chi tiết dịch vụ"
+                : "Chi tiết sản phẩm",
               children: (
                 <Table
                   dataSource={order.lines}
                   columns={[
                     {
-                      title: "Sản phẩm",
+                      title: isBookingInvoice ? "Dịch vụ" : "Sản phẩm",
                       dataIndex: ["product", "product_name"],
                       key: "product_name",
+                      render: (name: string, record: SaleOrderLineResponse) => {
+                        // For service items, get name from booking_items
+                        let displayName = name;
+                        if (record.is_service_item && bookingInfo) {
+                          const serviceItem = bookingInfo.booking_items?.find(
+                            (item) => item.service_id === record.service_id
+                          );
+                          displayName = serviceItem?.item_name || name;
+                        }
+
+                        return (
+                          <Space
+                            direction="vertical"
+                            size={2}
+                          >
+                            <Text>{displayName}</Text>
+                            {record.original_booking_code && (
+                              <Text
+                                type="secondary"
+                                style={{ fontSize: "12px" }}
+                              >
+                                Từ booking: {record.original_booking_code}
+                              </Text>
+                            )}
+                          </Space>
+                        );
+                      },
                     },
                     {
-                      title: "Mã SP",
+                      title: isBookingInvoice ? "Mã DV" : "Mã SP",
                       dataIndex: ["product", "sku"],
                       key: "sku",
                       width: 120,
+                      render: (sku: string, record: SaleOrderLineResponse) => {
+                        // For service items, show service_id instead
+                        if (record.is_service_item) {
+                          return (
+                            <Text
+                              type="secondary"
+                              style={{ fontSize: "12px" }}
+                              ellipsis={{tooltip: record.service_id}}
+                              copyable
+                            >
+                              {record.service_id}
+                            </Text>
+                          );
+                        }
+                        return sku;
+                      },
                     },
                     {
                       title: "Số lượng",

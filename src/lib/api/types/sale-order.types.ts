@@ -7,6 +7,7 @@ import {
   UserManagementInfo,
   WarehouseRef,
 } from "@/lib/api";
+import { BookingInfoDto } from "./booking.types";
 import { UUID } from "node:crypto";
 
 export interface SalesOrderLineInput extends BaseAuditEntity {
@@ -82,6 +83,9 @@ export interface SaleOrderResponse extends BaseAuditEntity {
 
   // Cancellation reason if status is CANCELLED
   cancellation_reason?: string;
+
+  // Booking information if this is a booking invoice
+  booking_info?: BookingInfoDto;
 }
 
 export interface SaleOrderLineResponse extends BaseAuditEntity {
@@ -90,6 +94,12 @@ export interface SaleOrderLineResponse extends BaseAuditEntity {
   quantity: number;
   unit_price: number;
   is_free_item?: boolean;
+  // Service item fields
+  service_id?: string;
+  is_service_item?: boolean;
+  // Booking context fields
+  original_booking_id?: string;
+  original_booking_code?: string;
 }
 
 export interface SaleReturnResponse extends BaseAuditEntity {
