@@ -20,7 +20,10 @@ export {
 } from "./ServicePackageTypeModals";
 
 // Service Package Modals
-export { ServicePackageModal, ServicePackageDetailModal } from "./ServicePackageModals";
+export {
+  ServicePackageModal,
+  ServicePackageDetailModal,
+} from "./ServicePackageModals";
 
 // Price Table Modals
 export { default as PriceTableModal } from "./PriceTableModals/PriceTableModal";
@@ -67,6 +70,9 @@ export { default as ProductModal } from "./Product/ProductModal";
 
 // Service Bay Modals
 export { ServiceBayModal, ServiceBayDetailModal } from "./ServiceBayModals";
+
+// Excel Import Modal
+export { ExcelImportModal } from "./ExcelImportModal";
 
 export type { ConfirmationModalProps } from "./ConfirmationModal";
 export type {

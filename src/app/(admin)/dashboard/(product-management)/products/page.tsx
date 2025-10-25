@@ -2,24 +2,12 @@
 import React, { useMemo, useState } from "react";
 import { AdminTable } from "@/components/ui/Table";
 import { ProductDetailModal, ProductModal } from "@/components/ui/Modal";
+import { ProductImageCell } from "@/components/ui/Table/ProductImageCell";
 import { ColumnsType } from "antd/es/table";
-import {
-  Tag,
-  Card,
-  Row,
-  Col,
-  Select,
-  Input,
-  Button,
-  Space,
-  Badge,
-  Tooltip,
-} from "antd";
+import { Tag, Card, Row, Col, Select, Input, Button, Space, Badge } from "antd";
 import {
   FilterOutlined,
   ReloadOutlined,
-  StarOutlined,
-  ShoppingCartOutlined,
   BarcodeOutlined,
 } from "@ant-design/icons";
 import { useProducts } from "@/lib/api/hooks/useProductManagement";
@@ -142,48 +130,11 @@ const ProductsPage = () => {
       key: "image",
       width: 100,
       render: (_, record) => (
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ position: "relative" }}>
-            <div
-              style={{
-                width: 60,
-                height: 60,
-                backgroundColor:
-                  "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                borderRadius: 8,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                border: "2px solid #f0f0f0",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              }}
-            >
-              <ShoppingCartOutlined style={{ fontSize: 20 }} />
-            </div>
-            {record.is_featured && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: -4,
-                  right: -4,
-                  backgroundColor: "#faad14",
-                  borderRadius: "50%",
-                  width: 20,
-                  height: 20,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
-                }}
-              >
-                <Tooltip title="Sản phẩm nổi bật">
-                  <StarOutlined style={{ color: "#fff", fontSize: 10 }} />
-                </Tooltip>
-              </div>
-            )}
-          </div>
-        </div>
+        <ProductImageCell
+          productId={record.product_id}
+          productName={record.product_name}
+          isFeatured={record.is_featured}
+        />
       ),
     },
     {
@@ -281,7 +232,11 @@ const ProductsPage = () => {
         }
       >
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={6}>
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
             <div>
               <label
                 style={{
@@ -303,7 +258,11 @@ const ProductsPage = () => {
               />
             </div>
           </Col>
-          <Col xs={24} sm={12} md={6}>
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
             <div>
               <label
                 style={{
@@ -330,7 +289,11 @@ const ProductsPage = () => {
               </Select>
             </div>
           </Col>
-          <Col xs={24} sm={12} md={6}>
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
             <div>
               <label
                 style={{
@@ -363,7 +326,11 @@ const ProductsPage = () => {
             </div>
           </Col>
 
-          <Col xs={24} sm={12} md={6}>
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
             <div>
               <label
                 style={{

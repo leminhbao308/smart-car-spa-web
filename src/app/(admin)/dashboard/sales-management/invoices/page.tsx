@@ -12,40 +12,39 @@ import {
   Typography,
   Row,
   Col,
-  Modal,
-  Descriptions,
-  Divider,
-  message,
   Tooltip,
   Spin,
   Empty,
-  Alert,
   App,
+  Form,
 } from "antd";
 import {
   SearchOutlined,
   EyeOutlined,
   PrinterOutlined,
-  DownloadOutlined,
   FilterOutlined,
   ReloadOutlined,
-  FileTextOutlined,
   CheckCircleOutlined,
   UndoOutlined,
-  ExclamationCircleOutlined,
   CreditCardOutlined,
   GiftOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
   useConfirmSalesOrder,
   useCreateReturn,
   useFulfillSalesOrder,
-  useSalesOrders,
+  usePagedSalesOrders,
+  useReturnedOrders,
+  useCancelOrder,
 } from "@/lib/api/hooks";
-import { SaleOrderLineResponse, SaleOrderResponse } from "@/lib/api";
+import { SaleOrderResponse, SaleReturnResponse } from "@/lib/api";
 import { useGetPaymentLink } from "@/lib/api/hooks/usePayment";
-import PromotionSnapshot from "@/components/ui/Invoice/PromotionSnapshot";
+import ReturnOrderResultModal from "@/components/ui/ReturnOrderResult/ReturnOrderResultModal";
+import InvoiceDetailModal from "@/components/ui/Invoice/InvoiceDetailModal";
+import ReturnOrderModal from "@/components/ui/Invoice/ReturnOrderModal";
+import CancelOrderModal from "@/components/ui/Invoice/CancelOrderModal";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -55,21 +54,37 @@ const InvoicesPage = () => {
   // Ant Design Message
   const { message } = App.useApp();
 
-  // Data fetching hooks
-  const { orders, loading, refetch } = useSalesOrders();
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0); // Backend uses 0-based index
+  const [pageSize, setPageSize] = useState(10);
+  const [sortBy, setSortBy] = useState("createdDate");
+  const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
+
+  // Data fetching hooks with pagination
+  const { orders, loading, refetch, totalElements, totalPages } =
+    usePagedSalesOrders(currentPage, pageSize, sortBy, sortDirection);
   const confirmMutation = useConfirmSalesOrder();
   const fulfillMutation = useFulfillSalesOrder();
   const returnMutation = useCreateReturn();
+  const cancelMutation = useCancelOrder();
+  const { returnedOrders, refetch: returnedRefetch } = useReturnedOrders();
 
   const [selectedOrder, setSelectedOrder] = useState<SaleOrderResponse | null>(
     null
   );
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isReturnModalVisible, setIsReturnModalVisible] = useState(false);
+  const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState<any>(null);
+  const [returnForm] = Form.useForm();
+  const [cancelForm] = Form.useForm();
+  const [returnResult, setReturnResult] = useState<SaleReturnResponse | null>(
+    null
+  );
+  const [isResultModalVisible, setIsResultModalVisible] = useState(false);
 
   // Get payment link
   const { data: paymentLink, isLoading: isLoadingPaymentLink } =
@@ -119,9 +134,9 @@ const InvoicesPage = () => {
     }
   };
 
-  // Filter orders
+  // Filter orders (now done client-side on current page only)
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
+    return orders.filter((order: SaleOrderResponse) => {
       const matchesSearch =
         order.id.toLowerCase().includes(searchText.toLowerCase()) ||
         order.customer?.full_name
@@ -164,7 +179,7 @@ const InvoicesPage = () => {
     ) {
       return order.final_amount / order.original_amount;
     }
-    return 1.0; // No discount
+    return 1; // No discount
   };
 
   // Calculate return amount with discount applied (what customer actually paid)
@@ -219,19 +234,57 @@ const InvoicesPage = () => {
 
   const handleOpenReturnModal = (order: SaleOrderResponse) => {
     setSelectedOrder(order);
+    returnForm.setFieldsValue({ reason: "Hoàn trả hàng" });
     setIsReturnModalVisible(true);
+  };
+
+  const handleOpenCancelModal = (order: SaleOrderResponse) => {
+    setSelectedOrder(order);
+    cancelForm.resetFields();
+    setIsCancelModalVisible(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!selectedOrder) return;
+
+    try {
+      const values = await cancelForm.validateFields();
+      await cancelMutation.mutateAsync({
+        orderId: selectedOrder.id,
+        cancellationReason: values.cancellation_reason,
+      });
+      setIsCancelModalVisible(false);
+      setSelectedOrder(null);
+      cancelForm.resetFields();
+      message.success(
+        `Hủy đơn hàng ${selectedOrder.id.substring(0, 8)}... thành công`
+      );
+    } catch (error) {
+      // Error handled by mutation or validation
+    }
   };
 
   const handleConfirmReturn = async () => {
     if (!selectedOrder) return;
 
     try {
-      await returnMutation.mutateAsync({
+      const values = await returnForm.validateFields();
+      const returnData = await returnMutation.mutateAsync({
         orderId: selectedOrder.id,
         items: [],
+        reason: values.reason,
       });
       setIsReturnModalVisible(false);
       setSelectedOrder(null);
+      returnForm.resetFields();
+
+      // Refetch to get updated data
+      await returnedRefetch();
+
+      // Show result modal with returned data immediately
+      setReturnResult(returnData);
+      setIsResultModalVisible(true);
+
       message.success(
         `Tạo yêu cầu hoàn trả đơn hàng ${selectedOrder.id.substring(
           0,
@@ -239,7 +292,7 @@ const InvoicesPage = () => {
         )}... thành công`
       );
     } catch (error) {
-      // Error handled by mutation
+      // Error handled by mutation or validation
     }
   };
 
@@ -331,15 +384,20 @@ const InvoicesPage = () => {
               direction="vertical"
               size={2}
             >
-              {promos.slice(0, 2).map((p: any, idx: number) => (
-                <Tag
-                  key={idx}
-                  color="purple"
-                  style={{ fontSize: "11px", margin: 0 }}
-                >
-                  {p.code || p.name}
-                </Tag>
-              ))}
+              {promos.slice(0, 2).map((p: any, idx: number) => {
+                // Support both old and new snapshot formats
+                const displayText =
+                  p.code || p.promotion_code || p.name || "Khuyến mãi";
+                return (
+                  <Tag
+                    key={`promo-${p.promotion_id || idx}`}
+                    color="purple"
+                    style={{ fontSize: "11px", margin: 0 }}
+                  >
+                    {displayText}
+                  </Tag>
+                );
+              })}
               {promos.length > 2 && (
                 <Text
                   type="secondary"
@@ -350,7 +408,8 @@ const InvoicesPage = () => {
               )}
             </Space>
           );
-        } catch {
+        } catch (error) {
+          console.error("Error parsing promotion snapshot:", error);
           return <Text type="secondary">-</Text>;
         }
       },
@@ -434,16 +493,16 @@ const InvoicesPage = () => {
       ),
     },
     {
-      title: "Ngày tạo",
-      dataIndex: "created_date",
-      key: "created_date",
+      title: "Cập nhật mới nhất",
+      dataIndex: "modified_date",
+      key: "modified_date",
       width: 150,
       render: (date: string) => dayjs(date).format("DD/MM/YYYY HH:mm"),
     },
     {
       title: "Thao tác",
       key: "action",
-      width: 100,
+      width: 160,
       fixed: "right" as const,
       render: (_: any, record: SaleOrderResponse) => (
         <Space size="small">
@@ -490,30 +549,54 @@ const InvoicesPage = () => {
                   loading={fulfillMutation.isPending}
                 />
               </Tooltip>
+              <Tooltip title="Hủy đơn hàng">
+                <Button
+                  type="text"
+                  size="middle"
+                  icon={<CloseCircleOutlined />}
+                  danger
+                  onClick={() => handleOpenCancelModal(record)}
+                  loading={cancelMutation.isPending}
+                />
+              </Tooltip>
             </>
           )}
 
           {record.status === "FULFILLED" && (
-            <Tooltip title="Hoàn trả toàn bộ">
+            <>
+              <Tooltip title="Tạo hóa đơn trả">
+                <Button
+                  type="text"
+                  size="middle"
+                  icon={<UndoOutlined />}
+                  danger
+                  onClick={() => handleOpenReturnModal(record)}
+                  loading={returnMutation.isPending}
+                />
+              </Tooltip>
+              <Tooltip title="Hủy đơn hàng">
+                <Button
+                  type="text"
+                  size="middle"
+                  icon={<CloseCircleOutlined />}
+                  danger
+                  onClick={() => handleOpenCancelModal(record)}
+                  loading={cancelMutation.isPending}
+                />
+              </Tooltip>
+            </>
+          )}
+
+          {record.status !== "CANCELLED" && (
+            <Tooltip title="In hóa đơn">
               <Button
                 type="text"
                 size="middle"
-                icon={<UndoOutlined />}
-                danger
-                onClick={() => handleOpenReturnModal(record)}
-                loading={returnMutation.isPending}
+                icon={<PrinterOutlined />}
+                onClick={() => handlePrint(record)}
               />
             </Tooltip>
           )}
-
-          <Tooltip title="In hóa đơn">
-            <Button
-              type="text"
-              size="middle"
-              icon={<PrinterOutlined />}
-              onClick={() => handlePrint(record)}
-            />
-          </Tooltip>
         </Space>
       ),
     },
@@ -619,12 +702,20 @@ const InvoicesPage = () => {
             columns={columns}
             rowKey="id"
             pagination={{
-              total: filteredOrders.length,
-              pageSize: 10,
+              current: currentPage + 1, // Ant Design uses 1-based index, backend uses 0-based
+              pageSize: pageSize,
+              total: totalElements,
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total, range) =>
                 `${range[0]}-${range[1]} của ${total} hóa đơn`,
+              onChange: (page, size) => {
+                setCurrentPage(page - 1); // Convert to 0-based index for backend
+                if (size !== pageSize) {
+                  setPageSize(size);
+                  setCurrentPage(0); // Reset to first page when page size changes
+                }
+              },
             }}
             scroll={{ x: 1200 }}
             locale={{
@@ -641,439 +732,60 @@ const InvoicesPage = () => {
       </Card>
 
       {/* Detail Modal */}
-      <Modal
-        title={
-          <Space>
-            <FileTextOutlined />
-            <span>Chi tiết hóa đơn</span>
-          </Space>
-        }
-        open={isDetailModalVisible}
-        onCancel={() => setIsDetailModalVisible(false)}
-        footer={[
-          <Button
-            key="print"
-            icon={<PrinterOutlined />}
-            onClick={() => selectedOrder && handlePrint(selectedOrder)}
-          >
-            In hóa đơn
-          </Button>,
-          <Button
-            key="export"
-            icon={<DownloadOutlined />}
-            onClick={() => selectedOrder && handleExport(selectedOrder)}
-          >
-            Xuất file
-          </Button>,
-          <Button
-            key="close"
-            type="primary"
-            onClick={() => setIsDetailModalVisible(false)}
-          >
-            Đóng
-          </Button>,
-        ]}
-        width={900}
-      >
-        {selectedOrder && (
-          <div>
-            <Descriptions
-              column={2}
-              bordered
-              size="small"
-            >
-              <Descriptions.Item
-                label="Mã đơn hàng"
-                span={2}
-              >
-                <Text
-                  strong
-                  copyable
-                >
-                  {selectedOrder.id}
-                </Text>
-              </Descriptions.Item>
-              <Descriptions.Item
-                label="Ngày tạo"
-                span={1}
-              >
-                {dayjs(selectedOrder.created_date).format("DD/MM/YYYY HH:mm")}
-              </Descriptions.Item>
-              <Descriptions.Item
-                label="Người tạo"
-                span={1}
-              >
-                {selectedOrder.created_by}
-              </Descriptions.Item>
-              <Descriptions.Item
-                label="Khách hàng"
-                span={1}
-              >
-                {selectedOrder.customer?.full_name || "Khách lẻ"}
-              </Descriptions.Item>
-              <Descriptions.Item
-                label="Số điện thoại"
-                span={1}
-              >
-                {selectedOrder.customer?.phone_number || ""}
-              </Descriptions.Item>
-              <Descriptions.Item
-                label="Chi nhánh"
-                span={1}
-              >
-                {selectedOrder.branch.branch_name}
-              </Descriptions.Item>
-              <Descriptions.Item
-                label="Địa chỉ"
-                span={1}
-              >
-                {selectedOrder.branch.address}
-              </Descriptions.Item>
-              <Descriptions.Item
-                label="Trạng thái"
-                span={1}
-              >
-                <Tag color={getStatusColor(selectedOrder.status)}>
-                  {getStatusText(selectedOrder.status)}
-                </Tag>
-              </Descriptions.Item>
-
-              {/* Pricing Information */}
-              {selectedOrder.total_discount_amount &&
-              selectedOrder.total_discount_amount > 0 ? (
-                <>
-                  <Descriptions.Item
-                    label="Tổng tiền gốc"
-                    span={1}
-                  >
-                    <Text style={{ fontSize: "15px" }}>
-                      ₫
-                      {(
-                        selectedOrder.original_amount ||
-                        calculateTotal(selectedOrder) +
-                          selectedOrder.total_discount_amount
-                      ).toLocaleString()}
-                    </Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item
-                    label="Giảm giá"
-                    span={1}
-                  >
-                    <Tag
-                      color="red"
-                      icon={<GiftOutlined />}
-                      style={{ fontSize: "13px" }}
-                    >
-                      -₫{selectedOrder.total_discount_amount.toLocaleString()}
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item
-                    label="Tổng thanh toán"
-                    span={1}
-                  >
-                    <Text
-                      strong
-                      style={{ fontSize: "18px", color: "#52c41a" }}
-                    >
-                      ₫
-                      {(
-                        selectedOrder.final_amount ??
-                        calculateTotal(selectedOrder)
-                      ).toLocaleString()}
-                    </Text>
-                  </Descriptions.Item>
-                </>
-              ) : (
-                <Descriptions.Item
-                  label="Tổng thanh toán"
-                  span={2}
-                >
-                  <Text
-                    strong
-                    style={{ fontSize: "18px", color: "#1890ff" }}
-                  >
-                    ₫
-                    {(
-                      selectedOrder.final_amount ??
-                      calculateTotal(selectedOrder)
-                    ).toLocaleString()}
-                  </Text>
-                </Descriptions.Item>
-              )}
-            </Descriptions>
-
-            {/* Promotion Snapshot */}
-            <PromotionSnapshot
-              snapshotJson={selectedOrder.promotion_snapshot}
-              totalDiscountAmount={selectedOrder.total_discount_amount}
-              discountPercentage={selectedOrder.discount_percentage}
-              originalAmount={selectedOrder.original_amount}
-              finalAmount={
-                selectedOrder.final_amount ?? calculateTotal(selectedOrder)
-              }
-            />
-
-            <Divider />
-
-            <Title level={5}>Chi tiết sản phẩm</Title>
-            <Table
-              dataSource={selectedOrder.lines}
-              columns={[
-                {
-                  title: "Sản phẩm",
-                  dataIndex: ["product", "product_name"],
-                  key: "product_name",
-                },
-                {
-                  title: "Mã SP",
-                  dataIndex: ["product", "sku"],
-                  key: "sku",
-                  width: 120,
-                },
-                {
-                  title: "Số lượng",
-                  dataIndex: "quantity",
-                  key: "quantity",
-                  width: 100,
-                  align: "center" as const,
-                },
-                {
-                  title: "Đơn giá",
-                  dataIndex: "unit_price",
-                  key: "unit_price",
-                  width: 130,
-                  render: (price: number, record: SaleOrderLineResponse) =>
-                    record.is_free_item ? (
-                      <Text
-                        type="success"
-                        strong
-                      >
-                        MIỄN PHÍ
-                      </Text>
-                    ) : (
-                      `₫${price.toLocaleString()}`
-                    ),
-                },
-                {
-                  title: "Thành tiền",
-                  key: "total",
-                  width: 140,
-                  render: (_: any, record: SaleOrderLineResponse) =>
-                    record.is_free_item ? (
-                      <Text
-                        type="success"
-                        strong
-                      >
-                        ₫0
-                      </Text>
-                    ) : (
-                      <Text strong>
-                        ₫
-                        {(record.quantity * record.unit_price).toLocaleString()}
-                      </Text>
-                    ),
-                },
-              ]}
-              pagination={false}
-              rowKey="id"
-              size="small"
-            />
-          </div>
-        )}
-      </Modal>
+      <InvoiceDetailModal
+        visible={isDetailModalVisible}
+        order={selectedOrder}
+        onClose={() => setIsDetailModalVisible(false)}
+        onPrint={handlePrint}
+        onExport={handleExport}
+        getStatusColor={getStatusColor}
+        getStatusText={getStatusText}
+        calculateTotal={calculateTotal}
+      />
 
       {/* Return Confirmation Modal */}
-      <Modal
-        title={
-          <Space>
-            <ExclamationCircleOutlined style={{ color: "#faad14" }} />
-            <span>Xác nhận hoàn trả đơn hàng</span>
-          </Space>
-        }
-        open={isReturnModalVisible}
-        onCancel={() => {
+      <ReturnOrderModal
+        visible={isReturnModalVisible}
+        order={selectedOrder}
+        form={returnForm}
+        loading={returnMutation.isPending}
+        onClose={() => {
           setIsReturnModalVisible(false);
           setSelectedOrder(null);
+          returnForm.resetFields();
         }}
-        onOk={handleConfirmReturn}
-        confirmLoading={returnMutation.isPending}
-        okText="Xác nhận hoàn trả"
-        cancelText="Hủy"
-        okButtonProps={{ danger: true }}
-        width={700}
-      >
-        {selectedOrder && (
-          <div>
-            <Alert
-              message="Cảnh báo"
-              description="Bạn sắp hoàn trả TOÀN BỘ đơn hàng này. Tất cả sản phẩm sẽ được trả về kho và không thể hoàn tác."
-              type="warning"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
+        onConfirm={handleConfirmReturn}
+        calculateTotal={calculateTotal}
+        calculateReturnAmount={calculateReturnAmount}
+        getDiscountedUnitPrice={getDiscountedUnitPrice}
+      />
 
-            <Descriptions
-              column={1}
-              bordered
-              size="small"
-            >
-              <Descriptions.Item label="Mã đơn hàng">
-                <Text
-                  strong
-                  code
-                >
-                  {selectedOrder.id}
-                </Text>
-              </Descriptions.Item>
-              <Descriptions.Item label="Khách hàng">
-                {selectedOrder.customer?.full_name || "Khách lẻ"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số điện thoại">
-                {selectedOrder.customer?.phone_number || "N/A"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Tổng tiền hoàn trả">
-                <Text
-                  strong
-                  style={{ fontSize: "16px", color: "#ff4d4f" }}
-                >
-                  ₫{calculateReturnAmount(selectedOrder).toLocaleString()}
-                </Text>
-                {selectedOrder.total_discount_amount &&
-                  selectedOrder.total_discount_amount > 0 && (
-                    <div style={{ marginTop: 4 }}>
-                      <Text
-                        type="secondary"
-                        style={{ fontSize: "12px" }}
-                      >
-                        (Giá gốc: ₫
-                        {calculateTotal(selectedOrder).toLocaleString()})
-                      </Text>
-                    </div>
-                  )}
-              </Descriptions.Item>
-            </Descriptions>
+      {/* Return Result Modal */}
+      <ReturnOrderResultModal
+        visible={isResultModalVisible}
+        returnData={returnResult}
+        onClose={() => {
+          setIsResultModalVisible(false);
+          setReturnResult(null);
+        }}
+      />
 
-            <Divider />
-
-            <Title level={5}>Danh sách sản phẩm sẽ được hoàn trả</Title>
-            <Table
-              dataSource={selectedOrder.lines}
-              columns={[
-                {
-                  title: "Sản phẩm",
-                  dataIndex: ["product", "product_name"],
-                  key: "product_name",
-                },
-                {
-                  title: "Mã SP",
-                  dataIndex: ["product", "sku"],
-                  key: "sku",
-                  width: 100,
-                },
-                {
-                  title: "Số lượng",
-                  dataIndex: "quantity",
-                  key: "quantity",
-                  width: 100,
-                  align: "center" as const,
-                },
-                {
-                  title: "Đơn giá",
-                  dataIndex: "unit_price",
-                  key: "unit_price",
-                  width: 150,
-                  render: (price: number, record: SaleOrderLineResponse) => {
-                    if (record.is_free_item) {
-                      return (
-                        <Text
-                          type="success"
-                          strong
-                        >
-                          MIỄN PHÍ
-                        </Text>
-                      );
-                    }
-                    const discountedPrice = getDiscountedUnitPrice(
-                      selectedOrder,
-                      price
-                    );
-                    const hasDiscount =
-                      selectedOrder.total_discount_amount &&
-                      selectedOrder.total_discount_amount > 0;
-
-                    return (
-                      <div>
-                        <div>₫{discountedPrice.toLocaleString()}</div>
-                        {hasDiscount && (
-                          <Text
-                            type="secondary"
-                            delete
-                            style={{ fontSize: "11px" }}
-                          >
-                            ₫{price.toLocaleString()}
-                          </Text>
-                        )}
-                      </div>
-                    );
-                  },
-                },
-                {
-                  title: "Thành tiền",
-                  key: "total",
-                  width: 150,
-                  render: (_: unknown, record: SaleOrderLineResponse) => {
-                    if (record.is_free_item) {
-                      return (
-                        <Text
-                          type="success"
-                          strong
-                        >
-                          ₫0
-                        </Text>
-                      );
-                    }
-                    const discountedPrice = getDiscountedUnitPrice(
-                      selectedOrder,
-                      record.unit_price
-                    );
-                    const lineTotal = record.quantity * discountedPrice;
-                    const originalTotal = record.quantity * record.unit_price;
-                    const hasDiscount =
-                      selectedOrder.total_discount_amount &&
-                      selectedOrder.total_discount_amount > 0;
-
-                    return (
-                      <div>
-                        <Text
-                          strong
-                          style={{ color: "#ff4d4f" }}
-                        >
-                          ₫{lineTotal.toLocaleString()}
-                        </Text>
-                        {hasDiscount && (
-                          <div>
-                            <Text
-                              type="secondary"
-                              delete
-                              style={{ fontSize: "11px" }}
-                            >
-                              ₫{originalTotal.toLocaleString()}
-                            </Text>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  },
-                },
-              ]}
-              pagination={false}
-              rowKey="id"
-              size="small"
-              scroll={{ y: 200 }}
-            />
-          </div>
-        )}
-      </Modal>
+      {/* Cancel Order Modal */}
+      <CancelOrderModal
+        visible={isCancelModalVisible}
+        order={selectedOrder}
+        form={cancelForm}
+        loading={cancelMutation.isPending}
+        onClose={() => {
+          setIsCancelModalVisible(false);
+          setSelectedOrder(null);
+          cancelForm.resetFields();
+        }}
+        onConfirm={handleConfirmCancel}
+        getStatusColor={getStatusColor}
+        getStatusText={getStatusText}
+        calculateTotal={calculateTotal}
+      />
     </div>
   );
 };

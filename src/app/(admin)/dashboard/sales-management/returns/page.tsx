@@ -21,6 +21,7 @@ import {
   Form,
   message,
   App,
+  Tabs,
 } from "antd";
 import {
   SearchOutlined,
@@ -43,6 +44,8 @@ import {
   SaleOrderResponse,
   SaleReturnResponse,
 } from "@/lib/api";
+import ReturnOrderResultModal from "@/components/ui/ReturnOrderResult/ReturnOrderResultModal";
+import PromotionSnapshot from "@/components/ui/Invoice/PromotionSnapshot";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -79,6 +82,10 @@ const ReturnsPage = () => {
   const [form] = Form.useForm();
   const [selectedOrderForReturn, setSelectedOrderForReturn] =
     useState<SaleOrderResponse | null>(null);
+  const [returnResult, setReturnResult] = useState<SaleReturnResponse | null>(
+    null
+  );
+  const [isResultModalVisible, setIsResultModalVisible] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -202,15 +209,23 @@ const ReturnsPage = () => {
       return;
     }
 
+    const reason = form.getFieldValue("reason") || "Hoàn trả hàng";
+
     createReturn(
-      { orderId: selectedOrderForReturn.id, items: [] },
+      { orderId: selectedOrderForReturn.id, items: [], reason },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
           setIsCreateModalVisible(false);
           setSelectedOrderForReturn(null);
           form.resetFields();
+
+          // Refetch to get updated data
           returnedRefetch();
           fullfilledRefetch();
+
+          // Show result modal with returned data immediately
+          setReturnResult(data);
+          setIsResultModalVisible(true);
         },
       }
     );
@@ -283,7 +298,7 @@ const ReturnsPage = () => {
     },
     {
       title: "Chi nhánh",
-      dataIndex: ["warehouse", "branch", "branch_name"],
+      dataIndex: ["branch", "branch_name"],
       key: "branch",
       width: 250,
     },
@@ -498,10 +513,11 @@ const ReturnsPage = () => {
               Đóng
             </Button>,
           ]}
-          width={800}
+          width={900}
         >
           {selectedOrder && (
             <div>
+              {/* Thông tin chung */}
               <Descriptions
                 column={2}
                 bordered
@@ -576,69 +592,130 @@ const ReturnsPage = () => {
 
               <Divider />
 
-              <Title level={5}>Chi tiết sản phẩm hoàn trả</Title>
-              <Table
-                dataSource={selectedOrder.sales_order.lines}
-                columns={[
+              {/* Tabs cho sản phẩm, khuyến mãi và lý do */}
+              <Tabs
+                defaultActiveKey="products"
+                items={[
                   {
-                    title: "Mã SP",
-                    dataIndex: ["product", "sku"],
-                    key: "sku",
-                    width: 80,
+                    key: "products",
+                    label: "Sản phẩm",
+                    children: (
+                      <Table
+                        dataSource={selectedOrder.sales_order.lines}
+                        columns={[
+                          {
+                            title: "Mã SP",
+                            dataIndex: ["product", "sku"],
+                            key: "sku",
+                            width: 100,
+                          },
+                          {
+                            title: "Sản phẩm",
+                            dataIndex: ["product", "product_name"],
+                            key: "product_name",
+                          },
+                          {
+                            title: "Số lượng",
+                            dataIndex: "quantity",
+                            key: "quantity",
+                            width: 100,
+                            align: "center" as const,
+                          },
+                          {
+                            title: "Đơn giá",
+                            dataIndex: "unit_price",
+                            key: "unit_price",
+                            width: 130,
+                            render: (
+                              price: number,
+                              record: SaleOrderLineResponse
+                            ) =>
+                              record.is_free_item ? (
+                                <Text
+                                  type="success"
+                                  strong
+                                >
+                                  MIỄN PHÍ
+                                </Text>
+                              ) : (
+                                `₫${Number(price).toLocaleString()}`
+                              ),
+                          },
+                          {
+                            title: "Thành tiền",
+                            key: "total",
+                            width: 150,
+                            render: (
+                              _: unknown,
+                              record: SaleOrderLineResponse
+                            ) =>
+                              record.is_free_item ? (
+                                <Text
+                                  type="success"
+                                  strong
+                                >
+                                  ₫0
+                                </Text>
+                              ) : (
+                                <Text strong>
+                                  ₫
+                                  {(
+                                    record.quantity * Number(record.unit_price)
+                                  ).toLocaleString()}
+                                </Text>
+                              ),
+                          },
+                        ]}
+                        pagination={false}
+                        rowKey="id"
+                        size="small"
+                      />
+                    ),
                   },
                   {
-                    title: "Sản phẩm",
-                    dataIndex: ["product", "product_name"],
-                    key: "product_name",
+                    key: "promotions",
+                    label: "Khuyến mãi",
+                    children: (
+                      <PromotionSnapshot
+                        snapshotJson={
+                          selectedOrder.sales_order.promotion_snapshot
+                        }
+                        totalDiscountAmount={
+                          selectedOrder.sales_order.total_discount_amount
+                        }
+                        discountPercentage={
+                          selectedOrder.sales_order.discount_percentage
+                        }
+                        originalAmount={
+                          selectedOrder.sales_order.original_amount
+                        }
+                        finalAmount={selectedOrder.sales_order.final_amount}
+                        orderLines={selectedOrder.sales_order.lines}
+                      />
+                    ),
                   },
                   {
-                    title: "SL",
-                    dataIndex: "quantity",
-                    key: "quantity",
-                    width: 80,
-                  },
-                  {
-                    title: "Đơn giá",
-                    dataIndex: "unit_price",
-                    key: "unit_price",
-                    width: 100,
-                    render: (price: number, record: SaleOrderLineResponse) =>
-                      record.is_free_item ? (
-                        <Text
-                          type="success"
-                          strong
-                        >
-                          MIỄN PHÍ
-                        </Text>
-                      ) : (
-                        `₫${Number(price).toLocaleString()}`
-                      ),
-                  },
-                  {
-                    title: "Thành tiền",
-                    key: "total",
-                    width: 120,
-                    render: (_: any, record: SaleOrderLineResponse) =>
-                      record.is_free_item ? (
-                        <Text
-                          type="success"
-                          strong
-                        >
-                          ₫0
-                        </Text>
-                      ) : (
-                        <Text strong>
-                          ₫
-                          {(
-                            record.quantity * Number(record.unit_price)
-                          ).toLocaleString()}
-                        </Text>
-                      ),
+                    key: "reason",
+                    label: "Lý do trả hàng",
+                    children: (
+                      <Alert
+                        message="Lý do hoàn trả"
+                        description={
+                          <Text
+                            style={{
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {selectedOrder.reason || "Không có lý do"}
+                          </Text>
+                        }
+                        type="info"
+                        showIcon
+                      />
+                    ),
                   },
                 ]}
-                pagination={false}
-                rowKey="id"
-                size="small"
               />
             </div>
           )}
@@ -662,6 +739,7 @@ const ReturnsPage = () => {
           <Form
             form={form}
             layout="vertical"
+            initialValues={{ reason: "Hoàn trả hàng" }}
           >
             <Form.Item
               label="Chọn đơn hàng"
@@ -686,20 +764,27 @@ const ReturnsPage = () => {
                 ))}
               </Select>
             </Form.Item>
+
+            <Form.Item
+              label="Lý do hoàn trả"
+              name="reason"
+              rules={[
+                { required: true, message: "Vui lòng nhập lý do hoàn trả" },
+              ]}
+            >
+              <Input.TextArea
+                placeholder="Nhập lý do hoàn trả hàng..."
+                rows={3}
+                maxLength={500}
+                showCount
+              />
+            </Form.Item>
           </Form>
 
           {selectedOrderForReturn && (
             <>
               <Divider />
               <Title level={5}>Danh sách sản phẩm sẽ được trả toàn bộ</Title>
-              <Alert
-                message="Lưu ý"
-                description="Tất cả sản phẩm trong đơn hàng sẽ được trả về kho. Hệ thống sẽ tự động hoàn trả toàn bộ đơn hàng."
-                type="info"
-                showIcon
-                style={{ marginBottom: 16 }}
-              />
-
               <Table
                 dataSource={selectedOrderForReturn.lines}
                 columns={[
@@ -852,6 +937,16 @@ const ReturnsPage = () => {
             </>
           )}
         </Modal>
+
+        {/* Return Result Modal */}
+        <ReturnOrderResultModal
+          visible={isResultModalVisible}
+          returnData={returnResult}
+          onClose={() => {
+            setIsResultModalVisible(false);
+            setReturnResult(null);
+          }}
+        />
       </div>
     </Spin>
   );

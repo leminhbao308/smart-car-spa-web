@@ -17,6 +17,10 @@ import {
   UpdateProductAttributeRequest,
   UpdateProductAttributeStatusRequest,
   ProductAttributeSearchParams,
+  ProductMedia,
+  AddProductImageRequest,
+  UpdateProductImageRequest,
+  ReorderProductImagesRequest,
 } from "../types/product.types";
 
 export const productService = {
@@ -24,7 +28,7 @@ export const productService = {
   getAllProducts: async (
     params: ProductSearchParams = {}
   ): Promise<ProductResponse> => {
-    const response = await api.get('/products/get-all', { params });
+    const response = await api.get("/products/get-all", { params });
     return response.data;
   },
 
@@ -107,7 +111,9 @@ export const productService = {
   },
 
   // Create new product type
-  createProductType: async (data: CreateProductTypeRequest): Promise<ProductType> => {
+  createProductType: async (
+    data: CreateProductTypeRequest
+  ): Promise<ProductType> => {
     const response = await api.post("/product-types/create", data);
     return response.data.data;
   },
@@ -117,7 +123,10 @@ export const productService = {
     productTypeId: string,
     data: UpdateProductTypeRequest
   ): Promise<ProductType> => {
-    const response = await api.post(`/product-types/${productTypeId}/update`, data);
+    const response = await api.post(
+      `/product-types/${productTypeId}/update`,
+      data
+    );
     return response.data.data;
   },
 
@@ -126,7 +135,10 @@ export const productService = {
     productTypeId: string,
     data: UpdateProductTypeStatusRequest
   ): Promise<ProductType> => {
-    const response = await api.post(`/product-types/${productTypeId}/status`, data);
+    const response = await api.post(
+      `/product-types/${productTypeId}/status`,
+      data
+    );
     return response.data.data;
   },
 
@@ -179,13 +191,17 @@ export const productService = {
   },
 
   // Get product attribute by ID
-  getProductAttributeById: async (attributeId: string): Promise<ProductAttribute> => {
+  getProductAttributeById: async (
+    attributeId: string
+  ): Promise<ProductAttribute> => {
     const response = await api.get(`/product-attributes/${attributeId}`);
     return response.data.data;
   },
 
   // Create new product attribute
-  createProductAttribute: async (data: CreateProductAttributeRequest): Promise<ProductAttribute> => {
+  createProductAttribute: async (
+    data: CreateProductAttributeRequest
+  ): Promise<ProductAttribute> => {
     const response = await api.post("/product-attributes/create", data);
     return response.data.data;
   },
@@ -195,7 +211,10 @@ export const productService = {
     attributeId: string,
     data: UpdateProductAttributeRequest
   ): Promise<ProductAttribute> => {
-    const response = await api.post(`/product-attributes/${attributeId}/update`, data);
+    const response = await api.post(
+      `/product-attributes/${attributeId}/update`,
+      data
+    );
     return response.data.data;
   },
 
@@ -204,7 +223,10 @@ export const productService = {
     attributeId: string,
     data: UpdateProductAttributeStatusRequest
   ): Promise<ProductAttribute> => {
-    const response = await api.post(`/product-attributes/${attributeId}/status`, data);
+    const response = await api.post(
+      `/product-attributes/${attributeId}/status`,
+      data
+    );
     return response.data.data;
   },
 
@@ -220,7 +242,9 @@ export const productService = {
   },
 
   // Get product attributes by data type
-  getProductAttributesByDataType: async (dataType: string): Promise<ProductAttribute[]> => {
+  getProductAttributesByDataType: async (
+    dataType: string
+  ): Promise<ProductAttribute[]> => {
     const response = await api.get(`/product-attributes/data-type/${dataType}`);
     return response.data.data;
   },
@@ -229,6 +253,91 @@ export const productService = {
   getRequiredProductAttributes: async (): Promise<ProductAttribute[]> => {
     const response = await api.get("/product-attributes/required");
     return response.data.data;
+  },
+
+  // ==================== Product Image Management ====================
+
+  // Get all images for a product
+  getProductImages: async (productId: string): Promise<ProductMedia[]> => {
+    const response = await api.get(`/products/${productId}/images`);
+    return response.data.data;
+  },
+
+  // Upload product image file
+  uploadProductImage: async (
+    productId: string,
+    file: File,
+    altText?: string,
+    isMain?: boolean
+  ): Promise<ProductMedia> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (altText) {
+      formData.append("alt_text", altText);
+    }
+    if (isMain !== undefined) {
+      formData.append("is_main", isMain.toString());
+    }
+
+    const response = await api.post(
+      `/products/${productId}/images/upload`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data.data;
+  },
+
+  // Add new image to product (via URL)
+  addProductImage: async (
+    productId: string,
+    data: AddProductImageRequest
+  ): Promise<ProductMedia> => {
+    const response = await api.post(`/products/${productId}/images/add`, data);
+    return response.data.data;
+  },
+
+  // Update product image
+  updateProductImage: async (
+    productId: string,
+    mediaId: string,
+    data: UpdateProductImageRequest
+  ): Promise<ProductMedia> => {
+    const response = await api.post(
+      `/products/${productId}/images/${mediaId}/update`,
+      data
+    );
+    return response.data.data;
+  },
+
+  // Delete product image
+  deleteProductImage: async (
+    productId: string,
+    mediaId: string
+  ): Promise<void> => {
+    await api.post(`/products/${productId}/images/${mediaId}/delete`);
+  },
+
+  // Set main product image
+  setMainProductImage: async (
+    productId: string,
+    mediaId: string
+  ): Promise<ProductMedia> => {
+    const response = await api.post(
+      `/products/${productId}/images/${mediaId}/set-main`
+    );
+    return response.data.data;
+  },
+
+  // Reorder product images
+  reorderProductImages: async (
+    productId: string,
+    data: ReorderProductImagesRequest
+  ): Promise<void> => {
+    await api.post(`/products/${productId}/images/reorder`, data);
   },
 };
 
