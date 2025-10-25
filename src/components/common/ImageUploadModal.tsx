@@ -49,7 +49,10 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
       cancelText="Hủy"
       confirmLoading={loading}
     >
-      <Form form={form} layout="vertical">
+      <Form
+        form={form}
+        layout="vertical"
+      >
         {/* File Upload - Not in Form.Item to avoid validation issues */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ marginBottom: 8 }}>
@@ -71,19 +74,31 @@ const ImageUploadModal: React.FC<ImageUploadModalProps> = ({
               </div>
             )}
           </Upload>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text
+            type="secondary"
+            style={{ fontSize: 12 }}
+          >
             Kích thước tối đa: {maxFileSize}MB
           </Typography.Text>
         </div>
 
         {/* Alt Text */}
-        <Form.Item name="alt_text" label="Mô tả ảnh (Alt text)">
-          <Input.TextArea rows={2} placeholder="Mô tả ngắn gọn về ảnh" />
+        <Form.Item
+          name="alt_text"
+          label="Mô tả ảnh (Alt text)"
+        >
+          <Input.TextArea
+            rows={2}
+            placeholder="Mô tả ngắn gọn về ảnh"
+          />
         </Form.Item>
 
         {/* Main Image Checkbox */}
         {showMainCheckbox && (
-          <Form.Item name="is_main" valuePropName="checked">
+          <Form.Item
+            name="is_main"
+            valuePropName="checked"
+          >
             <Checkbox>Đặt làm ảnh chính</Checkbox>
           </Form.Item>
         )}

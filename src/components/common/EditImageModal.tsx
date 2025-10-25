@@ -1,15 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  Modal,
-  Form,
-  Input,
-  Upload,
-  Image,
-  Typography,
-  Checkbox,
-} from "antd";
+import { Modal, Form, Input, Upload, Image, Typography, Checkbox } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import type { FormInstance, UploadFile } from "antd";
 
@@ -58,7 +50,10 @@ const EditImageModal: React.FC<EditImageModalProps> = ({
       confirmLoading={loading}
       width={600}
     >
-      <Form form={form} layout="vertical">
+      <Form
+        form={form}
+        layout="vertical"
+      >
         {/* Current Image Preview - only show if no new file uploaded */}
         {currentImageUrl && fileList.length === 0 && (
           <Form.Item label="Ảnh hiện tại">
@@ -93,7 +88,10 @@ const EditImageModal: React.FC<EditImageModalProps> = ({
               </div>
             )}
           </Upload>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text
+            type="secondary"
+            style={{ fontSize: 12 }}
+          >
             {fileList.length > 0
               ? "Ảnh cũ sẽ bị xóa và thay thế bằng ảnh mới"
               : `Kích thước tối đa: ${maxFileSize}MB`}
@@ -101,12 +99,21 @@ const EditImageModal: React.FC<EditImageModalProps> = ({
         </Form.Item>
 
         {/* Alt Text */}
-        <Form.Item name="alt_text" label="Mô tả ảnh (Alt text)">
-          <Input.TextArea rows={2} placeholder="Mô tả ngắn gọn về ảnh" />
+        <Form.Item
+          name="alt_text"
+          label="Mô tả ảnh (Alt text)"
+        >
+          <Input.TextArea
+            rows={2}
+            placeholder="Mô tả ngắn gọn về ảnh"
+          />
         </Form.Item>
 
         {/* Main Image Checkbox */}
-        <Form.Item name="is_main" valuePropName="checked">
+        <Form.Item
+          name="is_main"
+          valuePropName="checked"
+        >
           <Checkbox>Đặt làm ảnh chính</Checkbox>
         </Form.Item>
       </Form>
