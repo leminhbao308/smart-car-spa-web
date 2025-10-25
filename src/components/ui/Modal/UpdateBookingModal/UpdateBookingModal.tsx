@@ -515,20 +515,25 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       console.log("🔍 Setting booking date:", {
         scheduled_start_at: initialData.scheduled_start_at,
         slot_start_time: initialData.slot_start_time,
-        isWalkInBooking: !initialData.slot_start_time
+        booking_code: initialData.booking_code,
+        isWalkInBooking: initialData.booking_code?.startsWith('WALK') || false
       });
       
-      if (initialData.scheduled_start_at) {
-        const date = dayjs(initialData.scheduled_start_at).format("YYYY-MM-DD");
-        console.log("📅 Using scheduled_start_at:", date);
-        setBookingDate(date);
-      } else if (!initialData.slot_start_time) {
-        // For walk-in bookings without scheduled_start_at, use current date
+      // Determine booking type first
+      const isWalkInBookingForDate = initialData.booking_code?.startsWith('WALK') || false;
+      
+      if (isWalkInBookingForDate) {
+        // For walk-in bookings, always use current date (processing date)
         const currentDate = dayjs().format("YYYY-MM-DD");
         console.log("📅 Using current date for walk-in booking:", currentDate);
         setBookingDate(currentDate);
+      } else if (initialData.scheduled_start_at) {
+        // For slot bookings, use scheduled_start_at
+        const date = dayjs(initialData.scheduled_start_at).format("YYYY-MM-DD");
+        console.log("📅 Using scheduled_start_at for slot booking:", date);
+        setBookingDate(date);
       } else {
-        console.log("⚠️ No booking date set - neither scheduled_start_at nor walk-in booking");
+        console.log("⚠️ No booking date set - no scheduled_start_at for slot booking");
       }
       
       // Set customer data  
@@ -615,9 +620,14 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         console.log("⚠️ No booking items found in initialData");
       }
       
-      // Determine if this is a walk-in booking or slot booking
-      const isWalkInBooking = !initialData.slot_start_time;
-      console.log("Is walk-in booking:", isWalkInBooking);
+      // Determine if this is a walk-in booking or slot booking based on booking code prefix
+      const isWalkInBooking = initialData.booking_code?.startsWith('WALK') || false;
+      const isSlotBooking = initialData.booking_code?.startsWith('BK') || false;
+      console.log("Booking type detection:", {
+        booking_code: initialData.booking_code,
+        isWalkInBooking,
+        isSlotBooking
+      });
       
       if (isWalkInBooking) {
         // This is a walk-in booking
@@ -672,9 +682,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         priority: initialData.priority,
       });
 
-      // Check if it's a slot booking (has slot_start_time) or walk-in booking
-      const isWalkInBookingType = !initialData.slot_start_time;
-      const isSlotBookingType = !!initialData.slot_start_time;
+      // Check if it's a slot booking or walk-in booking based on booking code prefix
+      const isWalkInBookingType = initialData.booking_code?.startsWith('WALK') || false;
+      const isSlotBookingType = initialData.booking_code?.startsWith('BK') || false;
 
       if (isSlotBookingType && initialData.scheduled_start_at) {
         const slotDate = dayjs(initialData.scheduled_start_at).format(
@@ -925,9 +935,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       const values = await form.validateFields();
       console.log("Form values:", values);
 
-      // Determine booking type based on initial data
-      const isWalkInBooking = !initialData.slot_start_time;
-      const isSlotBooking = !!initialData.slot_start_time;
+      // Determine booking type based on booking code prefix
+      const isWalkInBooking = initialData.booking_code?.startsWith('WALK') || false;
+      const isSlotBooking = initialData.booking_code?.startsWith('BK') || false;
 
       console.log("Booking type:", { isWalkInBooking, isSlotBooking });
 
@@ -936,7 +946,15 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       const isExistingCustomer =
         customerType === "existing" && selectedCustomer && selectedVehicle;
 
-      console.log("Customer checks:", { isNewCustomer, isExistingCustomer });
+      console.log("Customer checks:", { 
+        isNewCustomer, 
+        isExistingCustomer,
+        customerType,
+        hasNewCustomer: !!newCustomer,
+        hasNewVehicle: !!newVehicle,
+        hasSelectedCustomer: !!selectedCustomer,
+        hasSelectedVehicle: !!selectedVehicle
+      });
 
       if (!isNewCustomer && !isExistingCustomer) {
         console.error("❌ Missing required information for booking");
@@ -944,7 +962,17 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           "isNewCustomer:",
           isNewCustomer,
           "isExistingCustomer:",
-          isExistingCustomer
+          isExistingCustomer,
+          "customerType:",
+          customerType,
+          "selectedCustomer:",
+          selectedCustomer,
+          "selectedVehicle:",
+          selectedVehicle,
+          "newCustomer:",
+          newCustomer,
+          "newVehicle:",
+          newVehicle
         );
         return;
       }
@@ -970,9 +998,11 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             vehicle_type_name: isNewCustomer ? newVehicle!.type_name : selectedVehicle!.type_name || "",
             vehicle_year: isNewCustomer ? newVehicle!.year : selectedVehicle!.model_year || new Date().getFullYear(),
             vehicle_color: isNewCustomer ? newVehicle!.color : selectedVehicle!.color || "",
-            branch_id: selectedBranch.branch_id,
-            service_bay_id: selectedWalkInBay || initialData.bay_id,
-            // For walk-in booking, we don't set scheduled times
+            // For walk-in booking, don't send branch_id as it cannot be changed
+            branch_id: isWalkInBooking ? undefined : selectedBranch.branch_id,
+            // For walk-in booking, only set service_bay_id if it's different from original
+            service_bay_id: (selectedWalkInBay && selectedWalkInBay !== initialData.bay_id) ? selectedWalkInBay : undefined,
+            // For walk-in booking, we don't set scheduled times or slot info
             preferred_start_at: undefined,
             scheduled_start_at: undefined,
             scheduled_end_at: undefined,
@@ -1015,7 +1045,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         }
       }
 
-      // Handle slot booking (existing customers only)
+      // Handle slot booking (both new and existing customers)
       if (isSlotBooking) {
         if (!selectedBranch || !selectedSlot) {
           console.error("Missing branch or slot information for slot booking");
@@ -1024,20 +1054,32 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
 
         console.log("Updating slot booking");
         try {
+          // Additional safety checks
+          if (isNewCustomer && (!newCustomer || !newVehicle)) {
+            console.error("❌ New customer data is incomplete");
+            return;
+          }
+          if (!isNewCustomer && (!selectedCustomer || !selectedVehicle)) {
+            console.error("❌ Existing customer data is incomplete");
+            return;
+          }
+
           const updateRequest = {
-            customer_name: selectedCustomer!.full_name,
-            customer_phone: selectedCustomer!.phone_number,
-            customer_email: selectedCustomer!.email,
-            vehicle_license_plate: selectedVehicle!.license_plate,
-            vehicle_brand_name: selectedVehicle!.brand_name || "",
-            vehicle_model_name: selectedVehicle!.model_name || "",
-            vehicle_type_name: selectedVehicle!.type_name || "",
-            vehicle_year: selectedVehicle!.model_year || new Date().getFullYear(),
-            vehicle_color: selectedVehicle!.color || "",
+            customer_name: isNewCustomer ? newCustomer!.full_name : selectedCustomer!.full_name,
+            customer_phone: isNewCustomer ? newCustomer!.phone_number : selectedCustomer!.phone_number,
+            customer_email: isNewCustomer ? newCustomer!.email : selectedCustomer!.email,
+            vehicle_license_plate: isNewCustomer ? newVehicle!.license_plate : selectedVehicle!.license_plate,
+            vehicle_brand_name: isNewCustomer ? newVehicle!.brand_name : selectedVehicle!.brand_name || "",
+            vehicle_model_name: isNewCustomer ? newVehicle!.model_name : selectedVehicle!.model_name || "",
+            vehicle_type_name: isNewCustomer ? newVehicle!.type_name : selectedVehicle!.type_name || "",
+            vehicle_year: isNewCustomer ? newVehicle!.year : selectedVehicle!.model_year || new Date().getFullYear(),
+            vehicle_color: isNewCustomer ? newVehicle!.color : selectedVehicle!.color || "",
             branch_id: selectedBranch.branch_id,
-            service_bay_id: selectedSlot.bayId,
-            slot_date: selectedSlot.date,
-            slot_start_time: selectedSlot.startTime,
+            // For slot booking, only set service_bay_id if it's different from original or slot changed
+            service_bay_id: (isSlotChanged || selectedSlot.bayId !== initialData.bay_id) ? selectedSlot.bayId : undefined,
+            // For slot booking, only set slot info if slot changed
+            slot_date: isSlotChanged ? selectedSlot.date : undefined,
+            slot_start_time: isSlotChanged ? selectedSlot.startTime : undefined,
             estimated_duration_minutes: selectedSlot.serviceDurationMinutes,
             buffer_minutes: 15,
             total_price: totalPrice,
@@ -1070,9 +1112,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         } catch (bookingError) {
           console.error("Error updating slot booking:", bookingError);
           onOk({
-            customerType: "existing",
-            customer: selectedCustomer,
-            vehicle: selectedVehicle,
+            customerType: isNewCustomer ? "new" : "existing",
+            customer: isNewCustomer ? newCustomer : selectedCustomer,
+            vehicle: isNewCustomer ? newVehicle : selectedVehicle,
             branch: selectedBranch,
             slot: selectedSlot,
             services: selectedItems,
@@ -1583,134 +1625,213 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     );
   };
 
-  const renderServiceSelectionStep = () => (
-    <div>
-      <Card size="small" title="Chọn dịch vụ" style={{ marginBottom: 16 }}>
-        <Form.Item
-          name="services"
-          label="Dịch vụ chăm sóc xe"
-          rules={[]}
-        >
-          <Select
-            mode="multiple"
-            placeholder="Chọn dịch vụ chăm sóc xe"
-            onChange={handleServiceChange}
-            optionLabelProp="label"
-            loading={isLoadingPriceBooks}
-            notFoundContent={
-              isLoadingPriceBooks
-                ? "Đang tải dịch vụ..."
-                : priceBooksError
-                ? `Lỗi tải dịch vụ: ${
-                    (priceBooksError as { response?: { data?: unknown } })
-                      ?.response?.data || "Không thể tải danh sách dịch vụ"
-                  }`
-                : availableServices.length === 0
-                ? "Không có dịch vụ nào khả dụng"
-                : "Không tìm thấy dịch vụ phù hợp"
-            }
-            filterOption={(input, option) => {
-              const label = option?.label?.toString() || "";
-              return label.toLowerCase().includes(input.toLowerCase());
-            }}
-          >
-            {availableServices.map((item) => (
-              <Option
-                key={item.item_id}
-                value={item.item_id}
-                label={item.item_name}
-              >
+  const renderServiceSelectionStep = () => {
+    // Determine if this is a walk-in booking based on booking code prefix
+    const isWalkInBookingType = initialData.booking_code?.startsWith('WALK') || false;
+    
+    return (
+      <div>
+        <Card size="small" title="Dịch vụ" style={{ marginBottom: 16 }}>
+          {isWalkInBookingType ? (
+            // For walk-in bookings, show services as read-only
+            <div>
+              {selectedItems.length > 0 && (
                 <div>
-                  <div style={{ fontWeight: 500 }}>
-                    {item.item_name}
-                    <Tag color="blue" style={{ marginLeft: 8, fontSize: 10 }}>
-                      Dịch vụ
-                    </Tag>
-                  </div>
-                  <div style={{ fontSize: 12, color: "#666" }}>
-                    {item.service?.service_name} •{" "}
-                    {item.fixed_price?.toLocaleString()} VNĐ
+                  <Text strong>Dịch vụ đã chọn:</Text>
+                  <div style={{ marginTop: 8 }}>
+                    {selectedItems.map((item) => (
+                      <Tag
+                        key={item.item_id}
+                        color="blue"
+                        style={{ marginBottom: 4 }}
+                      >
+                        {item.item_name} - {item.fixed_price?.toLocaleString()} VNĐ
+                      </Tag>
+                    ))}
                   </div>
                 </div>
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        {selectedItems.length > 0 && (
-          <div style={{ marginTop: 16 }}>
-            <Text strong>Dịch vụ đã chọn:</Text>
-            <div style={{ marginTop: 8 }}>
-              {selectedItems.map((item) => (
-                <Tag
-                  key={item.item_id}
-                  closable
-                  onClose={() => {
-                    const newItems = selectedItems.filter(
-                      (i) => i.item_id !== item.item_id
-                    );
-                    setSelectedItems(newItems);
-                    calculateTotals(newItems);
+              )}
+              
+              <Divider />
+              <Row gutter={16}>
+                <Col span={12}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 16,
+                      backgroundColor: "#f0f0f0",
+                      borderRadius: 8,
+                    }}
+                  >
+                    <DollarOutlined style={{ color: "#52c41a", fontSize: 24 }} />
+                    <div style={{ marginTop: 8 }}>
+                      <Text strong style={{ color: "#52c41a", fontSize: 18 }}>
+                        {totalPrice.toLocaleString()} VNĐ
+                      </Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Tổng giá
+                    </Text>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 16,
+                      backgroundColor: "#f0f0f0",
+                      borderRadius: 8,
+                    }}
+                  >
+                    <ClockCircleOutlined style={{ color: "#1890ff", fontSize: 24 }} />
+                    <div style={{ marginTop: 8 }}>
+                      <Text strong style={{ color: "#1890ff", fontSize: 18 }}>
+                        {totalDuration} phút
+                      </Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Tổng thời gian
+                    </Text>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          ) : (
+            // For slot bookings, show editable service selection
+            <div>
+              <Form.Item
+                name="services"
+                label="Dịch vụ chăm sóc xe"
+                rules={[]}
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="Chọn dịch vụ chăm sóc xe"
+                  onChange={handleServiceChange}
+                  optionLabelProp="label"
+                  loading={isLoadingPriceBooks}
+                  notFoundContent={
+                    isLoadingPriceBooks
+                      ? "Đang tải dịch vụ..."
+                      : priceBooksError
+                      ? `Lỗi tải dịch vụ: ${
+                          (priceBooksError as { response?: { data?: unknown } })
+                            ?.response?.data || "Không thể tải danh sách dịch vụ"
+                        }`
+                      : availableServices.length === 0
+                      ? "Không có dịch vụ nào khả dụng"
+                      : "Không tìm thấy dịch vụ phù hợp"
+                  }
+                  filterOption={(input, option) => {
+                    const label = option?.label?.toString() || "";
+                    return label.toLowerCase().includes(input.toLowerCase());
                   }}
-                  style={{ marginBottom: 4 }}
                 >
-                  {item.item_name} - {item.fixed_price?.toLocaleString()} VNĐ
-                </Tag>
-              ))}
-            </div>
-          </div>
-        )}
+                  {availableServices.map((item) => (
+                    <Option
+                      key={item.item_id}
+                      value={item.item_id}
+                      label={item.item_name}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 500 }}>
+                          {item.item_name}
+                          <Tag color="blue" style={{ marginLeft: 8, fontSize: 10 }}>
+                            Dịch vụ
+                          </Tag>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#666" }}>
+                          {item.service?.service_name} •{" "}
+                          {item.fixed_price?.toLocaleString()} VNĐ
+                        </div>
+                      </div>
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
 
-        <Divider />
-        <Row gutter={16}>
-          <Col span={12}>
-            <div
-              style={{
-                textAlign: "center",
-                padding: 16,
-                backgroundColor: "#f0f0f0",
-                borderRadius: 8,
-              }}
-            >
-              <DollarOutlined style={{ color: "#52c41a", fontSize: 24 }} />
-              <div style={{ marginTop: 8 }}>
-                <Text strong style={{ color: "#52c41a", fontSize: 18 }}>
-                  {totalPrice.toLocaleString()} VNĐ
-                </Text>
-              </div>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Tổng giá
-              </Text>
+              {selectedItems.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <Text strong>Dịch vụ đã chọn:</Text>
+                  <div style={{ marginTop: 8 }}>
+                    {selectedItems.map((item) => (
+                      <Tag
+                        key={item.item_id}
+                        closable
+                        onClose={() => {
+                          const newItems = selectedItems.filter(
+                            (i) => i.item_id !== item.item_id
+                          );
+                          setSelectedItems(newItems);
+                          calculateTotals(newItems);
+                        }}
+                        style={{ marginBottom: 4 }}
+                      >
+                        {item.item_name} - {item.fixed_price?.toLocaleString()} VNĐ
+                      </Tag>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Divider />
+              <Row gutter={16}>
+                <Col span={12}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 16,
+                      backgroundColor: "#f0f0f0",
+                      borderRadius: 8,
+                    }}
+                  >
+                    <DollarOutlined style={{ color: "#52c41a", fontSize: 24 }} />
+                    <div style={{ marginTop: 8 }}>
+                      <Text strong style={{ color: "#52c41a", fontSize: 18 }}>
+                        {totalPrice.toLocaleString()} VNĐ
+                      </Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Tổng giá
+                    </Text>
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: 16,
+                      backgroundColor: "#f0f0f0",
+                      borderRadius: 8,
+                    }}
+                  >
+                    <ClockCircleOutlined style={{ color: "#1890ff", fontSize: 24 }} />
+                    <div style={{ marginTop: 8 }}>
+                      <Text strong style={{ color: "#1890ff", fontSize: 18 }}>
+                        {totalDuration} phút
+                      </Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Tổng thời gian
+                    </Text>
+                  </div>
+                </Col>
+              </Row>
             </div>
-          </Col>
-          <Col span={12}>
-            <div
-              style={{
-                textAlign: "center",
-                padding: 16,
-                backgroundColor: "#f0f0f0",
-                borderRadius: 8,
-              }}
-            >
-              <ClockCircleOutlined style={{ color: "#1890ff", fontSize: 24 }} />
-              <div style={{ marginTop: 8 }}>
-                <Text strong style={{ color: "#1890ff", fontSize: 18 }}>
-                  {totalDuration} phút
-                </Text>
-              </div>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                Tổng thời gian
-              </Text>
-            </div>
-          </Col>
-        </Row>
-      </Card>
-    </div>
-  );
+          )}
+        </Card>
+      </div>
+    );
+  };
 
   const renderDateTimeBranchStep = () => {
-    // Determine if this is a walk-in booking
-    const isWalkInBookingType = !initialData.slot_start_time;
+    // Determine if this is a walk-in booking based on booking code prefix
+    const isWalkInBookingType = initialData.booking_code?.startsWith('WALK') || false;
+    
+    // Hide time and branch section completely for walk-in bookings
+    if (isWalkInBookingType) {
+      return null;
+    }
     
     return (
     <div>
@@ -1719,13 +1840,13 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           <Card size="small" title="Thời gian" style={{ marginBottom: 16 }}>
             <Form.Item
               name="bookingDate"
-              label={isWalkInBookingType ? "Ngày xử lý" : "Ngày đặt lịch"}
+              label="Ngày đặt lịch"
               rules={[]}
             >
               <DatePicker
                 style={{ width: "100%" }}
                 value={bookingDate ? dayjs(bookingDate) : null}
-                placeholder={isWalkInBookingType ? "Ngày xử lý tại chỗ" : "Chọn ngày"}
+                placeholder="Chọn ngày"
                 // Debug log
                 onOpenChange={(open) => {
                   if (open) {
@@ -1740,11 +1861,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                 disabledDate={(current) => {
                   const today = dayjs();
                   const currentHour = today.hour();
-
-                  // For walk-in bookings, only allow current date
-                  if (isWalkInBookingType) {
-                    return current && current < today.startOf("day");
-                  }
 
                   // For slot bookings, apply the 17:00 rule
                   if (currentHour >= 17) {
@@ -1814,410 +1930,524 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   );
   };
 
-  // Render bay recommendation for walk-in booking
-  const renderBayRecommendation = () => {
-    console.log("🔍 Rendering bay recommendation:", {
-      customerType,
-      selectedBranch,
-      bookingDate,
-      totalDuration,
-      bayRecommendation,
-      isLoadingRecommendation,
-      isLoadingQueue: false,
-      queueItems,
-    });
+  // Render bay recommendation for walk-in booking (copied from BookingModal)
+  const renderBayRecommendation = () => (
+    <div>
+      <Alert
+        message="🎯 Đề xuất bay thông minh"
+        description="Hệ thống đã tự động đề xuất bay tốt nhất dựa trên tình trạng hiện tại"
+        type="info"
+        style={{ marginBottom: 16 }}
+      />
 
-    return (
-      <div>
-        {isLoadingRecommendation ? (
-          <div style={{ textAlign: "center", padding: 20 }}>
-            <Spin size="large" />
-            <div style={{ marginTop: 8 }}>
-              Đang tìm bay phù hợp...
-            </div>
+      {isLoadingRecommendation ? (
+        <div style={{ textAlign: "center", padding: "20px" }}>
+          <Spin />
+          <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
+            Đang phân tích và đề xuất bay...
           </div>
-        ) : bayRecommendation?.recommended_bay ? (
-          <div>
-            <Alert
-              message={`Bay được đề xuất: ${bayRecommendation.recommended_bay.bay_name}`}
-              description={`Lý do: ${bayRecommendation.reason || "Bay phù hợp nhất"}`}
-              type="success"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-
+        </div>
+      ) : bayRecommendation ? (
+        <div>
+          {/* Recommended Bay */}
+          <Card title="Bay được đề xuất" style={{ marginBottom: 16 }}>
             <Row gutter={16}>
               <Col span={12}>
-                <Card size="small" title="Thông tin bay">
-                  <div>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text strong>Tên bay:</Text>{" "}
-                      {bayRecommendation.recommended_bay.bay_name}
+                <div style={{ textAlign: "center", padding: "16px" }}>
+                  <ShopOutlined
+                    style={{
+                      fontSize: 32,
+                      color:
+                        selectedWalkInBay ===
+                        bayRecommendation.recommended_bay?.bay_id
+                          ? "#52c41a"
+                          : "#d9d9d9",
+                      marginBottom: 8,
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontWeight: 600,
+                      fontSize: 18,
+                      color:
+                        selectedWalkInBay ===
+                        bayRecommendation.recommended_bay?.bay_id
+                          ? "#52c41a"
+                          : "#d9d9d9",
+                    }}
+                  >
+                    {bayRecommendation.recommended_bay?.bay_name}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                    {bayRecommendation.recommended_bay?.bay_code ||
+                      "Bay được đề xuất"}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color:
+                        selectedWalkInBay ===
+                        bayRecommendation.recommended_bay?.bay_id
+                          ? "#52c41a"
+                          : "#d9d9d9",
+                      marginTop: 4,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {selectedWalkInBay ===
+                    bayRecommendation.recommended_bay?.bay_id
+                      ? "Đã chọn"
+                      : "Được đề xuất"}
+                  </div>
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ padding: "16px" }}>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text strong>Lý do đề xuất:</Text>
+                    <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                      {bayRecommendation.reason}
                     </div>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text strong>Mã bay:</Text>{" "}
-                      {bayRecommendation.recommended_bay.bay_code}
-                    </div>
-                    <div style={{ marginBottom: 8 }}>
-                      <Text strong>Trạng thái:</Text>{" "}
-                      <Tag color="green">ACTIVE</Tag>
-                    </div>
-                    <div>
-                      <Text strong>Thời gian chờ ước tính:</Text>{" "}
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <Text strong>Thời gian chờ dự kiến:</Text>
+                    <div
+                      style={{ fontSize: 12, color: "#1890ff", marginTop: 4 }}
+                    >
                       {bayRecommendation.estimated_wait_time_minutes || 0} phút
                     </div>
                   </div>
-                </Card>
-              </Col>
-              <Col span={12}>
-                <Card size="small" title="Hành động">
                   <div>
-                    <Button
-                      type="primary"
-                      onClick={() => {
-                        if (bayRecommendation?.recommended_bay) {
-                          setSelectedWalkInBay(bayRecommendation.recommended_bay.bay_id);
+                    <Text strong>Hàng chờ hiện tại:</Text>
+                    <div
+                      style={{ fontSize: 12, color: "#faad14", marginTop: 4 }}
+                    >
+                      {queueItems.length} khách hàng
+                    </div>
+                    {manualBaySelection && (
+                      <div
+                        style={{ fontSize: 10, color: "#1890ff", marginTop: 2 }}
+                      >
+                        Bay:{" "}
+                        {onSiteBays.find(
+                          (bay: ServiceBay) => bay.bay_id === selectedWalkInBay
+                        )?.bay_name || "Đã chọn"}
+                      </div>
+                    )}
+                  </div>
+                  {manualBaySelection && (
+                    <div style={{ marginTop: 12 }}>
+                      <Button
+                        size="small"
+                        type="primary"
+                        onClick={async () => {
+                          setSelectedWalkInBay(
+                            bayRecommendation.recommended_bay?.bay_id || null
+                          );
                           setManualBaySelection(false);
 
-                          // Save walk-in bay state for current bay
-                          if (selectedBay) {
-                            setBayWalkInStates(prev => ({
-                              ...prev,
-                              [selectedBay.bay_id]: {
-                                selectedWalkInBay: bayRecommendation?.recommended_bay?.bay_id || null,
-                                bayRecommendation,
-                                queueItems,
-                                manualBaySelection: false
-                              }
-                            }));
+                          // Restore original queue from recommendation
+                          setIsLoadingQueue(true);
+                          try {
+                            if (
+                              bayRecommendation?.queue &&
+                              Array.isArray(bayRecommendation.queue)
+                            ) {
+                              console.log(
+                                "🔄 Restoring original queue from recommendation"
+                              );
+                              setQueueItems(
+                                bayRecommendation.queue as unknown as typeof queueItems
+                              );
+                            } else if (
+                              bayRecommendation?.recommended_bay?.bay_id
+                            ) {
+                              console.log(
+                                "🔄 Loading queue for recommended bay:",
+                                bayRecommendation.recommended_bay.bay_id
+                              );
+                              const queue = await getBayQueue(
+                                bayRecommendation.recommended_bay.bay_id,
+                                bookingDate
+                              );
+                              console.log(
+                                "✅ Queue loaded for recommended bay:",
+                                queue
+                              );
+                              setQueueItems(
+                                queue as unknown as typeof queueItems
+                              );
+                            }
+                          } catch (error) {
+                            console.error(
+                              "❌ Error loading queue for recommended bay:",
+                              error
+                            );
+                            setQueueItems([]);
+                          } finally {
+                            setIsLoadingQueue(false);
                           }
-                        }
-                      }}
-                      disabled={selectedWalkInBay === bayRecommendation?.recommended_bay?.bay_id}
-                    >
-                      {selectedWalkInBay === bayRecommendation?.recommended_bay?.bay_id
-                        ? "Đã chọn bay này"
-                        : "Chọn bay này"}
-                    </Button>
-                    <Button
-                      style={{ marginLeft: 8 }}
-                      onClick={() => setManualBaySelection(true)}
-                    >
-                      Chọn bay khác
-                    </Button>
-                  </div>
-                </Card>
+                        }}
+                      >
+                        Quay lại bay đề xuất
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </Col>
             </Row>
+          </Card>
+          {/* Alternative Bays */}
+          {bayRecommendation.alternative_bays &&
+            bayRecommendation.alternative_bays.length > 0 && (
+              <Card title="Bay thay thế" style={{ marginBottom: 16 }}>
+                <Text strong style={{ marginBottom: 8, display: "block" }}>
+                  Các bay khác có thể chọn:
+                </Text>
+                {manualBaySelection && (
+                  <Alert
+                    message="Bạn đã chọn bay khác với đề xuất"
+                    description="Thông tin hàng chờ và thời gian chờ có thể thay đổi. Bạn có thể quay lại bay được đề xuất bằng nút bên trên."
+                    type="warning"
+                    style={{ marginBottom: 16 }}
+                  />
+                )}
+                <Row gutter={8}>
+                  {bayRecommendation.alternative_bays.map((bay) => (
+                    <Col span={6} key={bay.bay_id}>
+                      <Card
+                        size="small"
+                        hoverable
+                        style={{
+                          textAlign: "center",
+                          border:
+                            selectedWalkInBay === bay.bay_id
+                              ? "2px solid #1890ff"
+                              : "1px solid #d9d9d9",
+                          backgroundColor:
+                            selectedWalkInBay === bay.bay_id
+                              ? "#e6f7ff"
+                              : "#fff",
+                        }}
+                        onClick={async () => {
+                          setSelectedWalkInBay(bay.bay_id);
+                          setManualBaySelection(true);
 
-            {manualBaySelection && (
-              <Card size="small" title="Chọn bay khác" style={{ marginTop: 16 }}>
-                <Form.Item
-                  name="manualBayId"
-                  label="Chọn bay"
-                  rules={[
-                    {
-                      required: manualBaySelection,
-                      message: "Vui lòng chọn bay",
-                    },
-                  ]}
-                >
-                  <Select
-                    placeholder="Chọn bay khác"
-                    onChange={async (bayId) => {
-                      setSelectedWalkInBay(bayId);
-
-                      // Load queue for the selected bay
-                      setIsLoadingQueue(true);
-                      try {
-                        console.log("🔄 Loading queue for selected bay:", bayId);
-                        const queue = await getBayQueue(bayId, bookingDate);
-                        console.log("✅ Queue loaded for bay:", queue);
-                        setQueueItems(queue as unknown as typeof queueItems);
-
-                        // Save walk-in bay state for current bay
-                        if (selectedBay) {
-                          setBayWalkInStates(prev => ({
-                            ...prev,
-                            [selectedBay.bay_id]: {
-                              selectedWalkInBay: bayId,
-                              bayRecommendation,
-                              queueItems: queue as unknown as typeof queueItems,
-                              manualBaySelection: true
-                            }
-                          }));
-                        }
-                      } catch (error) {
-                        console.error("❌ Error loading queue for bay:", error);
-                        setQueueItems([]);
-                      } finally {
-                        setIsLoadingQueue(false);
-                      }
-                    }}
-                    optionLabelProp="label"
-                  >
-                    {onSiteBays.map((bay) => (
-                      <Option key={bay.bay_id} value={bay.bay_id} label={bay.bay_name}>
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{bay.bay_name}</div>
-                          <div style={{ fontSize: 12, color: "#666" }}>
-                            {bay.bay_code} • {bay.status}
-                          </div>
+                          // Load queue for the selected bay
+                          setIsLoadingQueue(true);
+                          try {
+                            // Use the date selected by user
+                            console.log(
+                              "🔄 Loading queue for selected bay:",
+                              bay.bay_id,
+                              "using selected date:",
+                              bookingDate
+                            );
+                            const queue = await getBayQueue(
+                              bay.bay_id,
+                              bookingDate
+                            );
+                            console.log("✅ Queue loaded for bay:", queue);
+                            setQueueItems(
+                              queue as unknown as typeof queueItems
+                            );
+                          } catch (error) {
+                            console.error(
+                              "❌ Error loading queue for bay:",
+                              error
+                            );
+                            setQueueItems([]);
+                          } finally {
+                            setIsLoadingQueue(false);
+                          }
+                        }}
+                      >
+                        <ShopOutlined
+                          style={{ fontSize: 20, color: "#1890ff" }}
+                        />
+                        <div style={{ marginTop: 4 }}>
+                          <Text strong style={{ fontSize: 12 }}>
+                            {bay.bay_name}
+                          </Text>
                         </div>
-                      </Option>
-                    ))}
-                  </Select>
-                </Form.Item>
-              </Card>
-            )}
-
-            {false ? (
-              <div style={{ textAlign: "center", padding: 20 }}>
-                <Spin size="large" />
-                <div style={{ marginTop: 8 }}>Đang tải hàng chờ...</div>
-              </div>
-            ) : (
-              (() => {
-                const safeQueueItems = getSafeQueueItems();
-                console.log("🔍 Safe queue items:", safeQueueItems);
-                return safeQueueItems.length > 0;
-              })() && (
-                <Card
-                  title={`Hàng chờ hiện tại (${
-                    getSafeQueueItems().length
-                  } khách hàng)`}
-                  style={{ marginTop: 16 }}
-                >
-                  <style>
-                    {`
-                    .queue-first-row {
-                      background-color: #f6ffed !important;
-                    }
-                    .queue-even-row {
-                      background-color: #fafafa !important;
-                    }
-                    .queue-odd-row {
-                      background-color: #ffffff !important;
-                    }
-                  `}
-                  </style>
-                  <Table
-                    dataSource={getSafeQueueItems()}
-                    columns={[
-                      {
-                        title: "STT",
-                        dataIndex: "queue_position",
-                        key: "queue_position",
-                        width: 60,
-                        align: "center",
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        render: (value: number, record: any, index: number) => (
-                          <span
+                        <div style={{ fontSize: 10, color: "#666" }}>
+                          {bay.bay_code || "Bay thay thế"}
+                        </div>
+                        {selectedWalkInBay === bay.bay_id && (
+                          <div
                             style={{
-                              fontWeight: "600",
-                              color: index === 0 ? "#52c41a" : "#1890ff",
+                              fontSize: 8,
+                              color: "#1890ff",
+                              marginTop: 2,
+                              fontWeight: 500,
                             }}
                           >
-                            #{value || index + 1}
-                          </span>
-                        ),
-                      },
-                      {
-                        title: "Khách hàng",
-                        key: "customer",
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        render: (record: any) => (
-                          <div>
-                            <div style={{ fontWeight: "500", color: "#262626" }}>
-                              {String(
-                                record.booking_customer_name ||
-                                  record.customer_name ||
-                                  record.customerName ||
-                                  "N/A"
-                              )}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: "10px",
-                                color: "#999",
-                                marginTop: "2px",
-                              }}
-                            >
-                              {String(
-                                record.booking_code ||
-                                  record.booking_id ||
-                                  record.bookingId ||
-                                  ""
-                              )}
-                            </div>
+                            Đã chọn
                           </div>
-                        ),
-                      },
-                      {
-                        title: "Biển số",
-                        key: "license_plate",
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        render: (record: any) => (
-                          <span
+                        )}
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
+              </Card>
+            )}
+          {/* Queue Information */}
+          {isLoadingQueue ? (
+            <Card title="Đang tải hàng chờ..." style={{ marginBottom: 16 }}>
+              <div style={{ textAlign: "center", padding: "20px" }}>
+                <Spin />
+                <div style={{ marginTop: 8, fontSize: 12, color: "#666" }}>
+                  Đang tải thông tin hàng chờ...
+                </div>
+              </div>
+            </Card>
+          ) : (
+            (() => {
+              const safeQueueItems = getSafeQueueItems();
+              console.log("🔍 Queue items debug:", {
+                queueItems,
+                safeQueueItems,
+                isArray: Array.isArray(queueItems),
+                length: queueItems?.length,
+                source: "Bay Recommendation Queue Data",
+              });
+              return safeQueueItems.length > 0;
+            })() && (
+              <Card
+                title={`Hàng chờ hiện tại (${
+                  getSafeQueueItems().length
+                } khách hàng)`}
+                style={{ marginBottom: 16 }}
+              >
+                <style>
+                  {`
+                  .queue-first-row {
+                    background-color: #f6ffed !important;
+                  }
+                  .queue-even-row {
+                    background-color: #fafafa !important;
+                  }
+                  .queue-odd-row {
+                    background-color: #ffffff !important;
+                  }
+                `}
+                </style>
+                <Table
+                  dataSource={getSafeQueueItems()}
+                  columns={[
+                    {
+                      title: "STT",
+                      dataIndex: "queue_position",
+                      key: "queue_position",
+                      width: 60,
+                      align: "center",
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (value: number, record: any, index: number) => (
+                        <span
+                          style={{
+                            fontWeight: "600",
+                            color: index === 0 ? "#52c41a" : "#1890ff",
+                          }}
+                        >
+                          #{value || index + 1}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Khách hàng",
+                      key: "customer",
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (record: any) => (
+                        <div>
+                          <div style={{ fontWeight: "500", color: "#262626" }}>
+                            {String(
+                              record.booking_customer_name ||
+                                record.customer_name ||
+                                record.customerName ||
+                                "N/A"
+                            )}
+                          </div>
+                          <div
                             style={{
-                              color: "#666",
-                              fontFamily: "monospace",
-                              fontSize: "11px",
+                              fontSize: "10px",
+                              color: "#999",
+                              marginTop: "2px",
                             }}
                           >
                             {String(
-                              record.booking_vehicle_license_plate ||
-                                record.vehicle_license_plate ||
-                                record.vehicleLicensePlate ||
-                                "N/A"
-                            )}
-                          </span>
-                        ),
-                      },
-                      {
-                        title: "Dịch vụ",
-                        key: "services",
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        render: (record: any) => (
-                          <div>
-                            {record.booking_service_names &&
-                            record.booking_service_names.length > 0 ? (
-                              <>
-                                <div style={{ marginBottom: "2px" }}>
-                                  {record.booking_service_names
-                                    .slice(0, 1)
-                                    .join(", ")}
-                                </div>
-                                {record.booking_service_names.length > 1 && (
-                                  <div
-                                    style={{ fontSize: "10px", color: "#999" }}
-                                  >
-                                    +{record.booking_service_names.length - 1}{" "}
-                                    dịch vụ khác
-                                  </div>
-                                )}
-                              </>
-                            ) : (
-                              "N/A"
+                              record.booking_code ||
+                                record.booking_id ||
+                                record.bookingId ||
+                                ""
                             )}
                           </div>
-                        ),
-                      },
-                      {
-                        title: "Giá",
-                        key: "price",
-                        align: "right",
-                        width: 100,
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        render: (record: any) => (
-                          <span
-                            style={{
-                              fontWeight: "500",
-                              color: "#fa8c16",
-                            }}
-                          >
-                            {record.booking_total_price
-                              ? `${record.booking_total_price.toLocaleString()} VND`
-                              : "N/A"}
-                          </span>
-                        ),
-                      },
-                      {
-                        title: "Thời gian",
-                        key: "time",
-                        align: "center",
-                        width: 120,
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        render: (record: any) => (
-                          <div style={{ fontSize: "10px" }}>
-                            {record.estimated_start_time ||
-                            record.estimatedStartTime ? (
-                              <div>
+                        </div>
+                      ),
+                    },
+                    {
+                      title: "Biển số",
+                      key: "license_plate",
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (record: any) => (
+                        <span
+                          style={{
+                            color: "#666",
+                            fontFamily: "monospace",
+                            fontSize: "11px",
+                          }}
+                        >
+                          {String(
+                            record.booking_vehicle_license_plate ||
+                              record.vehicle_license_plate ||
+                              record.vehicleLicensePlate ||
+                              "N/A"
+                          )}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Dịch vụ",
+                      key: "services",
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (record: any) => (
+                        <div>
+                          {record.booking_service_names &&
+                          record.booking_service_names.length > 0 ? (
+                            <>
+                              <div style={{ marginBottom: "2px" }}>
+                                {record.booking_service_names
+                                  .slice(0, 1)
+                                  .join(", ")}
+                              </div>
+                              {record.booking_service_names.length > 1 && (
                                 <div
-                                  style={{
-                                    color: "#52c41a",
-                                    marginBottom: "2px",
-                                  }}
+                                  style={{ fontSize: "10px", color: "#999" }}
                                 >
-                                  Bắt đầu:{" "}
+                                  +{record.booking_service_names.length - 1}{" "}
+                                  dịch vụ khác
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            "N/A"
+                          )}
+                        </div>
+                      ),
+                    },
+                    {
+                      title: "Giá",
+                      key: "price",
+                      align: "right",
+                      width: 100,
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (record: any) => (
+                        <span
+                          style={{
+                            fontWeight: "500",
+                            color: "#fa8c16",
+                          }}
+                        >
+                          {record.booking_total_price
+                            ? `${record.booking_total_price.toLocaleString()} VND`
+                            : "N/A"}
+                        </span>
+                      ),
+                    },
+                    {
+                      title: "Thời gian",
+                      key: "time",
+                      align: "center",
+                      width: 120,
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      render: (record: any) => (
+                        <div style={{ fontSize: "10px" }}>
+                          {record.estimated_start_time ||
+                          record.estimatedStartTime ? (
+                            <div>
+                              <div
+                                style={{
+                                  color: "#52c41a",
+                                  marginBottom: "2px",
+                                }}
+                              >
+                                Bắt đầu:{" "}
+                                {new Date(
+                                  String(
+                                    record.estimated_start_time ||
+                                      record.estimatedStartTime
+                                  )
+                                ).toLocaleTimeString("vi-VN", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </div>
+                              {record.estimated_completion_time ||
+                              record.estimatedCompletionTime ? (
+                                <div style={{ color: "#1890ff" }}>
+                                  Hoàn thành:{" "}
                                   {new Date(
                                     String(
-                                      record.estimated_start_time ||
-                                        record.estimatedStartTime
+                                      record.estimated_completion_time ||
+                                        record.estimatedCompletionTime
                                     )
                                   ).toLocaleTimeString("vi-VN", {
                                     hour: "2-digit",
                                     minute: "2-digit",
                                   })}
                                 </div>
-                                {record.estimated_completion_time ||
-                                record.estimatedCompletionTime ? (
-                                  <div style={{ color: "#1890ff" }}>
-                                    Hoàn thành:{" "}
-                                    {new Date(
-                                      String(
-                                        record.estimated_completion_time ||
-                                          record.estimatedCompletionTime
-                                      )
-                                    ).toLocaleTimeString("vi-VN", {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    })}
-                                  </div>
-                                ) : null}
-                              </div>
-                            ) : (
-                              <div style={{ color: "#999" }}>
-                                Đang tính toán...
-                              </div>
-                            )}
-                          </div>
-                        ),
-                      },
-                    ]}
-                    pagination={false}
-                    size="small"
-                    scroll={{ y: 200 }}
-                    rowKey={(record: unknown, index?: number) =>
-                      (record as { queue_id?: string }).queue_id || `queue-${index || 0}`
-                    }
-                    rowClassName={(record: unknown, index?: number) =>
-                      (index || 0) === 0
-                        ? "queue-first-row"
-                        : (index || 0) % 2 === 0
-                        ? "queue-even-row"
-                        : "queue-odd-row"
-                    }
-                    locale={{
-                      emptyText: (
-                        <div
-                          style={{
-                            textAlign: "center",
-                            padding: "40px 20px",
-                            color: "#999",
-                            fontSize: "14px",
-                          }}
-                        >
-                          Không có khách hàng nào trong hàng chờ
+                              ) : null}
+                            </div>
+                          ) : (
+                            <div style={{ color: "#999" }}>
+                              Đang tính toán...
+                            </div>
+                          )}
                         </div>
                       ),
-                    }}
-                  />
-                </Card>
-              )
-            )}
-          </div>
-        ) : (
-          <Alert
-            message="Không tìm thấy bay phù hợp"
-            description="Vui lòng thử lại sau hoặc chọn bay khác"
-            type="warning"
-            showIcon
-          />
-        )}
-      </div>
-    );
-  };
+                    },
+                  ]}
+                  pagination={false}
+                  size="small"
+                  scroll={{ y: 200 }}
+                  rowKey={(record: unknown, index?: number) =>
+                    (record as { queue_id?: string }).queue_id || `queue-${index || 0}`
+                  }
+                  rowClassName={(record: unknown, index?: number) =>
+                    (index || 0) === 0
+                      ? "queue-first-row"
+                      : (index || 0) % 2 === 0
+                      ? "queue-even-row"
+                      : "queue-odd-row"
+                  }
+                  locale={{
+                    emptyText: (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          padding: "40px 20px",
+                          color: "#999",
+                          fontSize: "14px",
+                        }}
+                      >
+                        Không có khách hàng nào trong hàng chờ
+                      </div>
+                    ),
+                  }}
+                />
+              </Card>
+            )
+          )}
+        </div>
+      ) : (
+        <Alert
+          message="Không tìm thấy bay phù hợp"
+          description="Vui lòng thử lại sau hoặc chọn bay khác"
+          type="warning"
+          showIcon
+        />
+      )}
+    </div>
+  );
 
   // Render all content in single form (vertical layout like BookingModal)
   const renderAllContent = () => (
@@ -2237,9 +2467,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   );
 
   const renderSlotSelectionStep = () => {
-    // Determine booking type based on initial data
-    const isWalkInBooking = !initialData.slot_start_time;
-    const isSlotBooking = !!initialData.slot_start_time;
+    // Determine booking type based on booking code prefix
+    const isWalkInBooking = initialData.booking_code?.startsWith('WALK') || false;
+    const isSlotBooking = initialData.booking_code?.startsWith('BK') || false;
     
     console.log("🔍 Booking type detection:", {
       isWalkInBooking,
