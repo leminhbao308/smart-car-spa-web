@@ -865,11 +865,57 @@ const POSPage = () => {
     try {
       const baseUrl = globalThis.location.origin;
 
+      // Prepare full promotion snapshot - snapshot all promotion details
+      const promotionSnapshot = selectedPromotions.map((promo) => ({
+        promotion_id: promo.promotion_id,
+        code: promo.promotion_code,
+        name: promo.name,
+        description: promo.description,
+        start_at: promo.start_at,
+        end_at: promo.end_at,
+        usage_limit: promo.usage_limit,
+        per_customer_limit: promo.per_customer_limit,
+        priority: promo.priority,
+        is_stackable: promo.is_stackable,
+        coupon_redeem_once: promo.coupon_redeem_once,
+        branch: promo.branch
+          ? {
+              branch_id: promo.branch.branch_id,
+              branch_name: promo.branch.branch_name,
+              branch_url: promo.branch.branch_url,
+            }
+          : null,
+        discount_lines: promo.promotion_lines.map((line) => ({
+          promotion_line_id: line.promotion_line_id,
+          line_type: line.line_type,
+          target_id: line.target_id,
+          discount_type: line.discount_type,
+          discount_value: line.discount_value,
+          max_discount_amount: line.max_discount_amount,
+          min_order_value: line.min_order_value,
+          min_quantity: line.min_quantity,
+          buy_qty: line.buy_qty,
+          get_qty: line.get_qty,
+          free_product_name: line.free_product?.product_name,
+          free_quantity: line.free_quantity,
+          line_priority: line.line_priority,
+          is_active: line.is_active,
+        })),
+      }));
+
       const orderRequest = {
         branch_id: selectedBranch.branch_id,
         warehouse_id: selectedBranch.branch_id, // Using branch_id as warehouse_id
         customer_id: selectedCustomer?.user_id || undefined,
         promotion_ids: selectedPromotions.map((p) => p.promotion_id),
+        promotion_snapshot: JSON.stringify(promotionSnapshot),
+        original_amount: cartSummary?.subtotal || 0,
+        total_discount_amount: cartSummary?.totalDiscount || 0,
+        final_amount: cartSummary?.finalTotal || 0,
+        discount_percentage:
+          cartSummary?.subtotal && cartSummary.subtotal > 0
+            ? (cartSummary.totalDiscount / cartSummary.subtotal) * 100
+            : 0,
         lines: cart.map((item) => {
           const lineItem: any = {
             qty: item.quantity,
@@ -924,7 +970,6 @@ const POSPage = () => {
         cart.forEach((item) => {
           if (item.isServiceItem && item.originalBookingId) {
             bookingIds.add(item.originalBookingId);
-
           }
         });
 
@@ -1053,9 +1098,16 @@ const POSPage = () => {
         overflow: "hidden",
       }}
     >
-      <Row gutter={[16, 16]} style={{ height: "100%" }}>
+      <Row
+        gutter={[16, 16]}
+        style={{ height: "100%" }}
+      >
         {/* Products Section */}
-        <Col xs={24} lg={14} style={{ height: "100%" }}>
+        <Col
+          xs={24}
+          lg={14}
+          style={{ height: "100%" }}
+        >
           <ProductSection
             products={availableProducts}
             categories={categories}
@@ -1088,7 +1140,11 @@ const POSPage = () => {
         </Col>
 
         {/* Cart Section */}
-        <Col xs={24} lg={10} style={{ height: "100%" }}>
+        <Col
+          xs={24}
+          lg={10}
+          style={{ height: "100%" }}
+        >
           <CartSection
             cart={cart}
             selectedCustomer={selectedCustomer}

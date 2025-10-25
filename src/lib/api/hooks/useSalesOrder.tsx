@@ -1,8 +1,8 @@
 "use client";
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {SalesOrderService} from "../services/sales-order.service";
-import {CreateSORequest} from "../types/sale-order.types";
-import {message} from "antd";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { SalesOrderService } from "../services/sales-order.service";
+import { CreateSORequest } from "../types/sale-order.types";
+import { message } from "antd";
 
 /**
  * Hook for managing sales orders
@@ -121,7 +121,7 @@ export const useCreateSalesOrder = () => {
       return await SalesOrderService.createDraftOrder(payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
+      queryClient.invalidateQueries({ queryKey: ["salesOrders", "list"] });
     },
     onError: (error: any) => {
       const errorMessage = error?.response?.data?.message;
@@ -134,8 +134,10 @@ export const useCreateSalesOrder = () => {
       return await SalesOrderService.confirmSaleOrder(orderId);
     },
     onSuccess: (updatedOrder) => {
-      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
-      queryClient.invalidateQueries({queryKey: ["salesOrders", "detail", updatedOrder.id]});
+      queryClient.invalidateQueries({ queryKey: ["salesOrders", "list"] });
+      queryClient.invalidateQueries({
+        queryKey: ["salesOrders", "detail", updatedOrder.id],
+      });
     },
     onError: (error: any) => {
       const errorMessage = error?.response?.data?.message;
@@ -148,8 +150,10 @@ export const useCreateSalesOrder = () => {
       return await SalesOrderService.fullFillSaleOrder(orderId);
     },
     onSuccess: (updatedOrder) => {
-      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
-      queryClient.invalidateQueries({queryKey: ["salesOrders", "detail", updatedOrder.id]});
+      queryClient.invalidateQueries({ queryKey: ["salesOrders", "list"] });
+      queryClient.invalidateQueries({
+        queryKey: ["salesOrders", "detail", updatedOrder.id],
+      });
     },
     onError: (error: any) => {
       const errorMessage = error?.response?.data?.message;
@@ -176,8 +180,10 @@ export const useConfirmSalesOrder = () => {
       return await SalesOrderService.confirmSaleOrder(orderId);
     },
     onSuccess: (updatedOrder) => {
-      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
-      queryClient.invalidateQueries({queryKey: ["salesOrders", "detail", updatedOrder.id]});
+      queryClient.invalidateQueries({ queryKey: ["salesOrders", "list"] });
+      queryClient.invalidateQueries({
+        queryKey: ["salesOrders", "detail", updatedOrder.id],
+      });
       message.success("Xác nhận đơn hàng thành công!");
     },
     onError: (error: any) => {
@@ -198,8 +204,10 @@ export const useFulfillSalesOrder = () => {
       return await SalesOrderService.fullFillSaleOrder(orderId);
     },
     onSuccess: (updatedOrder) => {
-      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
-      queryClient.invalidateQueries({queryKey: ["salesOrders", "detail", updatedOrder.id]});
+      queryClient.invalidateQueries({ queryKey: ["salesOrders", "list"] });
+      queryClient.invalidateQueries({
+        queryKey: ["salesOrders", "detail", updatedOrder.id],
+      });
       message.success("Hoàn thành đơn hàng thành công!");
     },
     onError: (error: any) => {
@@ -217,17 +225,19 @@ export const useCreateReturn = () => {
 
   return useMutation({
     mutationFn: async ({
-                         orderId,
-                         items
-                       }: {
+      orderId,
+      items,
+      reason = "Hoàn trả hàng",
+    }: {
       orderId: string;
-      items: { product_id: string; qty: number; unit_cost: number }[]
+      items: { product_id: string; qty: number; unit_cost: number }[];
+      reason?: string;
     }) => {
-      return await SalesOrderService.returnSaleOrder(orderId);
+      return await SalesOrderService.returnSaleOrder(orderId, items, reason);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ["salesOrders", "list"]});
-      queryClient.invalidateQueries({queryKey: ["returns", "list"]});
+      queryClient.invalidateQueries({ queryKey: ["salesOrders", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["returns", "list"] });
       message.success("Tạo yêu cầu hoàn trả thành công!");
     },
     onError: (error: any) => {

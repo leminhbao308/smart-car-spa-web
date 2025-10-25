@@ -51,6 +51,7 @@ export interface CreateSOLine {
 
 export interface CreateReturnRequest {
   items: ReturnItem[];
+  reason: string; // Required field with default "Hoàn trả hàng"
 }
 
 export interface ReturnItem {
@@ -90,6 +91,7 @@ export interface SaleOrderLineResponse extends BaseAuditEntity {
 
 export interface SaleReturnResponse extends BaseAuditEntity {
   id: string;
+  reason: string;
   sales_order: SaleOrderResponse;
   branch: Branch;
   lines: SaleReturnItemResponse[];

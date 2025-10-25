@@ -53,6 +53,12 @@ export interface CreateAndPayRequest {
   payment_method: "BANK" | "CASH";
   return_url?: string;
   cancel_url?: string;
+  // Discount tracking fields
+  original_amount?: number;
+  total_discount_amount?: number;
+  final_amount?: number;
+  discount_percentage?: number;
+  promotion_snapshot?: string; // JSON string of applied promotions
 }
 
 export interface CreateAndPayResponse {

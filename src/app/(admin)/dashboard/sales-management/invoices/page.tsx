@@ -21,6 +21,8 @@ import {
   Empty,
   Alert,
   App,
+  Form,
+  Tabs,
 } from "antd";
 import {
   SearchOutlined,
@@ -42,10 +44,16 @@ import {
   useCreateReturn,
   useFulfillSalesOrder,
   useSalesOrders,
+  useReturnedOrders,
 } from "@/lib/api/hooks";
-import { SaleOrderLineResponse, SaleOrderResponse } from "@/lib/api";
+import {
+  SaleOrderLineResponse,
+  SaleOrderResponse,
+  SaleReturnResponse,
+} from "@/lib/api";
 import { useGetPaymentLink } from "@/lib/api/hooks/usePayment";
 import PromotionSnapshot from "@/components/ui/Invoice/PromotionSnapshot";
+import ReturnOrderResultModal from "@/components/ui/ReturnOrderResult/ReturnOrderResultModal";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -60,6 +68,7 @@ const InvoicesPage = () => {
   const confirmMutation = useConfirmSalesOrder();
   const fulfillMutation = useFulfillSalesOrder();
   const returnMutation = useCreateReturn();
+  const { returnedOrders, refetch: returnedRefetch } = useReturnedOrders();
 
   const [selectedOrder, setSelectedOrder] = useState<SaleOrderResponse | null>(
     null
@@ -70,6 +79,11 @@ const InvoicesPage = () => {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState<any>(null);
+  const [returnForm] = Form.useForm();
+  const [returnResult, setReturnResult] = useState<SaleReturnResponse | null>(
+    null
+  );
+  const [isResultModalVisible, setIsResultModalVisible] = useState(false);
 
   // Get payment link
   const { data: paymentLink, isLoading: isLoadingPaymentLink } =
@@ -219,6 +233,7 @@ const InvoicesPage = () => {
 
   const handleOpenReturnModal = (order: SaleOrderResponse) => {
     setSelectedOrder(order);
+    returnForm.setFieldsValue({ reason: "Hoàn trả hàng" });
     setIsReturnModalVisible(true);
   };
 
@@ -226,12 +241,23 @@ const InvoicesPage = () => {
     if (!selectedOrder) return;
 
     try {
-      await returnMutation.mutateAsync({
+      const values = await returnForm.validateFields();
+      const returnData = await returnMutation.mutateAsync({
         orderId: selectedOrder.id,
         items: [],
+        reason: values.reason,
       });
       setIsReturnModalVisible(false);
       setSelectedOrder(null);
+      returnForm.resetFields();
+
+      // Refetch to get updated data
+      await returnedRefetch();
+
+      // Show result modal with returned data immediately
+      setReturnResult(returnData);
+      setIsResultModalVisible(true);
+
       message.success(
         `Tạo yêu cầu hoàn trả đơn hàng ${selectedOrder.id.substring(
           0,
@@ -239,7 +265,7 @@ const InvoicesPage = () => {
         )}... thành công`
       );
     } catch (error) {
-      // Error handled by mutation
+      // Error handled by mutation or validation
     }
   };
 
@@ -331,15 +357,20 @@ const InvoicesPage = () => {
               direction="vertical"
               size={2}
             >
-              {promos.slice(0, 2).map((p: any, idx: number) => (
-                <Tag
-                  key={idx}
-                  color="purple"
-                  style={{ fontSize: "11px", margin: 0 }}
-                >
-                  {p.code || p.name}
-                </Tag>
-              ))}
+              {promos.slice(0, 2).map((p: any, idx: number) => {
+                // Support both old and new snapshot formats
+                const displayText =
+                  p.code || p.promotion_code || p.name || "Khuyến mãi";
+                return (
+                  <Tag
+                    key={`promo-${p.promotion_id || idx}`}
+                    color="purple"
+                    style={{ fontSize: "11px", margin: 0 }}
+                  >
+                    {displayText}
+                  </Tag>
+                );
+              })}
               {promos.length > 2 && (
                 <Text
                   type="secondary"
@@ -350,7 +381,8 @@ const InvoicesPage = () => {
               )}
             </Space>
           );
-        } catch {
+        } catch (error) {
+          console.error("Error parsing promotion snapshot:", error);
           return <Text type="secondary">-</Text>;
         }
       },
@@ -494,7 +526,7 @@ const InvoicesPage = () => {
           )}
 
           {record.status === "FULFILLED" && (
-            <Tooltip title="Hoàn trả toàn bộ">
+            <Tooltip title="Tạo hóa đơn trả">
               <Button
                 type="text"
                 size="middle"
@@ -677,6 +709,7 @@ const InvoicesPage = () => {
       >
         {selectedOrder && (
           <div>
+            {/* General Information - Always visible */}
             <Descriptions
               column={2}
               bordered
@@ -802,81 +835,103 @@ const InvoicesPage = () => {
               )}
             </Descriptions>
 
-            {/* Promotion Snapshot */}
-            <PromotionSnapshot
-              snapshotJson={selectedOrder.promotion_snapshot}
-              totalDiscountAmount={selectedOrder.total_discount_amount}
-              discountPercentage={selectedOrder.discount_percentage}
-              originalAmount={selectedOrder.original_amount}
-              finalAmount={
-                selectedOrder.final_amount ?? calculateTotal(selectedOrder)
-              }
-            />
+            <Divider style={{ margin: "16px 0" }} />
 
-            <Divider />
-
-            <Title level={5}>Chi tiết sản phẩm</Title>
-            <Table
-              dataSource={selectedOrder.lines}
-              columns={[
+            {/* Tabs for Promotions and Products */}
+            <Tabs
+              defaultActiveKey="products"
+              items={[
                 {
-                  title: "Sản phẩm",
-                  dataIndex: ["product", "product_name"],
-                  key: "product_name",
+                  key: "products",
+                  label: "Chi tiết sản phẩm",
+                  children: (
+                    <Table
+                      dataSource={selectedOrder.lines}
+                      columns={[
+                        {
+                          title: "Sản phẩm",
+                          dataIndex: ["product", "product_name"],
+                          key: "product_name",
+                        },
+                        {
+                          title: "Mã SP",
+                          dataIndex: ["product", "sku"],
+                          key: "sku",
+                          width: 120,
+                        },
+                        {
+                          title: "Số lượng",
+                          dataIndex: "quantity",
+                          key: "quantity",
+                          width: 100,
+                          align: "center" as const,
+                        },
+                        {
+                          title: "Đơn giá",
+                          dataIndex: "unit_price",
+                          key: "unit_price",
+                          width: 130,
+                          render: (
+                            price: number,
+                            record: SaleOrderLineResponse
+                          ) =>
+                            record.is_free_item ? (
+                              <Text
+                                type="success"
+                                strong
+                              >
+                                MIỄN PHÍ
+                              </Text>
+                            ) : (
+                              `₫${Number(price).toLocaleString()}`
+                            ),
+                        },
+                        {
+                          title: "Thành tiền",
+                          key: "total",
+                          width: 150,
+                          render: (_: unknown, record: SaleOrderLineResponse) =>
+                            record.is_free_item ? (
+                              <Text
+                                type="success"
+                                strong
+                              >
+                                ₫0
+                              </Text>
+                            ) : (
+                              <Text strong>
+                                ₫
+                                {(
+                                  record.quantity * record.unit_price
+                                ).toLocaleString()}
+                              </Text>
+                            ),
+                        },
+                      ]}
+                      pagination={false}
+                      rowKey={(record) => record.id}
+                      size="small"
+                    />
+                  ),
                 },
                 {
-                  title: "Mã SP",
-                  dataIndex: ["product", "sku"],
-                  key: "sku",
-                  width: 120,
-                },
-                {
-                  title: "Số lượng",
-                  dataIndex: "quantity",
-                  key: "quantity",
-                  width: 100,
-                  align: "center" as const,
-                },
-                {
-                  title: "Đơn giá",
-                  dataIndex: "unit_price",
-                  key: "unit_price",
-                  width: 130,
-                  render: (price: number, record: SaleOrderLineResponse) =>
-                    record.is_free_item ? (
-                      <Text
-                        type="success"
-                        strong
-                      >
-                        MIỄN PHÍ
-                      </Text>
-                    ) : (
-                      `₫${price.toLocaleString()}`
-                    ),
-                },
-                {
-                  title: "Thành tiền",
-                  key: "total",
-                  width: 140,
-                  render: (_: any, record: SaleOrderLineResponse) =>
-                    record.is_free_item ? (
-                      <Text
-                        type="success"
-                        strong
-                      >
-                        ₫0
-                      </Text>
-                    ) : (
-                      <Text strong>
-                        ₫
-                        {(record.quantity * record.unit_price).toLocaleString()}
-                      </Text>
-                    ),
+                  key: "promotions",
+                  label: "Khuyến mãi",
+                  children: (
+                    <PromotionSnapshot
+                      snapshotJson={selectedOrder.promotion_snapshot}
+                      totalDiscountAmount={selectedOrder.total_discount_amount}
+                      discountPercentage={selectedOrder.discount_percentage}
+                      originalAmount={selectedOrder.original_amount}
+                      finalAmount={
+                        selectedOrder.final_amount ??
+                        calculateTotal(selectedOrder)
+                      }
+                      orderLines={selectedOrder.lines}
+                    />
+                  ),
                 },
               ]}
-              pagination={false}
-              rowKey="id"
-              size="small"
             />
           </div>
         )}
@@ -894,6 +949,7 @@ const InvoicesPage = () => {
         onCancel={() => {
           setIsReturnModalVisible(false);
           setSelectedOrder(null);
+          returnForm.resetFields();
         }}
         onOk={handleConfirmReturn}
         confirmLoading={returnMutation.isPending}
@@ -904,14 +960,6 @@ const InvoicesPage = () => {
       >
         {selectedOrder && (
           <div>
-            <Alert
-              message="Cảnh báo"
-              description="Bạn sắp hoàn trả TOÀN BỘ đơn hàng này. Tất cả sản phẩm sẽ được trả về kho và không thể hoàn tác."
-              type="warning"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-
             <Descriptions
               column={1}
               bordered
@@ -952,6 +1000,29 @@ const InvoicesPage = () => {
                   )}
               </Descriptions.Item>
             </Descriptions>
+
+            <Divider />
+
+            <Form
+              form={returnForm}
+              layout="vertical"
+              initialValues={{ reason: "Hoàn trả hàng" }}
+            >
+              <Form.Item
+                label="Lý do hoàn trả"
+                name="reason"
+                rules={[
+                  { required: true, message: "Vui lòng nhập lý do hoàn trả" },
+                ]}
+              >
+                <Input.TextArea
+                  placeholder="Nhập lý do hoàn trả hàng..."
+                  rows={3}
+                  maxLength={500}
+                  showCount
+                />
+              </Form.Item>
+            </Form>
 
             <Divider />
 
@@ -1074,6 +1145,16 @@ const InvoicesPage = () => {
           </div>
         )}
       </Modal>
+
+      {/* Return Result Modal */}
+      <ReturnOrderResultModal
+        visible={isResultModalVisible}
+        returnData={returnResult}
+        onClose={() => {
+          setIsResultModalVisible(false);
+          setReturnResult(null);
+        }}
+      />
     </div>
   );
 };
