@@ -79,6 +79,9 @@ export interface SaleOrderResponse extends BaseAuditEntity {
   final_amount?: number; // Final amount after discount (amount to pay)
   discount_percentage?: number;
   promotion_snapshot?: string; // JSON array of applied promotions
+
+  // Cancellation reason if status is CANCELLED
+  cancellation_reason?: string;
 }
 
 export interface SaleOrderLineResponse extends BaseAuditEntity {
@@ -101,4 +104,13 @@ export interface SaleReturnItemResponse extends BaseAuditEntity {
   id: string;
   product: Product;
   quantity: number;
+}
+
+export interface PagedSaleOrderResponse {
+  content: SaleOrderResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
 }

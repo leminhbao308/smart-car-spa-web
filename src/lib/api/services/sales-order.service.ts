@@ -3,6 +3,7 @@ import {
   CreateSORequest,
   SaleOrderResponse,
   SaleReturnResponse,
+  PagedSaleOrderResponse,
 } from "@/lib/api/types/sale-order.types";
 
 export const SalesOrderService = {
@@ -32,6 +33,16 @@ export const SalesOrderService = {
     return response.data.data;
   },
 
+  cancelSaleOrder: async (
+    orderId: string,
+    cancellationReason: string
+  ): Promise<SaleOrderResponse> => {
+    const response = await api.post(`/so/cancel/${orderId}`, {
+      cancellation_reason: cancellationReason,
+    });
+    return response.data.data;
+  },
+
   getSaleOrderById: async (orderId: string): Promise<SaleOrderResponse> => {
     const response = await api.get(`/so/${orderId}`);
     return response.data.data;
@@ -39,6 +50,18 @@ export const SalesOrderService = {
 
   getAllSaleOrders: async (): Promise<SaleOrderResponse[]> => {
     const response = await api.get(`/so/get-all`);
+    return response.data.data;
+  },
+
+  getPagedSaleOrders: async (
+    page: number = 0,
+    size: number = 10,
+    sortBy: string = "createdDate",
+    sortDirection: "ASC" | "DESC" = "DESC"
+  ): Promise<PagedSaleOrderResponse> => {
+    const response = await api.get(`/so/paged`, {
+      params: { page, size, sortBy, sortDirection },
+    });
     return response.data.data;
   },
 
