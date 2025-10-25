@@ -1,19 +1,17 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { AdminTable } from "@/components/ui/Table";
-import { useConfirmationModalContext } from "@/components/ui/Modal";
 import BookingModal from "@/components/ui/Modal/BookingModal/BookingModal";
 import UpdateBookingModal from "@/components/ui/Modal/UpdateBookingModal/UpdateBookingModal";
 import CreateTrackingModal from "@/components/ui/Modal/CreateTrackingModal";
 import ServiceTrackingModal from "@/components/ui/Modal/ServiceTrackingModal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Modal, Typography, Button, Badge, App } from "antd";
+import { Tag, Modal, Typography, Button, App } from "antd";
 import {
   PhoneOutlined,
   EyeOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  LoginOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
@@ -21,13 +19,9 @@ import { formatDurationVer01 } from "@/components/utils/helper/duration.format.h
 import { getTimeRemaining } from "@/components/utils/helper/booking.time.helper";
 import {
   useBookings,
-  useConfirmBooking,
-  useCancelBooking,
   useCompleteService,
-  useCheckInBooking,
   useStartService,
 } from "@/lib/api/hooks/useBooking";
-import { useBookingWithInventory } from "@/lib/api/hooks/useBookingWithInventory";
 import { useCustomersDropdown } from "@/lib/api/hooks/useUsers";
 import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
 import {
@@ -139,7 +133,6 @@ const BookingsPage = () => {
     size: 10,
   });
 
-  const { showModal } = useConfirmationModalContext();
   const { notification } = App.useApp();
 
   // API hooks
@@ -147,18 +140,11 @@ const BookingsPage = () => {
     data: bookingsResponse,
     isLoading,
     error,
+    refetch: refetchBookings,
   } = useBookings(filterParams);
-  const confirmBookingMutation = useConfirmBooking();
-  const cancelBookingMutation = useCancelBooking();
   const completeServiceMutation = useCompleteService();
-  const checkInBookingMutation = useCheckInBooking();
   const startServiceMutation = useStartService();
   
-  // Enhanced hooks with inventory management
-  const {
-    confirmBookingWithInventory,
-    cancelBookingWithInventory,
-  } = useBookingWithInventory();
 
   // Fetch additional data for enrichment
   const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
@@ -521,65 +507,12 @@ const BookingsPage = () => {
     setUpdateModalOpen(true);
   };
 
-  const handleDelete = (record: BookingInfoDto) => {
-    showModal({
-      title: "Hủy lịch đặt",
-      content: `Bạn có chắc chắn muốn hủy lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
-      type: "error",
-      onConfirm: async () => {
-        try {          
-          // Use enhanced hook with inventory release
-          await cancelBookingWithInventory(
-            record, 
-            record.branch_id, 
-            "Hủy bởi admin", 
-            "admin"
-          );
-          notification.success({
-            message: "Thành công",
-            description: "Hủy lịch đặt và hoàn trả sản phẩm thành công",
-            placement: "topRight",
-          });
-        } catch (error) {
-          console.error("❌ Error cancelling booking with inventory:", error);
-          notification.error({
-            message: "Lỗi",
-            description: "Có lỗi xảy ra khi hủy lịch đặt hoặc hoàn trả sản phẩm",
-            placement: "topRight",
-          });
-        }
-      },
-    });
-  };
 
   const handleView = (record: BookingInfoDto) => {
     setSelectedBooking(record);
     setDetailModalOpen(true);
   };
 
-  const handleCheckIn = (record: BookingInfoDto) => {
-    showModal({
-      title: "Check-in lịch đặt",
-      content: `Xác nhận check-in cho lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
-      type: "info",
-      onConfirm: async () => {
-        try {
-          await checkInBookingMutation.mutateAsync(record.booking_id);
-          notification.success({
-            message: "Thành công",
-            description: "Check-in thành công",
-            placement: "topRight",
-          });
-        } catch {
-          notification.error({
-            message: "Lỗi",
-            description: "Có lỗi xảy ra khi check-in",
-            placement: "topRight",
-          });
-        }
-      },
-    });
-  };
 
   const handleModalOk = async () => {
     // This will be handled by the BookingModal component
@@ -592,35 +525,15 @@ const BookingsPage = () => {
     setSelectedBooking(null);
   };
 
-  const handleConfirm = (record: BookingInfoDto) => {
-    showModal({
-      title: "Xác nhận lịch đặt",
-      content: `Xác nhận lịch đặt ${record.booking_code} của khách hàng ${record.customer_name}?`,
-      type: "info",
-      onConfirm: async () => {
-        try {
-          // Use enhanced hook with inventory fulfillment
-          await confirmBookingWithInventory(record, record.branch_id);
-          notification.success({
-            message: "Thành công",
-            description: "Xác nhận lịch đặt và xuất sản phẩm thành công",
-            placement: "topRight",
-          });
-        } catch (error) {
-          console.error("Error confirming booking with inventory:", error);
-          notification.error({
-            message: "Lỗi",
-            description: "Có lỗi xảy ra khi xác nhận lịch đặt hoặc xuất sản phẩm",
-            placement: "topRight",
-          });
-        }
-      },
-    });
-  };
 
   const handleCreateTrackingSuccess = () => {
     setCreateTrackingModalOpen(false);
     setSelectedBooking(null);
+  };
+
+  // Function to refresh table data
+  const handleRefreshTable = () => {
+    refetchBookings();
   };
 
   return (
@@ -635,10 +548,7 @@ const BookingsPage = () => {
           isLoading ||
           isLoadingCustomers ||
           isLoadingVehicles ||
-          confirmBookingMutation.isPending ||
-          cancelBookingMutation.isPending ||
           completeServiceMutation.isPending ||
-          checkInBookingMutation.isPending ||
           startServiceMutation.isPending
         }
         onAdd={handleAdd}
@@ -675,37 +585,7 @@ const BookingsPage = () => {
             });
           },
         }}
-        actions={[
-          {
-            key: "confirm",
-            label: "Xác nhận",
-            type: "default",
-            icon: <CheckCircleOutlined />,
-            onClick: handleConfirm,
-            condition: (record: BookingInfoDto) =>
-              record.status === BookingStatus.PENDING,
-          },
-          {
-            key: "checkin",
-            label: "Check-in",
-            type: "default",
-            icon: <LoginOutlined />,
-            onClick: handleCheckIn,
-            condition: (record: BookingInfoDto) =>
-              record.status === BookingStatus.CONFIRMED,
-          },
-          {
-            key: "cancel",
-            label: "Hủy booking",
-            type: "default",
-            icon: <CloseCircleOutlined />,
-            onClick: handleDelete,
-            condition: (record: BookingInfoDto) =>
-              record.status === BookingStatus.PENDING ||
-              record.status === BookingStatus.CONFIRMED ||
-              record.status === BookingStatus.CHECKED_IN,
-          },
-        ]}
+        actions={[]}
       />
 
       {/* Modal đặt lịch */}
@@ -714,6 +594,7 @@ const BookingsPage = () => {
         onCancel={() => setModalOpen(false)}
         onOk={handleModalOk}
         loading={isLoading}
+        onRefresh={handleRefreshTable}
       />
 
       {/* Modal cập nhật booking */}
@@ -724,6 +605,7 @@ const BookingsPage = () => {
           onOk={handleUpdateModalOk}
           initialData={selectedBooking}
           loading={isLoading}
+          onRefresh={handleRefreshTable}
         />
       )}
 
