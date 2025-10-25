@@ -159,6 +159,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [selectedItems, setSelectedItems] = useState<PriceBookItem[]>([]);
   const [selectedBay, setSelectedBay] = useState<ServiceBay | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot | null>(null);
+  
+  // Debug selectedSlot state changes
+  useEffect(() => {
+    console.log("🔄 selectedSlot state changed:", {
+      selectedSlot,
+      hasSelectedSlot: !!selectedSlot,
+      details: selectedSlot,
+      timestamp: new Date().toISOString()
+    });
+  }, [selectedSlot]);
 
   // Bay recommendation state
   const [bayRecommendation, setBayRecommendation] = useState<{
@@ -270,11 +280,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
       return [];
     }
 
-    if (!priceBooksData) {
+    if (!priceBooksData) { 
       return [];
     }
 
-    if (!Array.isArray(priceBooksData)) {
+    if (!Array.isArray(priceBooksData)) { 
       return [];
     }
 
@@ -284,7 +294,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         priceBook.items.forEach((item) => {
           // Filter for services only: serviceId != null AND servicePackageId == null
           if (item.service && !item.servicePackage) {
-            allItems.push(item);
+            allItems.push(item); 
           } else {
             console.log(
               `✗ Skipped item: ${item.item_name} - ${
@@ -317,16 +327,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
         date: bookingDate,
         serviceDurationMinutes: totalDuration,
         bayId: selectedBay.bay_id,
-      });
-
+      }); 
+      
       // Remove duplicate slots based on startTime and endTime
       const uniqueSlots = slots.filter(
         (slot, index, self) =>
           index ===
           self.findIndex(
             (s) => s.startTime === slot.startTime && s.endTime === slot.endTime
-          )
-      );
+        )
+      ); 
       setAvailableSlots(uniqueSlots);
     } catch (error) {
       console.error("Error loading available slots:", error);
@@ -448,31 +458,66 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Check if slot is suitable for service duration
   const isSlotSuitable = useCallback(
     (slot: SlotInfo) => {
+      console.log("🔍 isSlotSuitable check:", {
+        slot: {
+          startTime: slot.startTime,
+          isAvailable: slot.isAvailable,
+          durationMinutes: slot.durationMinutes
+        },
+        totalDuration,
+        availableSlotsCount: availableSlots.length
+      });
+      
       // For single slot services (≤ 60 minutes)
       if (totalDuration <= 60) {
-        return slot.isAvailable && slot.durationMinutes >= totalDuration;
+        const result = slot.isAvailable && slot.durationMinutes >= totalDuration;
+        console.log("📏 Single slot check:", {
+          isAvailable: slot.isAvailable,
+          durationMinutes: slot.durationMinutes,
+          totalDuration,
+          result
+        });
+        return result;
       }
-
+      
       // For multi-slot services (> 60 minutes)
       // Check if this slot and consecutive slots are available
       const requiredSlots = Math.ceil(totalDuration / 60);
       const currentSlotIndex = availableSlots.findIndex(
         (s) => s.startTime === slot.startTime
       );
-
-      if (currentSlotIndex === -1) return false;
-
+      
+      console.log("📏 Multi-slot check:", {
+        requiredSlots,
+        currentSlotIndex,
+        availableSlotsLength: availableSlots.length
+      });
+      
+      if (currentSlotIndex === -1) {
+        console.log("❌ Slot not found in availableSlots");
+        return false;
+      }
+      
       // Check if we have enough consecutive available slots
       for (let i = 0; i < requiredSlots; i++) {
         const checkSlotIndex = currentSlotIndex + i;
-        if (checkSlotIndex >= availableSlots.length) return false;
-
+        if (checkSlotIndex >= availableSlots.length) {
+          console.log("❌ Not enough consecutive slots");
+          return false;
+        }
+        
         const checkSlot = availableSlots[checkSlotIndex];
         if (!checkSlot.isAvailable || checkSlot.status !== "AVAILABLE") {
+          console.log("❌ Consecutive slot not available:", {
+            index: checkSlotIndex,
+            isAvailable: checkSlot.isAvailable,
+            status: checkSlot.status
+          });
           return false;
         }
       }
-
+      
+      console.log("✅ Multi-slot check passed");
       return true;
     },
     [totalDuration, availableSlots]
@@ -481,9 +526,26 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Check if slot can be selected (available and suitable)
   const canSelectSlot = useCallback(
     (slot: SlotInfo) => {
-      return (
-        slot.isAvailable && slot.status === "AVAILABLE" && isSlotSuitable(slot)
-      );
+      const isAvailable = slot.isAvailable;
+      const isStatusAvailable = slot.status === "AVAILABLE";
+      const isSuitable = isSlotSuitable(slot);
+      
+      console.log("🔍 canSelectSlot check:", {
+        slot: {
+          startTime: slot.startTime,
+          isAvailable,
+          status: slot.status,
+          durationMinutes: slot.durationMinutes
+        },
+        checks: {
+          isAvailable,
+          isStatusAvailable,
+          isSuitable
+        },
+        result: isAvailable && isStatusAvailable && isSuitable
+      });
+      
+      return isAvailable && isStatusAvailable && isSuitable;
     },
     [isSlotSuitable]
   );
@@ -583,14 +645,38 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSlotSelect = useCallback(
     (slot: SlotInfo) => {
+      console.log("🎯 handleSlotSelect called:", {
+        slot: {
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          isAvailable: slot.isAvailable,
+          status: slot.status,
+          durationMinutes: slot.durationMinutes
+        },
+        canSelect: canSelectSlot(slot),
+        totalDuration,
+        bookingDate
+      });
+      
       if (canSelectSlot(slot)) {
-        setSelectedSlot({
+        const newSlot = {
           bayId: slot.bayId,
           bayName: slot.bayName,
           date: bookingDate,
           startTime: slot.startTime,
           serviceDurationMinutes: totalDuration,
-        });
+        };
+        console.log("✅ Setting selectedSlot:", newSlot);
+        setSelectedSlot(newSlot);
+        
+        // Reset walk-in bay selection when selecting a slot
+        setSelectedWalkInBay(null);
+        setManualBaySelection(false);
+        console.log("🔄 Reset walk-in bay selection for slot booking");
+        
+        console.log("🔄 selectedSlot state updated, will trigger re-render");
+      } else {
+        console.log("❌ Cannot select slot - canSelectSlot returned false");
       }
     },
     [canSelectSlot, bookingDate, totalDuration]
@@ -631,15 +717,42 @@ const BookingModal: React.FC<BookingModalProps> = ({
         return;
       }
 
+      console.log("✅ Customer validation passed, proceeding with booking creation...");
+      console.log("🔍 Booking type conditions:", {
+        isNewCustomer,
+        isExistingCustomer,
+        customerType,
+        selectedSlot: !!selectedSlot,
+        selectedWalkInBay: !!selectedWalkInBay,
+        selectedSlotDetails: selectedSlot,
+        selectedWalkInBayDetails: selectedWalkInBay
+      });
+      
+      console.log("🔍 Debug booking conditions:", {
+        "isNewCustomer": isNewCustomer,
+        "isExistingCustomer": isExistingCustomer,
+        "customerType": customerType,
+        "selectedSlot": !!selectedSlot,
+        "selectedWalkInBay": !!selectedWalkInBay,
+        "condition1_newCustomer": isNewCustomer,
+        "condition2_existingWalkIn": isExistingCustomer && customerType === "existing" && selectedWalkInBay && !selectedSlot,
+        "condition3_existingSlot": isExistingCustomer && selectedSlot && !selectedWalkInBay
+      });
+
       // Handle new customer (walk-in booking)
       if (isNewCustomer) {
-        if (!selectedBranch) {
-          console.error("Missing branch information for new customer");
+        if (!selectedBranch || !selectedWalkInBay) {
+          console.error("Missing branch or bay information for new customer");
           return;
         }
 
         console.log("Creating walk-in booking for new customer");
         try {
+          // Calculate current time for walk-in booking
+          const now = new Date();
+          const currentTime = now.toISOString();
+          const estimatedEndTime = new Date(now.getTime() + totalDuration * 60000).toISOString();
+
           const walkInData = {
             customerType: "NEW" as const,
             customerId: undefined,
@@ -663,11 +776,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
               duration_minutes: item.service?.estimated_duration || 60,
               price: item.fixed_price || 0,
             })),
-            assignedBayId: selectedWalkInBay || "",
+            assignedBayId: selectedWalkInBay,
             branchId: selectedBranch.branch_id,
             notes: values.notes || "",
             priority: "NORMAL" as const,
             specialRequests: [],
+            // Add missing fields for walk-in booking
+            estimated_duration_minutes: totalDuration,
+            preferent_start_at: currentTime,
+            schedule_start_at: currentTime,
+            schedule_end_at: estimatedEndTime,
+            deposit_amount: Math.round(totalPrice * 0.1), // 10% deposit
+            vehicle_brand_name: newVehicle!.brand_name,
+            vehicle_color: newVehicle!.color,
+            vehicle_type_name: newVehicle!.type_name,
+            vehicle_year: newVehicle!.year || new Date().getFullYear(),
+            slot_start_time: now.toTimeString().slice(0, 5), // HH:mm format
+            slot_end_time: new Date(now.getTime() + totalDuration * 60000).toTimeString().slice(0, 5), // HH:mm format
           };
 
           const walkInResponse = await createWalkInBooking(
@@ -693,18 +818,106 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }
       }
 
-      // Handle existing customer (slot booking)
-      if (isExistingCustomer) {
-        if (!selectedBranch || !selectedSlot) {
-          console.error(
-            "Missing branch or slot information for existing customer"
-          );
+      // Handle existing customer for walk-in booking (onsite processing)
+      console.log("🔍 Checking existing customer walk-in condition:", {
+        isExistingCustomer,
+        customerType,
+        selectedWalkInBay: !!selectedWalkInBay,
+        selectedSlot: !!selectedSlot,
+        condition: isExistingCustomer && customerType === "existing" && selectedWalkInBay && !selectedSlot
+      });
+      
+      if (isExistingCustomer && customerType === "existing" && selectedWalkInBay && !selectedSlot) {
+        if (!selectedBranch) {
+          console.error("Missing branch information for existing customer walk-in");
           return;
         }
 
+        console.log("Creating walk-in booking for existing customer");
+        try {
+          // Calculate current time for walk-in booking
+          const now = new Date();
+          const currentTime = now.toISOString();
+          const estimatedEndTime = new Date(now.getTime() + totalDuration * 60000).toISOString();
+
+          const walkInData = {
+            customerType: "EXISTING" as const,
+            customerId: selectedCustomer!.user_id,
+            vehicleId: selectedVehicle!.vehicle_id,
+            newCustomer: undefined,
+            newVehicle: undefined,
+            services: selectedItems.map((item) => ({
+              service_id: item.service?.service_id || item.item_id,
+              service_name: item.item_name,
+              duration_minutes: item.service?.estimated_duration || 60,
+              price: item.fixed_price || 0,
+            })),
+            assignedBayId: selectedWalkInBay,
+            branchId: selectedBranch.branch_id,
+            notes: values.notes || "",
+            priority: "NORMAL" as const,
+            specialRequests: [],
+            // Add missing fields for walk-in booking
+            estimated_duration_minutes: totalDuration,
+            preferent_start_at: currentTime,
+            schedule_start_at: currentTime,
+            schedule_end_at: estimatedEndTime,
+            deposit_amount: 0, // No deposit for walk-in booking
+            vehicle_brand_name: selectedVehicle!.brand_name || "",
+            vehicle_color: selectedVehicle!.color || "",
+            vehicle_type_name: selectedVehicle!.type_name || "",
+            vehicle_year: selectedVehicle!.model_year || new Date().getFullYear(),
+            slot_start_time: now.toTimeString().slice(0, 5), // HH:mm format
+            slot_end_time: new Date(now.getTime() + totalDuration * 60000).toTimeString().slice(0, 5), // HH:mm format
+          };
+
+          const walkInResponse = await createWalkInBooking(
+            walkInData,
+            selectedBranch.branch_id
+          );
+          console.log("Walk-in booking created for existing customer:", walkInResponse);
+          onOk(walkInResponse);
+          return;
+        } catch (walkInError) {
+          console.error("Error creating walk-in booking for existing customer:", walkInError);
+          onOk({
+            customerType: "existing",
+            customer: selectedCustomer,
+            vehicle: selectedVehicle,
+            branch: selectedBranch,
+            services: selectedItems,
+            totalPrice,
+            totalDuration,
+            notes: values.notes || "",
+          });
+          return;
+        }
+      }
+
+      // Handle existing customer (slot booking)
+      console.log("🔍 Checking existing customer slot booking condition:", {
+        isExistingCustomer,
+        selectedSlot: !!selectedSlot,
+        selectedWalkInBay: !!selectedWalkInBay,
+        condition: isExistingCustomer && selectedSlot && !selectedWalkInBay
+      });
+      
+      if (isExistingCustomer && selectedSlot && !selectedWalkInBay) {
+        console.log("🎯 Processing existing customer slot booking...");
+        if (!selectedBranch) {
+          console.error(
+            "Missing branch information for existing customer slot booking"
+          );
+        return;
+      }
+
         console.log("Creating slot booking for existing customer");
         try {
-          const createRequest = {
+          // Calculate slot end time
+          const slotStartTime = dayjs(`${selectedSlot.date} ${selectedSlot.startTime}`);
+          const slotEndTime = slotStartTime.add(selectedSlot.serviceDurationMinutes, 'minute');
+
+      const createRequest = {
             customer_id: selectedCustomer?.user_id,
             customer_name: selectedCustomer!.full_name,
             customer_phone: selectedCustomer!.phone_number,
@@ -717,27 +930,34 @@ const BookingModal: React.FC<BookingModalProps> = ({
             vehicle_year:
               selectedVehicle!.model_year || new Date().getFullYear(),
             vehicle_color: selectedVehicle!.color || "",
-            branch_id: selectedBranch.branch_id,
-            selected_slot: {
-              bay_id: selectedSlot.bayId,
-              date: selectedSlot.date,
-              start_time: selectedSlot.startTime,
-              service_duration_minutes: selectedSlot.serviceDurationMinutes,
-            },
-            booking_items: selectedItems.map((item) => ({
-              service_id: item.service?.service_id || item.item_id,
-              item_name: item.item_name,
-              item_description: item.service?.description || "",
-              discount_amount: 0,
-              tax_amount: Math.round((item.fixed_price || 0) * 0.1),
-            })),
-            total_price: totalPrice,
-            currency: "VND",
-            deposit_amount: 0,
-            coupon_code: values.couponCode || undefined,
-            notes: values.notes || "",
-            special_requests: values.specialRequests || [],
-          };
+        branch_id: selectedBranch.branch_id,
+        selected_slot: {
+          bay_id: selectedSlot.bayId,
+          date: selectedSlot.date,
+          start_time: selectedSlot.startTime,
+          service_duration_minutes: selectedSlot.serviceDurationMinutes,
+        },
+        booking_items: selectedItems.map((item) => ({
+          service_id: item.service?.service_id || item.item_id,
+          item_name: item.item_name,
+          item_description: item.service?.description || "",
+          discount_amount: 0,
+          tax_amount: Math.round((item.fixed_price || 0) * 0.1),
+        })),
+        total_price: totalPrice,
+        currency: "VND",
+            deposit_amount: 0, // No deposit for slot booking
+        coupon_code: values.couponCode || undefined,
+        notes: values.notes || "",
+        special_requests: values.specialRequests || [],
+        // Add missing fields for slot booking
+        estimated_duration_minutes: totalDuration,
+        preferent_start_at: slotStartTime.toISOString(),
+        schedule_start_at: slotStartTime.toISOString(),
+        schedule_end_at: slotEndTime.toISOString(),
+        slot_start_time: selectedSlot.startTime,
+        slot_end_time: slotEndTime.format('HH:mm'),
+      };
 
           console.log(
             "🚀 Creating regular booking with request:",
@@ -745,7 +965,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           );
           const createResponse =
             await createBookingWithSlotMutation.mutateAsync(createRequest);
-          console.log("📋 Booking creation response:", createResponse);
+      console.log("📋 Booking creation response:", createResponse);
           onOk(createRequest);
           return;
         } catch (bookingError) {
@@ -764,6 +984,17 @@ const BookingModal: React.FC<BookingModalProps> = ({
           return;
         }
       }
+      
+      // If no condition was met, log the issue
+      console.log("❌ No booking condition was met. This should not happen.");
+      console.log("🔍 Final state check:", {
+        isNewCustomer,
+        isExistingCustomer,
+        customerType,
+        selectedSlot: !!selectedSlot,
+        selectedWalkInBay: !!selectedWalkInBay,
+        selectedBranch: !!selectedBranch
+      });
     } catch (error) {
       console.error("Booking submission failed:", error);
 
@@ -1159,140 +1390,140 @@ const BookingModal: React.FC<BookingModalProps> = ({
               key: "existing",
               label: <span>👤 Khách hàng có sẵn</span>,
               children: (
-                <div>
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Card
-                        size="small"
-                        title="Thông tin khách hàng"
-                        style={{ marginBottom: 16 }}
-                      >
-                        <Form.Item
-                          name="customerId"
-                          label="Chọn khách hàng"
+    <div>
+      <Row gutter={16}> 
+        <Col span={12}>
+          <Card
+            size="small"
+            title="Thông tin khách hàng"
+            style={{ marginBottom: 16 }}
+          >
+            <Form.Item
+              name="customerId"
+              label="Chọn khách hàng"
                           rules={[
                             {
                               required: customerType === "existing",
                               message: "Vui lòng chọn khách hàng",
                             },
                           ]}
-                        >
-                          <Select
-                            placeholder="Tìm kiếm theo tên hoặc số điện thoại"
-                            showSearch
-                            loading={isLoadingCustomers}
-                            onChange={handleCustomerChange}
-                            filterOption={(input, option) => {
-                              const label = option?.label?.toString() || "";
-                              const customer = customers.find(
-                                (c) => c.user_id === option?.value
-                              );
-                              const phoneNumber = customer?.phone_number || "";
-                              const searchText = input.toLowerCase();
-                              return (
-                                label.toLowerCase().includes(searchText) ||
-                                phoneNumber.includes(searchText)
-                              );
-                            }}
-                            optionLabelProp="label"
-                          >
-                            {customers.map((customer) => (
-                              <Option
-                                key={customer.user_id}
-                                value={customer.user_id}
-                                label={customer.full_name}
-                              >
-                                <div>
-                                  <div style={{ fontWeight: 500 }}>
-                                    {customer.full_name}
-                                  </div>
-                                  <div style={{ fontSize: 12, color: "#666" }}>
-                                    {customer.phone_number} • {customer.email}
-                                  </div>
-                                </div>
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
+            >
+              <Select
+                placeholder="Tìm kiếm theo tên hoặc số điện thoại"
+                showSearch
+                loading={isLoadingCustomers}
+                onChange={handleCustomerChange}
+                filterOption={(input, option) => {
+                  const label = option?.label?.toString() || "";
+                  const customer = customers.find(
+                    (c) => c.user_id === option?.value
+                  );
+                  const phoneNumber = customer?.phone_number || "";
+                  const searchText = input.toLowerCase();
+                  return (
+                    label.toLowerCase().includes(searchText) ||
+                    phoneNumber.includes(searchText)
+                  );
+                }}
+                optionLabelProp="label"
+              >
+                {customers.map((customer) => (
+                  <Option
+                    key={customer.user_id}
+                    value={customer.user_id}
+                    label={customer.full_name}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 500 }}>
+                        {customer.full_name}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#666" }}>
+                        {customer.phone_number} • {customer.email}
+                      </div>
+                    </div>
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
 
-                        {selectedCustomer && (
-                          <Alert
-                            message={`Khách hàng: ${selectedCustomer.full_name}`}
-                            description={`SĐT: ${selectedCustomer.phone_number} • Email: ${selectedCustomer.email}`}
-                            type="success"
-                            style={{ marginTop: 8 }}
-                          />
-                        )}
-                      </Card>
-                    </Col>
+            {selectedCustomer && (
+              <Alert
+                message={`Khách hàng: ${selectedCustomer.full_name}`}
+                description={`SĐT: ${selectedCustomer.phone_number} • Email: ${selectedCustomer.email}`}
+                type="success"
+                style={{ marginTop: 8 }}
+              />
+            )}
+          </Card>
+        </Col>
 
-                    <Col span={12}>
+        <Col span={12}>
                       <Card
                         size="small"
                         title="Thông tin xe"
                         style={{ marginBottom: 16 }}
                       >
-                        <Form.Item
-                          name="vehicleId"
-                          label="Chọn xe"
+            <Form.Item
+              name="vehicleId"
+              label="Chọn xe"
                           rules={[
                             {
                               required: customerType === "existing",
                               message: "Vui lòng chọn xe",
                             },
                           ]}
-                        >
-                          <Select
-                            placeholder={
-                              selectedCustomer
-                                ? "Chọn xe của khách hàng"
-                                : "Vui lòng chọn khách hàng trước"
-                            }
-                            loading={isLoadingVehicles}
-                            onChange={handleVehicleChange}
-                            disabled={!selectedCustomer}
-                            optionLabelProp="label"
-                            notFoundContent={
-                              !selectedCustomer
-                                ? "Vui lòng chọn khách hàng trước"
-                                : isLoadingVehicles
-                                ? "Đang tải danh sách xe..."
-                                : vehicles.length === 0
-                                ? `Khách hàng "${selectedCustomer.full_name}" chưa có xe nào trong hệ thống`
-                                : "Không tìm thấy xe phù hợp"
-                            }
-                          >
-                            {vehicles.map((vehicle: VehicleProfileDisplay) => (
-                              <Option
-                                key={vehicle.vehicle_id}
-                                value={vehicle.vehicle_id}
-                                label={vehicle.license_plate}
-                              >
-                                <div>
-                                  <div style={{ fontWeight: 500 }}>
-                                    {vehicle.license_plate}
-                                  </div>
-                                  <div style={{ fontSize: 12, color: "#666" }}>
-                                    {vehicle.brand_name} {vehicle.model_name} •{" "}
-                                    {vehicle.type_name}
-                                  </div>
-                                </div>
-                              </Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
+            >
+              <Select
+                placeholder={
+                  selectedCustomer
+                    ? "Chọn xe của khách hàng"
+                    : "Vui lòng chọn khách hàng trước"
+                }
+                loading={isLoadingVehicles}
+                onChange={handleVehicleChange}
+                disabled={!selectedCustomer}
+                optionLabelProp="label"
+                notFoundContent={
+                  !selectedCustomer
+                    ? "Vui lòng chọn khách hàng trước"
+                    : isLoadingVehicles
+                    ? "Đang tải danh sách xe..."
+                    : vehicles.length === 0
+                    ? `Khách hàng "${selectedCustomer.full_name}" chưa có xe nào trong hệ thống`
+                    : "Không tìm thấy xe phù hợp"
+                }
+              >
+                {vehicles.map((vehicle: VehicleProfileDisplay) => (
+                  <Option
+                    key={vehicle.vehicle_id}
+                    value={vehicle.vehicle_id}
+                    label={vehicle.license_plate}
+                  >
+                    <div>
+                      <div style={{ fontWeight: 500 }}>
+                        {vehicle.license_plate}
+                      </div>
+                      <div style={{ fontSize: 12, color: "#666" }}>
+                        {vehicle.brand_name} {vehicle.model_name} •{" "}
+                        {vehicle.type_name}
+                      </div>
+                    </div>
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
 
-                        {selectedVehicle && (
-                          <Alert
-                            message={`Xe: ${selectedVehicle.license_plate}`}
-                            description={`${selectedVehicle.brand_name} ${selectedVehicle.model_name} • ${selectedVehicle.type_name}`}
-                            type="info"
-                            style={{ marginTop: 8 }}
-                          />
-                        )}
-                      </Card>
-                    </Col>
-                  </Row>
+            {selectedVehicle && (
+              <Alert
+                message={`Xe: ${selectedVehicle.license_plate}`}
+                description={`${selectedVehicle.brand_name} ${selectedVehicle.model_name} • ${selectedVehicle.type_name}`}
+                type="info"
+                style={{ marginTop: 8 }}
+              />
+            )}
+          </Card>
+        </Col>
+      </Row>
                 </div>
               ),
             },
@@ -2153,14 +2384,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
     </div>
   );
 
-  const renderSlotSelectionStep = () => (
-    <div>
-      <Card
-        size="small"
-        title="Chọn Khu Vực Chăm Sóc Và Slot"
-        style={{ marginBottom: 16 }}
-      >
-        {!selectedBranch || !bookingDate ? (
+  const renderSlotSelectionStep = () => {
+    console.log("🔍 renderSlotSelectionStep:", {
+      selectedBranch: !!selectedBranch,
+      bookingDate: !!bookingDate,
+      bookingDateValue: bookingDate,
+      customerType
+    });
+    
+    return (
+      <div>
+        <Card
+          size="small"
+          title="Chọn Khu Vực Chăm Sóc Và Slot"
+          style={{ marginBottom: 16 }}
+        >
+          {!selectedBranch || !bookingDate ? (
           <Alert
             message="Vui lòng chọn dịch vụ, chi nhánh và ngày trước"
             description="Bạn cần chọn dịch vụ, chi nhánh và ngày để xem các slot có sẵn"
@@ -2186,44 +2425,44 @@ const BookingModal: React.FC<BookingModalProps> = ({
                       key: "booking",
                       label: <span>📅 Đặt lịch ({serviceBays.length})</span>,
                       children: (
-                        <div>
-                          <Row gutter={16} style={{ marginBottom: 16 }}>
-                            <Col span={24}>
+          <div>
+            <Row gutter={16} style={{ marginBottom: 16 }}>
+              <Col span={24}>
                               <Text strong>Chọn Service Bay cho đặt lịch:</Text>
-                              <div style={{ marginTop: 8 }}>
-                                {isLoadingServiceBays ? (
-                                  <Spin />
-                                ) : (
-                                  <Row gutter={8}>
-                                    {serviceBays?.slice(0, 8).map((bay) => (
-                                      <Col span={6} key={bay.bay_id}>
-                                        <Card
-                                          size="small"
-                                          hoverable
-                                          style={{
-                                            textAlign: "center",
-                                            border:
-                                              selectedBay?.bay_id === bay.bay_id
-                                                ? "2px solid #1890ff"
-                                                : "1px solid #d9d9d9",
-                                            backgroundColor:
-                                              selectedBay?.bay_id === bay.bay_id
-                                                ? "#e6f7ff"
-                                                : "#fff",
-                                          }}
+                <div style={{ marginTop: 8 }}>
+                  {isLoadingServiceBays ? (
+                    <Spin />
+                  ) : (
+                    <Row gutter={8}>
+                      {serviceBays?.slice(0, 8).map((bay) => (
+                        <Col span={6} key={bay.bay_id}>
+                          <Card
+                            size="small"
+                            hoverable
+                            style={{
+                              textAlign: "center",
+                              border:
+                                selectedBay?.bay_id === bay.bay_id
+                                  ? "2px solid #1890ff"
+                                  : "1px solid #d9d9d9",
+                              backgroundColor:
+                                selectedBay?.bay_id === bay.bay_id
+                                  ? "#e6f7ff"
+                                  : "#fff",
+                            }}
                                           onClick={() =>
                                             handleBayChange(bay.bay_id)
                                           }
-                                        >
-                                          <ShopOutlined
+                          >
+                            <ShopOutlined
                                             style={{
                                               fontSize: 24,
                                               color: "#1890ff",
                                             }}
-                                          />
-                                          <div style={{ marginTop: 8 }}>
-                                            <Text strong>{bay.bay_name}</Text>
-                                          </div>
+                            />
+                            <div style={{ marginTop: 8 }}>
+                              <Text strong>{bay.bay_name}</Text>
+                            </div>
                                           <div
                                             style={{
                                               fontSize: 12,
@@ -2235,200 +2474,200 @@ const BookingModal: React.FC<BookingModalProps> = ({
                                                 -2
                                               )}`}{" "}
                                             • 60 phút/slot
-                                          </div>
-                                        </Card>
-                                      </Col>
-                                    ))}
-                                  </Row>
-                                )}
-                              </div>
-                            </Col>
-                          </Row>
+                            </div>
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  )}
+                </div>
+              </Col>
+            </Row>
 
-                          {selectedBay && (
-                            <div>
-                              <Divider />
+            {selectedBay && (
+              <div>
+                <Divider />
                               <Text strong>
                                 Chọn Slot trong {selectedBay.bay_name}:
                               </Text>
-                              <div style={{ marginTop: 8 }}>
-                                {loadingSlots ? (
+                <div style={{ marginTop: 8 }}>
+                  {loadingSlots ? (
                                   <div
                                     style={{
                                       textAlign: "center",
                                       padding: "20px",
                                     }}
                                   >
-                                    <Spin />
-                                    <div
+                      <Spin />
+                      <div
                                       style={{
                                         marginTop: 8,
                                         fontSize: 12,
                                         color: "#666",
                                       }}
-                                    >
-                                      Đang tải slot...
-                                    </div>
-                                  </div>
-                                ) : availableSlots.length === 0 ? (
-                                  <Alert
-                                    message="Không có slot khả dụng"
-                                    description="Không có slot nào phù hợp với thời gian dịch vụ đã chọn"
-                                    type="warning"
-                                    showIcon
-                                  />
-                                ) : (
-                                  <Row gutter={8}>
-                                    {availableSlots.map((slot, index) => {
-                                      const canSelect = canSelectSlot(slot);
-                                      const isSelected =
+                      >
+                        Đang tải slot...
+                      </div>
+                    </div>
+                  ) : availableSlots.length === 0 ? (
+                    <Alert
+                      message="Không có slot khả dụng"
+                      description="Không có slot nào phù hợp với thời gian dịch vụ đã chọn"
+                      type="warning"
+                      showIcon
+                    />
+                  ) : (
+                    <Row gutter={8}>
+                      {availableSlots.map((slot, index) => {
+                        const canSelect = canSelectSlot(slot);
+                        const isSelected =
                                         selectedSlot?.startTime ===
                                         slot.startTime;
 
-                                      return (
+                        return (
                                         <Col
                                           span={4}
                                           key={`${slot.startTime}-${slot.endTime}-${index}`}
                                         >
-                                          <Tooltip
-                                            title={
-                                              canSelect
-                                                ? totalDuration > 60
+                            <Tooltip
+                              title={
+                                canSelect
+                                  ? totalDuration > 60
                                                   ? `Chọn ${Math.ceil(
                                                       totalDuration / 60
                                                     )} slot liên tiếp từ ${
                                                       slot.startTime
                                                     } (${totalDuration} phút)`
-                                                  : `Chọn slot ${slot.startTime} - ${slot.endTime}`
-                                                : slot.status === "BOOKED"
-                                                ? "Slot đã được đặt"
-                                                : slot.status === "IN_PROGRESS"
-                                                ? "Slot đang được sử dụng"
-                                                : slot.status === "COMPLETED"
-                                                ? "Slot đã hoàn thành"
-                                                : slot.status === "CANCELLED"
-                                                ? "Slot đã bị hủy"
-                                                : totalDuration > 60
+                                    : `Chọn slot ${slot.startTime} - ${slot.endTime}`
+                                  : slot.status === "BOOKED"
+                                  ? "Slot đã được đặt"
+                                  : slot.status === "IN_PROGRESS"
+                                  ? "Slot đang được sử dụng"
+                                  : slot.status === "COMPLETED"
+                                  ? "Slot đã hoàn thành"
+                                  : slot.status === "CANCELLED"
+                                  ? "Slot đã bị hủy"
+                                  : totalDuration > 60
                                                 ? `Cần ${Math.ceil(
                                                     totalDuration / 60
                                                   )} slot liên tiếp - không đủ`
-                                                : "Slot không khả dụng"
-                                            }
-                                          >
-                                            <Card
-                                              size="small"
-                                              hoverable={canSelect}
-                                              style={{
-                                                textAlign: "center",
-                                                border: isSelected
-                                                  ? "2px solid #52c41a"
-                                                  : canSelect
-                                                  ? "1px solid #d9d9d9"
-                                                  : "1px solid #ff4d4f",
-                                                backgroundColor: isSelected
-                                                  ? "#f6ffed"
-                                                  : canSelect
-                                                  ? "#fff"
-                                                  : slot.status === "BOOKED"
-                                                  ? "#fff2f0"
+                                  : "Slot không khả dụng"
+                              }
+                            >
+                              <Card
+                                size="small"
+                                hoverable={canSelect}
+                                style={{
+                                  textAlign: "center",
+                                  border: isSelected
+                                    ? "2px solid #52c41a"
+                                    : canSelect
+                                    ? "1px solid #d9d9d9"
+                                    : "1px solid #ff4d4f",
+                                  backgroundColor: isSelected
+                                    ? "#f6ffed"
+                                    : canSelect
+                                    ? "#fff"
+                                    : slot.status === "BOOKED"
+                                    ? "#fff2f0"
                                                   : slot.status ===
                                                     "IN_PROGRESS"
-                                                  ? "#e6f7ff"
-                                                  : "#f5f5f5",
+                                    ? "#e6f7ff"
+                                    : "#f5f5f5",
                                                 cursor: canSelect
                                                   ? "pointer"
                                                   : "not-allowed",
-                                                opacity: canSelect ? 1 : 0.6,
+                                  opacity: canSelect ? 1 : 0.6,
                                                 marginBottom: 8,
-                                              }}
-                                              onClick={() =>
+                                }}
+                                onClick={() =>
                                                 canSelect &&
                                                 handleSlotSelect(slot)
-                                              }
-                                            >
-                                              <div
-                                                style={{
-                                                  color:
-                                                    slotStatusColors[
-                                                      slot.status as keyof typeof slotStatusColors
-                                                    ],
-                                                  fontSize: 16,
-                                                }}
-                                              >
-                                                {
-                                                  slotStatusIcons[
-                                                    slot.status as keyof typeof slotStatusIcons
-                                                  ]
-                                                }
-                                              </div>
-                                              <div
-                                                style={{
-                                                  marginTop: 4,
-                                                  fontSize: 12,
-                                                  fontWeight: 500,
+                                }
+                              >
+                                <div
+                                  style={{
+                                    color:
+                                      slotStatusColors[
+                                        slot.status as keyof typeof slotStatusColors
+                                      ],
+                                    fontSize: 16,
+                                  }}
+                                >
+                                  {
+                                    slotStatusIcons[
+                                      slot.status as keyof typeof slotStatusIcons
+                                    ]
+                                  }
+                                </div>
+                                <div
+                                  style={{
+                                    marginTop: 4,
+                                    fontSize: 12,
+                                    fontWeight: 500,
                                                   color: canSelect
                                                     ? "#000"
                                                     : "#999",
-                                                }}
-                                              >
-                                                {slot.startTime}
-                                              </div>
+                                  }}
+                                >
+                                  {slot.startTime}
+                                </div>
                                               <div
                                                 style={{
                                                   fontSize: 10,
                                                   color: "#666",
                                                 }}
                                               >
-                                                {slot.endTime}
-                                              </div>
+                                  {slot.endTime}
+                                </div>
                                               {totalDuration > 60 &&
                                                 canSelect && (
-                                                  <div
-                                                    style={{
-                                                      fontSize: 8,
-                                                      color: "#52c41a",
-                                                      marginTop: 2,
-                                                      fontWeight: 500,
-                                                    }}
-                                                  >
+                                  <div
+                                    style={{
+                                      fontSize: 8,
+                                      color: "#52c41a",
+                                      marginTop: 2,
+                                      fontWeight: 500,
+                                    }}
+                                  >
                                                     {Math.ceil(
                                                       totalDuration / 60
                                                     )}{" "}
                                                     slot
-                                                  </div>
-                                                )}
-                                              {!canSelect && (
-                                                <div
-                                                  style={{
-                                                    fontSize: 8,
-                                                    color: "#ff4d4f",
-                                                    marginTop: 2,
-                                                  }}
-                                                >
-                                                  {slot.status === "BOOKED"
-                                                    ? "Đã đặt"
+                                  </div>
+                                )}
+                                {!canSelect && (
+                                  <div
+                                    style={{
+                                      fontSize: 8,
+                                      color: "#ff4d4f",
+                                      marginTop: 2,
+                                    }}
+                                  >
+                                    {slot.status === "BOOKED"
+                                      ? "Đã đặt"
                                                     : slot.status ===
                                                       "IN_PROGRESS"
-                                                    ? "Đang dùng"
+                                      ? "Đang dùng"
                                                     : slot.status ===
                                                       "CANCELLED"
-                                                    ? "Đã hủy"
-                                                    : totalDuration > 60
-                                                    ? "Không đủ slot"
-                                                    : "Không khả dụng"}
-                                                </div>
-                                              )}
-                                            </Card>
-                                          </Tooltip>
-                                        </Col>
-                                      );
-                                    })}
-                                  </Row>
+                                      ? "Đã hủy"
+                                      : totalDuration > 60
+                                      ? "Không đủ slot"
+                                      : "Không khả dụng"}
+                                  </div>
                                 )}
-                              </div>
+                              </Card>
+                            </Tooltip>
+                          </Col>
+                        );
+                      })}
+                    </Row>
+                  )}
+                </div>
 
-                              {selectedSlot && (
-                                <Alert
+                {selectedSlot && (
+                  <Alert
                                   message={`Slot đã chọn: ${
                                     selectedSlot.startTime
                                   } - ${dayjs(selectedSlot.startTime, "HH:mm")
@@ -2436,16 +2675,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
                                       selectedSlot.serviceDurationMinutes,
                                       "minute"
                                     )
-                                    .format("HH:mm")}`}
-                                  description={`Service Bay: ${selectedSlot.bayName} • Ngày: ${selectedSlot.date}`}
-                                  type="success"
-                                  showIcon
-                                  style={{ marginTop: 16 }}
-                                />
-                              )}
-                            </div>
-                          )}
-                        </div>
+                      .format("HH:mm")}`}
+                    description={`Service Bay: ${selectedSlot.bayName} • Ngày: ${selectedSlot.date}`}
+                    type="success"
+                    showIcon
+                    style={{ marginTop: 16 }}
+                  />
+                )}
+              </div>
+            )}
+          </div>
                       ),
                     },
                   ]
@@ -2470,7 +2709,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         </Form.Item>
       </Card>
     </div>
-  );
+    );
+  };
 
   return (
     <Modal
@@ -2487,22 +2727,70 @@ const BookingModal: React.FC<BookingModalProps> = ({
         <Button key="cancel" onClick={onCancel}>
           Hủy
         </Button>,
-        <Button
-          key="submit"
-          type="primary"
+              <Button
+                key="submit"
+                type="primary"
           loading={loading || createBookingWithSlotMutation.isPending}
-          onClick={handleSubmit}
-          disabled={
-            !selectedBranch ||
-            selectedItems.length === 0 ||
-            (customerType === "existing" &&
-              (!selectedCustomer || !selectedVehicle)) ||
-            (customerType === "new" && (!newCustomer || !newVehicle)) ||
-            !selectedWalkInBay
-          }
-        >
-          Đặt lịch
-        </Button>,
+                onClick={handleSubmit}
+          disabled={(() => {
+            console.log("🔍 Button disabled check called at:", new Date().toISOString());
+            console.log("🔍 Current selectedSlot state:", selectedSlot);
+            
+            // Check if new customer has all required fields
+            const newCustomerValid = customerType === "new" ? (
+              newCustomer?.full_name && 
+              newCustomer?.phone_number && 
+              newCustomer?.email &&
+              newVehicle?.license_plate &&
+              newVehicle?.brand_name &&
+              newVehicle?.model_name &&
+              newVehicle?.type_name &&
+              newVehicle?.color
+            ) : true;
+            
+            const isDisabled = !selectedBranch ||
+              selectedItems.length === 0 ||
+              (customerType === "existing" &&
+                (!selectedCustomer || !selectedVehicle)) ||
+              (customerType === "new" && !newCustomerValid) ||
+              // For walk-in booking (onsite processing), need selectedWalkInBay
+              (customerType === "new" && !selectedWalkInBay) ||
+              // For existing customer, need either selectedWalkInBay OR selectedSlot
+              (customerType === "existing" && !selectedWalkInBay && !selectedSlot);
+            
+            console.log("🔍 Button disabled check:", {
+              selectedBranch: !!selectedBranch,
+              selectedItems: selectedItems.length,
+              customerType,
+              selectedCustomer: !!selectedCustomer,
+              selectedVehicle: !!selectedVehicle,
+              newCustomer: !!newCustomer,
+              newVehicle: !!newVehicle,
+              newCustomerValid,
+              selectedWalkInBay: !!selectedWalkInBay,
+              selectedSlot: !!selectedSlot,
+              selectedSlotDetails: selectedSlot,
+              isDisabled,
+              // Debug the specific condition
+              existingCustomerCondition: customerType === "existing" && !selectedWalkInBay && !selectedSlot,
+              walkInCondition: customerType === "new" && !selectedWalkInBay,
+              newCustomerDetails: customerType === "new" ? {
+                name: newCustomer?.full_name,
+                phone: newCustomer?.phone_number,
+                email: newCustomer?.email,
+                plate: newVehicle?.license_plate,
+                brand: newVehicle?.brand_name,
+                model: newVehicle?.model_name,
+                type: newVehicle?.type_name,
+                color: newVehicle?.color
+              } : null
+            });
+            
+            return isDisabled;
+          })()}
+              >
+                Đặt lịch
+              </Button>,
       ]}
     >
       <Form

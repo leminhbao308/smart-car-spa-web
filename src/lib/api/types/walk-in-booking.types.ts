@@ -43,6 +43,13 @@ export interface WalkInBookingRequest {
   services: ServiceRequest[];
   total_price: number;
   currency: string;
+  deposit_amount?: number;
+  estimated_duration_minutes?: number;
+  preferred_start_at?: string;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
+  slot_start_time?: string;
+  slot_end_time?: string;
   notes?: string;
   priority?: 'NORMAL' | 'HIGH' | 'URGENT';
   special_requests?: string[];
@@ -300,6 +307,14 @@ export interface WalkInBookingFormData {
   notes?: string;
   priority: Priority;
   specialRequests?: string[];
+  // Additional fields for complete booking data
+  deposit_amount?: number;
+  estimated_duration_minutes?: number;
+  preferred_start_at?: string;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
+  slot_start_time?: string;
+  slot_end_time?: string;
 }
 
 // ==================== API RESPONSE TYPES ====================

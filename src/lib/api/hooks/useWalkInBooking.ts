@@ -130,6 +130,12 @@ export const useWalkInBooking = () => {
       setLoading(true);
       setError(undefined);
 
+      // Use provided data or calculate defaults
+      const now = new Date();
+      const currentTime = formData.preferred_start_at || now.toISOString();
+      const totalDuration = formData.estimated_duration_minutes || formData.services.reduce((sum, service) => sum + service.duration_minutes, 0);
+      const estimatedEndTime = formData.scheduled_end_at || new Date(now.getTime() + totalDuration * 60000).toISOString();
+
       const request: WalkInBookingRequest = {
         customer_type: formData.customerType,
         customer_id: formData.customerId,
@@ -148,6 +154,13 @@ export const useWalkInBooking = () => {
         services: formData.services,
         total_price: formData.services.reduce((sum, service) => sum + service.price, 0),
         currency: 'VND',
+        deposit_amount: formData.deposit_amount || 0, // No deposit for walk-in booking
+        estimated_duration_minutes: totalDuration,
+        preferred_start_at: currentTime,
+        scheduled_start_at: formData.scheduled_start_at || currentTime,
+        scheduled_end_at: estimatedEndTime,
+        slot_start_time: formData.slot_start_time || now.toTimeString().slice(0, 5), // HH:mm format
+        slot_end_time: formData.slot_end_time || new Date(now.getTime() + totalDuration * 60000).toTimeString().slice(0, 5), // HH:mm format
         notes: formData.notes,
         priority: formData.priority,
         special_requests: formData.specialRequests,
