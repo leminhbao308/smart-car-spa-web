@@ -226,45 +226,6 @@ const POSPage = () => {
     return lookup;
   }, [servicesForSale]);
 
-  // Function to get service price from price book using fixed_price (NO FALLBACK)
-  const getServicePrice = useCallback(
-    async (serviceId: string): Promise<number> => {
-      try {
-        if (!currentPriceBook) {
-          console.warn("No price book found for service pricing");
-          return 0;
-        }
-
-        // Get detailed price book with items
-        const priceBookDetails = await PricingService.getPriceBookById(
-          currentPriceBook.id
-        );
-
-        // Find the service in price book items
-        const serviceItem = priceBookDetails.items?.find(
-          (item) => item.item_type === "SERVICE" && item.item_id === serviceId
-        );
-
-        if (
-          serviceItem &&
-          serviceItem.fixed_price !== null &&
-          serviceItem.fixed_price > 0
-        ) {
-          return serviceItem.fixed_price;
-        }
-
-        console.warn(
-          `Service ${serviceId} not found in price book or no valid fixed_price`
-        );
-        return 0;
-      } catch (error) {
-        console.error(`Failed to get pricing for service ${serviceId}:`, error);
-        return 0;
-      }
-    },
-    [currentPriceBook]
-  );
-
   // Calculate cart summary with promotions
   const cartSummary = useMemo(() => {
     return calculateTotalDiscounts(selectedPromotions, cart);
@@ -450,7 +411,7 @@ const POSPage = () => {
     });
   }, [message, modal]);
 
-  // Add booking to cart - now adds individual services from booking items
+  // Add booking to cart - OPTIMIZED with batch pricing to prevent N+1 queries
   const handleAddBookingToCart = useCallback(
     async (booking: BookingInfoDto) => {
       if (!booking.booking_items || booking.booking_items.length === 0) {
@@ -465,127 +426,156 @@ const POSPage = () => {
         return;
       }
 
-      // Auto-fetch customer information from booking
-      let customerInfo: UserManagementInfo | null = null;
-      if (booking.customer_id) {
-        try {
-          customerInfo = await UserService.getUserById(booking.customer_id);
+      try {
+        // Step 1: Collect all service IDs from booking items
+        const serviceIds = booking.booking_items
+          .filter((item) => item.service_id)
+          .map((item) => item.service_id!);
 
-          // Auto-set selected customer
-          setSelectedCustomer(customerInfo);
+        if (serviceIds.length === 0) {
+          message.warning("Booking không có service hợp lệ");
+          return;
+        }
+
+        // Step 2: Batch fetch ALL service prices in ONE API call! 🚀
+        // This prevents N+1 query pattern (5 services = 5 API calls → 1 API call)
+        const servicePrices = await PricingService.getServicePricesBatch(
+          serviceIds,
+          currentPriceBook.id
+        );
+
+        // Step 3: Fetch customer info (can run in parallel with pricing if needed)
+        let customerInfo: UserManagementInfo | null = null;
+        if (booking.customer_id) {
+          try {
+            customerInfo = await UserService.getUserById(booking.customer_id);
+            setSelectedCustomer(customerInfo);
+            message.success(
+              `Đã tự động chọn khách hàng: ${customerInfo.full_name}`
+            );
+          } catch (error) {
+            console.error(
+              `❌ Failed to fetch customer info for ${booking.customer_id}:`,
+              error
+            );
+            message.warning("Không thể lấy thông tin khách hàng từ booking");
+          }
+        }
+
+        // Step 4: Process all booking items with cached prices (NO MORE API CALLS!) ✅
+        const newServiceItems: CartItem[] = [];
+        let addedServicesCount = 0;
+        let skippedCount = 0;
+
+        for (const bookingItem of booking.booking_items) {
+          if (!bookingItem.service_id) continue;
+
+          // Find the service in our service lookup
+          const service = serviceLookup.get(bookingItem.service_id);
+          if (!service) {
+            console.warn(
+              `Service not found for service_id: ${bookingItem.service_id}`
+            );
+            skippedCount++;
+            continue;
+          }
+
+          // Check if already in cart
+          const existingServiceItem = cart.find(
+            (item) =>
+              item.isServiceItem &&
+              item.serviceId === bookingItem.service_id &&
+              item.originalBookingId === booking.booking_id
+          );
+
+          if (existingServiceItem) {
+            skippedCount++;
+            continue;
+          }
+
+          // Get price from batch result (NO API CALL!) ✅
+          const servicePrice = servicePrices[bookingItem.service_id] || 0;
+
+          if (servicePrice === 0) {
+            console.warn(
+              `No price found for service ${bookingItem.service_id} in price book`
+            );
+            skippedCount++;
+            continue;
+          }
+
+          // Create service cart item
+          const serviceCartItem: CartItem = {
+            productId: bookingItem.service_id,
+            productName: bookingItem.item_name || service.service_name,
+            price: servicePrice,
+            quantity: 1,
+            total: servicePrice,
+            categoryName: "Dịch vụ",
+            availableStock: 1,
+            maxQuantity: 1,
+            isServiceItem: true,
+            serviceId: bookingItem.service_id,
+            serviceName: bookingItem.item_name || service.service_name,
+            serviceDescription:
+              bookingItem.item_description || service.description,
+            estimatedDuration: service.estimated_duration,
+            // Booking context
+            originalBookingId: booking.booking_id,
+            originalBookingCode: booking.booking_code,
+            customerName: customerInfo?.full_name || booking.customer_name,
+            vehicleLicensePlate: booking.vehicle_license_plate,
+          };
+
+          newServiceItems.push(serviceCartItem);
+          addedServicesCount++;
+        }
+
+        // Step 5: Add all items to cart at once
+        if (newServiceItems.length === 0) {
+          if (skippedCount > 0) {
+            message.warning(
+              `${skippedCount} dịch vụ đã bỏ qua (không có giá hoặc đã có trong giỏ)`
+            );
+          } else {
+            message.warning("Không tìm thấy dịch vụ phù hợp trong booking này");
+          }
+          return;
+        }
+
+        setCart((prevCart) => {
+          // Check if any services from this booking are already in cart
+          const existingServices = prevCart.filter(
+            (item) =>
+              item.isServiceItem &&
+              item.originalBookingId === booking.booking_id
+          );
+
+          if (existingServices.length > 0) {
+            message.warning("Các dịch vụ từ booking này đã có trong giỏ hàng");
+            return prevCart;
+          }
+
           message.success(
-            `Đã tự động chọn khách hàng: ${customerInfo.full_name}`
+            `✅ Đã thêm ${addedServicesCount} dịch vụ từ booking ${booking.booking_code}` +
+              (skippedCount > 0 ? ` (${skippedCount} bỏ qua)` : "")
           );
-        } catch (error) {
-          console.error(
-            `❌ Failed to fetch customer info for ${booking.customer_id}:`,
-            error
-          );
-          message.warning("Không thể lấy thông tin khách hàng từ booking");
-        }
-      } else {
-        console.warn("⚠️ Booking không có customer_id");
-        message.warning("Booking này không có thông tin khách hàng");
+
+          // Set selected booking ID to hide the card
+          setSelectedBookingId(booking.booking_id);
+
+          return [...prevCart, ...newServiceItems];
+        });
+      } catch (error) {
+        console.error("Error adding booking to cart:", error);
+        message.error("Lỗi khi thêm booking vào giỏ hàng");
       }
-
-      const newServiceItems: CartItem[] = [];
-      let addedServicesCount = 0;
-
-      // Process each booking item (service) and add to cart
-      for (const bookingItem of booking.booking_items) {
-        if (!bookingItem.service_id) continue;
-
-        // Find the service in our service lookup
-        const service = serviceLookup.get(bookingItem.service_id);
-        if (!service) {
-          console.warn(
-            `Service not found for service_id: ${bookingItem.service_id}`
-          );
-          continue;
-        }
-
-        // Check if this service is already in cart from this booking
-        const existingServiceItem = cart.find(
-          (item) =>
-            item.isServiceItem &&
-            item.serviceId === bookingItem.service_id &&
-            item.originalBookingId === booking.booking_id
-        );
-
-        if (existingServiceItem) {
-          continue; // Skip if already added
-        }
-
-        // Get service price from price book (NO FALLBACK to tax_amount)
-        const servicePrice = await getServicePrice(bookingItem.service_id);
-
-        if (servicePrice === 0) {
-          continue; // Skip this service if no price in price book
-        }
-
-        // Use ONLY price from price book
-        const finalPrice = servicePrice;
-
-        // Create service cart item
-        const serviceCartItem: CartItem = {
-          productId: bookingItem.service_id, // Use service_id as productId
-          productName: bookingItem.item_name || service.service_name,
-          price: finalPrice, // Use price from price book only
-          quantity: 1,
-          total: finalPrice,
-          categoryName: "Dịch vụ",
-          availableStock: 1,
-          maxQuantity: 1,
-          isServiceItem: true, // Flag to identify service items
-          serviceId: bookingItem.service_id,
-          serviceName: bookingItem.item_name || service.service_name,
-          serviceDescription:
-            bookingItem.item_description || service.description,
-          estimatedDuration: service.estimated_duration,
-          // Booking context
-          originalBookingId: booking.booking_id,
-          originalBookingCode: booking.booking_code,
-          customerName: customerInfo?.full_name || booking.customer_name,
-          vehicleLicensePlate: booking.vehicle_license_plate,
-        };
-
-        newServiceItems.push(serviceCartItem);
-        addedServicesCount++;
-      }
-
-      if (newServiceItems.length === 0) {
-        message.warning("Không tìm thấy dịch vụ phù hợp trong booking này");
-        return;
-      }
-
-      setCart((prevCart) => {
-        // Check if any services from this booking are already in cart
-        const existingServices = prevCart.filter(
-          (item) =>
-            item.isServiceItem && item.originalBookingId === booking.booking_id
-        );
-
-        if (existingServices.length > 0) {
-          message.warning("Các dịch vụ từ booking này đã có trong giỏ hàng");
-          return prevCart;
-        }
-
-        message.success(
-          `Đã thêm ${addedServicesCount} dịch vụ từ booking ${booking.booking_code} vào giỏ hàng`
-        );
-
-        // Set selected booking ID to hide the card
-        setSelectedBookingId(booking.booking_id);
-
-        return [...prevCart, ...newServiceItems];
-      });
     },
     [
       message,
       serviceLookup,
       cart,
       currentPriceBook,
-      getServicePrice,
       setSelectedCustomer,
       setSelectedBookingId,
     ]
