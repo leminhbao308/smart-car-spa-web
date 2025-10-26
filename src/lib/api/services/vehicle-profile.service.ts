@@ -24,84 +24,102 @@ export class VehicleProfileService {
     profiles: VehicleProfile[]
   ): Promise<VehicleProfileDisplay[]> {
     try {
-      // Fetch all related data in parallel
-      const [brandsResponse, typesResponse, modelsResponse, usersResponse] =
-        await Promise.all([
-          VehicleService.getAllVehicleBrands({ size: 1000 }),
-          VehicleService.getAllVehicleTypes({ size: 1000 }),
-          VehicleService.getAllVehicleModels({ size: 1000 }),
-          UserService.getAllUsers({ size: 1000 }),
-        ]);
+      // Validate input
+      if (!profiles || !Array.isArray(profiles)) {
+        console.warn("Invalid profiles data:", profiles);
+        return [];
+      }
 
-      // Create lookup maps
-      const brandsMap = new Map(
-        brandsResponse.data.content.map((brand) => [brand.brand_id, brand])
+      if (profiles.length === 0) {
+        console.log("No profiles to transform");
+        return [];
+      }
+
+      console.log("Transforming profiles:", profiles.length, "items");
+
+      // Transform profiles by fetching data for each unique ID
+      const transformedProfiles = await Promise.all(
+        profiles.map(async (profile) => {
+          try {
+            // Fetch data for each profile's IDs in parallel
+            const [brandResponse, typeResponse, modelResponse, userResponse] = await Promise.all([
+              VehicleService.getVehicleBrandById(profile.vehicle_brand_id),
+              VehicleService.getVehicleTypeById(profile.vehicle_type_id),
+              VehicleService.getVehicleModelById(profile.vehicle_model_id),
+              UserService.getUserById(profile.owner_id),
+            ]);
+
+            const brand = brandResponse;
+            const type = typeResponse;
+            const model = modelResponse;
+            const owner = userResponse;
+
+            console.log(`Transforming profile ${profile.vehicle_id}:`, {
+              brand_id: profile.vehicle_brand_id,
+              brand_name: brand?.brand_name,
+              type_id: profile.vehicle_type_id,
+              type_name: type?.type_name,
+              model_id: profile.vehicle_model_id,
+              model_name: model?.model_name,
+              owner_id: profile.owner_id,
+              owner_name: owner?.full_name,
+            });
+
+            return {
+              ...profile,
+              brand_name: brand?.brand_name || "Unknown Brand",
+              brand_logo: brand?.brand_logo_url,
+              type_name: type?.type_name || "Unknown Type",
+              type_icon: undefined,
+              model_name: model?.model_name || "Unknown Model",
+              model_year: undefined,
+              owner_name: owner?.full_name || "Unknown Owner",
+              owner_phone: owner?.phone_number,
+              owner_email: owner?.email,
+            } as VehicleProfileDisplay;
+          } catch (error) {
+            console.error(`Error transforming profile ${profile.vehicle_id}:`, error);
+            // Return profile with fallback values if API calls fail
+            return {
+              ...profile,
+              brand_name: "Error loading",
+              brand_logo: undefined,
+              type_name: "Error loading",
+              type_icon: undefined,
+              model_name: "Error loading",
+              model_year: undefined,
+              owner_name: "Error loading",
+              owner_phone: undefined,
+              owner_email: undefined,
+            } as VehicleProfileDisplay;
+          }
+        })
       );
-      const typesMap = new Map(
-        typesResponse.data.content.map((type) => [type.type_id, type])
-      );
-      const modelsMap = new Map(
-        modelsResponse.data.content.map((model) => [model.model_id, model])
-      );
-      const usersMap = new Map(
-        usersResponse.data.content.map((user) => [user.user_id, user])
-      );
 
-      console.log("Lookup maps created:", {
-        brandsCount: brandsMap.size,
-        typesCount: typesMap.size,
-        modelsCount: modelsMap.size,
-        usersCount: usersMap.size,
-      });
-
-      // Transform profiles
-      return profiles.map((profile) => {
-        const brand = brandsMap.get(profile.vehicle_brand_id);
-        const type = typesMap.get(profile.vehicle_type_id);
-        const model = modelsMap.get(profile.vehicle_model_id);
-        const owner = usersMap.get(profile.owner_id);
-
-        console.log(`Transforming profile ${profile.vehicle_id}:`, {
-          brand_id: profile.vehicle_brand_id,
-          brand_found: !!brand,
-          brand_name: brand?.brand_name,
-          type_id: profile.vehicle_type_id,
-          type_found: !!type,
-          type_name: type?.type_name,
-          model_id: profile.vehicle_model_id,
-          model_found: !!model,
-          model_name: model?.model_name,
-          owner_id: profile.owner_id,
-          owner_found: !!owner,
-          owner_name: owner?.full_name,
-        });
-
-        return {
-          ...profile,
-          brand_name: brand?.brand_name || "Unknown Brand",
-          brand_logo: brand?.brand_logo_url, // Use brand_logo_url
-          type_name: type?.type_name || "Unknown Type",
-          type_icon: undefined, // VehicleType doesn't have icon field
-          model_name: model?.model_name || "Unknown Model",
-          model_year: undefined, // VehicleModel doesn't have year field
-          owner_name: owner?.full_name || "Unknown Owner",
-          owner_phone: owner?.phone_number,
-          owner_email: owner?.email,
-        } as VehicleProfileDisplay;
-      });
+      return transformedProfiles;
     } catch (error) {
       console.error("Error transforming vehicle profiles:", error);
+      console.error("Error details:", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        stack: error instanceof Error ? error.stack : undefined,
+        profiles: profiles,
+      });
+      
       // Return original data if transformation fails
-      return profiles.map(
-        (profile) =>
-          ({
-            ...profile,
-            brand_name: "Error loading",
-            type_name: "Error loading",
-            model_name: "Error loading",
-            owner_name: "Error loading",
-          } as VehicleProfileDisplay)
-      );
+      if (profiles && Array.isArray(profiles)) {
+        return profiles.map(
+          (profile) =>
+            ({
+              ...profile,
+              brand_name: "Error loading",
+              type_name: "Error loading",
+              model_name: "Error loading",
+              owner_name: "Error loading",
+            } as VehicleProfileDisplay)
+        );
+      }
+      
+      return [];
     }
   }
 

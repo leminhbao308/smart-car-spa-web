@@ -6,6 +6,9 @@ import {
   DashboardOutlined,
   LoginOutlined,
   UserAddOutlined,
+  CarOutlined,
+  CalendarOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 import { Avatar, Button, Dropdown, Space, Typography, Divider } from "antd";
 import type { MenuProps } from "antd";
@@ -72,6 +75,30 @@ const AccountPopup = ({ children }: AccountPopupProps) => {
       onClick: () => {
         // Navigate to profile page
         router.push(ROUTES.MEMBER_PROFILE);
+      },
+    },
+    {
+      key: "vehicle-management",
+      icon: <CarOutlined />,
+      label: "Quản lý xe",
+      onClick: () => {
+        router.push("/member/vehicle");
+      },
+    },
+    {
+      key: "booking",
+      icon: <CalendarOutlined />,
+      label: "Đặt lịch",
+      onClick: () => {
+        router.push("/member/booking");
+      },
+    },
+    {
+      key: "booking-history",
+      icon: <HistoryOutlined />,
+      label: "Lịch sử đặt lịch",
+      onClick: () => {
+        router.push("/member/booking-list");
       },
     },
     ...(user?.role?.role_code === "ADMIN"

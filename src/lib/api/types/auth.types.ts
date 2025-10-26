@@ -58,7 +58,7 @@ export interface UserInfo extends BaseEntity {
   full_name: string;
   phone_number: string;
   date_of_birth: string;
-  gender: "MALE" | "FEMALE" | "OTHER";
+  gender: "MALE" | "FEMALE";
   address: string;
   avatar_url?: string | null;
   is_active: boolean;
@@ -128,7 +128,7 @@ export interface SignupRequest {
   full_name: string;
   phone_number: string;
   date_of_birth: string; // ISO date string
-  gender: "MALE" | "FEMALE" | "OTHER";
+  gender: "MALE" | "FEMALE";
   address: string;
   avatar_url?: string | null;
 }

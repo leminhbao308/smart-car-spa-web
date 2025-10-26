@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserService } from "../services/user.service";
+import { BookingService } from "../services/booking.service";
 import {
   GetAllUsersRequest,
   CreateUserRequest,
@@ -22,10 +23,10 @@ export const useCustomersDropdown = () => {
   } = useQuery({
     queryKey: ["customers", "dropdown"],
     queryFn: async () => {
-      const response = await UserService.getAllUsers({ 
-        page: 0, 
+      const response = await UserService.getAllUsers({
+        page: 0,
         size: 1000, // Get all customers for dropdown
-        userType: 'CUSTOMER' // Only customers
+        userType: "CUSTOMER", // Only customers
       });
       return response.data;
     },
@@ -91,7 +92,9 @@ export const useCreateUser = () => {
       message.success("Tạo người dùng thành công!");
     },
     onError: (error: Error) => {
-      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      const errorMessage = (
+        error as { response?: { data?: { message?: string } } }
+      )?.response?.data?.message;
       message.error(errorMessage || "Có lỗi xảy ra khi tạo người dùng");
     },
   });
@@ -104,18 +107,28 @@ export const useUpdateUser = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ userId, data }: { userId: string; data: UpdateUserRequest }) => {
+    mutationFn: async ({
+      userId,
+      data,
+    }: {
+      userId: string;
+      data: UpdateUserRequest;
+    }) => {
       return await UserService.updateUser(userId, data);
     },
     onSuccess: (updatedUser, variables) => {
       // Invalidate and refetch users list
       queryClient.invalidateQueries({ queryKey: ["users", "list"] });
       // Invalidate specific user detail
-      queryClient.invalidateQueries({ queryKey: ["users", "detail", variables.userId] });
+      queryClient.invalidateQueries({
+        queryKey: ["users", "detail", variables.userId],
+      });
       message.success("Cập nhật người dùng thành công!");
     },
     onError: (error: Error) => {
-      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      const errorMessage = (
+        error as { response?: { data?: { message?: string } } }
+      )?.response?.data?.message;
       message.error(errorMessage || "Có lỗi xảy ra khi cập nhật người dùng");
     },
   });
@@ -137,7 +150,9 @@ export const useDeleteUser = () => {
       message.success("Xóa người dùng thành công!");
     },
     onError: (error: Error) => {
-      const errorMessage = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      const errorMessage = (
+        error as { response?: { data?: { message?: string } } }
+      )?.response?.data?.message;
       message.error(errorMessage || "Có lỗi xảy ra khi xóa người dùng");
     },
   });
@@ -166,6 +181,42 @@ export const useUser = (userId: string | null) => {
 
   return {
     user,
+    loading,
+    error,
+    refetch,
+  };
+};
+
+/**
+ * Hook for customer bookings
+ * Gets all bookings for a specific customer
+ */
+export const useCustomerBookings = (customerId: string | null) => {
+  console.log("useCustomerBookings called with customerId:", customerId);
+  
+  const {
+    data: bookings,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["bookings", "customer", customerId],
+    queryFn: async () => {
+      console.log("Query function called with customerId:", customerId);
+      if (!customerId) {
+        console.log("No customerId provided, returning empty array");
+        return [];
+      }
+      console.log("Calling BookingService.getBookingsByCustomer...");
+      return await BookingService.getBookingsByCustomer(customerId);
+    },
+    enabled: !!customerId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  return {
+    bookings: bookings || [],
     loading,
     error,
     refetch,

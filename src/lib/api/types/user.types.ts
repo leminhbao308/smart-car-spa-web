@@ -17,7 +17,7 @@ export interface UserManagementInfo extends BaseEntity {
   full_name: string;
   phone_number: string;
   date_of_birth: string | null;
-  gender: "MALE" | "FEMALE" | "OTHER";
+  gender: "MALE" | "FEMALE";
   address: string | null;
   avatar_url: string | null;
   is_active: boolean;
@@ -111,7 +111,7 @@ export interface CreateUserRequest {
   fullName: string;
   phoneNumber: string;
   dateOfBirth: string; // ISO date string
-  gender: "MALE" | "FEMALE" | "OTHER";
+  gender: "MALE" | "FEMALE";
   address: string;
   avatarUrl?: string | null;
   roleCode: "CUSTOMER" | "ADMIN" | "STAFF";
@@ -152,7 +152,7 @@ export interface UpdateUserRequest {
   full_name: string;
   phone_number: string;
   date_of_birth: string; // ISO date string
-  gender: "MALE" | "FEMALE" | "OTHER";
+  gender: "MALE" | "FEMALE";
   address: string;
   avatar_url?: string | null; // optional
   is_active?: boolean; // optional
@@ -174,7 +174,7 @@ export interface UpdateUserResponse {
     full_name: string;
     phone_number: string;
     date_of_birth: string;
-    gender: "MALE" | "FEMALE" | "OTHER";
+    gender: "MALE" | "FEMALE";
     address: string;
     avatar_url: string | null;
     role: {

@@ -2,7 +2,7 @@
 import { Carousel } from "antd";
 import Link from "next/link";
 import Image from "next/image";
-import { calc } from "antd/es/theme/internal";
+import { usePathname } from "next/navigation";
 
 export interface CarouselItem {
   id: number;
@@ -73,6 +73,13 @@ const imageStyle: React.CSSProperties = {
 };
 
 const CustomerCarousel = ({ carouselData = [] }: CustomerCarouselProps) => {
+  const pathname = usePathname();
+  
+  // Chỉ hiển thị carousel ở trang chủ
+  if (pathname !== "/") {
+    return null;
+  }
+
   return (
     <Carousel autoplay autoplaySpeed={5000} effect="fade">
       {carouselData.map((item) => (

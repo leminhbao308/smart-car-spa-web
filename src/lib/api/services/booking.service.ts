@@ -105,17 +105,61 @@ export class BookingService {
     customerId: string
   ): Promise<BookingInfoDto[]> {
     try {
-      const response = await apiClient.get(`/customers/${customerId}/bookings`);
+      console.log("Fetching bookings for customer ID:", customerId);
+      const url = `/customers/${customerId}/bookings`;
+      console.log("API URL:", url);
+      const response = await apiClient.get(url);
+      console.log("Bookings API response:", response);
 
       if (response.data.success && response.data.data) {
+        console.log("Bookings data:", response.data.data);
         return response.data.data;
       } else {
+        console.error("API response error:", response.data);
         throw new Error(
           response.data.message || "Failed to fetch customer bookings"
         );
       }
     } catch (error) {
       console.error("Get bookings by customer error:", error);
+      
+      // More detailed error logging
+      if (error instanceof Error) {
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+        
+        // Check if it's an axios error
+        if ('response' in error) {
+          const axiosError = error as any;
+          console.error("Axios error response status:", axiosError.response?.status);
+          console.error("Axios error response data:", axiosError.response?.data);
+          console.error("Axios error config:", axiosError.config);
+        }
+        
+        // Check if it's a network error
+        if ('code' in error) {
+          console.error("Error code:", (error as any).code);
+        }
+      } else {
+        console.error("Non-Error object:", typeof error, error);
+      }
+      
+      // Try alternative endpoint if the first one fails
+      try {
+        console.log("Trying alternative endpoint...");
+        const altUrl = `/bookings?customerId=${customerId}`;
+        console.log("Alternative API URL:", altUrl);
+        const altResponse = await apiClient.get(altUrl);
+        console.log("Alternative API response:", altResponse);
+        
+        if (altResponse.data.success && altResponse.data.data) {
+          console.log("Alternative bookings data:", altResponse.data.data);
+          return altResponse.data.data;
+        }
+      } catch (altError) {
+        console.error("Alternative endpoint also failed:", altError);
+      }
+      
       throw error;
     }
   }

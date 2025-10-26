@@ -20,6 +20,9 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { menuItems } from "@/components/utils/data/menu.data";
 import { AccountPopup } from "@/components/ui/AccountPopup";
+import { LoginRequiredModal } from "@/components/ui/Modal/LoginRequiredModal";
+import { useAuth } from "@/lib/api/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
 // Định nghĩa type cho menu items
 export interface MenuItem {
@@ -34,6 +37,9 @@ interface CustomerHeaderProps {
 
 const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [loginModalVisible, setLoginModalVisible] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
 
   // Tự động đóng drawer khi màn hình từ 768px trở lên
   useEffect(() => {
@@ -52,6 +58,22 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
     };
   }, [drawerVisible]);
 
+  // Xử lý click menu item
+  const handleMenuClick = (key: string) => {
+    if (key === "booking") {
+      if (isAuthenticated) {
+        // Nếu đã đăng nhập, chuyển đến trang booking
+        router.push("/member/booking");
+      } else {
+        // Nếu chưa đăng nhập, hiển thị modal yêu cầu đăng nhập
+        setLoginModalVisible(true);
+      }
+    } else {
+      // Các menu item khác có thể xử lý tương tự nếu cần
+      console.log("Menu clicked:", key);
+    }
+  };
+
   // Chuyển đổi menu items sang format của Ant Design, giữ nguyên children cho submenu
   const antdMenuItems: MenuProps["items"] = menuItems.map((item) => ({
     key: item.key,
@@ -59,7 +81,9 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
     children: item.children?.map((subItem) => ({
       key: subItem.key,
       label: subItem.label,
+      onClick: () => handleMenuClick(subItem.key),
     })),
+    onClick: () => handleMenuClick(item.key),
   }));
 
   return (
@@ -210,6 +234,15 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
           </AccountPopup>
         </Space>
       </Drawer>
+
+      {/* Login Required Modal */}
+      <LoginRequiredModal
+        open={loginModalVisible}
+        onCancel={() => setLoginModalVisible(false)}
+        title="Yêu cầu đăng nhập"
+        message="Bạn cần đăng nhập để đặt lịch chăm sóc xe."
+        redirectPath="/auth/login"
+      />
     </Header>
   );
 };

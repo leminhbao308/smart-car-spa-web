@@ -332,6 +332,8 @@ export class UserService {
   ): Promise<UpdateUserResponse> {
     try {
       console.log("Updating user with data:", userData);
+      console.log("User ID:", userId);
+      console.log("API endpoint:", `/users/${userId}/update`);
 
       const response = await apiClient.post(
         `/users/${userId}/update`,
@@ -339,6 +341,8 @@ export class UserService {
       );
 
       console.log("Update user API response:", response);
+      console.log("Response status:", response.status);
+      console.log("Response data:", response.data);
 
       if (response.data.success && response.data.data) {
         return response.data;
@@ -347,12 +351,24 @@ export class UserService {
       }
     } catch (error: unknown) {
       console.log("Update user error details:", error);
+      console.log("Error type:", typeof error);
+      console.log("Error message:", error instanceof Error ? error.message : "Unknown error");
 
       // Handle specific error cases
       if (error && typeof error === "object" && "response" in error) {
         const errorResponse = error as {
-          response?: { status?: number; data?: { message?: string } };
+          response?: { 
+            status?: number; 
+            data?: { message?: string; success?: boolean };
+            statusText?: string;
+          };
         };
+
+        console.log("Error response details:", {
+          status: errorResponse.response?.status,
+          statusText: errorResponse.response?.statusText,
+          data: errorResponse.response?.data,
+        });
         if (errorResponse.response?.status === 400) {
           // Bad Request - validation errors
           const errorMessage =
