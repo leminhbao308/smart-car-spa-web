@@ -595,10 +595,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const customer = customers.find((c) => c.user_id === customerId);
       setSelectedCustomer(customer || null);
       setSelectedVehicle(null);
-      // Use formRef to avoid circular reference
-      if (formRef.current) {
-        formRef.current.setFieldValue("vehicleId", undefined);
-      }
+      // Reset vehicle field in form
+      setTimeout(() => {
+        if (formRef.current) {
+          formRef.current.setFieldValue("vehicleId", undefined);
+        }
+      }, 0);
     },
     [customers]
   );

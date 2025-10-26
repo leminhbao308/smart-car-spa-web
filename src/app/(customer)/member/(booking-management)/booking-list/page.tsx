@@ -12,6 +12,8 @@ import {
   Statistic,
   Spin,
   Empty,
+  Popconfirm,
+  App,
 } from "antd";
 import {
   CalendarOutlined,
@@ -23,12 +25,16 @@ import {
   ReloadOutlined,
   EnvironmentOutlined,
   EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { useCustomerBookings } from "@/lib/api/hooks/useUsers";
+import { useCancelBooking } from "@/lib/api/hooks/useBooking";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import VehicleTrackingModal from "@/components/ui/Modal/VehicleTrackingModal/VehicleTrackingModal";
+import CustomerUpdateBookingModal from "@/components/ui/Modal/CustomerUpdateBookingModal";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
 import { ServiceProcessTrackingInfoDto } from "@/lib/api/types/service-process-tracking.types";
 
@@ -37,15 +43,24 @@ const { Title, Text } = Typography;
 const CustomerBookingListPage = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  
+  const { message } = App.useApp();
+
   // State for tracking modal
   const [trackingModalOpen, setTrackingModalOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<BookingInfoDto | null>(null);
-  const [trackings, setTrackings] = useState<ServiceProcessTrackingInfoDto[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<BookingInfoDto | null>(
+    null
+  );
+  const [trackings, setTrackings] = useState<ServiceProcessTrackingInfoDto[]>(
+    []
+  );
+
+  // State for update modal
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [selectedBookingForUpdate, setSelectedBookingForUpdate] = useState<BookingInfoDto | null>(null);
 
   // Add CSS styles for better table appearance
   React.useEffect(() => {
-    const style = document.createElement('style');
+    const style = document.createElement("style");
     style.textContent = `
       .booking-table .ant-table-thead > tr > th {
         background: #fafafa;
@@ -80,20 +95,79 @@ const CustomerBookingListPage = () => {
       }
     `;
     document.head.appendChild(style);
-    
+
     return () => {
       document.head.removeChild(style);
     };
   }, []);
 
   // Get customer bookings
-  const { bookings, loading, error, refetch } = useCustomerBookings(user?.user_id || null);
+  const { bookings, loading, error, refetch } = useCustomerBookings(
+    user?.user_id || null
+  );
+
+  // Cancel booking mutation
+  const cancelBookingMutation = useCancelBooking();
 
   // Function to open tracking modal
   const handleViewTracking = (booking: BookingInfoDto) => {
     setSelectedBooking(booking);
     setTrackings([]); // Will be loaded by the modal
     setTrackingModalOpen(true);
+  };
+
+  // Function to handle edit booking
+  const handleEditBooking = (booking: BookingInfoDto) => {
+    setSelectedBookingForUpdate(booking);
+    setUpdateModalOpen(true);
+  };
+
+  // Function to handle update modal close
+  const handleUpdateModalClose = () => {
+    setUpdateModalOpen(false);
+    setSelectedBookingForUpdate(null);
+  };
+
+  // Function to handle update modal success
+  const handleUpdateModalSuccess = () => {
+    setUpdateModalOpen(false);
+    setSelectedBookingForUpdate(null);
+    // Refresh the bookings list
+    refetch();
+  };
+
+  // Function to handle cancel booking
+  const handleCancelBooking = async (booking: BookingInfoDto) => {
+    try {
+      await cancelBookingMutation.mutateAsync({
+        bookingId: booking.booking_id,
+        reason: "Khách hàng hủy đặt lịch",
+        cancelledBy: user?.user_id || "",
+      });
+      message.success("Hủy đặt lịch thành công!");
+      refetch();
+    } catch (error) {
+      console.error("Cancel booking error:", error);
+      message.error("Hủy đặt lịch thất bại!");
+    }
+  };
+
+  // Function to check if booking can be cancelled
+  const canCancelBooking = (booking: BookingInfoDto) => {
+    // Only allow cancellation for BK bookings
+    const isBKBooking = booking.booking_code?.startsWith("BK");
+    if (!isBKBooking) return false;
+
+    // Only allow cancellation for PENDING or CONFIRMED status
+    const allowedStatuses = ["PENDING", "CONFIRMED"];
+    if (!allowedStatuses.includes(booking.status)) return false;
+
+    // Only allow cancellation if booking is more than 1 day away
+    const bookingDate = dayjs(booking.scheduled_start_at);
+    const now = dayjs();
+    const daysUntilBooking = bookingDate.diff(now, "day");
+    
+    return daysUntilBooking >= 1;
   };
 
   // Redirect if not authenticated
@@ -193,42 +267,27 @@ const CustomerBookingListPage = () => {
         </Text>
       ),
     },
-    {
-      title: "Ngày & Giờ",
-      dataIndex: "scheduled_start_at",
-      key: "scheduled_start_at",
-      width: 160,
-      render: (date: string) => (
-        <Space direction="vertical" size="small" style={{ fontSize: "13px" }}>
-          <Space>
-            <CalendarOutlined style={{ color: "#1890ff" }} />
-            <Text strong>{dayjs(date).format("DD/MM/YYYY")}</Text>
-          </Space>
-          <Space>
-            <ClockCircleOutlined style={{ color: "#52c41a" }} />
-            <Text>{dayjs(date).format("HH:mm")}</Text>
-          </Space>
-        </Space>
-      ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      sorter: (a: any, b: any) => dayjs(a.scheduled_start_at).unix() - dayjs(b.scheduled_start_at).unix(),
-    },
-    {
-      title: "Dịch vụ",
-      dataIndex: "booking_items",
-      key: "booking_items",
-      width: 180,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      render: (items: any[]) => (
-        <div>
-          {items?.map((item, index) => (
-            <Tag key={index} color="blue" style={{ fontSize: "12px", marginBottom: "4px" }}>
-              {item.item_name}
-            </Tag>
-          ))}
-        </div>
-      ),
-    },
+
+    // {
+    //   title: "Dịch vụ",
+    //   dataIndex: "booking_items",
+    //   key: "booking_items",
+    //   width: 180,
+    //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    //   render: (items: any[]) => (
+    // <div>
+    //       {items?.map((item, index) => (
+    //         <Tag
+    //           key={index}
+    //           color="blue"
+    //           style={{ fontSize: "12px", marginBottom: "4px" }}
+    //         >
+    //           {item.item_name}
+    //         </Tag>
+    //       ))}
+    //     </div>
+    //   ),
+    // },
     {
       title: "Xe",
       dataIndex: "vehicle_license_plate",
@@ -270,6 +329,53 @@ const CustomerBookingListPage = () => {
       ),
     },
     {
+      title: "Ngày & Giờ",
+      dataIndex: "scheduled_start_at",
+      key: "scheduled_start_at",
+      width: 160,
+      render: (date: string) => (
+        <Space direction="vertical" size="small" style={{ fontSize: "13px" }}>
+          <Space>
+            <CalendarOutlined style={{ color: "#1890ff" }} />
+            <Text strong>{dayjs(date).format("DD/MM/YYYY")}</Text>
+          </Space>
+          <Space>
+            <ClockCircleOutlined style={{ color: "#52c41a" }} />
+            <Text>{dayjs(date).format("HH:mm")}</Text>
+          </Space>
+        </Space>
+      ),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sorter: (a: any, b: any) =>
+        dayjs(a.scheduled_start_at).unix() - dayjs(b.scheduled_start_at).unix(),
+    },
+    {
+      title: "Tổng tiền",
+      dataIndex: "total_price",
+      key: "total_price",
+      width: 160,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      render: (amount: number, record: any) => (
+        <Space direction="vertical" size="small" style={{ fontSize: "13px" }}>
+          <Text strong style={{ color: "#52c41a", fontSize: "14px" }}>
+            {amount?.toLocaleString("vi-VN")} {record.currency || "VND"}
+          </Text>
+          {record.payment_status && (
+            <Tag
+              color={record.payment_status === "PENDING" ? "orange" : "green"}
+              style={{ fontSize: "11px", fontWeight: "bold" }}
+            >
+              {record.payment_status === "PENDING"
+                ? "Chưa thanh toán"
+                : "Đã thanh toán"}
+            </Tag>
+          )}
+        </Space>
+      ),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      sorter: (a: any, b: any) => (a.total_price || 0) - (b.total_price || 0),
+    },
+    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
@@ -277,7 +383,11 @@ const CustomerBookingListPage = () => {
       render: (status: string) => {
         const config = getStatusConfig(status);
         return (
-          <Tag color={config.color} icon={config.icon} style={{ fontSize: "12px", fontWeight: "bold" }}>
+          <Tag
+            color={config.color}
+            icon={config.icon}
+            style={{ fontSize: "12px", fontWeight: "bold" }}
+          >
             {config.text}
           </Tag>
         );
@@ -292,37 +402,14 @@ const CustomerBookingListPage = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onFilter: (value: any, record: any) => record.status === value,
     },
+
     {
-      title: "Tổng tiền",
-      dataIndex: "total_price",
-      key: "total_price",
-      width: 160,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      render: (amount: number, record: any) => (
-        <Space direction="vertical" size="small" style={{ fontSize: "13px" }}>
-          <Text strong style={{ color: "#52c41a", fontSize: "14px" }}>
-            {amount?.toLocaleString("vi-VN")} {record.currency || "VND"}
-          </Text>
-          {record.payment_status && (
-            <Tag 
-              color={record.payment_status === "PENDING" ? "orange" : "green"}
-              style={{ fontSize: "11px", fontWeight: "bold" }}
-            >
-              {record.payment_status === "PENDING" ? "Chưa thanh toán" : "Đã thanh toán"}
-            </Tag>
-          )}
-        </Space>
-      ),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      sorter: (a: any, b: any) => (a.total_price || 0) - (b.total_price || 0),
-    },
-    {
-      title: "Thao tác",
-      key: "action",
+      title: "Xem chi tiết",
+      key: "view",
       width: 120,
-      fixed: "right",
+      align: "center",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      render: (_, record: any) => (
+      render: (_: any, record: any) => (
         <Button
           type="primary"
           size="small"
@@ -330,9 +417,68 @@ const CustomerBookingListPage = () => {
           onClick={() => handleViewTracking(record)}
           style={{ fontSize: "12px" }}
         >
-          Xem chi tiết
+          Xem
         </Button>
       ),
+    },
+    {
+      title: "Chỉnh sửa",
+      key: "edit",
+      width: 120,
+      align: "center",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      render: (_: any, record: any) => {
+        const isBookingCode = record.booking_code?.startsWith("BK");
+        const isPending = record.status === "PENDING";
+        const canEdit = isBookingCode && isPending;
+
+        return canEdit ? (
+          <Button
+            type="default"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEditBooking(record)}
+            style={{ fontSize: "12px" }}
+          >
+            Sửa
+          </Button>
+        ) : (
+          <span style={{ color: "#d9d9d9", fontSize: "12px" }}>-</span>
+        );
+      },
+    },
+    {
+      title: "Hủy",
+      key: "cancel",
+      width: 120,
+      align: "center",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      render: (_: any, record: any) => {
+        const canCancel = canCancelBooking(record);
+
+        return canCancel ? (
+          <Popconfirm
+            title="Hủy đặt lịch"
+            description="Bạn có chắc chắn muốn hủy đặt lịch này không?"
+            onConfirm={() => handleCancelBooking(record)}
+            okText="Hủy"
+            cancelText="Không"
+            okButtonProps={{ danger: true }}
+          >
+            <Button
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              loading={cancelBookingMutation.isPending}
+              style={{ fontSize: "12px" }}
+            >
+              Hủy
+            </Button>
+          </Popconfirm>
+        ) : (
+          <span style={{ color: "#d9d9d9", fontSize: "12px" }}>-</span>
+        );
+      },
     },
   ];
 
@@ -361,16 +507,20 @@ const CustomerBookingListPage = () => {
   }
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
-      {/* Header */}
-      <div style={{ marginBottom: "32px", textAlign: "center" }}>
-        <Title level={2} style={{ fontSize: "28px", marginBottom: "12px", color: "#1890ff" }}>
-          Danh sách đặt lịch của tôi
-        </Title>
-        <Text type="secondary" style={{ fontSize: "16px" }}>
-          Quản lý và theo dõi các lịch hẹn dịch vụ của bạn
-        </Text>
-      </div>
+    <App>
+      <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
+        {/* Header */}
+        <div style={{ marginBottom: "32px", textAlign: "center" }}>
+          <Title
+            level={2}
+            style={{ fontSize: "28px", marginBottom: "12px", color: "#1890ff" }}
+          >
+            Danh sách đặt lịch của tôi
+          </Title>
+          <Text type="secondary" style={{ fontSize: "16px" }}>
+            Quản lý và theo dõi các lịch hẹn dịch vụ của bạn
+          </Text>
+        </div>
 
       {/* Statistics */}
       <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
@@ -419,13 +569,15 @@ const CustomerBookingListPage = () => {
       {/* Bookings Table */}
       <Card
         title={
-          <div style={{ fontSize: "18px", fontWeight: "bold", color: "#1890ff" }}>
+          <div
+            style={{ fontSize: "18px", fontWeight: "bold", color: "#1890ff" }}
+          >
             Chi tiết đặt lịch
           </div>
         }
         extra={
-          <Button 
-            icon={<ReloadOutlined />} 
+          <Button
+            icon={<ReloadOutlined />}
             onClick={() => refetch()}
             type="primary"
             size="middle"
@@ -433,9 +585,9 @@ const CustomerBookingListPage = () => {
             Làm mới
           </Button>
         }
-        style={{ 
+        style={{
           boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-          borderRadius: "12px"
+          borderRadius: "12px",
         }}
       >
         {bookings.length === 0 ? (
@@ -443,7 +595,10 @@ const CustomerBookingListPage = () => {
             description="Bạn chưa có lịch hẹn nào"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           >
-            <Button type="primary" onClick={() => router.push("/member/booking")}>
+            <Button
+              type="primary"
+              onClick={() => router.push("/member/booking")}
+            >
               Đặt lịch ngay
             </Button>
           </Empty>
@@ -460,15 +615,14 @@ const CustomerBookingListPage = () => {
                 showTotal: (total, range) =>
                   `${range[0]}-${range[1]} của ${total} đặt lịch`,
                 responsive: true,
-                size: "middle",
                 position: ["bottomRight"],
               }}
-              scroll={{ x: 1120 }}
+              scroll={{ x: 1740 }}
               size="middle"
               bordered
-              style={{ 
+              style={{
                 minWidth: "800px",
-                maxWidth: "100%"
+                maxWidth: "100%",
               }}
               className="booking-table"
             />
@@ -489,7 +643,20 @@ const CustomerBookingListPage = () => {
           shouldCreateTracking={false}
         />
       )}
-    </div>
+
+      {/* Customer Update Booking Modal */}
+      {selectedBookingForUpdate && (
+        <CustomerUpdateBookingModal
+          open={updateModalOpen}
+          onCancel={handleUpdateModalClose}
+          onOk={handleUpdateModalSuccess}
+          initialData={selectedBookingForUpdate}
+          loading={false}
+          onRefresh={refetch}
+        />
+      )}
+      </div>
+    </App>
   );
 };
 

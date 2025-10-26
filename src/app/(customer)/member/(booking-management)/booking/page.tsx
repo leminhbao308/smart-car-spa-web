@@ -18,7 +18,7 @@ import {
   Alert,
   Spin,
   Divider,
-  message,
+  App,
   Space,
 } from "antd";
 import {
@@ -96,6 +96,7 @@ const CustomerBookingPage = () => {
   const formRef = useRef(form);
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { message } = App.useApp();
 
   // Selection states
   const [selectedVehicle, setSelectedVehicle] =
@@ -406,7 +407,7 @@ const CustomerBookingPage = () => {
       };
 
       await createBookingWithSlotMutation.mutateAsync(createRequest);
-      message.success("Đặt lịch thành công!");
+      message.success("Đặt lịch thành công! Chuyển đến danh sách đặt lịch...");
 
       // Reset form
       form.resetFields();
@@ -418,6 +419,11 @@ const CustomerBookingPage = () => {
       setTotalPrice(0);
       setTotalDuration(0);
       setBookingDate("");
+
+      // Redirect to booking list after 2 seconds
+      setTimeout(() => {
+        router.push("/member/booking-list");
+      }, 2000);
     } catch (error) {
       console.error("Booking submission failed:", error);
       message.error("Đặt lịch thất bại!");
@@ -501,7 +507,8 @@ const CustomerBookingPage = () => {
   }
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
+    <App>
+      <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
       <Card>
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
           {/* Header */}
@@ -683,7 +690,7 @@ const CustomerBookingPage = () => {
                         ? "Đang tải danh sách xe..."
                         : "Không tìm thấy xe phù hợp"
                     }
-                    dropdownRender={(menu) => (
+                    popupRender={(menu) => (
                       <div>
                         {menu}
                         <Divider style={{ margin: "8px 0" }} />
@@ -1297,7 +1304,8 @@ const CustomerBookingPage = () => {
         onSuccess={handleCreateVehicleSuccess}
         loading={isCreatingVehicle}
       />
-    </div>
+      </div>
+    </App>
   );
 };
 
