@@ -1,4 +1,4 @@
-import {BaseAuditEntity, Product, ProductRef, Service, ServicePackage,} from "@/lib/api";
+import {BaseAuditEntity, Product, Service, ServicePackage,} from "@/lib/api";
 
 export interface PriceBook extends BaseAuditEntity{
   id: string;

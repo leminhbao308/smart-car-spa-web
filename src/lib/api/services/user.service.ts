@@ -122,7 +122,7 @@ export class UserService {
     isActive: boolean
   ): Promise<void> {
     try {
-      const response = await apiClient.patch(`/users/${userId}/status`, {
+      const response = await apiClient.post(`/users/${userId}/status`, {
         is_active: isActive,
       });
 

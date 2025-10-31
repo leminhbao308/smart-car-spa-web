@@ -1,7 +1,6 @@
 /**
  * Common API types
  */
-import {UUID} from "node:crypto";
 
 // Base API Response
 export interface ApiResponse<T = unknown> {
