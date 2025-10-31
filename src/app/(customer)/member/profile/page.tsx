@@ -17,6 +17,7 @@ import {
   DatePicker,
   Select,
   App,
+  Modal,
 } from "antd";
 import {
   UserOutlined,
@@ -30,12 +31,14 @@ import {
   HistoryOutlined,
   CameraOutlined,
   CheckCircleOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { useUser } from "@/lib/api/hooks/useUsers";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import { UserService } from "@/lib/api/services/user.service";
+import { AuthService } from "@/lib/api/services/auth.service";
 import { useQueryClient } from "@tanstack/react-query";
 
 const { Title, Text } = Typography;
@@ -46,9 +49,13 @@ const ProfileMemberPage = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [form] = Form.useForm();
+  const [passwordForm] = Form.useForm();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] =
+    useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Get fresh user data using React Query
   const {
@@ -276,6 +283,38 @@ const ProfileMemberPage = () => {
     }
   };
 
+  const handleChangePassword = async (values: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }) => {
+    try {
+      setIsChangingPassword(true);
+
+      // Prepare change password request
+      const request = {
+        current_password: values.currentPassword,
+        new_password: values.newPassword,
+      };
+
+      // Call API to change password
+      await AuthService.changePassword(request);
+
+      message.success("Đổi mật khẩu thành công!");
+      setIsChangePasswordModalOpen(false);
+      passwordForm.resetFields();
+    } catch (error: unknown) {
+      console.log("Error changing password:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Có lỗi xảy ra. Vui lòng thử lại!";
+      message.error(errorMessage);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   if (authLoading || userLoading) {
     return (
       <div style={{ textAlign: "center", padding: "50px" }}>
@@ -314,7 +353,9 @@ const ProfileMemberPage = () => {
                 <Avatar
                   size={120}
                   icon={<UserOutlined />}
-                  src={avatarUrl && avatarUrl.trim() !== "" ? avatarUrl : undefined}
+                  src={
+                    avatarUrl && avatarUrl.trim() !== "" ? avatarUrl : undefined
+                  }
                   style={{
                     backgroundColor: "#1890ff",
                     fontSize: "48px",
@@ -333,6 +374,15 @@ const ProfileMemberPage = () => {
                 size="small"
                 style={{ width: "100%" }}
               >
+                <Upload
+                  showUploadList={false}
+                  onChange={handleAvatarChange}
+                  beforeUpload={() => false}
+                >
+                  <Button icon={<CameraOutlined />} style={{ width: "100%" }}>
+                    Đổi ảnh đại diện
+                  </Button>
+                </Upload>
                 {!isEditing && (
                   <Button
                     type="primary"
@@ -344,16 +394,14 @@ const ProfileMemberPage = () => {
                     Chỉnh sửa thông tin
                   </Button>
                 )}
-
-                <Upload
-                  showUploadList={false}
-                  onChange={handleAvatarChange}
-                  beforeUpload={() => false}
+                <Button
+                  icon={<LockOutlined />}
+                  onClick={() => setIsChangePasswordModalOpen(true)}
+                  disabled={isSaving}
+                  style={{ width: "100%" }}
                 >
-                  <Button icon={<CameraOutlined />} style={{ width: "100%" }}>
-                    Đổi ảnh đại diện
-                  </Button>
-                </Upload>
+                  Đổi mật khẩu
+                </Button>
               </Space>
 
               <Divider />
@@ -462,7 +510,6 @@ const ProfileMemberPage = () => {
                       label="Email"
                       name="email"
                       rules={[
-                        { required: true, message: "Vui lòng nhập email!" },
                         { type: "email", message: "Email không hợp lệ!" },
                       ]}
                     >
@@ -590,6 +637,101 @@ const ProfileMemberPage = () => {
           </Col>
         </Row>
       </div>
+
+      {/* Change Password Modal */}
+      <Modal
+        title="Đổi mật khẩu"
+        open={isChangePasswordModalOpen}
+        onCancel={() => {
+          setIsChangePasswordModalOpen(false);
+          passwordForm.resetFields();
+        }}
+        footer={null}
+        width={500}
+      >
+        <Form
+          form={passwordForm}
+          onFinish={handleChangePassword}
+          layout="vertical"
+        >
+          <Form.Item
+            label="Mật khẩu hiện tại"
+            name="currentPassword"
+            rules={[
+              { required: true, message: "Vui lòng nhập mật khẩu hiện tại!" },
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="Nhập mật khẩu hiện tại"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Mật khẩu mới"
+            name="newPassword"
+            rules={[
+              { required: true, message: "Vui lòng nhập mật khẩu mới!" },
+              { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="Nhập mật khẩu mới"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Xác nhận mật khẩu mới"
+            name="confirmPassword"
+            dependencies={["newPassword"]}
+            rules={[
+              { required: true, message: "Vui lòng xác nhận mật khẩu!" },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  if (!value || getFieldValue("newPassword") === value) {
+                    return Promise.resolve();
+                  }
+                  return Promise.reject(
+                    new Error("Mật khẩu xác nhận không khớp!")
+                  );
+                },
+              }),
+            ]}
+          >
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="Nhập lại mật khẩu mới"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
+            <Space>
+              <Button
+                onClick={() => {
+                  setIsChangePasswordModalOpen(false);
+                  passwordForm.resetFields();
+                }}
+                disabled={isChangingPassword}
+                size="large"
+              >
+                Hủy
+              </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={isChangingPassword}
+                size="large"
+              >
+                Đổi mật khẩu
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </App>
   );
 };

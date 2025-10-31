@@ -333,6 +333,16 @@ const ForgotPasswordPage: React.FC = () => {
         {/* Header */}
         <CustomerHeader />
 
+        {/* reCAPTCHA Container - Global container for all steps */}
+        <div
+          id="recaptcha-container"
+          style={{
+            width: 0,
+            height: 0,
+            overflow: "hidden",
+          }}
+        />
+
         {/* Form Container */}
         <div
           style={{

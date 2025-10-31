@@ -119,14 +119,6 @@ const Step2OTPVerify: React.FC<Step2OTPVerifyProps> = ({
           ← Quay lại
         </Button>
       </div>
-
-      {/* reCAPTCHA Container - Hidden but needed for Phone Auth */}
-      <div
-        id="recaptcha-container"
-        style={{
-          display: "none",
-        }}
-      />
     </Form>
   );
 };
