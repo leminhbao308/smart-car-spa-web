@@ -7,7 +7,10 @@ import {
   User,
   AuthError,
   sendEmailVerification,
-  signOut
+  signOut,
+  signInWithPhoneNumber,
+  ConfirmationResult,
+  RecaptchaVerifier
 } from 'firebase/auth';
 import { auth } from './config';
 
@@ -26,6 +29,12 @@ export interface LoginData {
 export interface FirebaseAuthError {
   code: string;
   message: string;
+}
+
+export interface PhoneAuthData {
+  phoneNumber: string;
+  verificationCode?: string;
+  recaptchaVerifier?: RecaptchaVerifier;
 }
 
 export class FirebaseAuthService {
@@ -124,6 +133,84 @@ export class FirebaseAuthService {
   }
 
   /**
+   * Tạo Recaptcha Verifier cho Phone Auth
+   */
+  static createRecaptchaVerifier(elementId: string): RecaptchaVerifier {
+    const verifier = new RecaptchaVerifier(auth, elementId, {
+      size: 'normal',
+      callback: () => {
+        console.log('reCAPTCHA solved');
+      },
+      'expired-callback': () => {
+        console.log('reCAPTCHA expired');
+      },
+    });
+    return verifier;
+  }
+
+  /**
+   * Gửi OTP đến số điện thoại
+   */
+  static async sendOTPToPhone(
+    phoneNumber: string,
+    recaptchaVerifier: RecaptchaVerifier
+  ): Promise<ConfirmationResult> {
+    try {
+      // Ensure phone number has country code
+      let formattedPhone = phoneNumber.trim();
+      
+      // If phone doesn't start with +, add +84 and remove leading 0
+      if (!formattedPhone.startsWith('+')) {
+        // Remove leading 0 if present
+        if (formattedPhone.startsWith('0')) {
+          formattedPhone = formattedPhone.substring(1);
+        }
+        // Add Vietnam country code
+        formattedPhone = `+84${formattedPhone}`;
+      }
+      
+      console.log('Original phone:', phoneNumber);
+      console.log('Formatted phone:', formattedPhone);
+      
+      const confirmationResult = await signInWithPhoneNumber(
+        auth,
+        formattedPhone,
+        recaptchaVerifier
+      );
+      
+      return confirmationResult;
+    } catch (error) {
+      console.log('Error sending OTP to phone:', error);
+      throw this.handleAuthError(error as AuthError);
+    }
+  }
+
+  /**
+   * Verify OTP code cho Phone Auth
+   */
+  static async verifyPhoneOTP(
+    confirmationResult: ConfirmationResult,
+    otpCode: string
+  ): Promise<User> {
+    try {
+      const result = await confirmationResult.confirm(otpCode);
+      return result.user;
+    } catch (error) {
+      console.log('Error verifying phone OTP:', error);
+      throw this.handleAuthError(error as AuthError);
+    }
+  }
+
+  /**
+   * Xóa Recaptcha Verifier
+   */
+  static clearRecaptchaVerifier(verifier: RecaptchaVerifier): void {
+    if (verifier) {
+      verifier.clear();
+    }
+  }
+
+  /**
    * Xử lý lỗi Firebase Auth
    */
   private static handleAuthError(error: AuthError): FirebaseAuthError {
@@ -138,7 +225,14 @@ export class FirebaseAuthService {
       'auth/invalid-credential': 'Thông tin đăng nhập không hợp lệ',
       'auth/too-many-requests': 'Quá nhiều yêu cầu, vui lòng thử lại sau',
       'auth/network-request-failed': 'Lỗi kết nối mạng',
-      'auth/requires-recent-login': 'Vui lòng đăng nhập lại để thực hiện thao tác này'
+      'auth/requires-recent-login': 'Vui lòng đăng nhập lại để thực hiện thao tác này',
+      'auth/invalid-phone-number': 'Số điện thoại không hợp lệ',
+      'auth/invalid-verification-code': 'Mã OTP không đúng',
+      'auth/missing-verification-code': 'Vui lòng nhập mã OTP',
+      'auth/code-expired': 'Mã OTP đã hết hạn',
+      'auth/quota-exceeded': 'Đã vượt quá giới hạn gửi OTP',
+      'auth/captcha-check-failed': 'Xác thực reCAPTCHA thất bại',
+      'auth/session-expired': 'Phiên đăng nhập đã hết hạn'
     };
 
     return {

@@ -5,7 +5,7 @@
 
 import { FirebaseAuthService, FirebaseAuthError } from './firebase-auth.service';
 import { AuthService } from '../api/services/auth.service';
-import { User } from 'firebase/auth';
+import { User, RecaptchaVerifier, ConfirmationResult } from 'firebase/auth';
 import { SignupRequest } from '../api/types';
 
 export class AuthIntegrationService {
@@ -21,6 +21,51 @@ export class AuthIntegrationService {
     }
   }
 
+  /**
+   * Tạo Recaptcha Verifier cho Phone Auth
+   */
+  static createRecaptchaVerifier(elementId: string): RecaptchaVerifier {
+    return FirebaseAuthService.createRecaptchaVerifier(elementId);
+  }
+
+  /**
+   * Gửi OTP đến số điện thoại sử dụng Firebase
+   */
+  static async sendOTPToPhone(
+    phoneNumber: string,
+    recaptchaVerifier: RecaptchaVerifier
+  ): Promise<ConfirmationResult> {
+    try {
+      return await FirebaseAuthService.sendOTPToPhone(phoneNumber, recaptchaVerifier);
+    } catch (error) {
+      const firebaseError = error as FirebaseAuthError;
+      throw new Error(firebaseError.message);
+    }
+  }
+
+  /**
+   * Verify OTP code cho Phone Auth
+   */
+  static async verifyPhoneOTP(
+    confirmationResult: ConfirmationResult,
+    otpCode: string
+  ): Promise<User> {
+    try {
+      return await FirebaseAuthService.verifyPhoneOTP(confirmationResult, otpCode);
+    } catch (error) {
+      const firebaseError = error as FirebaseAuthError;
+      throw new Error(firebaseError.message);
+    }
+  }
+
+  /**
+   * Xóa Recaptcha Verifier
+   */
+  static clearRecaptchaVerifier(verifier: RecaptchaVerifier): void {
+    FirebaseAuthService.clearRecaptchaVerifier(verifier);
+  }
+
+// sign
   /**
    * Verify email link và tạo tài khoản Firebase
    */

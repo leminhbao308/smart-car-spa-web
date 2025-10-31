@@ -1,19 +1,19 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
+  App,
   Form,
   Input,
   Button,
   Typography,
   Divider,
-  message,
   Checkbox,
 } from "antd";
 import { GoogleOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import CustomerHeader from "@/components/layout/Header/customer.header";
-import { AuthIntegrationService } from "@/lib/firebase";
+import { AuthIntegrationService, RecaptchaVerifier, ConfirmationResult } from "@/lib/firebase";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { SignupRequest } from "@/lib/api/types";
 
@@ -28,13 +28,14 @@ interface PasswordFormData {
   fullName: string;
   phoneNumber: string;
   dateOfBirth: string;
-  gender: "MALE" | "FEMALE" | "OTHER";
+  gender: "MALE" | "FEMALE";
   address: string;
   password: string;
   confirmPassword: string;
 }
 
 const SignupPage = () => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // 1: Email/Phone, 2: OTP, 3: Password
@@ -45,35 +46,70 @@ const SignupPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signup } = useAuth();
+  
+  // Phone Auth states
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
+  const confirmationResultRef = useRef<ConfirmationResult | null>(null);
+  const [isPhoneAuth, setIsPhoneAuth] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
 
   const handleEmailOrPhoneSubmit = async (values: BasicInfoFormData) => {
     try {
       setLoading(true);
 
-      // Validate email format
+      // Check if it's email or phone
       const isEmail = values.emailOrPhone.includes("@");
-      if (!isEmail) {
-        message.error("Vui lòng nhập email hợp lệ để gửi OTP!");
-        return;
-      }
-
-      // Send OTP using Firebase
-      await AuthIntegrationService.sendOTPToEmail(values.emailOrPhone);
-
+      
       setEmailOrPhone(values.emailOrPhone);
-      setCurrentStep(2);
-      setOtpTimer(60); // 60 seconds countdown
-      setOtpExpired(false);
-
-      message.success(
-        `Mã OTP đã được gửi đến email ${values.emailOrPhone}! Vui lòng kiểm tra hộp thư.`
-      );
+      
+      if (isEmail) {
+        // Email Auth Flow
+        setIsPhoneAuth(false);
+        await AuthIntegrationService.sendOTPToEmail(values.emailOrPhone);
+        setCurrentStep(2);
+        setOtpTimer(60);
+        setOtpExpired(false);
+        message.success(
+          `Mã OTP đã được gửi đến email ${values.emailOrPhone}! Vui lòng kiểm tra hộp thư.`
+        );
+      } else {
+        // Phone Auth Flow
+        setIsPhoneAuth(true);
+        
+        // Create Recaptcha Verifier
+        if (recaptchaVerifierRef.current) {
+          AuthIntegrationService.clearRecaptchaVerifier(recaptchaVerifierRef.current);
+        }
+        
+        const verifier = AuthIntegrationService.createRecaptchaVerifier('recaptcha-container');
+        recaptchaVerifierRef.current = verifier;
+        
+        // Send OTP to phone
+        const confirmationResult = await AuthIntegrationService.sendOTPToPhone(
+          values.emailOrPhone,
+          verifier
+        );
+        
+        confirmationResultRef.current = confirmationResult;
+        setCurrentStep(2);
+        setOtpTimer(60);
+        setOtpExpired(false);
+        message.success(
+          `Mã OTP đã được gửi đến số điện thoại ${values.emailOrPhone}!`
+        );
+      }
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error
           ? error.message
           : "Gửi OTP thất bại. Vui lòng thử lại!";
       message.error(errorMessage);
+      
+      // Clear recaptcha on error
+      if (recaptchaVerifierRef.current) {
+        AuthIntegrationService.clearRecaptchaVerifier(recaptchaVerifierRef.current);
+        recaptchaVerifierRef.current = null;
+      }
     } finally {
       setLoading(false);
     }
@@ -89,7 +125,7 @@ const SignupPage = () => {
 
       message.success("Đăng ký với Google thành công!");
       router.push("/auth/login");
-    } catch (error) {
+    } catch {
       message.error("Đăng ký với Google thất bại!");
     } finally {
       setLoading(false);
@@ -100,12 +136,25 @@ const SignupPage = () => {
     try {
       setLoading(true);
 
-      // Firebase sử dụng email link thay vì OTP code
-      // Redirect user đến email verification page
-      message.info("Vui lòng kiểm tra email và click vào link để xác thực!");
-
-      // Redirect đến email verification page
-      window.location.href = `/auth/verify-email?email=${emailOrPhone}`;
+      if (isPhoneAuth && confirmationResultRef.current) {
+        // Phone Auth: Verify OTP code
+        if (!otpCode || otpCode.length !== 6) {
+          message.error("Vui lòng nhập đầy đủ mã OTP 6 chữ số!");
+          return;
+        }
+        
+        await AuthIntegrationService.verifyPhoneOTP(
+          confirmationResultRef.current,
+          otpCode
+        );
+        
+        message.success("Xác thực số điện thoại thành công!");
+        setCurrentStep(3);
+      } else {
+        // Email Auth: Firebase sử dụng email link
+        message.info("Vui lòng kiểm tra email và click vào link để xác thực!");
+        window.location.href = `/auth/verify-email?email=${emailOrPhone}`;
+      }
     } catch (error: unknown) {
       console.log("Error verifying OTP:", error);
       const errorMessage =
@@ -156,17 +205,41 @@ const SignupPage = () => {
     try {
       setLoading(true);
 
-      // Resend OTP using Firebase
-      await AuthIntegrationService.sendOTPToEmail(emailOrPhone);
+      if (isPhoneAuth) {
+        // Phone Auth: Resend OTP
+        if (recaptchaVerifierRef.current) {
+          AuthIntegrationService.clearRecaptchaVerifier(recaptchaVerifierRef.current);
+        }
+        
+        const verifier = AuthIntegrationService.createRecaptchaVerifier('recaptcha-container');
+        recaptchaVerifierRef.current = verifier;
+        
+        const confirmationResult = await AuthIntegrationService.sendOTPToPhone(
+          emailOrPhone,
+          verifier
+        );
+        
+        confirmationResultRef.current = confirmationResult;
+        message.success("Mã OTP mới đã được gửi!");
+      } else {
+        // Email Auth: Resend OTP
+        await AuthIntegrationService.sendOTPToEmail(emailOrPhone);
+        message.success("Mã OTP mới đã được gửi!");
+      }
 
       setOtpTimer(60); // Reset timer to 60 seconds
       setOtpExpired(false);
-      message.success("Mã OTP mới đã được gửi!");
     } catch (error: unknown) {
       console.log("Error resending OTP:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Gửi lại OTP thất bại!";
       message.error(errorMessage);
+      
+      // Clear recaptcha on error
+      if (recaptchaVerifierRef.current) {
+        AuthIntegrationService.clearRecaptchaVerifier(recaptchaVerifierRef.current);
+        recaptchaVerifierRef.current = null;
+      }
     } finally {
       setLoading(false);
     }
@@ -205,6 +278,15 @@ const SignupPage = () => {
       }
     };
   }, [otpTimer]);
+
+  // Cleanup recaptcha on unmount
+  useEffect(() => {
+    return () => {
+      if (recaptchaVerifierRef.current) {
+        AuthIntegrationService.clearRecaptchaVerifier(recaptchaVerifierRef.current);
+      }
+    };
+  }, []);
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -400,6 +482,14 @@ const SignupPage = () => {
                 </Button>
               </Form.Item>
             </Form>
+
+            {/* reCAPTCHA Container - Hidden but needed for Phone Auth */}
+            <div
+              id="recaptcha-container"
+              style={{
+                display: "none",
+              }}
+            />
           </>
         );
 
@@ -416,7 +506,7 @@ const SignupPage = () => {
                   margin: "0 0 8px 0",
                 }}
               >
-                Xác thực Email
+                {isPhoneAuth ? "Xác thực số điện thoại" : "Xác thực Email"}
               </h1>
               <p
                 style={{
@@ -425,60 +515,101 @@ const SignupPage = () => {
                   margin: 0,
                 }}
               >
-                Chúng tôi đã gửi link xác thực đến {emailOrPhone}
+                {isPhoneAuth 
+                  ? `Chúng tôi đã gửi mã OTP đến ${emailOrPhone}`
+                  : `Chúng tôi đã gửi link xác thực đến ${emailOrPhone}`}
               </p>
             </div>
 
-            {/* Email Verification Info */}
-            <div
-              style={{
-                marginBottom: "24px",
-                padding: "16px",
-                backgroundColor: "#F8F9FA",
-                borderRadius: "8px",
-                border: "1px solid #E5E7EB",
-              }}
-            >
-              <div style={{ textAlign: "center" }}>
-                <p
+            {isPhoneAuth ? (
+              <>
+                {/* OTP Input for Phone */}
+                <div style={{ marginBottom: "24px" }}>
+                  <Input.OTP
+                    length={6}
+                    value={otpCode}
+                    onChange={setOtpCode}
+                    style={{
+                      gap: "8px",
+                    }}
+                  />
+                </div>
+
+                {/* Verify Button */}
+                <Button
+                  type="primary"
+                  onClick={handleOTPVerify}
+                  loading={loading}
+                  size="large"
+                  block
+                  disabled={!otpCode || otpCode.length !== 6}
                   style={{
-                    color: "#1B2559",
+                    height: "48px",
+                    backgroundColor: "#6C7BEA",
+                    border: "none",
+                    borderRadius: "8px",
                     fontSize: "14px",
-                    margin: "0 0 8px 0",
+                    fontWeight: "500",
+                    marginBottom: "16px",
                   }}
                 >
-                  📧 Kiểm tra hộp thư của bạn
-                </p>
-                <p style={{ color: "#8B92A5", fontSize: "12px", margin: 0 }}>
-                  Click vào link trong email để xác thực tài khoản
-                </p>
-              </div>
-            </div>
+                  {loading ? "Đang xác thực..." : "Xác thực mã OTP"}
+                </Button>
+              </>
+            ) : (
+              <>
+                {/* Email Verification Info */}
+                <div
+                  style={{
+                    marginBottom: "24px",
+                    padding: "16px",
+                    backgroundColor: "#F8F9FA",
+                    borderRadius: "8px",
+                    border: "1px solid #E5E7EB",
+                  }}
+                >
+                  <div style={{ textAlign: "center" }}>
+                    <p
+                      style={{
+                        color: "#1B2559",
+                        fontSize: "14px",
+                        margin: "0 0 8px 0",
+                      }}
+                    >
+                      📧 Kiểm tra hộp thư của bạn
+                    </p>
+                    <p style={{ color: "#8B92A5", fontSize: "12px", margin: 0 }}>
+                      Click vào link trong email để xác thực tài khoản
+                    </p>
+                  </div>
+                </div>
 
-            {/* Verify Button */}
-            <Button
-              type="primary"
-              onClick={handleOTPVerify}
-              loading={loading}
-              size="large"
-              block
-              style={{
-                height: "48px",
-                backgroundColor: "#6C7BEA",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontWeight: "500",
-                marginBottom: "16px",
-              }}
-            >
-              {loading ? "Đang xử lý..." : "Tôi đã xác thực email"}
-            </Button>
+                {/* Verify Button for Email */}
+                <Button
+                  type="primary"
+                  onClick={handleOTPVerify}
+                  loading={loading}
+                  size="large"
+                  block
+                  style={{
+                    height: "48px",
+                    backgroundColor: "#6C7BEA",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    marginBottom: "16px",
+                  }}
+                >
+                  {loading ? "Đang xử lý..." : "Tôi đã xác thực email"}
+                </Button>
+              </>
+            )}
 
-            {/* Resend Email */}
+            {/* Resend OTP */}
             <div style={{ textAlign: "center" }}>
               <Text style={{ color: "#8B92A5", fontSize: "14px" }}>
-                Không nhận được email?{" "}
+                {isPhoneAuth ? "Không nhận được mã OTP? " : "Không nhận được email? "}
               </Text>
               {otpExpired ? (
                 <Button
@@ -505,7 +636,15 @@ const SignupPage = () => {
             <div style={{ textAlign: "center", marginTop: "16px" }}>
               <Button
                 type="link"
-                onClick={() => setCurrentStep(1)}
+                onClick={() => {
+                  setCurrentStep(1);
+                  setIsPhoneAuth(false);
+                  setOtpCode("");
+                  if (recaptchaVerifierRef.current) {
+                    AuthIntegrationService.clearRecaptchaVerifier(recaptchaVerifierRef.current);
+                    recaptchaVerifierRef.current = null;
+                  }
+                }}
                 style={{
                   color: "#8B92A5",
                   padding: 0,
@@ -515,6 +654,14 @@ const SignupPage = () => {
                 ← Quay lại
               </Button>
             </div>
+
+            {/* reCAPTCHA Container - Hidden but needed for Phone Auth */}
+            <div
+              id="recaptcha-container"
+              style={{
+                display: "none",
+              }}
+            />
           </>
         );
 
@@ -674,7 +821,6 @@ const SignupPage = () => {
                   <option value="">Chọn giới tính</option>
                   <option value="MALE">Nam</option>
                   <option value="FEMALE">Nữ</option>
-                  <option value="OTHER">Khác</option>
                 </select>
               </Form.Item>
 
@@ -908,4 +1054,12 @@ const SignupPage = () => {
   );
 };
 
-export default SignupPage;
+const SignupPageWithApp = () => {
+  return (
+    <App>
+      <SignupPage />
+    </App>
+  );
+};
+
+export default SignupPageWithApp;
