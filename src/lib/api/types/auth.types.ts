@@ -72,7 +72,8 @@ export interface UserInfo extends BaseEntity {
 
 // Login Request
 export interface LoginRequest {
-  email: string;
+  email?: string;
+  phone_number?: string;
   password: string;
 }
 
@@ -103,7 +104,8 @@ export interface LogoutRequest {
 
 // Forgot Password Request
 export interface ForgotPasswordRequest {
-  email: string;
+  phone_number: string;
+  new_password: string;
 }
 
 // Reset Password Request
@@ -122,7 +124,7 @@ export interface ChangePasswordRequest {
 
 // Signup Request
 export interface SignupRequest {
-  email: string;
+  email?: string | null;
   password: string;
   google_id?: string | null;
   full_name: string;

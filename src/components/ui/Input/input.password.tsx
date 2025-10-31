@@ -15,16 +15,13 @@ const InputPassword = ({
   onChange: (value: string) => void;
   placeholderCustom?: string;
   name?: string;
-  rules?: FormItemProps['rules'];
+  rules?: FormItemProps["rules"];
   style?: React.CSSProperties;
 }) => {
   return (
-    <Form.Item
-      name={name || "password"}
-      rules={rules || [{ required: true, message: "Vui lòng nhập password!" }]}
-    >
+    <Form.Item name={name || "password"} rules={rules}>
       <Input.Password
-        placeholder={placeholderCustom || "Enter your password"}
+        placeholder={placeholderCustom || "Nhập mật khẩu"}
         iconRender={(visible) =>
           visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />
         }

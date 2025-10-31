@@ -3,7 +3,7 @@ import CustomerHeader from "@/components/layout/Header/customer.header";
 import InputPassword from "@/components/ui/Input/input.password";
 import { ROUTES } from "@/components/utils/constant/path.route";
 import { useAuth, AuthService } from "@/lib/api";
-import { GoogleOutlined } from "@ant-design/icons";
+import { GoogleOutlined, MailOutlined, PhoneOutlined } from "@ant-design/icons";
 import {
   App,
   Button,
@@ -19,7 +19,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 interface LoginFormValues {
-  email: string;
+  identifier: string;
   password: string;
   remember: boolean;
 }
@@ -30,7 +30,7 @@ const MIN_PASSWORD_LENGTH = 3;
 
 const LoginForm = () => {
   const [form] = Form.useForm();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const { login, isAuthenticated, isLoading, error, clearError } = useAuth();
   const router = useRouter();
@@ -86,16 +86,19 @@ const LoginForm = () => {
     try {
       clearError(); // Clear any previous errors
 
+      // Determine if identifier is email or phone
+      const isEmail = values.identifier.includes("@");
+
       await login({
-        email: values.email,
+        [isEmail ? "email" : "phone_number"]: values.identifier,
         password: values.password,
       });
 
       message.success("Đăng nhập thành công!");
 
-      // Lưu thông tin remember me nếu được chọn
-      if (values.remember) {
-        localStorage.setItem(REMEMBERED_EMAIL_KEY, values.email);
+      // Lưu thông tin remember me nếu được chọn (only for email)
+      if (values.remember && isEmail) {
+        localStorage.setItem(REMEMBERED_EMAIL_KEY, values.identifier);
       } else {
         localStorage.removeItem(REMEMBERED_EMAIL_KEY);
       }
@@ -122,8 +125,8 @@ const LoginForm = () => {
   useEffect(() => {
     const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
     if (rememberedEmail) {
-      setEmail(rememberedEmail);
-      form.setFieldsValue({ email: rememberedEmail, remember: true });
+      setIdentifier(rememberedEmail);
+      form.setFieldsValue({ identifier: rememberedEmail, remember: true });
     }
   }, [form]);
 
@@ -277,7 +280,7 @@ const LoginForm = () => {
                 </div>
               )}
 
-              {/* Email Input */}
+              {/* Email or Phone Input */}
               <Form.Item
                 label={
                   <span
@@ -287,19 +290,58 @@ const LoginForm = () => {
                       fontWeight: "500",
                     }}
                   >
-                    Email
+                    Email hoặc số điện thoại
                   </span>
                 }
-                name="email"
+                name="identifier"
                 rules={[
-                  { required: true, message: "Vui lòng nhập email!" },
-                  { type: "email", message: "Email không hợp lệ!" },
+                  {
+                    required: true,
+                    message: "Vui lòng nhập email hoặc số điện thoại!",
+                  },
+                  {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+
+                      const isEmail = value.includes("@");
+                      const isPhone = /^[0-9]{10,11}$/.test(value);
+
+                      if (isEmail) {
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        if (!emailRegex.test(value)) {
+                          return Promise.reject(
+                            new Error("Email không hợp lệ!")
+                          );
+                        }
+                      } else if (isPhone) {
+                        return Promise.resolve();
+                      } else {
+                        return Promise.reject(
+                          new Error(
+                            "Vui lòng nhập email hợp lệ hoặc số điện thoại 10-11 chữ số!"
+                          )
+                        );
+                      }
+
+                      return Promise.resolve();
+                    },
+                  },
                 ]}
-                initialValue={email}
+                initialValue={identifier}
               >
                 <Input
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={identifier}
+                  onChange={(e) => {
+                    setIdentifier(e.target.value);
+                    // Dynamically change icon based on input
+                  }}
+                  prefix={
+                    identifier.includes("@") ? (
+                      <MailOutlined style={{ color: "#8B92A5" }} />
+                    ) : (
+                      <PhoneOutlined style={{ color: "#8B92A5" }} />
+                    )
+                  }
                   style={{
                     height: "48px",
                     backgroundColor: "#F8F9FA",
@@ -307,7 +349,7 @@ const LoginForm = () => {
                     borderRadius: "8px",
                     color: "#1B2559",
                   }}
-                  placeholder="mail@scsms.com"
+                  placeholder="mail@scsms.com hoặc 0123456789"
                   disabled={isLoading}
                 />
               </Form.Item>
@@ -327,7 +369,7 @@ const LoginForm = () => {
                 }
                 name="password"
                 rules={[
-                  { required: true, message: "Vui lòng nhập mật khẩu!" },
+                  { required: true, message: "" },
                   {
                     min: MIN_PASSWORD_LENGTH,
                     message: `Mật khẩu phải có ít nhất ${MIN_PASSWORD_LENGTH} ký tự!`,
