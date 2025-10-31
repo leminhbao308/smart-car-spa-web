@@ -8,20 +8,19 @@ import {
   Row,
   Col,
   Empty,
-  Popconfirm,
   App,
 } from "antd";
 import {
   CarOutlined,
   PlusOutlined,
   EditOutlined,
-  DeleteOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
 import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
 import CreateVehicleProfileModal from "@/components/ui/Modal/CarProfileModal/CreateVehicleProfileModal";
+import EditVehicleProfileModal from "@/components/ui/Modal/CarProfileModal/EditVehicleProfileModal";
 
 const { Title, Text } = Typography;
 
@@ -32,13 +31,19 @@ const VehiclePage = () => {
   const [createVehicleModalVisible, setCreateVehicleModalVisible] =
     useState(false);
   const [isCreatingVehicle, setIsCreatingVehicle] = useState(false);
+  const [editVehicleModalVisible, setEditVehicleModalVisible] =
+    useState(false);
+  const [editingVehicle, setEditingVehicle] =
+    useState<VehicleProfileDisplay | null>(null);
 
   // Load vehicles for current user
   const {
     profiles: userVehicles,
     loading: isLoadingVehicles,
     createProfile: createVehicleProfile,
+    updateProfile: updateVehicleProfile,
     deleteProfile: deleteVehicleProfile,
+    refreshProfiles,
   } = useVehicleProfiles({
     ownerId: user?.user_id,
     params: { size: 1000 },
@@ -89,14 +94,27 @@ const VehiclePage = () => {
     setCreateVehicleModalVisible(false);
   };
 
-  const handleDeleteVehicle = async (vehicleId: string) => {
+  const handleEditVehicle = (vehicle: VehicleProfileDisplay) => {
+    setEditingVehicle(vehicle);
+    setEditVehicleModalVisible(true);
+  };
+
+  const handleEditVehicleSuccess = async (vehicleData: VehicleProfileDisplay) => {
     try {
-      await deleteVehicleProfile(vehicleId);
-      message.success("Xóa xe thành công!");
+      // Refresh the list after successful update
+      await refreshProfiles();
+      message.success("Cập nhật xe thành công!");
+      setEditVehicleModalVisible(false);
+      setEditingVehicle(null);
     } catch (error) {
-      console.error("Error deleting vehicle:", error);
-      message.error("Có lỗi xảy ra khi xóa xe!");
+      console.error("Error refreshing vehicle list:", error);
+      message.error("Có lỗi xảy ra khi cập nhật danh sách xe!");
     }
+  };
+
+  const handleEditVehicleCancel = () => {
+    setEditVehicleModalVisible(false);
+    setEditingVehicle(null);
   };
 
   // const handleBookService = (vehicle: VehicleProfileDisplay) => {
@@ -303,100 +321,94 @@ const VehiclePage = () => {
                         borderRadius: "12px",
                         boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
                         height: "100%",
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
+                      styles={{
+                        body: {
+                          flex: 1,
+                          display: "flex",
+                          flexDirection: "column",
+                        },
                       }}
                       actions={[
                         <Button
                           key="edit"
                           icon={<EditOutlined />}
-                          onClick={() => {
-                            // TODO: Implement edit vehicle
-                            message.info("Tính năng chỉnh sửa đang phát triển");
-                          }}
+                          onClick={() => handleEditVehicle(vehicle)}
                         >
                           Sửa
                         </Button>,
-                        <Popconfirm
-                          key="delete"
-                          title="Xóa xe"
-                          description="Bạn có chắc chắn muốn xóa xe này?"
-                          onConfirm={() =>
-                            handleDeleteVehicle(vehicle.vehicle_id)
-                          }
-                          okText="Xóa"
-                          cancelText="Hủy"
-                        >
-                          <Button danger icon={<DeleteOutlined />}>
-                            Xóa
-                          </Button>
-                        </Popconfirm>,
                       ]}
                     >
-                      <div
-                        style={{ textAlign: "center", marginBottom: "16px" }}
-                      >
-                        <CarOutlined
-                          style={{
-                            fontSize: "48px",
-                            color: "#1890ff",
-                            marginBottom: "12px",
-                          }}
-                        />
-                        <Title
-                          level={4}
-                          style={{ margin: 0, color: "#262626" }}
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{ textAlign: "center", marginBottom: "16px" }}
                         >
-                          {vehicle.license_plate}
-                        </Title>
-                      </div>
-
-                      <div style={{ marginBottom: "12px" }}>
-                        <Row gutter={[8, 8]}>
-                          <Col span={12}>
-                            <Text type="secondary" style={{ fontSize: "12px" }}>
-                              Hãng xe:
-                            </Text>
-                            <div style={{ fontWeight: 500 }}>
-                              {vehicle.brand_name || "Chưa cập nhật"}
-                            </div>
-                          </Col>
-                          <Col span={12}>
-                            <Text type="secondary" style={{ fontSize: "12px" }}>
-                              Dòng xe:
-                            </Text>
-                            <div style={{ fontWeight: 500 }}>
-                              {vehicle.model_name || "Chưa cập nhật"}
-                            </div>
-                          </Col>
-                          <Col span={12}>
-                            <Text type="secondary" style={{ fontSize: "12px" }}>
-                              Loại xe:
-                            </Text>
-                            <div style={{ fontWeight: 500 }}>
-                              {vehicle.type_name || "Chưa cập nhật"}
-                            </div>
-                          </Col>
-                          <Col span={12}>
-                            <Text type="secondary" style={{ fontSize: "12px" }}>
-                              Số km:
-                            </Text>
-                            <div style={{ fontWeight: 500 }}>
-                              {vehicle.distance_traveled?.toLocaleString() || 0}{" "}
-                              km
-                            </div>
-                          </Col>
-                        </Row>
-                      </div>
-
-                      {vehicle.description && (
-                        <div style={{ marginBottom: "12px" }}>
-                          <Text type="secondary" style={{ fontSize: "12px" }}>
-                            Mô tả:
-                          </Text>
-                          <div style={{ fontSize: "12px", color: "#666" }}>
-                            {vehicle.description}
-                          </div>
+                          <CarOutlined
+                            style={{
+                              fontSize: "48px",
+                              color: "#1890ff",
+                              marginBottom: "12px",
+                            }}
+                          />
+                          <Title
+                            level={4}
+                            style={{ margin: 0, color: "#262626" }}
+                          >
+                            {vehicle.license_plate}
+                          </Title>
                         </div>
-                      )}
+
+                        <div style={{ marginBottom: "12px" }}>
+                          <Row gutter={[8, 8]}>
+                            <Col span={12}>
+                              <Text type="secondary" style={{ fontSize: "12px" }}>
+                                Hãng xe:
+                              </Text>
+                              <div style={{ fontWeight: 500 }}>
+                                {vehicle.brand_name || "Chưa cập nhật"}
+                              </div>
+                            </Col>
+                            <Col span={12}>
+                              <Text type="secondary" style={{ fontSize: "12px" }}>
+                                Dòng xe:
+                              </Text>
+                              <div style={{ fontWeight: 500 }}>
+                                {vehicle.model_name || "Chưa cập nhật"}
+                              </div>
+                            </Col>
+                            <Col span={12}>
+                              <Text type="secondary" style={{ fontSize: "12px" }}>
+                                Loại xe:
+                              </Text>
+                              <div style={{ fontWeight: 500 }}>
+                                {vehicle.type_name || "Chưa cập nhật"}
+                              </div>
+                            </Col>
+                            <Col span={12}>
+                              <Text type="secondary" style={{ fontSize: "12px" }}>
+                                Số km:
+                              </Text>
+                              <div style={{ fontWeight: 500 }}>
+                                {vehicle.distance_traveled?.toLocaleString() || 0}{" "}
+                                km
+                              </div>
+                            </Col>
+                          </Row>
+                        </div>
+
+                        {vehicle.description && (
+                          <div style={{ marginBottom: "12px" }}>
+                            <Text type="secondary" style={{ fontSize: "12px" }}>
+                              Mô tả:
+                            </Text>
+                            <div style={{ fontSize: "12px", color: "#666" }}>
+                              {vehicle.description}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </Card>
                   </Col>
                 ))}
@@ -411,6 +423,16 @@ const VehiclePage = () => {
           visible={createVehicleModalVisible}
           onCancel={handleCreateVehicleCancel}
           onSuccess={handleCreateVehicleSuccess}
+          loading={isCreatingVehicle}
+        />
+
+        {/* Edit Vehicle Modal */}
+        <EditVehicleProfileModal
+          ownerId={user?.user_id}
+          visible={editVehicleModalVisible}
+          onCancel={handleEditVehicleCancel}
+          onSuccess={handleEditVehicleSuccess}
+          profile={editingVehicle}
           loading={isCreatingVehicle}
         />
       </div>
