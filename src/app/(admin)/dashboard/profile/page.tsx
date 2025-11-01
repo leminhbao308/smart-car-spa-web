@@ -19,7 +19,6 @@ import {
   App,
   Modal,
 } from "antd";
-import type { UploadFile, UploadChangeParam } from "antd/es/upload";
 import {
   UserOutlined,
   EditOutlined,
@@ -27,9 +26,6 @@ import {
   CloseOutlined,
   PhoneOutlined,
   MailOutlined,
-  CalendarOutlined,
-  CarOutlined,
-  HistoryOutlined,
   CameraOutlined,
   CheckCircleOutlined,
   LockOutlined,
@@ -46,7 +42,7 @@ import { TokenManager } from "@/lib/api/utils/token.manager";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const ProfileMemberPage = () => {
+const AdminProfilePage = () => {
   const { user: authUser, isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -79,10 +75,6 @@ const ProfileMemberPage = () => {
   // Set form values when user data loads
   useEffect(() => {
     if (user) {
-      console.log("User data loaded:", user);
-      console.log("Created date:", user.created_date);
-      console.log("Created at:", user.created_at);
-
       form.setFieldsValue({
         full_name: user.full_name,
         email: user.email,
@@ -132,12 +124,6 @@ const ProfileMemberPage = () => {
 
   // Convert gender from English to Vietnamese for display
   const convertGenderToVietnamese = (gender: string): string => {
-    console.log(
-      "Converting gender to Vietnamese:",
-      gender,
-      "type:",
-      typeof gender
-    );
     const genderMap: { [key: string]: string } = {
       MALE: "Nam",
       FEMALE: "Nữ",
@@ -145,9 +131,7 @@ const ProfileMemberPage = () => {
       female: "Nữ",
     };
 
-    const result = genderMap[gender] || "Nam";
-    console.log("Gender conversion result:", result);
-    return result;
+    return genderMap[gender] || "Nam";
   };
 
   const handleSave = async () => {
@@ -159,11 +143,6 @@ const ProfileMemberPage = () => {
         message.error("Không tìm thấy thông tin người dùng!");
         return;
       }
-
-      // Test API connection first
-      console.log("Testing API connection...");
-      console.log("Current user:", user);
-      console.log("Form values:", values);
 
       // Prepare update data
       const updateData = {
@@ -177,55 +156,12 @@ const ProfileMemberPage = () => {
         gender: values.gender ? convertGenderToEnglish(values.gender) : "MALE",
       };
 
-      // Try different date formats if the first one fails
-      if (values.date_of_birth) {
-        const dateTimeFormat = values.date_of_birth.format(
-          "YYYY-MM-DDTHH:mm:ss"
-        );
-        console.log("Alternative datetime format:", dateTimeFormat);
-      }
-
-      console.log("=== UPDATE PROFILE DEBUG ===");
-      console.log("Update profile data:", updateData);
-      console.log("Data types:", {
-        full_name: typeof updateData.full_name,
-        email: typeof updateData.email,
-        phone_number: typeof updateData.phone_number,
-        date_of_birth: typeof updateData.date_of_birth,
-        gender: typeof updateData.gender,
-        address: typeof updateData.address,
-      });
-      console.log("Date of birth value:", values.date_of_birth);
-      console.log(
-        "Formatted date:",
-        values.date_of_birth
-          ? values.date_of_birth.format("YYYY-MM-DD")
-          : "null"
-      );
-      console.log("Gender value (from form):", values.gender);
-      console.log(
-        "Gender after conversion (for API):",
-        values.gender ? convertGenderToEnglish(values.gender) : "MALE"
-      );
-      console.log("Gender conversion test:", {
-        Nam: convertGenderToEnglish("Nam"),
-        Nữ: convertGenderToEnglish("Nữ"),
-        MALE: convertGenderToEnglish("MALE"),
-        FEMALE: convertGenderToEnglish("FEMALE"),
-      });
-      console.log("User ID:", user.user_id);
-      console.log("All form values:", values);
-      console.log("=== END DEBUG ===");
-
       // Call API to update user profile
-      let response;
       try {
-        response = await UserService.updateUser(user.user_id, updateData);
-        console.log("Update response:", response);
+        await UserService.updateUser(user.user_id, updateData);
       } catch (error) {
         // If first attempt fails with date format error, try with datetime format
         if (error instanceof Error && error.message.includes("date_of_birth")) {
-          console.log("First attempt failed, trying with datetime format...");
           const retryData = {
             ...updateData,
             date_of_birth: values.date_of_birth
@@ -235,9 +171,7 @@ const ProfileMemberPage = () => {
               ? convertGenderToEnglish(values.gender)
               : "MALE",
           };
-          console.log("Retry data:", retryData);
-          response = await UserService.updateUser(user.user_id, retryData);
-          console.log("Retry response:", response);
+          await UserService.updateUser(user.user_id, retryData);
         } else {
           throw error;
         }
@@ -247,7 +181,6 @@ const ProfileMemberPage = () => {
       setIsEditing(false);
 
       // Refresh user data using React Query
-      console.log("Refreshing user data...");
       await refetchUser();
 
       // Also invalidate related queries to ensure fresh data
@@ -255,19 +188,9 @@ const ProfileMemberPage = () => {
         queryKey: ["users", "detail", user.user_id],
       });
       queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
-      console.log("User data refreshed successfully!");
     } catch (error) {
       console.error("Error updating profile:", error);
-      console.error("Error details:", {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-        response:
-          error instanceof Error && "response" in error
-            ? (error as { response?: unknown }).response
-            : undefined,
-      });
 
-      // Show more specific error message
       if (error instanceof Error && error.message.includes("date_of_birth")) {
         message.error(
           "Lỗi cập nhật ngày sinh. Vui lòng thử lại sau khi backend được cập nhật."
@@ -286,8 +209,6 @@ const ProfileMemberPage = () => {
       console.log("Upload already in progress, skipping duplicate call");
       return;
     }
-
-    console.log("handleAvatarUpload called with file:", file);
 
     if (!user?.user_id) {
       message.error("Không tìm thấy thông tin người dùng!");
@@ -324,9 +245,8 @@ const ProfileMemberPage = () => {
       const response = await UserService.uploadAvatar(user.user_id, file);
 
       if (response.success && response.data) {
-        // Update avatar URL from response - use avatar_url directly from response
+        // Update avatar URL from response
         const newAvatarUrl = response.data.avatar_url || "";
-        console.log("Profile: Avatar URL from upload response:", newAvatarUrl);
         setAvatarUrl(newAvatarUrl);
 
         message.success("Cập nhật ảnh đại diện thành công!");
@@ -342,11 +262,8 @@ const ProfileMemberPage = () => {
 
         // Update auth context by updating user in storage with new avatar_url
         try {
-          console.log("Profile: Updating user in storage with avatar_url from response:", newAvatarUrl);
-          
           // Get current user from storage
           const currentUser = AuthService.getCurrentUserFromStorage();
-          console.log("Profile: Current user from storage:", currentUser);
           
           if (currentUser && newAvatarUrl) {
             // Update user with new avatar_url
@@ -355,15 +272,8 @@ const ProfileMemberPage = () => {
               avatar_url: newAvatarUrl,
             };
             
-            console.log("Profile: Updated user object with avatar_url:", updatedUser.avatar_url);
-            
             // Save updated user to storage
             TokenManager.setUserInfo(updatedUser);
-            
-            // Verify it was saved correctly
-            const verifyUser = AuthService.getCurrentUserFromStorage();
-            console.log("Profile: Verified user from storage after save:", verifyUser);
-            console.log("Profile: Verified avatar_url from storage:", verifyUser?.avatar_url);
             
             // Also sync to cookies for consistency
             const accessToken = TokenManager.getAccessToken();
@@ -372,24 +282,19 @@ const ProfileMemberPage = () => {
               TokenManager.syncToCookies(accessToken, refreshToken, updatedUser);
             }
             
-            // Trigger a custom event to notify AccountPopup to refresh
+            // Trigger a custom event to notify AccountPopup/Header to refresh
             if (typeof window !== "undefined") {
-              console.log("Profile: Dispatching userAvatarUpdated event with avatar_url:", updatedUser.avatar_url);
               window.dispatchEvent(new CustomEvent("userAvatarUpdated", {
                 detail: updatedUser
               }));
               
-              // Also dispatch a simpler event with just the avatar URL for immediate update
               window.dispatchEvent(new CustomEvent("avatarUrlUpdated", {
                 detail: { avatar_url: updatedUser.avatar_url }
               }));
             }
           } else {
             // Fallback: try to get fresh user from API
-            console.log("Profile: Falling back to API call...");
             const updatedUser = await AuthService.getCurrentUser();
-            console.log("Profile: Updated user from API:", updatedUser);
-            console.log("Profile: Avatar URL in updated user:", updatedUser?.avatar_url);
             
             if (updatedUser) {
               TokenManager.setUserInfo(updatedUser);
@@ -411,7 +316,6 @@ const ProfileMemberPage = () => {
           }
         } catch (error) {
           console.error("Failed to refresh auth context:", error);
-          // Continue anyway - the data will refresh on next page load
         }
       }
     } catch (error) {
@@ -427,20 +331,11 @@ const ProfileMemberPage = () => {
     }
   };
 
-  const handleAvatarChange = async (info: UploadChangeParam<UploadFile>) => {
-    // Ignore onChange if upload is already in progress or if we're handling via beforeUpload
+  const handleAvatarChange = async () => {
+    // Ignore onChange if upload is already in progress
     if (uploadInProgressRef.current) {
-      console.log("Upload in progress, ignoring onChange");
       return;
     }
-    
-    console.log("handleAvatarChange called:", info);
-    console.log("File status:", info.file?.status);
-    console.log("FileList:", info.fileList);
-    
-    // Only process if fileList exists and beforeUpload hasn't already triggered
-    // Since we handle upload in beforeUpload, we can safely ignore onChange
-    // This prevents duplicate calls
   };
 
   const handleChangePassword = async (values: {
@@ -525,7 +420,7 @@ const ProfileMemberPage = () => {
                   <Title level={3} style={{ margin: 0 }}>
                     {user.full_name}
                   </Title>
-                  <Text type="secondary">Khách hàng VIP</Text>
+                  <Text type="secondary">{user?.role?.role_name || "Quản trị viên"}</Text>
                 </div>
               </div>
 
@@ -539,15 +434,9 @@ const ProfileMemberPage = () => {
                   showUploadList={false}
                   onChange={handleAvatarChange}
                   beforeUpload={(file) => {
-                    // Prevent auto upload
-                    console.log("beforeUpload called with file:", file);
-                    
-                    // Trigger upload immediately when file is selected
-                    // Only if upload is not already in progress
                     if (file instanceof File && !uploadInProgressRef.current) {
                       handleAvatarUpload(file);
                     }
-                    
                     return false;
                   }}
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
@@ -760,63 +649,6 @@ const ProfileMemberPage = () => {
             </Card>
           </Col>
         </Row>
-
-        {/* Quick Actions */}
-        <Row gutter={[24, 24]} style={{ marginTop: "24px" }}>
-          <Col xs={24} sm={8}>
-            <Card
-              hoverable
-              style={{ textAlign: "center", borderRadius: "12px" }}
-              onClick={() => router.push("/member/vehicle")}
-            >
-              <CarOutlined
-                style={{
-                  fontSize: "32px",
-                  color: "#1890ff",
-                  marginBottom: "12px",
-                }}
-              />
-              <Title level={4}>Quản lý xe</Title>
-              <Text type="secondary">Xem và quản lý thông tin xe của bạn</Text>
-            </Card>
-          </Col>
-
-          <Col xs={24} sm={8}>
-            <Card
-              hoverable
-              style={{ textAlign: "center", borderRadius: "12px" }}
-              onClick={() => router.push("/member/booking")}
-            >
-              <CalendarOutlined
-                style={{
-                  fontSize: "32px",
-                  color: "#52c41a",
-                  marginBottom: "12px",
-                }}
-              />
-              <Title level={4}>Đặt lịch</Title>
-              <Text type="secondary">Đặt lịch chăm sóc xe mới</Text>
-            </Card>
-          </Col>
-
-          <Col xs={24} sm={8}>
-            <Card
-              hoverable
-              style={{ textAlign: "center", borderRadius: "12px" }}
-              onClick={() => router.push("/member/booking-list")}
-            >
-              <HistoryOutlined
-                style={{
-                  fontSize: "32px",
-                  color: "#faad14",
-                  marginBottom: "12px",
-                }}
-              />
-              <Title level={4}>Lịch sử đặt</Title>
-              <Text type="secondary">Xem lịch sử đặt lịch của bạn</Text>
-            </Card>
-          </Col>
-        </Row>
       </div>
 
       {/* Change Password Modal */}
@@ -917,4 +749,4 @@ const ProfileMemberPage = () => {
   );
 };
 
-export default ProfileMemberPage;
+export default AdminProfilePage;

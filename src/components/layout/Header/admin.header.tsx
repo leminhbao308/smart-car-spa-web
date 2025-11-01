@@ -1,19 +1,7 @@
 "use client";
-import {
-  Breadcrumb,
-  Input,
-  Space,
-  Avatar,
-  Button,
-  Typography,
-  Dropdown,
-  App,
-} from "antd";
+import { Breadcrumb, Avatar, Button, Typography, Dropdown, App } from "antd";
 import { Header } from "antd/es/layout/layout";
 import {
-  SearchOutlined,
-  BellOutlined,
-  MoonOutlined,
   InfoCircleOutlined,
   UserOutlined,
   HomeOutlined,
@@ -35,7 +23,7 @@ const AdminHeader = () => {
   const { collapsed, toggleCollapsed } = useSiderContext();
   const { user, logout, isLoading } = useAuth();
   const { modal, message: messageApi } = App.useApp();
-  
+
   // State to track logout status and messages
   const logoutStatusRef = useRef<{
     isLoggingOut: boolean;
@@ -106,7 +94,7 @@ const AdminHeader = () => {
       "general-information": "Thông tin chung",
       permissions: "Phân quyền",
       "service-types": "Loại dịch vụ",
-      "services": "Dịch vụ",
+      services: "Dịch vụ",
       "car-profiles": "Hồ sơ xe",
       "care-processes": "Quy trình chăm sóc",
       "price-table": "Bảng giá",
@@ -204,7 +192,8 @@ const AdminHeader = () => {
         } catch (error) {
           console.log("Logout error:", error);
           logoutStatusRef.current.isLoggingOut = true;
-          logoutStatusRef.current.error = "Có lỗi xảy ra khi đăng xuất. Vui lòng thử lại.";
+          logoutStatusRef.current.error =
+            "Có lỗi xảy ra khi đăng xuất. Vui lòng thử lại.";
         }
       },
     });
@@ -216,16 +205,7 @@ const AdminHeader = () => {
       icon: <UserOutlined />,
       label: "Thông tin cá nhân",
       onClick: () => {
-        // Navigate to profile page if available
-        // router.push(ROUTES.MEMBER_PROFILE);
-      },
-    },
-    {
-      key: "settings",
-      icon: <InfoCircleOutlined />,
-      label: "Cài đặt",
-      onClick: () => {
-        // Handle settings navigation
+        router.push(ROUTES.DASHBOARD_PROFILE);
       },
     },
     {
@@ -323,12 +303,11 @@ const AdminHeader = () => {
         </div>
       </div>
 
-      {/* Phần bên phải - Search, Icons, Avatar */}
+      {/* Phần bên phải - User Profile */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "16px",
           backgroundColor: "rgba(255, 255, 255, 0.6)",
           padding: "10px 20px",
           borderRadius: "30px",
@@ -337,90 +316,6 @@ const AdminHeader = () => {
           border: "1px solid rgba(0,0,0,0.05)",
         }}
       >
-        {/* Search Bar */}
-        <Input
-          placeholder="Tìm kiếm..."
-          prefix={<SearchOutlined style={{ color: "rgba(0, 0, 0, 0.5)" }} />}
-          style={{
-            fontSize: "14px",
-            width: "280px",
-            border: "none",
-            backgroundColor: "rgba(255, 255, 255, 0.8)",
-            borderRadius: "25px",
-            padding: "10px 16px",
-            boxShadow: "none",
-            color: "rgba(0, 0, 0, 0.8)",
-          }}
-        />
-
-        {/* Divider */}
-        <div
-          style={{
-            width: "1px",
-            height: "28px",
-            backgroundColor: "rgba(0,0,0,0.1)",
-          }}
-        />
-
-        {/* Icons */}
-        <Space size="small">
-          <Button
-            type="text"
-            icon={<BellOutlined />}
-            style={{
-              fontSize: "18px",
-              color: "rgba(0, 0, 0, 0.6)",
-              borderRadius: "50%",
-              width: "40px",
-              height: "40px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
-              e.currentTarget.style.color = "rgba(0, 0, 0, 0.8)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
-              e.currentTarget.style.color = "rgba(0, 0, 0, 0.6)";
-            }}
-          />
-          <Button
-            type="text"
-            icon={<MoonOutlined />}
-            style={{
-              fontSize: "18px",
-              color: "rgba(0, 0, 0, 0.6)",
-              borderRadius: "50%",
-              width: "40px",
-              height: "40px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
-              e.currentTarget.style.color = "rgba(0, 0, 0, 0.8)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
-              e.currentTarget.style.color = "rgba(0, 0, 0, 0.6)";
-            }}
-          />
-        </Space>
-
-        {/* Divider */}
-        <div
-          style={{
-            width: "1px",
-            height: "28px",
-            backgroundColor: "rgba(0,0,0,0.1)",
-          }}
-        />
-
         {/* User Profile */}
         <Dropdown
           menu={{ items: userMenuItems }}
