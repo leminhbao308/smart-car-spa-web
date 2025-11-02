@@ -156,7 +156,7 @@ const ServicePackageDetailModal: React.FC<ServicePackageDetailModalProps> = ({
       }
 
     } catch (error) {
-      console.error("Error loading related data:", error);
+      console.log("Error loading related data:", error);
       message.error("Không thể tải thông tin liên quan");
     } finally {
       setLoading(false);

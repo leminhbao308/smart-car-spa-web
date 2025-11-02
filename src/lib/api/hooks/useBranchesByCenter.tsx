@@ -25,7 +25,7 @@ export const useBranchesByCenter = (centerId: string | null): UseBranchesByCente
       const response = await BranchService.getAllBranches();
       setBranches(response.branches);
     } catch (err) {
-      console.error("Failed to fetch branches:", err);
+      console.log("Failed to fetch branches:", err);
       setError("Failed to load branches data.");
     } finally {
       setLoading(false);

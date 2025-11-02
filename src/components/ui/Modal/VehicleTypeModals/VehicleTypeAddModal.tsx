@@ -42,7 +42,7 @@ const VehicleTypeAddModal: React.FC<VehicleTypeAddModalProps> = ({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Error creating vehicle type:", error);
+      console.log("Error creating vehicle type:", error);
       // Error handling is done in the hook
     }
   };

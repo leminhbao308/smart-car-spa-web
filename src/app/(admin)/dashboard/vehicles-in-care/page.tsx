@@ -441,7 +441,7 @@ const VehiclesInCarePage = () => {
               );
             createdTrackings.push(createdTracking);
           } catch (error) {
-            console.error(
+            console.log(
               `❌ Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`,
               error
             );
@@ -457,7 +457,7 @@ const VehiclesInCarePage = () => {
         });
       }
     } catch (error) {
-      console.error("❌ Error in auto-create tracking:", error);
+      console.log("❌ Error in auto-create tracking:", error);
       notification.error({
         message: "Lỗi",
         description: "Có lỗi xảy ra khi tự động tạo tracking",

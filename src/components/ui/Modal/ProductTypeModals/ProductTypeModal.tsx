@@ -73,7 +73,7 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
 
       onSuccess();
     } catch (error) {
-      console.error("Form validation or submission error:", error);
+      console.log("Form validation or submission error:", error);
     }
   };
 

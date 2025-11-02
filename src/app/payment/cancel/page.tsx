@@ -33,7 +33,7 @@ const CancelPaymentPage = () => {
           await cancelPayment(paymentId);
           message.success("Đã hủy thanh toán");
         } catch (error: any) {
-          console.error("Error cancelling payment:", error);
+          console.log("Error cancelling payment:", error);
           // Don't show error message as user intentionally cancelled
         } finally {
           setIsCancelling(false);

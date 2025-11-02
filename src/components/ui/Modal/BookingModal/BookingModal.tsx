@@ -116,6 +116,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   loading = false,
   onRefresh,
 }) => {
+  // Lazy initialization: only create form instance when modal is open or was opened
   const [form] = Form.useForm();
   const formRef = useRef(form);
 
@@ -278,7 +279,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Get all services from price books (filter for services only, not service packages)
   const availableServices = useMemo(() => {
     if (priceBooksError) {
-      console.error("Error loading price books:", priceBooksError);
+      console.log("Error loading price books:", priceBooksError);
       return [];
     }
 
@@ -341,7 +342,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       );
       setAvailableSlots(uniqueSlots);
     } catch (error) {
-      console.error("Error loading available slots:", error);
+      console.log("Error loading available slots:", error);
       setAvailableSlots([]);
     } finally {
       setLoadingSlots(false);
@@ -425,7 +426,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           setQueueItems([]);
         }
       } catch (error) {
-        console.error("❌ Error getting bay recommendation:", error);
+        console.log("❌ Error getting bay recommendation:", error);
         setBayRecommendation(null);
         setQueueItems([]);
       } finally {
@@ -712,8 +713,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       console.log("Customer checks:", { isNewCustomer, isExistingCustomer });
 
       if (!isNewCustomer && !isExistingCustomer) {
-        console.error("❌ Missing required information for booking");
-        console.error(
+        console.log("❌ Missing required information for booking");
+        console.log(
           "isNewCustomer:",
           isNewCustomer,
           "isExistingCustomer:",
@@ -754,7 +755,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // Handle new customer (walk-in booking)
       if (isNewCustomer) {
         if (!selectedBranch || !selectedWalkInBay) {
-          console.error("Missing branch or bay information for new customer");
+          console.log("Missing branch or bay information for new customer");
           return;
         }
 
@@ -812,7 +813,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           return;
         } catch (walkInError) {
-          console.error("Error creating walk-in booking:", walkInError);
+          console.log("Error creating walk-in booking:", walkInError);
           onOk({
             customerType: "new",
             customer: newCustomer,
@@ -847,7 +848,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         !selectedSlot
       ) {
         if (!selectedBranch) {
-          console.error(
+          console.log(
             "Missing branch information for existing customer walk-in"
           );
           return;
@@ -921,7 +922,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           return;
         } catch (walkInError) {
-          console.error(
+          console.log(
             "Error creating walk-in booking for existing customer:",
             walkInError
           );
@@ -950,7 +951,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       if (isExistingCustomer && selectedSlot && !selectedWalkInBay) {
         console.log("🎯 Processing existing customer slot booking...");
         if (!selectedBranch) {
-          console.error(
+          console.log(
             "Missing branch information for existing customer slot booking"
           );
           return;
@@ -1023,7 +1024,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           return;
         } catch (bookingError) {
-          console.error("Error creating slot booking:", bookingError);
+          console.log("Error creating slot booking:", bookingError);
           onOk({
             customerType: "existing",
             customer: selectedCustomer,
@@ -1050,7 +1051,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         selectedBranch: !!selectedBranch,
       });
     } catch (error) {
-      console.error("Booking submission failed:", error);
+      console.log("Booking submission failed:", error);
 
       // Debug form validation errors
       if (error && typeof error === "object" && "errorFields" in error) {
@@ -1063,9 +1064,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
             }>;
           }
         ).errorFields;
-        console.error("Validation errors:", errorFields);
+        console.log("Validation errors:", errorFields);
         errorFields.forEach((field, index: number) => {
-          console.error(`Field ${index + 1}:`, {
+          console.log(`Field ${index + 1}:`, {
             name: field.name,
             errors: field.errors,
             warnings: field.warnings,
@@ -1917,7 +1918,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               );
                             }
                           } catch (error) {
-                            console.error(
+                            console.log(
                               "❌ Error loading queue for recommended bay:",
                               error
                             );
@@ -1990,7 +1991,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               queue as unknown as typeof queueItems
                             );
                           } catch (error) {
-                            console.error(
+                            console.log(
                               "❌ Error loading queue for bay:",
                               error
                             );
@@ -2344,7 +2345,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               queue as unknown as typeof queueItems
                             );
                           } catch (error) {
-                            console.error(
+                            console.log(
                               "❌ Error loading queue for bay:",
                               error
                             );
@@ -2828,6 +2829,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       <Form
         form={form}
         layout="vertical"
+        preserve={false}
         initialValues={{
           priority: "NORMAL",
         }}

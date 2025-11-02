@@ -40,7 +40,7 @@ const VehicleTypesPage = () => {
 
       setData(response.data.content);
     } catch (error) {
-      console.error("Error fetching vehicle types:", error);
+      console.log("Error fetching vehicle types:", error);
       message.error("Không thể tải danh sách loại xe");
     } finally {
       setLoading(false);
@@ -91,7 +91,7 @@ const VehicleTypesPage = () => {
           // Refresh the data to ensure the table is updated
           fetchVehicleTypes();
         } catch (error) {
-          console.error("Error deleting vehicle type:", error);
+          console.log("Error deleting vehicle type:", error);
           const errorMessage =
             error instanceof Error
               ? error.message

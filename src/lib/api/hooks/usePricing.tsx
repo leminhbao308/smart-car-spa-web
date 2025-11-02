@@ -57,7 +57,7 @@ export const useActivePriceBooks = () => {
         return result;
       } catch (error) {
         console.log("=== getActivePriceBooks API ERROR ===");
-        console.error("API Error:", error);
+        console.log("API Error:", error);
         throw error;
       }
     },
@@ -83,7 +83,7 @@ export const useAllPriceBooks = () => {
         return result;
       } catch (error) {
         console.log("=== getAllPriceBooks API ERROR ===");
-        console.error("API Error:", error);
+        console.log("API Error:", error);
         throw error;
       }
     },

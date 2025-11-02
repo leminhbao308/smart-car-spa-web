@@ -42,7 +42,7 @@ const VehicleBrandDetailModal: React.FC<VehicleBrandDetailModalProps> = ({
       const brandData = await VehicleService.getVehicleBrandById(brandId);
       setBrand(brandData);
     } catch (error) {
-      console.error("Error fetching brand details:", error);
+      console.log("Error fetching brand details:", error);
     } finally {
       setLoading(false);
     }

@@ -78,7 +78,7 @@ export class VehicleProfileService {
               owner_email: owner?.email,
             } as VehicleProfileDisplay;
           } catch (error) {
-            console.error(`Error transforming profile ${profile.vehicle_id}:`, error);
+            console.log(`Error transforming profile ${profile.vehicle_id}:`, error);
             // Return profile with fallback values if API calls fail
             return {
               ...profile,
@@ -98,8 +98,8 @@ export class VehicleProfileService {
 
       return transformedProfiles;
     } catch (error) {
-      console.error("Error transforming vehicle profiles:", error);
-      console.error("Error details:", {
+      console.log("Error transforming vehicle profiles:", error);
+      console.log("Error details:", {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
         profiles: profiles,
@@ -251,7 +251,7 @@ export class VehicleProfileService {
         );
       }
     } catch (error) {
-      console.error("Get vehicle profile by ID error:", error);
+      console.log("Get vehicle profile by ID error:", error);
       throw error;
     }
   }
@@ -276,7 +276,7 @@ export class VehicleProfileService {
         );
       }
     } catch (error) {
-      console.error("Create vehicle profile error:", error);
+      console.log("Create vehicle profile error:", error);
       throw error;
     }
   }
@@ -314,7 +314,7 @@ export class VehicleProfileService {
         );
       }
     } catch (error) {
-      console.error("Update vehicle profile error:", error);
+      console.log("Update vehicle profile error:", error);
       throw error;
     }
   }
@@ -339,7 +339,7 @@ export class VehicleProfileService {
         );
       }
     } catch (error) {
-      console.error("Delete vehicle profile error:", error);
+      console.log("Delete vehicle profile error:", error);
       throw error;
     }
   }

@@ -257,8 +257,8 @@ const ProfileMemberPage = () => {
       queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
       console.log("User data refreshed successfully!");
     } catch (error) {
-      console.error("Error updating profile:", error);
-      console.error("Error details:", {
+      console.log("Error updating profile:", error);
+      console.log("Error details:", {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
         response:
@@ -410,12 +410,12 @@ const ProfileMemberPage = () => {
             }
           }
         } catch (error) {
-          console.error("Failed to refresh auth context:", error);
+          console.log("Failed to refresh auth context:", error);
           // Continue anyway - the data will refresh on next page load
         }
       }
     } catch (error) {
-      console.error("Error uploading avatar:", error);
+      console.log("Error uploading avatar:", error);
       const errorMessage =
         error instanceof Error
           ? error.message

@@ -274,7 +274,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           try {
             await ServiceService.deleteServiceProduct(productId);
           } catch (error) {
-            console.error("Error deleting service product:", error);
+            console.log("Error deleting service product:", error);
           }
         }
 
@@ -283,7 +283,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           try {
             await ServiceProcessService.deleteServiceProcessStep(stepId);
           } catch (error) {
-            console.error("Error deleting process step:", error);
+            console.log("Error deleting process step:", error);
           }
         }
 
@@ -320,7 +320,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
 
       onSuccess();
     } catch (error) {
-      console.error("Error submitting service:", error);
+      console.log("Error submitting service:", error);
       message.error("Có lỗi xảy ra khi lưu dịch vụ!");
     } finally {
       setLoading(false);

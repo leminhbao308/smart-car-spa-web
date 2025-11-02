@@ -189,7 +189,7 @@ const AdminProfilePage = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
     } catch (error) {
-      console.error("Error updating profile:", error);
+      console.log("Error updating profile:", error);
 
       if (error instanceof Error && error.message.includes("date_of_birth")) {
         message.error(
@@ -315,11 +315,11 @@ const AdminProfilePage = () => {
             }
           }
         } catch (error) {
-          console.error("Failed to refresh auth context:", error);
+          console.log("Failed to refresh auth context:", error);
         }
       }
     } catch (error) {
-      console.error("Error uploading avatar:", error);
+      console.log("Error uploading avatar:", error);
       const errorMessage =
         error instanceof Error
           ? error.message

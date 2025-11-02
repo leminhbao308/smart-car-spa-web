@@ -59,7 +59,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to fetch product attributes");
       }
     } catch (error) {
-      console.error("Get all product attributes error:", error);
+      console.log("Get all product attributes error:", error);
       throw error;
     }
   }
@@ -77,7 +77,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to fetch product attribute");
       }
     } catch (error) {
-      console.error("Get product attribute by ID error:", error);
+      console.log("Get product attribute by ID error:", error);
       throw error;
     }
   }
@@ -95,7 +95,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to fetch product attribute");
       }
     } catch (error) {
-      console.error("Get product attribute by code error:", error);
+      console.log("Get product attribute by code error:", error);
       throw error;
     }
   }
@@ -113,7 +113,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to fetch product attributes by data type");
       }
     } catch (error) {
-      console.error("Get product attributes by data type error:", error);
+      console.log("Get product attributes by data type error:", error);
       throw error;
     }
   }
@@ -131,7 +131,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to fetch required product attributes");
       }
     } catch (error) {
-      console.error("Get required product attributes error:", error);
+      console.log("Get required product attributes error:", error);
       throw error;
     }
   }
@@ -149,7 +149,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to fetch active product attributes");
       }
     } catch (error) {
-      console.error("Get active product attributes error:", error);
+      console.log("Get active product attributes error:", error);
       throw error;
     }
   }
@@ -172,7 +172,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to create product attribute");
       }
     } catch (error) {
-      console.error("Create product attribute error:", error);
+      console.log("Create product attribute error:", error);
       throw error;
     }
   }
@@ -196,7 +196,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to update product attribute");
       }
     } catch (error) {
-      console.error("Update product attribute error:", error);
+      console.log("Update product attribute error:", error);
       throw error;
     }
   }
@@ -215,7 +215,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to delete product attribute");
       }
     } catch (error) {
-      console.error("Delete product attribute error:", error);
+      console.log("Delete product attribute error:", error);
       throw error;
     }
   }
@@ -239,7 +239,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to update product attribute status");
       }
     } catch (error) {
-      console.error("Update product attribute status error:", error);
+      console.log("Update product attribute status error:", error);
       throw error;
     }
   }
@@ -257,7 +257,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to validate product attribute code");
       }
     } catch (error) {
-      console.error("Validate product attribute code error:", error);
+      console.log("Validate product attribute code error:", error);
       throw error;
     }
   }
@@ -275,7 +275,7 @@ export class ProductAttributeService {
         throw new Error(response.data.message || "Failed to fetch product attribute statistics");
       }
     } catch (error) {
-      console.error("Get product attribute statistics error:", error);
+      console.log("Get product attribute statistics error:", error);
       throw error;
     }
   }

@@ -60,7 +60,7 @@ export default function ServicesPage() {
                 boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
                 border: "1px solid #E5E7EB",
               }}
-              bodyStyle={{ padding: "24px" }}
+              styles={{ body: { padding: "24px" } }}
             >
               <div style={{ textAlign: "center", marginBottom: "20px" }}>
                 {service.icon}

@@ -131,7 +131,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
           : servicesRes.data?.content || []
       );
     } catch (error) {
-      console.error("Error loading initial data:", error);
+      console.log("Error loading initial data:", error);
       message.error("Không thể tải dữ liệu khởi tạo");
     } finally {
       setLoadingData(false);
@@ -367,7 +367,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
         }
 
       } catch (error) {
-        console.error("Error removing service from package:", error);
+        console.log("Error removing service from package:", error);
         const errorMessage = error instanceof Error ? error.message : "Không thể xóa dịch vụ khỏi gói";
         message.error(errorMessage);
       }
@@ -471,7 +471,7 @@ const ServicePackageModal: React.FC<ServicePackageModalProps> = ({
       onSuccess();
       onCancel();
     } catch (error) {
-      console.error("Error submitting form:", error);
+      console.log("Error submitting form:", error);
       message.error(
         mode === "create"
           ? "Tạo gói dịch vụ thất bại"

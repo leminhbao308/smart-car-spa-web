@@ -83,7 +83,7 @@ const VehiclePage = () => {
       message.success("Thêm xe thành công!");
       setCreateVehicleModalVisible(false);
     } catch (error) {
-      console.error("Error creating vehicle:", error);
+      console.log("Error creating vehicle:", error);
       message.error("Có lỗi xảy ra khi tạo xe mới!");
     } finally {
       setIsCreatingVehicle(false);
@@ -107,7 +107,7 @@ const VehiclePage = () => {
       setEditVehicleModalVisible(false);
       setEditingVehicle(null);
     } catch (error) {
-      console.error("Error refreshing vehicle list:", error);
+      console.log("Error refreshing vehicle list:", error);
       message.error("Có lỗi xảy ra khi cập nhật danh sách xe!");
     }
   };

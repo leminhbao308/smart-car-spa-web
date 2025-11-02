@@ -74,7 +74,7 @@ const VehicleBrandEditModal: React.FC<VehicleBrandEditModalProps> = ({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Error updating vehicle brand:", error);
+      console.log("Error updating vehicle brand:", error);
       // Error handling is done in the hook
     }
   };

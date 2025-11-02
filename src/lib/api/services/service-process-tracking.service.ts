@@ -34,7 +34,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to create service process tracking");
       }
     } catch (error) {
-      console.error("Create service process tracking error:", error);
+      console.log("Create service process tracking error:", error);
       throw error;
     }
   }
@@ -87,7 +87,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to fetch service process trackings");
       }
     } catch (error) {
-      console.error("Get all service process trackings error:", error);
+      console.log("Get all service process trackings error:", error);
       throw error;
     }
   }
@@ -105,7 +105,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to fetch service process tracking");
       }
     } catch (error) {
-      console.error("Get service process tracking by ID error:", error);
+      console.log("Get service process tracking by ID error:", error);
       throw error;
     }
   }
@@ -129,7 +129,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to update service process tracking");
       }
     } catch (error) {
-      console.error("Update service process tracking error:", error);
+      console.log("Update service process tracking error:", error);
       throw error;
     }
   }
@@ -148,7 +148,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to delete service process tracking");
       }
     } catch (error) {
-      console.error("Delete service process tracking error:", error);
+      console.log("Delete service process tracking error:", error);
       throw error;
     }
   }
@@ -166,7 +166,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to fetch trackings by booking");
       }
     } catch (error) {
-      console.error("Get trackings by booking error:", error);
+      console.log("Get trackings by booking error:", error);
       throw error;
     }
   }
@@ -184,7 +184,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to fetch trackings by technician");
       }
     } catch (error) {
-      console.error("Get trackings by technician error:", error);
+      console.log("Get trackings by technician error:", error);
       throw error;
     }
   }
@@ -202,7 +202,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to fetch trackings by bay");
       }
     } catch (error) {
-      console.error("Get trackings by bay error:", error);
+      console.log("Get trackings by bay error:", error);
       throw error;
     }
   }
@@ -220,7 +220,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to fetch in-progress trackings");
       }
     } catch (error) {
-      console.error("Get in-progress trackings error:", error);
+      console.log("Get in-progress trackings error:", error);
       throw error;
     }
   }
@@ -244,7 +244,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to start step");
       }
     } catch (error) {
-      console.error("Start step error:", error);
+      console.log("Start step error:", error);
       throw error;
     }
   }
@@ -268,7 +268,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to update progress");
       }
     } catch (error) {
-      console.error("Update progress error:", error);
+      console.log("Update progress error:", error);
       throw error;
     }
   }
@@ -292,7 +292,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to complete step");
       }
     } catch (error) {
-      console.error("Complete step error:", error);
+      console.log("Complete step error:", error);
       throw error;
     }
   }
@@ -316,7 +316,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to cancel step");
       }
     } catch (error) {
-      console.error("Cancel step error:", error);
+      console.log("Cancel step error:", error);
       throw error;
     }
   }
@@ -340,7 +340,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to add note");
       }
     } catch (error) {
-      console.error("Add note error:", error);
+      console.log("Add note error:", error);
       throw error;
     }
   }
@@ -366,7 +366,7 @@ export class ServiceProcessTrackingService {
         throw new Error(response.data.message || "Failed to add evidence media");
       }
     } catch (error) {
-      console.error("Add evidence media error:", error);
+      console.log("Add evidence media error:", error);
       throw error;
     }
   }

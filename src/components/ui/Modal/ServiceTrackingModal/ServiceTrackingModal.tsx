@@ -216,7 +216,7 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
     try {
       await refetchTrackings();
     } catch (error) {
-      console.error("Error refetching trackings:", error);
+      console.log("Error refetching trackings:", error);
     }
   };
 
@@ -238,7 +238,7 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
       // Refresh trackings data to update UI
       await refetchTrackings();
     } catch (error) {
-      console.error("Start step error:", error);
+      console.log("Start step error:", error);
       message.error("Có lỗi xảy ra khi bắt đầu tracking");
     } finally {
       setLoading(false);
@@ -263,7 +263,7 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
     try {
       await refetchTrackings();
     } catch (error) {
-      console.error("Error refetching trackings:", error);
+      console.log("Error refetching trackings:", error);
     }
   };
 
@@ -285,7 +285,7 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
       // Refresh trackings data to update UI
       await refetchTrackings();
     } catch (error) {
-      console.error("Complete step error:", error);
+      console.log("Complete step error:", error);
       message.error("Có lỗi xảy ra khi hoàn thành tracking");
     } finally {
       setLoading(false);
@@ -307,7 +307,7 @@ const ServiceTrackingModal: React.FC<ServiceTrackingModalProps> = ({
         onCancel();
       }, 1500);
     } catch (error) {
-      console.error("Complete service error:", error);
+      console.log("Complete service error:", error);
       message.error("Có lỗi xảy ra khi hoàn thành dịch vụ");
     } finally {
       setLoading(false);

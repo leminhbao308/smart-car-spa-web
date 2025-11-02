@@ -253,7 +253,7 @@ const BookingTrackingManagementModal: React.FC<
       await loadTrackingData();
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
     } catch (error) {
-      console.error("Error starting tracking:", error);
+      console.log("Error starting tracking:", error);
       notification.error({
         message: "Lỗi",
         description: "Không thể bắt đầu thực hiện bước",

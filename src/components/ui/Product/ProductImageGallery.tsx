@@ -377,7 +377,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
       addImageUpload.clearFiles();
       addForm.resetFields();
     } catch (error) {
-      console.error("Error adding image:", error);
+      console.log("Error adding image:", error);
     }
   };
 
@@ -426,7 +426,7 @@ const ProductImageGallery: React.FC<ProductImageGalleryProps> = ({
       editImageUpload.clearFiles();
       editForm.resetFields();
     } catch (err) {
-      console.error("Error updating image:", err);
+      console.log("Error updating image:", err);
     }
   };
 

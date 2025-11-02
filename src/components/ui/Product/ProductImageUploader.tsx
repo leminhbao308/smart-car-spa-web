@@ -86,7 +86,7 @@ const ProductImageUploader: React.FC<ProductImageUploaderProps> = ({
       form.resetFields();
       antMessage.success("Đã thêm ảnh!");
     } catch (error) {
-      console.error("Error adding image:", error);
+      console.log("Error adding image:", error);
     }
   };
 

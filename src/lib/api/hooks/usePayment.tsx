@@ -52,7 +52,7 @@ export const useVerifyPayment = (
         console.log(`📊 useVerifyPayment: Payment status result:`, result);
         return result;
       } catch (error) {
-        console.error(`❌ useVerifyPayment: Error verifying payment:`, error);
+        console.log(`❌ useVerifyPayment: Error verifying payment:`, error);
         throw error;
       }
     },

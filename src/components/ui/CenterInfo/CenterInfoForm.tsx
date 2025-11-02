@@ -246,7 +246,7 @@ const CenterInfoForm: React.FC<CenterInfoFormProps> = ({
         onOk(updatedCenter);
       }
     } catch (error) {
-      console.error("Update center failed:", error);
+      console.log("Update center failed:", error);
       // Show error message to user
       const errorMessage =
         error instanceof Error

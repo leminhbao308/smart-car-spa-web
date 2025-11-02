@@ -199,7 +199,7 @@ const PriceBookFormModal: React.FC<PriceBookFormModalProps> = ({
       message.success(mode === "create" ? "Tạo bảng giá thành công" : "Cập nhật bảng giá thành công");
     } catch (error: any) {
       message.error(error?.message || "Có lỗi xảy ra");
-      console.error("Error submitting price book:", error);
+      console.log("Error submitting price book:", error);
     } finally {
       setSubmitting(false);
     }

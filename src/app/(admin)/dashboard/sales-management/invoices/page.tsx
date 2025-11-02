@@ -409,7 +409,7 @@ const InvoicesPage = () => {
             </Space>
           );
         } catch (error) {
-          console.error("Error parsing promotion snapshot:", error);
+          console.log("Error parsing promotion snapshot:", error);
           return <Text type="secondary">-</Text>;
         }
       },

@@ -67,7 +67,7 @@ export class ServiceProcessService {
   //       throw new Error("Invalid response format");
   //     }
   //   } catch (error) {
-  //     console.error("Get all service processes error:", error);
+  //     console.log("Get all service processes error:", error);
   //     throw error;
   //   }
   // }
@@ -88,7 +88,7 @@ export class ServiceProcessService {
         throw new Error("Failed to fetch service process");
       }
     } catch (error) {
-      console.error("Get service process by ID error:", error);
+      console.log("Get service process by ID error:", error);
       throw error;
     }
   }
@@ -109,7 +109,7 @@ export class ServiceProcessService {
         throw new Error("Failed to fetch service process");
       }
     } catch (error) {
-      console.error("Get service process by code error:", error);
+      console.log("Get service process by code error:", error);
       throw error;
     }
   }
@@ -132,7 +132,7 @@ export class ServiceProcessService {
         throw new Error("Failed to fetch service process by service ID");
       }
     } catch (error) {
-      console.error("Get service process by service ID error:", error);
+      console.log("Get service process by service ID error:", error);
       throw error;
     }
   }
@@ -153,7 +153,7 @@ export class ServiceProcessService {
         );
       }
     } catch (error) {
-      console.error("Get default service process error:", error);
+      console.log("Get default service process error:", error);
       throw error;
     }
   }
@@ -180,7 +180,7 @@ export class ServiceProcessService {
   //       return []; // Return empty array instead of throwing error
   //     }
   //   } catch (error) {
-  //     console.error("Get active service processes error:", error);
+  //     console.log("Get active service processes error:", error);
   //     // Return empty array instead of throwing error to prevent UI crashes
   //     return [];
   //   }
@@ -201,7 +201,7 @@ export class ServiceProcessService {
         throw new Error("Failed to create service process");
       }
     } catch (error) {
-      console.error("Create service process error:", error);
+      console.log("Create service process error:", error);
       throw error;
     }
   }
@@ -226,7 +226,7 @@ export class ServiceProcessService {
         throw new Error("Failed to update service process");
       }
     } catch (error) {
-      console.error("Update service process error:", error);
+      console.log("Update service process error:", error);
       throw error;
     }
   }
@@ -249,7 +249,7 @@ export class ServiceProcessService {
         );
       }
     } catch (error) {
-      console.error("Delete service process error:", error);
+      console.log("Delete service process error:", error);
       throw error;
     }
   }
@@ -275,7 +275,7 @@ export class ServiceProcessService {
         throw new Error("Failed to set default service process");
       }
     } catch (error) {
-      console.error("Set default service process error:", error);
+      console.log("Set default service process error:", error);
       throw error;
     }
   }
@@ -300,7 +300,7 @@ export class ServiceProcessService {
         throw new Error("Failed to fetch service process steps");
       }
     } catch (error) {
-      console.error("Get service process steps error:", error);
+      console.log("Get service process steps error:", error);
       throw error;
     }
   }
@@ -323,7 +323,7 @@ export class ServiceProcessService {
         throw new Error("Failed to fetch service process step");
       }
     } catch (error) {
-      console.error("Get service process step by ID error:", error);
+      console.log("Get service process step by ID error:", error);
       throw error;
     }
   }
@@ -351,7 +351,7 @@ export class ServiceProcessService {
         throw new Error("Failed to add step to service process");
       }
     } catch (error) {
-      console.error("Add step to service process error:", error);
+      console.log("Add step to service process error:", error);
       throw error;
     }
   }
@@ -379,7 +379,7 @@ export class ServiceProcessService {
         throw new Error("Failed to update service process step");
       }
     } catch (error) {
-      console.error("Update service process step error:", error);
+      console.log("Update service process step error:", error);
       throw error;
     }
   }
@@ -402,7 +402,7 @@ export class ServiceProcessService {
         );
       }
     } catch (error) {
-      console.error("Delete service process step error:", error);
+      console.log("Delete service process step error:", error);
       throw error;
     }
   }
@@ -427,7 +427,7 @@ export class ServiceProcessService {
         throw new Error("Failed to fetch service process step products");
       }
     } catch (error) {
-      console.error("Get service process step products error:", error);
+      console.log("Get service process step products error:", error);
       throw error;
     }
   }
@@ -450,7 +450,7 @@ export class ServiceProcessService {
         throw new Error("Failed to fetch service process products");
       }
     } catch (error) {
-      console.error("Get service process products error:", error);
+      console.log("Get service process products error:", error);
       throw error;
     }
   }
@@ -473,7 +473,7 @@ export class ServiceProcessService {
         throw new Error("Failed to fetch service process step product");
       }
     } catch (error) {
-      console.error("Get service process step product by ID error:", error);
+      console.log("Get service process step product by ID error:", error);
       throw error;
     }
   }
@@ -501,7 +501,7 @@ export class ServiceProcessService {
         throw new Error("Failed to add product to step");
       }
     } catch (error) {
-      console.error("Add product to step error:", error);
+      console.log("Add product to step error:", error);
       throw error;
     }
   }
@@ -535,7 +535,7 @@ export class ServiceProcessService {
         throw new Error("Failed to update service process step product");
       }
     } catch (error) {
-      console.error("Update service process step product error:", error);
+      console.log("Update service process step product error:", error);
       throw error;
     }
   }
@@ -564,7 +564,7 @@ export class ServiceProcessService {
         );
       }
     } catch (error) {
-      console.error("Delete service process step product error:", error);
+      console.log("Delete service process step product error:", error);
       throw error;
     }
   }

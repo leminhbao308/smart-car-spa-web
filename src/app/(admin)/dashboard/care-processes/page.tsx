@@ -183,7 +183,7 @@ const CareProcessesPage = () => {
               message.success(isActivating ? "Kích hoạt quy trình thành công!" : "Tạm dừng quy trình thành công!");
               refetch();
             } catch (error) {
-              console.error("Error updating service process status:", error);
+              console.log("Error updating service process status:", error);
               message.error(isActivating ? "Có lỗi xảy ra khi kích hoạt quy trình" : "Có lỗi xảy ra khi tạm dừng quy trình");
             }
           },

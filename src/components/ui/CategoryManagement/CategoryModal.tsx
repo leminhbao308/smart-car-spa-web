@@ -132,18 +132,18 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
       // Handle form validation errors
       const validationError = error as FormValidationError;
       if (validationError && validationError.errorFields) {
-        console.error("Form validation failed:", validationError.errorFields);
+        console.log("Form validation failed:", validationError.errorFields);
         // Show specific validation errors to user
         const errorMessages = validationError.errorFields
           .map((field) => `${field.name.join(".")}: ${field.errors.join(", ")}`)
           .join("\n");
-        console.error("Validation errors:", errorMessages);
+        console.log("Validation errors:", errorMessages);
         message.error("Vui lòng kiểm tra lại thông tin đã nhập!");
       } else if (validationError && validationError.message) {
-        console.error("Form validation failed:", validationError.message);
+        console.log("Form validation failed:", validationError.message);
         message.error("Có lỗi xảy ra khi xác thực form!");
       } else {
-        console.error(
+        console.log(
           "Form validation failed:",
           JSON.stringify(error, null, 2)
         );

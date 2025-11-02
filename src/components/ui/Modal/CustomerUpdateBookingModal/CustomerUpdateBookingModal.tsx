@@ -223,7 +223,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   // Get all services from price books (filter for services only)
   const availableServices = useMemo(() => {
     if (priceBooksError) {
-      console.error("Error loading price books:", priceBooksError);
+      console.log("Error loading price books:", priceBooksError);
       return [];
     }
 
@@ -278,7 +278,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
         setAvailableSlots(uniqueSlots);
       } catch (error) {
-        console.error("Error loading available slots:", error);
+        console.log("Error loading available slots:", error);
         setAvailableSlots([]);
       } finally {
         setLoadingSlots(false);
@@ -586,7 +586,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         onRefresh();
       }
     } catch (error) {
-      console.error("Booking update failed:", error);
+      console.log("Booking update failed:", error);
       message.error("Cập nhật booking thất bại!");
     }
   };

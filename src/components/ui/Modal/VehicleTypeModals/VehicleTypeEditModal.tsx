@@ -65,7 +65,7 @@ const VehicleTypeEditModal: React.FC<VehicleTypeEditModalProps> = ({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Error updating vehicle type:", error);
+      console.log("Error updating vehicle type:", error);
       // Error handling is done in the hook
     }
   };

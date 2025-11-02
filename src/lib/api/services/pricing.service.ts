@@ -85,7 +85,7 @@ export const PricingService = {
 
       return response.data.data;
     } catch (error) {
-      console.error("PricingService.getActivePriceBooks error:", error);
+      console.log("PricingService.getActivePriceBooks error:", error);
       throw error;
     }
   },
@@ -132,7 +132,7 @@ export const PricingService = {
 
       return response.data.data;
     } catch (error) {
-      console.error("PricingService.getAllPriceBooks error:", error);
+      console.log("PricingService.getAllPriceBooks error:", error);
       throw error;
     }
   },

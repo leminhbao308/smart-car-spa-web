@@ -151,7 +151,7 @@ const StockBatchModal: React.FC<StockBatchModalProps> = ({
       setBatches(sortedData);
       setFilteredBatches(sortedData);
     } catch (error) {
-      console.error("Failed to fetch stock batches:", error);
+      console.log("Failed to fetch stock batches:", error);
       setBatches([]);
       setFilteredBatches([]);
       setSummary(null);

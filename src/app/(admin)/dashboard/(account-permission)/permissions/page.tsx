@@ -49,7 +49,7 @@ const PermissionPage = () => {
         throw new Error(response.message || "Failed to fetch roles");
       }
     } catch (error: unknown) {
-      console.error("Error fetching roles:", error);
+      console.log("Error fetching roles:", error);
       const errorMessage =
         error instanceof Error
           ? error.message

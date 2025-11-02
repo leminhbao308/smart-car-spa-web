@@ -186,7 +186,7 @@ const StaffPage = () => {
     try {
       await refreshUsers();
     } catch (error) {
-      console.error("StaffPage: Error refreshing data:", error);
+      console.log("StaffPage: Error refreshing data:", error);
     }
   };
 

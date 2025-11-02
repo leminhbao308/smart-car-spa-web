@@ -93,7 +93,7 @@ const ServicesPage = () => {
         }
       } catch (error) {
         message.error("Không thể tải danh sách dịch vụ");
-        console.error("Error loading services:", error);
+        console.log("Error loading services:", error);
       } finally {
         setLoading(false);
       }
@@ -107,7 +107,7 @@ const ServicesPage = () => {
       await loadServices(pagination.current - 1, pagination.pageSize);
       setTableKey((prev) => prev + 1); // Force table re-render
     } catch (error) {
-      console.error("Error refreshing data:", error);
+      console.log("Error refreshing data:", error);
       message.error("Không thể làm mới dữ liệu");
     }
   };

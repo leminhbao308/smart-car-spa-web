@@ -105,7 +105,7 @@ const StockInventoryPage = () => {
       const orders = await PurchaseOrderService.getAllPurchaseOrders();
       setPurchaseOrders(orders);
     } catch (error: any) {
-      console.error("Failed to fetch purchase orders:", error);
+      console.log("Failed to fetch purchase orders:", error);
     }
   };
 
@@ -157,7 +157,7 @@ const StockInventoryPage = () => {
           }
         });
       } catch (error) {
-        console.error("Failed to fetch pricing:", error);
+        console.log("Failed to fetch pricing:", error);
       }
 
       const branchName = selectedBranchId

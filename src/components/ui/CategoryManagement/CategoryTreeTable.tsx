@@ -112,7 +112,7 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
     try {
       await deleteCategoryMutation.mutateAsync(categoryId);
     } catch (error) {
-      console.error("Delete failed:", error);
+      console.log("Delete failed:", error);
     }
   };
 
@@ -123,7 +123,7 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
         isActive,
       });
     } catch (error) {
-      console.error("Toggle status failed:", error);
+      console.log("Toggle status failed:", error);
     }
   };
 

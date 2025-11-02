@@ -90,7 +90,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
           return product.product_name;
         }
       } catch (error) {
-        console.error("Error fetching product name:", error);
+        console.log("Error fetching product name:", error);
       }
       return null;
     },
@@ -407,7 +407,7 @@ const CareProcessModal: React.FC<CareProcessModalProps> = ({
       setShouldClearAllSteps(false);
       onSuccess?.();
     } catch (error) {
-      console.error("Error saving service process:", error);
+      console.log("Error saving service process:", error);
       message.error("Có lỗi xảy ra khi lưu quy trình");
     }
   };

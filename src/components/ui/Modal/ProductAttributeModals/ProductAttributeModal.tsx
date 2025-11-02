@@ -96,7 +96,7 @@ const ProductAttributeModal: React.FC<ProductAttributeModalProps> = ({
       
       onSuccess?.();
     } catch (error) {
-      console.error("Error saving attribute:", error);
+      console.log("Error saving attribute:", error);
     }
   };
 

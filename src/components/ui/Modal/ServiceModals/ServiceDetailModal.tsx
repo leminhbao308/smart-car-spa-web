@@ -69,7 +69,7 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
       );
       setProcessDetails(process);
     } catch (error) {
-      console.error("Error loading process details:", error);
+      console.log("Error loading process details:", error);
       message.error("Không thể tải chi tiết quy trình");
     } finally {
       setLoadingProcess(false);

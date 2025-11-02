@@ -31,7 +31,7 @@ export const useBookingWithInventory = () => {
       console.log(`✅ Successfully confirmed booking ${booking.booking_id} and fulfilled inventory`);
       
     } catch (error) {
-      console.error(`❌ Error confirming booking ${booking.booking_id}:`, error);
+      console.log(`❌ Error confirming booking ${booking.booking_id}:`, error);
       throw error;
     }
   }, [confirmBookingMutation, fulfillInventory]);
@@ -59,7 +59,7 @@ export const useBookingWithInventory = () => {
       console.log(`✅ Successfully cancelled booking ${booking.booking_id} and released inventory`);
       
     } catch (error) {
-      console.error(`❌ Error cancelling booking ${booking.booking_id}:`, error);
+      console.log(`❌ Error cancelling booking ${booking.booking_id}:`, error);
       throw error;
     }
   }, [cancelBookingMutation, releaseInventory]);
@@ -89,7 +89,7 @@ export const useBookingWithInventory = () => {
       console.log(`✅ Successfully started service for booking ${booking.booking_id}`);
       
     } catch (error) {
-      console.error(`❌ Error starting service for booking ${booking.booking_id}:`, error);
+      console.log(`❌ Error starting service for booking ${booking.booking_id}:`, error);
       throw error;
     }
   }, [startServiceMutation, fulfillInventory]);

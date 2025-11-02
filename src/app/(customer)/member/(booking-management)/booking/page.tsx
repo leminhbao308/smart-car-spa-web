@@ -161,7 +161,7 @@ const CustomerBookingPage = () => {
   // Get all services from price books
   const availableServices = useMemo(() => {
     if (priceBooksError) {
-      console.error("Error loading price books:", priceBooksError);
+      console.log("Error loading price books:", priceBooksError);
       return [];
     }
 
@@ -213,7 +213,7 @@ const CustomerBookingPage = () => {
       );
       setAvailableSlots(uniqueSlots);
     } catch (error) {
-      console.error("Error loading available slots:", error);
+      console.log("Error loading available slots:", error);
       setAvailableSlots([]);
     } finally {
       setLoadingSlots(false);
@@ -425,7 +425,7 @@ const CustomerBookingPage = () => {
         router.push("/member/booking-list");
       }, 2000);
     } catch (error) {
-      console.error("Booking submission failed:", error);
+      console.log("Booking submission failed:", error);
       message.error("Đặt lịch thất bại!");
     } finally {
       setIsSubmitting(false);
@@ -482,7 +482,7 @@ const CustomerBookingPage = () => {
 
       setCreateVehicleModalVisible(false);
     } catch (error) {
-      console.error("Error creating vehicle:", error);
+      console.log("Error creating vehicle:", error);
       message.error("Có lỗi xảy ra khi tạo xe mới!");
     } finally {
       setIsCreatingVehicle(false);

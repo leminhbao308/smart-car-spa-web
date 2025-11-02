@@ -342,7 +342,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         const queue = await getBayQueue(bayId, bookingDate);
         setQueueItems(queue as unknown as typeof queueItems);
       } catch (error) {
-        console.error("❌ Error loading bay recommendation:", error);
+        console.log("❌ Error loading bay recommendation:", error);
       } finally {
         setIsLoadingRecommendation(false);
       }
@@ -386,7 +386,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   // Get all services from price books (filter for services only, not service packages)
   const availableServices = useMemo(() => {
     if (priceBooksError) {
-      console.error("Error loading price books:", priceBooksError);
+      console.log("Error loading price books:", priceBooksError);
       return [];
     }
 
@@ -452,7 +452,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       console.log("Unique slots after deduplication:", uniqueSlots);
       setAvailableSlots(uniqueSlots);
     } catch (error) {
-      console.error("Error loading available slots:", error);
+      console.log("Error loading available slots:", error);
       setAvailableSlots([]);
     } finally {
       setLoadingSlots(false);
@@ -536,7 +536,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           setQueueItems([]);
         }
       } catch (error) {
-        console.error("❌ Error getting bay recommendation:", error);
+        console.log("❌ Error getting bay recommendation:", error);
         setBayRecommendation(null);
         setQueueItems([]);
       } finally {
@@ -1088,7 +1088,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         onRefresh();
       }
     } catch (error) {
-      console.error("Error confirming booking:", error);
+      console.log("Error confirming booking:", error);
     }
   };
 
@@ -1102,7 +1102,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         onRefresh();
       }
     } catch (error) {
-      console.error("Error checking in booking:", error);
+      console.log("Error checking in booking:", error);
     }
   };
 
@@ -1120,7 +1120,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         onRefresh();
       }
     } catch (error) {
-      console.error("Error cancelling booking:", error);
+      console.log("Error cancelling booking:", error);
     }
   };
 
@@ -1165,8 +1165,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       });
 
       if (!isNewCustomer && !isExistingCustomer) {
-        console.error("❌ Missing required information for booking");
-        console.error(
+        console.log("❌ Missing required information for booking");
+        console.log(
           "isNewCustomer:",
           isNewCustomer,
           "isExistingCustomer:",
@@ -1188,7 +1188,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       // Handle walk-in booking (both new and existing customers)
       if (isWalkInBooking) {
         if (!selectedBranch) {
-          console.error("Missing branch information for walk-in booking");
+          console.log("Missing branch information for walk-in booking");
           return;
         }
 
@@ -1266,7 +1266,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           }
           return;
         } catch (walkInError) {
-          console.error("Error updating walk-in booking:", walkInError);
+          console.log("Error updating walk-in booking:", walkInError);
           onOk({
             customerType: isNewCustomer ? "new" : "existing",
             customer: isNewCustomer ? newCustomer : selectedCustomer,
@@ -1284,7 +1284,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       // Handle slot booking (both new and existing customers)
       if (isSlotBooking) {
         if (!selectedBranch || !selectedSlot) {
-          console.error("Missing branch or slot information for slot booking");
+          console.log("Missing branch or slot information for slot booking");
           return;
         }
 
@@ -1292,11 +1292,11 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         try {
           // Additional safety checks
           if (isNewCustomer && (!newCustomer || !newVehicle)) {
-            console.error("❌ New customer data is incomplete");
+            console.log("❌ New customer data is incomplete");
             return;
           }
           if (!isNewCustomer && (!selectedCustomer || !selectedVehicle)) {
-            console.error("❌ Existing customer data is incomplete");
+            console.log("❌ Existing customer data is incomplete");
             return;
           }
 
@@ -1367,7 +1367,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           onOk(updateRequest);
           return;
         } catch (bookingError) {
-          console.error("Error updating slot booking:", bookingError);
+          console.log("Error updating slot booking:", bookingError);
           onOk({
             customerType: isNewCustomer ? "new" : "existing",
             customer: isNewCustomer ? newCustomer : selectedCustomer,
@@ -1383,7 +1383,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         }
       }
     } catch (error) {
-      console.error("Booking update failed:", error);
+      console.log("Booking update failed:", error);
 
       // Debug form validation errors
       if (error && typeof error === "object" && "errorFields" in error) {
@@ -1396,9 +1396,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             }>;
           }
         ).errorFields;
-        console.error("Validation errors:", errorFields);
+        console.log("Validation errors:", errorFields);
         errorFields.forEach((field, index: number) => {
-          console.error(`Field ${index + 1}:`, {
+          console.log(`Field ${index + 1}:`, {
             name: field.name,
             errors: field.errors,
             warnings: field.warnings,
@@ -2363,7 +2363,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                               );
                             }
                           } catch (error) {
-                            console.error(
+                            console.log(
                               "❌ Error loading queue for recommended bay:",
                               error
                             );
@@ -2436,7 +2436,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                               queue as unknown as typeof queueItems
                             );
                           } catch (error) {
-                            console.error(
+                            console.log(
                               "❌ Error loading queue for bay:",
                               error
                             );

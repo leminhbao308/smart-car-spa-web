@@ -35,7 +35,7 @@ const GeneralInformationPage = () => {
 
       message.success("Cập nhật thông tin trung tâm thành công!");
     } catch (error: unknown) {
-      console.error("Error in handleEditOk:", error);
+      console.log("Error in handleEditOk:", error);
       const errorMessage =
         error instanceof Error
           ? error.message

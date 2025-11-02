@@ -12,7 +12,7 @@
   
   // Store original console methods
   const originalWarn = console.warn;
-  const originalError = console.error;
+  const originalError = console.log;
   const originalLog = console.log;
   
   // Patterns to suppress
@@ -41,8 +41,8 @@
     originalWarn.apply(console, args);
   };
   
-  // Override console.error
-  console.error = function(...args: any[]) {
+  // Override console.log
+  console.log = function(...args: any[]) {
     const message = args[0];
     if (typeof message === "string" && shouldSuppress(message)) {
       return;

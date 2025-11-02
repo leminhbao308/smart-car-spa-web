@@ -95,7 +95,7 @@ const ServicePackageTypeModal: React.FC<ServicePackageTypeModalProps> = ({
 
       onSuccess();
     } catch (error: unknown) {
-      console.error("Error saving service package type:", error);
+      console.log("Error saving service package type:", error);
       const errorMessage =
         error instanceof Error
           ? error.message

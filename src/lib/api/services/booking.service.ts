@@ -57,7 +57,7 @@ export class BookingService {
         throw new Error(response.data.message || "Failed to fetch bookings");
       }
     } catch (error) {
-      console.error("Get all bookings error:", error);
+      console.log("Get all bookings error:", error);
       throw error;
     }
   }
@@ -75,7 +75,7 @@ export class BookingService {
         throw new Error(response.data.message || "Failed to fetch booking");
       }
     } catch (error) {
-      console.error("Get booking by ID error:", error);
+      console.log("Get booking by ID error:", error);
       throw error;
     }
   }
@@ -93,7 +93,7 @@ export class BookingService {
   //       throw new Error(response.data.message || "Failed to fetch booking");
   //     }
   //   } catch (error) {
-  //     console.error("Get booking by code error:", error);
+  //     console.log("Get booking by code error:", error);
   //     throw error;
   //   }
   // }
@@ -115,33 +115,33 @@ export class BookingService {
         console.log("Bookings data:", response.data.data);
         return response.data.data;
       } else {
-        console.error("API response error:", response.data);
+        console.log("API response error:", response.data);
         throw new Error(
           response.data.message || "Failed to fetch customer bookings"
         );
       }
     } catch (error) {
-      console.error("Get bookings by customer error:", error);
+      console.log("Get bookings by customer error:", error);
       
       // More detailed error logging
       if (error instanceof Error) {
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
+        console.log("Error message:", error.message);
+        console.log("Error stack:", error.stack);
         
         // Check if it's an axios error
         if ('response' in error) {
           const axiosError = error as any;
-          console.error("Axios error response status:", axiosError.response?.status);
-          console.error("Axios error response data:", axiosError.response?.data);
-          console.error("Axios error config:", axiosError.config);
+          console.log("Axios error response status:", axiosError.response?.status);
+          console.log("Axios error response data:", axiosError.response?.data);
+          console.log("Axios error config:", axiosError.config);
         }
         
         // Check if it's a network error
         if ('code' in error) {
-          console.error("Error code:", (error as any).code);
+          console.log("Error code:", (error as any).code);
         }
       } else {
-        console.error("Non-Error object:", typeof error, error);
+        console.log("Non-Error object:", typeof error, error);
       }
       
       // Try alternative endpoint if the first one fails
@@ -157,7 +157,7 @@ export class BookingService {
           return altResponse.data.data;
         }
       } catch (altError) {
-        console.error("Alternative endpoint also failed:", altError);
+        console.log("Alternative endpoint also failed:", altError);
       }
       
       throw error;
@@ -177,7 +177,7 @@ export class BookingService {
   //       throw new Error(response.data.message || "Failed to fetch upcoming bookings");
   //     }
   //   } catch (error) {
-  //     console.error("Get upcoming bookings error:", error);
+  //     console.log("Get upcoming bookings error:", error);
   //     throw error;
   //   }
   // }
@@ -195,7 +195,7 @@ export class BookingService {
   //       throw new Error(response.data.message || "Failed to fetch past bookings");
   //     }
   //   } catch (error) {
-  //     console.error("Get past bookings error:", error);
+  //     console.log("Get past bookings error:", error);
   //     throw error;
   //   }
   // }
@@ -217,7 +217,7 @@ export class BookingService {
         );
       }
     } catch (error) {
-      console.error("Get bookings by branch error:", error);
+      console.log("Get bookings by branch error:", error);
       throw error;
     }
   }
@@ -242,7 +242,7 @@ export class BookingService {
         );
       }
     } catch (error) {
-      console.error("Get bookings by branch and date error:", error);
+      console.log("Get bookings by branch and date error:", error);
       throw error;
     }
   }
@@ -262,7 +262,7 @@ export class BookingService {
         );
       }
     } catch (error) {
-      console.error("Get bookings by status error:", error);
+      console.log("Get bookings by status error:", error);
       throw error;
     }
   }
@@ -288,7 +288,7 @@ export class BookingService {
   //       );
   //     }
   //   } catch (error) {
-  //     console.error("Search bookings by customer name error:", error);
+  //     console.log("Search bookings by customer name error:", error);
   //     throw error;
   //   }
   // }
@@ -312,7 +312,7 @@ export class BookingService {
   //       );
   //     }
   //   } catch (error) {
-  //     console.error("Search bookings by phone error:", error);
+  //     console.log("Search bookings by phone error:", error);
   //     throw error;
   //   }
   // }
@@ -330,7 +330,7 @@ export class BookingService {
   //       throw new Error(response.data.message || "Failed to search bookings by license plate");
   //     }
   //   } catch (error) {
-  //     console.error("Search bookings by license plate error:", error);
+  //     console.log("Search bookings by license plate error:", error);
   //     throw error;
   //   }
   // }
@@ -355,7 +355,7 @@ export class BookingService {
         );
       }
     } catch (error) {
-      console.error("Get booking statistics error:", error);
+      console.log("Get booking statistics error:", error);
       throw error;
     }
   }
@@ -378,7 +378,7 @@ export class BookingService {
         throw new Error(response.data.message || "Failed to create booking");
       }
     } catch (error) {
-      console.error("Create booking error:", error);
+      console.log("Create booking error:", error);
       throw error;
     }
   }
@@ -405,7 +405,7 @@ export class BookingService {
         throw new Error(response.data.message || "Failed to update booking");
       }
     } catch (error) {
-      console.error("Update booking error:", error);
+      console.log("Update booking error:", error);
       throw error;
     }
   }
@@ -424,7 +424,7 @@ export class BookingService {
         throw new Error(response.data.message || "Failed to delete booking");
       }
     } catch (error) {
-      console.error("Delete booking error:", error);
+      console.log("Delete booking error:", error);
       throw error;
     }
   }
@@ -450,7 +450,7 @@ export class BookingService {
         throw new Error(response.data.message || "Failed to cancel booking");
       }
     } catch (error) {
-      console.error("Cancel booking error:", error);
+      console.log("Cancel booking error:", error);
       throw error;
     }
   }
@@ -469,7 +469,7 @@ export class BookingService {
         throw new Error(response.data.message || "Failed to confirm booking");
       }
     } catch (error) {
-      console.error("Confirm booking error:", error);
+      console.log("Confirm booking error:", error);
       throw error;
     }
   }
@@ -488,7 +488,7 @@ export class BookingService {
         throw new Error(response.data.message || "Failed to check-in booking");
       }
     } catch (error) {
-      console.error("Check-in booking error:", error);
+      console.log("Check-in booking error:", error);
       throw error;
     }
   }
@@ -507,7 +507,7 @@ export class BookingService {
         throw new Error(response.data.message || "Failed to start service");
       }
     } catch (error) {
-      console.error("Start service error:", error);
+      console.log("Start service error:", error);
       throw error;
     }
   }
@@ -526,7 +526,7 @@ export class BookingService {
         throw new Error(response.data.message || "Failed to complete service");
       }
     } catch (error) {
-      console.error("Complete service error:", error);
+      console.log("Complete service error:", error);
       throw error;
     }
   }
@@ -561,7 +561,7 @@ export class BookingService {
         );
       }
     } catch (error: unknown) {
-      console.error("Mark booking as paid error:", error);
+      console.log("Mark booking as paid error:", error);
       throw error;
     }
   }

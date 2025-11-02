@@ -6,7 +6,7 @@
 // Only run on client side
 if (typeof window !== "undefined") {
   const originalWarn = console.warn;
-  const originalError = console.error;
+  const originalError = console.log;
 
   // List of warnings to suppress
   const suppressedWarnings = [
@@ -62,8 +62,8 @@ if (typeof window !== "undefined") {
     originalWarn.apply(console, args);
   };
 
-  // Override console.error for specific errors
-  console.error = (...args) => {
+  // Override console.log for specific errors
+  console.log = (...args) => {
     const message = args[0];
     
     if (typeof message === "string") {

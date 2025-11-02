@@ -147,7 +147,7 @@ const CustomerBookingListPage = () => {
       message.success("Hủy đặt lịch thành công!");
       refetch();
     } catch (error) {
-      console.error("Cancel booking error:", error);
+      console.log("Cancel booking error:", error);
       message.error("Hủy đặt lịch thất bại!");
     }
   };

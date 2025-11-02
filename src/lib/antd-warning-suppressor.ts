@@ -7,7 +7,7 @@
 if (typeof window !== "undefined") {
   // Store original console methods
   const originalWarn = console.warn;
-  const originalError = console.error;
+  const originalError = console.log;
   const originalLog = console.log;
 
   // List of patterns to suppress
@@ -42,8 +42,8 @@ if (typeof window !== "undefined") {
     originalWarn.apply(console, args);
   };
 
-  // Override console.error
-  console.error = (...args: any[]) => {
+  // Override console.log
+  console.log = (...args: any[]) => {
     const message = args[0];
     
     if (typeof message === "string" && shouldSuppress(message)) {
