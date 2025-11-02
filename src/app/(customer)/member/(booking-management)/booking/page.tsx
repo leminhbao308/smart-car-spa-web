@@ -225,6 +225,45 @@ const CustomerBookingPage = () => {
     loadAvailableSlots();
   }, [loadAvailableSlots]);
 
+  // Reset slot when booking date changes and slot date doesn't match
+  useEffect(() => {
+    if (selectedSlot && bookingDate && selectedSlot.date !== bookingDate) {
+      console.log("🔄 Booking date changed, resetting slot:", {
+        slotDate: selectedSlot.date,
+        newBookingDate: bookingDate,
+      });
+      setSelectedSlot(null);
+    }
+  }, [bookingDate, selectedSlot]);
+
+  // Reset slot when totalDuration changes and current slot is not suitable
+  useEffect(() => {
+    if (
+      selectedSlot &&
+      totalDuration > 0 &&
+      selectedBranch &&
+      selectedBay &&
+      selectedSlot.serviceDurationMinutes !== totalDuration
+    ) {
+      // Check if current slot is still suitable for new duration
+      // If duration increased, reset slot
+      if (totalDuration > selectedSlot.serviceDurationMinutes) {
+        console.log("🔄 Service duration increased, resetting slot:", {
+          currentSlotDuration: selectedSlot.serviceDurationMinutes,
+          newTotalDuration: totalDuration,
+        });
+        setSelectedSlot(null);
+      } else {
+        // Duration decreased, update slot duration but keep selection if still valid
+        const updatedSlot = {
+          ...selectedSlot,
+          serviceDurationMinutes: totalDuration,
+        };
+        setSelectedSlot(updatedSlot);
+      }
+    }
+  }, [totalDuration, selectedSlot, selectedBranch, selectedBay]);
+
   // Check if slot is suitable for service duration
   const isSlotSuitable = useCallback(
     (slot: SlotInfo) => {
@@ -956,7 +995,12 @@ const CustomerBookingPage = () => {
                         return current && current < today.startOf("day");
                       }}
                       onChange={(date) => {
-                        setBookingDate(date ? date.format("YYYY-MM-DD") : "");
+                        const newDate = date ? date.format("YYYY-MM-DD") : "";
+                        setBookingDate(newDate);
+                        // Reset slot when date changes
+                        if (selectedSlot && selectedSlot.date !== newDate) {
+                          setSelectedSlot(null);
+                        }
                       }}
                     />
                   </Form.Item>
@@ -1133,8 +1177,12 @@ const CustomerBookingPage = () => {
                           <Row gutter={8}>
                             {availableSlots.map((slot, index) => {
                               const canSelect = canSelectSlot(slot);
+                              // Check if slot is selected: must match bayId, date, and startTime
                               const isSelected =
-                                selectedSlot?.startTime === slot.startTime;
+                                selectedSlot &&
+                                selectedSlot.bayId === slot.bayId &&
+                                selectedSlot.date === bookingDate &&
+                                selectedSlot.startTime === slot.startTime;
 
                               return (
                                 <Col
@@ -1242,7 +1290,7 @@ const CustomerBookingPage = () => {
                         )}
                       </div>
 
-                      {selectedSlot && (
+                      {selectedSlot && selectedBay && selectedSlot.bayId === selectedBay.bay_id && (
                         <Alert
                           message={`Slot đã chọn: ${
                             selectedSlot.startTime

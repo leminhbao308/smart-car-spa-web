@@ -14,6 +14,8 @@ import {
   Empty,
   Popconfirm,
   App,
+  DatePicker,
+  Select,
 } from "antd";
 import {
   CalendarOutlined,
@@ -27,18 +29,21 @@ import {
   EyeOutlined,
   EditOutlined,
   DeleteOutlined,
+  FilterOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { useCustomerBookings } from "@/lib/api/hooks/useUsers";
 import { useCancelBooking } from "@/lib/api/hooks/useBooking";
+import { useBranches } from "@/lib/api/hooks/useBranches";
 import { useRouter } from "next/navigation";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import VehicleTrackingModal from "@/components/ui/Modal/VehicleTrackingModal/VehicleTrackingModal";
 import CustomerUpdateBookingModal from "@/components/ui/Modal/CustomerUpdateBookingModal";
 import { BookingInfoDto } from "@/lib/api/types/booking.types";
 import { ServiceProcessTrackingInfoDto } from "@/lib/api/types/service-process-tracking.types";
 
 const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
 const CustomerBookingListPage = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -56,9 +61,28 @@ const CustomerBookingListPage = () => {
 
   // State for update modal
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
-  const [selectedBookingForUpdate, setSelectedBookingForUpdate] = useState<BookingInfoDto | null>(null);
+  const [selectedBookingForUpdate, setSelectedBookingForUpdate] =
+    useState<BookingInfoDto | null>(null);
 
-  // Add CSS styles for better table appearance
+  // Filter states
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>(
+    undefined
+  );
+  const [selectedBookingType, setSelectedBookingType] = useState<
+    "advance" | "walk-in" | undefined
+  >(undefined);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 8,
+  });
+
+  // Get branches for filter
+  const { branches, loading: isLoadingBranches } = useBranches();
+
+  // Add CSS styles for better table appearance and responsive design
   React.useEffect(() => {
     const style = document.createElement("style");
     style.textContent = `
@@ -68,13 +92,16 @@ const CustomerBookingListPage = () => {
         font-weight: bold;
         text-align: center;
         border: 1px solid #f0f0f0;
-        padding: 16px 8px;
+        padding: 12px 8px;
+        white-space: nowrap;
       }
       
       .booking-table .ant-table-tbody > tr > td {
         padding: 12px 8px;
         border-bottom: 1px solid #f0f0f0;
         vertical-align: middle;
+        word-wrap: break-word;
+        word-break: break-word;
       }
       
       .booking-table .ant-table-tbody > tr:hover > td {
@@ -92,6 +119,149 @@ const CustomerBookingListPage = () => {
       .booking-table .ant-table-pagination {
         margin-top: 24px;
         text-align: right;
+        overflow-x: auto;
+      }
+
+      /* Responsive styles for mobile */
+      @media (max-width: 768px) {
+        .booking-table .ant-table-thead > tr > th {
+          padding: 10px 4px;
+          font-size: 12px;
+        }
+        
+        .booking-table .ant-table-tbody > tr > td {
+          padding: 10px 4px;
+          font-size: 12px;
+        }
+
+        .booking-table .ant-table-pagination {
+          flex-direction: column;
+          gap: 12px;
+          align-items: flex-start;
+        }
+
+        .booking-table .ant-pagination {
+          flex-wrap: wrap;
+          justify-content: flex-start;
+        }
+
+        .booking-table .ant-pagination-options {
+          margin-left: 0 !important;
+          margin-top: 8px;
+        }
+
+        /* Hide some less important columns on mobile */
+        .booking-table .ant-table-thead > tr > th:nth-child(4),
+        .booking-table .ant-table-tbody > tr > td:nth-child(4) {
+          display: none;
+        }
+
+        .booking-table .ant-table-thead > tr > th:nth-child(6),
+        .booking-table .ant-table-tbody > tr > td:nth-child(6) {
+          display: none;
+        }
+      }
+
+      /* Responsive styles for tablet */
+      @media (min-width: 769px) and (max-width: 1024px) {
+        .booking-table .ant-table-thead > tr > th {
+          padding: 12px 6px;
+          font-size: 13px;
+        }
+        
+        .booking-table .ant-table-tbody > tr > td {
+          padding: 12px 6px;
+          font-size: 13px;
+        }
+
+        .booking-table .ant-table-pagination {
+          flex-wrap: wrap;
+        }
+      }
+
+      /* Responsive for small mobile */
+      @media (max-width: 576px) {
+        .booking-table-wrapper {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .booking-table .ant-table {
+          min-width: 600px;
+        }
+
+        .booking-table .ant-table-thead > tr > th,
+        .booking-table .ant-table-tbody > tr > td {
+          padding: 8px 4px;
+          font-size: 11px;
+        }
+
+        /* Show only essential columns on very small screens */
+        .booking-table .ant-table-thead > tr > th:nth-child(3),
+        .booking-table .ant-table-tbody > tr > td:nth-child(3),
+        .booking-table .ant-table-thead > tr > th:nth-child(5),
+        .booking-table .ant-table-tbody > tr > td:nth-child(5) {
+          display: none;
+        }
+      }
+
+      /* Improve scrollbar appearance */
+      .booking-table-wrapper::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      .booking-table-wrapper::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      .booking-table-wrapper::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+      }
+
+      .booking-table-wrapper::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+
+      /* Better fixed column styling */
+      .booking-table .ant-table-cell-fix-left,
+      .booking-table .ant-table-cell-fix-right {
+        background-color: #fff;
+        z-index: 1;
+      }
+
+      .booking-table .ant-table-tbody > tr:hover > .ant-table-cell-fix-left,
+      .booking-table .ant-table-tbody > tr:hover > .ant-table-cell-fix-right {
+        background-color: #f5f5f5;
+      }
+
+      .booking-table .ant-table-tbody > tr:nth-child(even) > .ant-table-cell-fix-left,
+      .booking-table .ant-table-tbody > tr:nth-child(even) > .ant-table-cell-fix-right {
+        background-color: #fafafa;
+      }
+
+      /* Responsive filter section */
+      @media (max-width: 768px) {
+        .filter-card .ant-space {
+          width: 100%;
+        }
+
+        .filter-card .ant-space-item {
+          width: 100%;
+        }
+
+        .filter-card .ant-picker,
+        .filter-card .ant-select {
+          width: 100% !important;
+        }
+      }
+
+      @media (max-width: 576px) {
+        .filter-card .ant-space {
+          flex-direction: column;
+          align-items: stretch;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -105,6 +275,64 @@ const CustomerBookingListPage = () => {
   const { bookings, loading, error, refetch } = useCustomerBookings(
     user?.user_id || null
   );
+
+  // Client-side filtering with useMemo
+  const filteredBookings = React.useMemo(() => {
+    let result = bookings || [];
+
+    // Filter by date range
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      const startDate = dateRange[0].startOf("day");
+      const endDate = dateRange[1].endOf("day");
+      result = result.filter((booking: BookingInfoDto) => {
+        const bookingDate =
+          booking.scheduled_start_at ||
+          booking.preferred_start_at ||
+          booking.created_at;
+        if (!bookingDate) return false;
+        const date = dayjs(bookingDate).startOf("day");
+        const startUnix = startDate.unix();
+        const endUnix = endDate.unix();
+        const dateUnix = date.unix();
+        return dateUnix >= startUnix && dateUnix <= endUnix;
+      });
+    }
+
+    // Filter by branch
+    if (selectedBranchId) {
+      result = result.filter(
+        (booking: BookingInfoDto) => booking.branch_id === selectedBranchId
+      );
+    }
+
+    // Filter by booking type based on booking_code
+    if (selectedBookingType) {
+      result = result.filter((booking: BookingInfoDto) => {
+        const bookingCode = booking.booking_code?.toUpperCase() || "";
+        // Đặt trước (advance booking): booking_code bắt đầu bằng "BK"
+        if (selectedBookingType === "advance") {
+          return bookingCode.startsWith("BK");
+        }
+        // Đặt xử lý tại chỗ (walk-in): booking_code bắt đầu bằng "WALK-IN" hoặc "WALK"
+        if (selectedBookingType === "walk-in") {
+          return (
+            bookingCode.startsWith("WALK-IN") || bookingCode.startsWith("WALK")
+          );
+        }
+        return true;
+      });
+    }
+
+    return result;
+  }, [bookings, dateRange, selectedBranchId, selectedBookingType]);
+
+  // Client-side pagination
+  const paginatedBookings = React.useMemo(() => {
+    const start = (pagination.current - 1) * pagination.pageSize;
+    const end = start + pagination.pageSize;
+    return filteredBookings.slice(start, end);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredBookings, pagination.current, pagination.pageSize]);
 
   // Cancel booking mutation
   const cancelBookingMutation = useCancelBooking();
@@ -160,14 +388,33 @@ const CustomerBookingListPage = () => {
 
     // Only allow cancellation for PENDING or CONFIRMED status
     const allowedStatuses = ["PENDING", "CONFIRMED"];
-    if (!allowedStatuses.includes(booking.status)) return false;
+    if (!allowedStatuses.includes(booking.status)) {
+      console.log("🔍 Booking cannot be cancelled - status:", booking.status);
+      return false;
+    }
 
-    // Only allow cancellation if booking is more than 1 day away
+    // Only allow cancellation if booking is in the future (not yet started)
     const bookingDate = dayjs(booking.scheduled_start_at);
     const now = dayjs();
-    const daysUntilBooking = bookingDate.diff(now, "day");
-    
-    return daysUntilBooking >= 1;
+    const isFutureBooking = bookingDate.isAfter(now);
+
+    // Debug logging
+    console.log("🔍 Cancel booking check:", {
+      bookingCode: booking.booking_code,
+      status: booking.status,
+      scheduledStartAt: booking.scheduled_start_at,
+      bookingDate: bookingDate.format("YYYY-MM-DD HH:mm"),
+      now: now.format("YYYY-MM-DD HH:mm"),
+      isFutureBooking,
+      hoursUntilBooking: bookingDate.diff(now, "hour"),
+    });
+
+    if (!isFutureBooking) {
+      console.log("🔍 Booking cannot be cancelled - booking time has passed");
+      return false;
+    }
+
+    return true;
   };
 
   // Redirect if not authenticated
@@ -197,18 +444,54 @@ const CustomerBookingListPage = () => {
     return null;
   }
 
-  // Calculate statistics
-  const totalBookings = bookings.length;
-  const upcomingBookings = bookings.filter(
+  // Calculate statistics from filtered bookings
+  const totalBookings = filteredBookings.length;
+  const upcomingBookings = filteredBookings.filter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (booking: any) => dayjs(booking.scheduled_start_at).isAfter(dayjs())
   ).length;
-  const completedBookings = bookings.filter(
+  const completedBookings = filteredBookings.filter(
     (booking) => booking.status === "COMPLETED"
   ).length;
-  const cancelledBookings = bookings.filter(
+  const cancelledBookings = filteredBookings.filter(
     (booking) => booking.status === "CANCELLED"
   ).length;
+
+  // Handle date range change
+  const handleDateRangeChange = (
+    dates: [Dayjs | null, Dayjs | null] | null
+  ) => {
+    setDateRange(dates);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  // Handle branch filter change
+  const handleBranchFilterChange = (branchId: string | undefined) => {
+    setSelectedBranchId(branchId);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  // Handle booking type filter change
+  const handleBookingTypeFilterChange = (
+    bookingType: "advance" | "walk-in" | undefined
+  ) => {
+    setSelectedBookingType(bookingType);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setDateRange(null);
+    setSelectedBranchId(undefined);
+    setSelectedBookingType(undefined);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  // Prepare branch options
+  const branchOptions = branches.map((branch) => ({
+    label: branch.branch_name || branch.branch_code || "N/A",
+    value: branch.branch_id,
+  }));
 
   // Get status color and icon
   const getStatusConfig = (status: string) => {
@@ -256,13 +539,30 @@ const CustomerBookingListPage = () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const columns: any[] = [
     {
+      title: "STT",
+      key: "index",
+      width: 60,
+      align: "center",
+      render: (_: unknown, __: unknown, index: number) => (
+        <span style={{ fontSize: 14, color: "#666" }}>
+          {(pagination.current - 1) * pagination.pageSize + index + 1}
+        </span>
+      ),
+    },
+    {
       title: "Mã đặt lịch",
       dataIndex: "booking_code",
       key: "booking_code",
       width: 140,
-      fixed: "left",
+      ellipsis: {
+        showTitle: false,
+      },
       render: (text: string) => (
-        <Text code style={{ fontSize: "13px", fontWeight: "bold" }}>
+        <Text
+          code
+          style={{ fontSize: "13px", fontWeight: "bold" }}
+          ellipsis={{ tooltip: text }}
+        >
           {text}
         </Text>
       ),
@@ -293,15 +593,26 @@ const CustomerBookingListPage = () => {
       dataIndex: "vehicle_license_plate",
       key: "vehicle_license_plate",
       width: 140,
+      ellipsis: {
+        showTitle: false,
+      },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (text: string, record: any) => (
         <Space direction="vertical" size="small" style={{ fontSize: "13px" }}>
           <Space>
             <CarOutlined style={{ color: "#1890ff" }} />
-            <Text strong>{text}</Text>
+            <Text strong ellipsis={{ tooltip: text }}>
+              {text}
+            </Text>
           </Space>
           {record.vehicle_brand_name && (
-            <Text type="secondary" style={{ fontSize: "11px" }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: "11px" }}
+              ellipsis={{
+                tooltip: `${record.vehicle_brand_name} ${record.vehicle_model_name}`,
+              }}
+            >
               {record.vehicle_brand_name} {record.vehicle_model_name}
             </Text>
           )}
@@ -313,15 +624,24 @@ const CustomerBookingListPage = () => {
       dataIndex: "branch_name",
       key: "branch_name",
       width: 160,
+      ellipsis: {
+        showTitle: false,
+      },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (text: string, record: any) => (
         <Space direction="vertical" size="small" style={{ fontSize: "13px" }}>
           <Space>
             <EnvironmentOutlined style={{ color: "#1890ff" }} />
-            <Text strong>{text}</Text>
+            <Text strong ellipsis={{ tooltip: text }}>
+              {text}
+            </Text>
           </Space>
           {record.bay_name && (
-            <Text type="secondary" style={{ fontSize: "11px" }}>
+            <Text
+              type="secondary"
+              style={{ fontSize: "11px" }}
+              ellipsis={{ tooltip: record.bay_name }}
+            >
               {record.bay_name}
             </Text>
           )}
@@ -341,7 +661,7 @@ const CustomerBookingListPage = () => {
           </Space>
           <Space>
             <ClockCircleOutlined style={{ color: "#52c41a" }} />
-            <Text>{dayjs(date).format("HH:mm")}</Text>
+            <Text>Bắt đầu lúc: {dayjs(date).format("HH:mm")}</Text>
           </Space>
         </Space>
       ),
@@ -416,9 +736,7 @@ const CustomerBookingListPage = () => {
           icon={<EyeOutlined />}
           onClick={() => handleViewTracking(record)}
           style={{ fontSize: "12px" }}
-        >
-          Xem
-        </Button>
+        />
       ),
     },
     {
@@ -439,16 +757,14 @@ const CustomerBookingListPage = () => {
             icon={<EditOutlined />}
             onClick={() => handleEditBooking(record)}
             style={{ fontSize: "12px" }}
-          >
-            Sửa
-          </Button>
+          />
         ) : (
           <span style={{ color: "#d9d9d9", fontSize: "12px" }}>-</span>
         );
       },
     },
     {
-      title: "Hủy",
+      title: "Hủy Lịch",
       key: "cancel",
       width: 120,
       align: "center",
@@ -471,9 +787,7 @@ const CustomerBookingListPage = () => {
               icon={<DeleteOutlined />}
               loading={cancelBookingMutation.isPending}
               style={{ fontSize: "12px" }}
-            >
-              Hủy
-            </Button>
+            />
           </Popconfirm>
         ) : (
           <span style={{ color: "#d9d9d9", fontSize: "12px" }}>-</span>
@@ -508,7 +822,14 @@ const CustomerBookingListPage = () => {
 
   return (
     <App>
-      <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
+      <div
+        style={{
+          padding: "24px",
+          maxWidth: "1400px",
+          margin: "0 auto",
+          width: "100%",
+        }}
+      >
         {/* Header */}
         <div style={{ marginBottom: "32px", textAlign: "center" }}>
           <Title
@@ -521,140 +842,205 @@ const CustomerBookingListPage = () => {
             Quản lý và theo dõi các lịch hẹn dịch vụ của bạn
           </Text>
         </div>
+        {/* Statistics */}
+        <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic
+                title="Tổng đặt lịch"
+                value={totalBookings}
+                prefix={<CalendarOutlined />}
+                valueStyle={{ fontSize: "20px" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic
+                title="Sắp tới"
+                value={upcomingBookings}
+                prefix={<ClockCircleOutlined />}
+                valueStyle={{ color: "#1890ff", fontSize: "20px" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic
+                title="Hoàn thành"
+                value={completedBookings}
+                prefix={<CheckCircleOutlined />}
+                valueStyle={{ color: "#52c41a", fontSize: "20px" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic
+                title="Đã hủy"
+                value={cancelledBookings}
+                prefix={<CloseCircleOutlined />}
+                valueStyle={{ color: "#ff4d4f", fontSize: "20px" }}
+              />
+            </Card>
+          </Col>
+        </Row>
 
-      {/* Statistics */}
-      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-        <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="Tổng đặt lịch"
-              value={totalBookings}
-              prefix={<CalendarOutlined />}
-              valueStyle={{ fontSize: "20px" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="Sắp tới"
-              value={upcomingBookings}
-              prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: "#1890ff", fontSize: "20px" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="Hoàn thành"
-              value={completedBookings}
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: "#52c41a", fontSize: "20px" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card size="small">
-            <Statistic
-              title="Đã hủy"
-              value={cancelledBookings}
-              prefix={<CloseCircleOutlined />}
-              valueStyle={{ color: "#ff4d4f", fontSize: "20px" }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Bookings Table */}
-      <Card
-        title={
-          <div
-            style={{ fontSize: "18px", fontWeight: "bold", color: "#1890ff" }}
-          >
-            Chi tiết đặt lịch
-          </div>
-        }
-        extra={
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => refetch()}
-            type="primary"
-            size="middle"
-          >
-            Làm mới
-          </Button>
-        }
-        style={{
-          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-          borderRadius: "12px",
-        }}
-      >
-        {bookings.length === 0 ? (
-          <Empty
-            description="Bạn chưa có lịch hẹn nào"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          >
-            <Button
-              type="primary"
-              onClick={() => router.push("/member/booking")}
-            >
-              Đặt lịch ngay
-            </Button>
-          </Empty>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <Table
-              columns={columns}
-              dataSource={bookings}
-              rowKey="booking_id"
-              pagination={{
-                pageSize: 8,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} của ${total} đặt lịch`,
-                responsive: true,
-                position: ["bottomRight"],
-              }}
-              scroll={{ x: 1740 }}
-              size="middle"
-              bordered
-              style={{
-                minWidth: "800px",
-                maxWidth: "100%",
-              }}
-              className="booking-table"
-            />
-          </div>
-        )}
-      </Card>
-
-      {/* Vehicle Tracking Modal */}
-      {selectedBooking && (
-        <VehicleTrackingModal
-          open={trackingModalOpen}
-          onCancel={() => {
-            setTrackingModalOpen(false);
-            setSelectedBooking(null);
+        {/* Filter Section */}
+        <Card
+          className="filter-card"
+          style={{
+            marginBottom: 16,
+            backgroundColor: "#fafafa",
           }}
-          booking={selectedBooking}
-          trackings={trackings}
-          shouldCreateTracking={false}
-        />
-      )}
+          styles={{ body: { padding: 16 } }}
+        >
+          <Space size="middle" wrap>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <FilterOutlined style={{ color: "#1890ff" }} />
+              <span style={{ fontWeight: 500, fontSize: 14 }}>Bộ lọc:</span>
+            </div>
+            <RangePicker
+              value={dateRange}
+              onChange={handleDateRangeChange}
+              placeholder={["Từ ngày", "Đến ngày"]}
+              format="DD/MM/YYYY"
+              style={{ width: 280 }}
+              allowClear
+            />
+            <Select
+              placeholder="Chọn chi nhánh"
+              style={{ width: 250 }}
+              allowClear
+              value={selectedBranchId}
+              onChange={handleBranchFilterChange}
+              loading={isLoadingBranches}
+              options={branchOptions}
+              showSearch
+              optionFilterProp="label"
+            />
+            <Select
+              placeholder="Loại đặt lịch"
+              style={{ width: 200 }}
+              allowClear
+              value={selectedBookingType}
+              onChange={handleBookingTypeFilterChange}
+              options={[
+                { label: "Đặt trước", value: "advance" },
+                { label: "Đặt xử lý tại chỗ", value: "walk-in" },
+              ]}
+            />
+            {(dateRange || selectedBranchId || selectedBookingType) && (
+              <Button onClick={handleClearFilters} size="small">
+                Xóa bộ lọc
+              </Button>
+            )}
+          </Space>
+        </Card>
 
-      {/* Customer Update Booking Modal */}
-      {selectedBookingForUpdate && (
-        <CustomerUpdateBookingModal
-          open={updateModalOpen}
-          onCancel={handleUpdateModalClose}
-          onOk={handleUpdateModalSuccess}
-          initialData={selectedBookingForUpdate}
-          loading={false}
-          onRefresh={refetch}
-        />
-      )}
+        {/* Bookings Table */}
+        <Card
+          title={
+            <div
+              style={{ fontSize: "18px", fontWeight: "bold", color: "#1890ff" }}
+            >
+              Chi tiết đặt lịch
+            </div>
+          }
+          extra={
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => refetch()}
+              type="primary"
+              size="middle"
+            >
+              Làm mới
+            </Button>
+          }
+          style={{
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+            borderRadius: "12px",
+          }}
+        >
+          {bookings.length === 0 ? (
+            <Empty
+              description="Bạn chưa có lịch hẹn nào"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            >
+              <Button
+                type="primary"
+                onClick={() => router.push("/member/booking")}
+              >
+                Đặt lịch ngay
+              </Button>
+            </Empty>
+          ) : (
+            <div
+              className="booking-table-wrapper"
+              style={{ overflowX: "auto", overflowY: "hidden" }}
+            >
+              <Table
+                columns={columns}
+                dataSource={paginatedBookings}
+                rowKey="booking_id"
+                pagination={{
+                  current: pagination.current,
+                  pageSize: pagination.pageSize,
+                  total: filteredBookings.length,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) =>
+                    `${range[0]}-${range[1]} của ${total} đặt lịch`,
+                  responsive: true,
+                  position: ["bottomRight"],
+                  pageSizeOptions: ["5", "8", "10", "20", "50"],
+                  onChange: (page, pageSize) => {
+                    setPagination({
+                      current: page,
+                      pageSize: pageSize || 8,
+                    });
+                  },
+                }}
+                scroll={{
+                  x: "max-content",
+                  y: undefined,
+                }}
+                size="middle"
+                bordered
+                className="booking-table"
+                style={{
+                  width: "100%",
+                }}
+              />
+            </div>
+          )}
+        </Card>
+
+        {/* Vehicle Tracking Modal */}
+        {selectedBooking && (
+          <VehicleTrackingModal
+            open={trackingModalOpen}
+            onCancel={() => {
+              setTrackingModalOpen(false);
+              setSelectedBooking(null);
+            }}
+            booking={selectedBooking}
+            trackings={trackings}
+            shouldCreateTracking={false}
+          />
+        )}
+
+        {/* Customer Update Booking Modal */}
+        {selectedBookingForUpdate && (
+          <CustomerUpdateBookingModal
+            open={updateModalOpen}
+            onCancel={handleUpdateModalClose}
+            onOk={handleUpdateModalSuccess}
+            initialData={selectedBookingForUpdate}
+            loading={false}
+            onRefresh={refetch}
+          />
+        )}
       </div>
     </App>
   );
