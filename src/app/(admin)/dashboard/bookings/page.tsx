@@ -186,7 +186,7 @@ const BookingsPage = () => {
     let isCustomerEnriched = false;
     let isVehicleEnriched = false;
     console.log("Đây là booking:", booking);
-    
+
     // Enrich customer info if missing
     if (
       booking.customer_id &&
@@ -622,7 +622,11 @@ const BookingsPage = () => {
 
   const handleUpdateModalOk = async (updatedBooking?: unknown) => {
     // Update selectedBooking with the updated data from backend
-    if (updatedBooking && typeof updatedBooking === 'object' && 'booking_id' in updatedBooking) {
+    if (
+      updatedBooking &&
+      typeof updatedBooking === "object" &&
+      "booking_id" in updatedBooking
+    ) {
       console.log("🔄 Updating selectedBooking with new data:", updatedBooking);
       console.log("🔍 Updated booking branch/bay info:", {
         branch_id: (updatedBooking as BookingInfoDto).branch_id,
@@ -631,7 +635,9 @@ const BookingsPage = () => {
         bay_name: (updatedBooking as BookingInfoDto).bay_name,
       });
       // Enrich the updated booking data
-      const enrichedBooking = enrichBookingData(updatedBooking as BookingInfoDto);
+      const enrichedBooking = enrichBookingData(
+        updatedBooking as BookingInfoDto
+      );
       console.log("🔍 Enriched booking branch/bay info:", {
         branch_id: enrichedBooking.branch_id,
         branch_name: enrichedBooking.branch_name,
@@ -659,7 +665,10 @@ const BookingsPage = () => {
         (b: BookingInfoDto) => b.booking_id === selectedBooking.booking_id
       );
       if (updatedBooking) {
-        console.log("🔄 Updating selectedBooking after refresh:", updatedBooking);
+        console.log(
+          "🔄 Updating selectedBooking after refresh:",
+          updatedBooking
+        );
         const enrichedBooking = enrichBookingData(updatedBooking);
         setSelectedBooking(enrichedBooking);
       }
@@ -924,7 +933,12 @@ const BookingsPage = () => {
                   </div>
                   <div style={{ fontSize: 12, color: "#666" }}>
                     {formatDurationVer01(
-                      selectedBooking.estimated_duration_minutes || 0
+                      (() => {
+                        const estimated =
+                          selectedBooking.estimated_duration_minutes || 0;
+
+                        return estimated;
+                      })()
                     )}
                   </div>
                 </div>
@@ -1183,7 +1197,12 @@ const BookingsPage = () => {
                           <div style={{ fontSize: 12, color: "#666" }}>
                             Thời gian ước tính:{" "}
                             {formatDurationVer01(
-                              selectedBooking.estimated_duration_minutes || 0
+                              (() => {
+                                const estimated =
+                                  selectedBooking.estimated_duration_minutes ||
+                                  0;
+                                return estimated;
+                              })()
                             )}
                           </div>
                         </div>
