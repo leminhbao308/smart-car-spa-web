@@ -274,7 +274,8 @@ const BookingsPage = () => {
     // Filter by branch
     if (selectedBranchId) {
       result = result.filter(
-        (booking: EnrichedBookingInfoDto) => booking.branch_id === selectedBranchId
+        (booking: EnrichedBookingInfoDto) =>
+          booking.branch_id === selectedBranchId
       );
     }
 
@@ -289,8 +290,7 @@ const BookingsPage = () => {
         // Đặt xử lý tại chỗ (walk-in): booking_code bắt đầu bằng "WALK-IN" hoặc "WALK"
         if (selectedBookingType === "walk-in") {
           return (
-            bookingCode.startsWith("WALK-IN") ||
-            bookingCode.startsWith("WALK")
+            bookingCode.startsWith("WALK-IN") || bookingCode.startsWith("WALK")
           );
         }
         return true;
@@ -1104,16 +1104,6 @@ const BookingsPage = () => {
                                     0,
                                     8
                                   )}...`}
-                              </div>
-                              <div
-                                style={{
-                                  fontSize: 12,
-                                  color: "#666",
-                                  marginTop: 2,
-                                }}
-                              >
-                                {formatCurrency(item.unit_price || 0)} • Số
-                                lượng: {item.quantity || 1}
                               </div>
                               {item.item_description && (
                                 <div
