@@ -1,8 +1,3 @@
-/**
- * Update Booking Modal
- * Modal chuyên dụng cho việc cập nhật booking
- */
-
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Modal,
@@ -227,6 +222,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       }
     >
   >({}); // Store walk-in bay state for each bay
+  
+  // Track if form has been initialized to prevent resetting when dependencies change
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
 
   // New customer states (for walk-in booking)
   const [newCustomer, setNewCustomer] = useState<{
@@ -464,6 +462,43 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     loadAvailableSlots();
   }, [loadAvailableSlots]);
 
+  // Reset slot when booking date changes and slot date doesn't match
+  useEffect(() => {
+    if (selectedSlot && bookingDate && selectedSlot.date !== bookingDate) {
+      console.log("🔄 Booking date changed, resetting slot:", {
+        slotDate: selectedSlot.date,
+        newBookingDate: bookingDate,
+      });
+      setSelectedSlot(null);
+      setIsSlotChanged(false);
+      // Clear slot from baySlotStates
+      if (selectedBay) {
+        setBaySlotStates((prev) => ({
+          ...prev,
+          [selectedBay.bay_id]: {
+            slot: null,
+            isChanged: false,
+          },
+        }));
+      }
+    }
+  }, [bookingDate, selectedSlot, selectedBay]);
+
+  // Sync selectedVehicle from form value when vehicleId changes in form
+  useEffect(() => {
+    if (form && allVehicles.length > 0 && isFormInitialized) {
+      const formVehicleId = form.getFieldValue("vehicleId");
+      if (formVehicleId) {
+        const vehicle = allVehicles.find((v) => v.vehicle_id === formVehicleId);
+        if (vehicle && (!selectedVehicle || selectedVehicle.vehicle_id !== formVehicleId)) {
+          console.log("🔄 Syncing selectedVehicle from form value:", vehicle.vehicle_id);
+          setSelectedVehicle(vehicle);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, allVehicles, isFormInitialized]);
+
   // Auto recommend bay for walk-in booking
   useEffect(() => {
     const getBayRecommendation = async () => {
@@ -611,13 +646,15 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     [isSlotSuitable]
   );
 
-  // Initialize form with initial data
+  // Initialize form with initial data (only when modal opens or initialData changes)
   useEffect(() => {
     console.log("UpdateBookingModal useEffect triggered:", {
       initialData,
       open,
+      isFormInitialized,
     });
-    if (initialData && open) {
+    // Only initialize if modal is open and form hasn't been initialized yet, or initialData changed
+    if (initialData && open && (!isFormInitialized || initialData.booking_id)) {
       console.log("Initializing form with data:", initialData);
 
       // Determine customer type based on customer_id
@@ -883,19 +920,18 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       setTotalPrice(initialData.total_price || 0);
       setTotalDuration(initialData.estimated_duration_minutes || 0);
       setIsSlotChanged(false); // Reset slot change flag
+      setIsFormInitialized(true);
       // setCurrentStep(0); // Start from step 1 for edit mode
+    } else if (!open) {
+      // Reset initialization flag when modal closes
+      setIsFormInitialized(false);
     }
-  }, [
-    initialData,
-    open,
-    customers,
-    allVehicles,
-    branches,
-    serviceBays,
-    availableServices,
-    form,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    // calculateTotals and loadBayRecommendation are intentionally excluded to prevent infinite loops
+  }, [
+    initialData?.booking_id, // Only depend on booking_id to detect data change
+    open,
+    isFormInitialized,
+    // Other dependencies are intentionally excluded to prevent resetting user changes
   ]);
 
   const calculateTotals = useCallback((items: PriceBookItem[]) => {
@@ -972,13 +1008,46 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   // Handle branch change
   const handleBranchChange = useCallback(
     (branchId: string) => {
+      console.log("🏢 Branch change:", {
+        branchId,
+        currentSelectedBranch: selectedBranch?.branch_id,
+        currentSelectedBay: selectedBay?.bay_id,
+        currentSelectedSlot: selectedSlot,
+        currentSelectedVehicle: selectedVehicle?.vehicle_id,
+        formVehicleId: form?.getFieldValue("vehicleId"),
+      });
       const branch = branches.find((b) => b.branch_id === branchId);
       setSelectedBranch(branch || null);
+      // Reset bay and slot when branch changes
       setSelectedBay(null);
       setSelectedSlot(null);
       setAvailableSlots([]);
+      // Clear bay slot states when branch changes to prevent restoring old slots
+      setBaySlotStates({});
+      setBayWalkInStates({});
+      setIsSlotChanged(false);
+      setOriginalSlot(null);
+      // Update form value
+      if (form) {
+        const currentVehicleId = form.getFieldValue("vehicleId");
+        form.setFieldsValue({
+          branchId: branchId,
+          serviceBayId: undefined,
+        });
+        
+        // Restore vehicle from form value if it exists and vehicle is in allVehicles
+        if (currentVehicleId && allVehicles.length > 0) {
+          const vehicle = allVehicles.find((v) => v.vehicle_id === currentVehicleId);
+          if (vehicle) {
+            console.log("🔄 Restoring vehicle from form value:", vehicle.vehicle_id);
+            setSelectedVehicle(vehicle);
+          } else {
+            console.log("⚠️ Vehicle not found in allVehicles:", currentVehicleId);
+          }
+        }
+      }
     },
-    [branches]
+    [branches, form, selectedBranch, selectedBay, selectedSlot, selectedVehicle, allVehicles]
   );
 
   // Handle bay change (same logic as BookingModal)
@@ -1009,11 +1078,43 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       const bay = serviceBays?.find((b) => b.bay_id === bayId);
       setSelectedBay(bay || null);
 
-      // Restore slot state for the new bay
+      // Restore slot state for the new bay, but only if it matches current branch and date
       if (bay && baySlotStates[bay.bay_id]) {
         const bayState = baySlotStates[bay.bay_id];
-        setSelectedSlot(bayState.slot);
-        setIsSlotChanged(bayState.isChanged);
+        // Only restore slot if it belongs to current branch and date
+        if (
+          bayState.slot &&
+          bayState.slot.bayId === bay.bay_id &&
+          bayState.slot.date === bookingDate &&
+          selectedBranch &&
+          bay.branch_id === selectedBranch.branch_id
+        ) {
+          console.log("🔄 Restoring slot for bay:", {
+            bayId: bay.bay_id,
+            slot: bayState.slot,
+            bookingDate,
+            slotDate: bayState.slot.date,
+            branchId: bay.branch_id,
+            selectedBranchId: selectedBranch.branch_id,
+          });
+          setSelectedSlot(bayState.slot);
+          setIsSlotChanged(bayState.isChanged);
+        } else {
+          console.log("❌ Not restoring slot - mismatch:", {
+            hasSlot: !!bayState.slot,
+            slotBayId: bayState.slot?.bayId,
+            currentBayId: bay.bay_id,
+            slotDate: bayState.slot?.date,
+            currentBookingDate: bookingDate,
+            bayBranchId: bay.branch_id,
+            selectedBranchId: selectedBranch?.branch_id,
+            branchMatch: selectedBranch
+              ? bay.branch_id === selectedBranch.branch_id
+              : false,
+          });
+          setSelectedSlot(null);
+          setIsSlotChanged(false);
+        }
       } else {
         setSelectedSlot(null);
         setIsSlotChanged(false);
@@ -1044,6 +1145,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       queueItems,
       manualBaySelection,
       bayWalkInStates,
+      bookingDate,
+      selectedBranch,
     ]
   );
 
@@ -1259,7 +1362,14 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             request: updateRequest,
           });
           console.log("📋 Walk-in booking update response:", updateResponse);
-          onOk(updateRequest);
+          console.log("🔍 Response branch info:", {
+            branch_id: updateResponse?.branch_id,
+            branch_name: updateResponse?.branch_name,
+            branch_code: updateResponse?.branch_code,
+            bay_id: updateResponse?.bay_id,
+            bay_name: updateResponse?.bay_name,
+          });
+          onOk(updateResponse); // Pass response data instead of request
           // Refresh table data
           if (onRefresh) {
             onRefresh();
@@ -1329,15 +1439,23 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
               ? newVehicle!.color
               : selectedVehicle!.color || "",
             branch_id: selectedBranch.branch_id,
-            // For slot booking, only set service_bay_id if it's different from original or slot changed
-            service_bay_id:
-              isSlotChanged || selectedSlot.bayId !== initialData.bay_id
-                ? selectedSlot.bayId
-                : undefined,
-            // For slot booking, only set slot info if slot changed
-            slot_date: isSlotChanged ? selectedSlot.date : undefined,
-            slot_start_time: isSlotChanged ? selectedSlot.startTime : undefined,
-            estimated_duration_minutes: selectedSlot.serviceDurationMinutes,
+            // For slot booking, always send slot info if slot is selected (backend will handle if changed)
+            service_bay_id: selectedSlot ? selectedSlot.bayId : undefined,
+            // Always send slot info if slot is selected - backend will determine if it changed
+            slot_date: selectedSlot ? selectedSlot.date : undefined,
+            slot_start_time: selectedSlot ? selectedSlot.startTime : undefined,
+            // Calculate scheduled_start_at and scheduled_end_at for backend
+            scheduled_start_at: selectedSlot
+              ? dayjs(`${selectedSlot.date} ${selectedSlot.startTime}`).toISOString()
+              : undefined,
+            scheduled_end_at: selectedSlot
+              ? dayjs(`${selectedSlot.date} ${selectedSlot.startTime}`)
+                  .add(selectedSlot.serviceDurationMinutes, "minute")
+                  .toISOString()
+              : undefined,
+            estimated_duration_minutes: selectedSlot
+              ? selectedSlot.serviceDurationMinutes
+              : totalDuration,
             buffer_minutes: 15,
             total_price: totalPrice,
             currency: "VND",
@@ -1352,19 +1470,36 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
 
           console.log("🚀 Updating slot booking with request:", updateRequest);
           console.log("🔍 Slot booking data:", {
-            service_bay_id: selectedSlot.bayId,
-            slot_date: selectedSlot.date,
-            slot_start_time: selectedSlot.startTime,
-            estimated_duration_minutes: selectedSlot.serviceDurationMinutes,
+            selectedSlot: selectedSlot,
+            service_bay_id: selectedSlot?.bayId,
+            slot_date: selectedSlot?.date,
+            slot_start_time: selectedSlot?.startTime,
+            scheduled_start_at: updateRequest.scheduled_start_at,
+            scheduled_end_at: updateRequest.scheduled_end_at,
+            estimated_duration_minutes: selectedSlot?.serviceDurationMinutes,
             isSlotChanged,
             originalSlot,
+            branch_id: selectedBranch.branch_id,
+            initialBranchId: initialData.branch_id,
+            initialBayId: initialData.bay_id,
           });
           const updateResponse = await updateBookingMutation.mutateAsync({
             bookingId: initialData.booking_id,
             request: updateRequest,
           });
           console.log("📋 Booking update response:", updateResponse);
-          onOk(updateRequest);
+          console.log("🔍 Response branch info:", {
+            branch_id: updateResponse?.branch_id,
+            branch_name: updateResponse?.branch_name,
+            branch_code: updateResponse?.branch_code,
+            bay_id: updateResponse?.bay_id,
+            bay_name: updateResponse?.bay_name,
+          });
+          onOk(updateResponse); // Pass response data instead of request
+          // Refresh table data
+          if (onRefresh) {
+            onRefresh();
+          }
           return;
         } catch (bookingError) {
           console.log("Error updating slot booking:", bookingError);
@@ -1466,7 +1601,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                             >
                               <Form.Item
                                 name="customerId"
-                                label="Chọn khách hàng"
+                                label="Khách hàng"
                                 rules={[
                                   {
                                     required: customerType === "existing",
@@ -1478,6 +1613,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                                   placeholder="Tìm kiếm theo tên hoặc số điện thoại"
                                   showSearch
                                   loading={isLoadingCustomers}
+                                  disabled={!!initialData.customer_id} // Disable if customer_id exists (existing customer)
                                   onChange={(customerId) => {
                                     const customer = customers.find(
                                       (c) => c.user_id === customerId
@@ -1537,8 +1673,14 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                               {selectedCustomer && (
                                 <Alert
                                   message={`Khách hàng: ${selectedCustomer.full_name}`}
-                                  description={`SĐT: ${selectedCustomer.phone_number} • Email: ${selectedCustomer.email}`}
-                                  type="success"
+                                  description={
+                                    initialData.customer_id
+                                      ? "Thông tin khách hàng không thể thay đổi. Chỉ có thể cập nhật xe."
+                                      : `SĐT: ${selectedCustomer.phone_number} • Email: ${selectedCustomer.email}`
+                                  }
+                                  type={
+                                    initialData.customer_id ? "info" : "success"
+                                  }
                                   style={{ marginTop: 8 }}
                                 />
                               )}
@@ -1567,6 +1709,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                                       ? "Chọn xe của khách hàng"
                                       : "Vui lòng chọn khách hàng trước"
                                   }
+                                  value={selectedVehicle?.vehicle_id || form?.getFieldValue("vehicleId") || undefined}
                                   loading={isLoadingVehicles}
                                   onChange={handleVehicleChange}
                                   disabled={!selectedCustomer}
@@ -1655,7 +1798,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           <Col span={12}>
             <Card
               size="small"
-              title="Thông tin khách hàng mới"
+              title="Thông tin khách hàng vãng lai"
               style={{ marginBottom: 16 }}
             >
               <Form.Item
@@ -1742,7 +1885,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           <Col span={12}>
             <Card
               size="small"
-              title="Thông tin xe mới"
+              title="Thông tin xe"
               style={{ marginBottom: 16 }}
             >
               <Form.Item
@@ -2166,8 +2309,28 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                       date,
                       newDate,
                       isValid: date ? date.isValid() : false,
+                      currentSelectedSlot: selectedSlot,
+                      slotDate: selectedSlot?.date,
                     });
                     setBookingDate(newDate);
+                    // Reset slot if the current slot's date doesn't match the new date
+                    if (selectedSlot && selectedSlot.date !== newDate) {
+                      console.log(
+                        "📅 Date changed, resetting slot because date mismatch"
+                      );
+                      setSelectedSlot(null);
+                      setIsSlotChanged(false);
+                      // Also clear slot from baySlotStates for the current bay
+                      if (selectedBay) {
+                        setBaySlotStates((prev) => ({
+                          ...prev,
+                          [selectedBay.bay_id]: {
+                            slot: null,
+                            isChanged: false,
+                          },
+                        }));
+                      }
+                    }
                   }}
                 />
               </Form.Item>
@@ -2180,6 +2343,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                 <Select
                   placeholder="Chọn chi nhánh"
                   optionLabelProp="label"
+                  value={selectedBranch?.branch_id}
                   onChange={handleBranchChange}
                   loading={isLoadingBranches}
                   showSearch

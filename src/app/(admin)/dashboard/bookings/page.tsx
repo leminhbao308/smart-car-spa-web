@@ -178,7 +178,7 @@ const BookingsPage = () => {
     useVehicleProfiles({ params: { size: 1000 } });
   const { branches, loading: isLoadingBranches } = useBranches();
 
-  // Helper function to enrich booking data with customer and vehicle info
+  // Helper function to enrich booking data with customer, vehicle, branch and bay info
   const enrichBookingData = (
     booking: BookingInfoDto
   ): EnrichedBookingInfoDto => {
@@ -186,6 +186,7 @@ const BookingsPage = () => {
     let isCustomerEnriched = false;
     let isVehicleEnriched = false;
     console.log("Đây là booking:", booking);
+    
     // Enrich customer info if missing
     if (
       booking.customer_id &&
@@ -240,6 +241,22 @@ const BookingsPage = () => {
         isVehicleEnriched = true;
       }
     }
+
+    // Enrich branch info if missing
+    if (booking.branch_id && (!booking.branch_name || !booking.branch_code)) {
+      const branch = branches.find((b) => b.branch_id === booking.branch_id);
+      if (branch) {
+        enrichedBooking = {
+          ...enrichedBooking,
+          branch_name: enrichedBooking.branch_name || branch.branch_name,
+          branch_code: enrichedBooking.branch_code || branch.branch_code,
+        };
+      }
+    }
+
+    // Enrich bay info if missing (we need to load service bays by branch_id)
+    // For now, we'll rely on backend to return bay_name, but we can enhance this later
+    // if needed by loading service bays per branch
 
     return { ...enrichedBooking, isCustomerEnriched, isVehicleEnriched };
   };
@@ -603,10 +620,29 @@ const BookingsPage = () => {
     setModalOpen(false);
   };
 
-  const handleUpdateModalOk = async () => {
-    // This will be handled by the UpdateBookingModal component
+  const handleUpdateModalOk = async (updatedBooking?: unknown) => {
+    // Update selectedBooking with the updated data from backend
+    if (updatedBooking && typeof updatedBooking === 'object' && 'booking_id' in updatedBooking) {
+      console.log("🔄 Updating selectedBooking with new data:", updatedBooking);
+      console.log("🔍 Updated booking branch/bay info:", {
+        branch_id: (updatedBooking as BookingInfoDto).branch_id,
+        branch_name: (updatedBooking as BookingInfoDto).branch_name,
+        bay_id: (updatedBooking as BookingInfoDto).bay_id,
+        bay_name: (updatedBooking as BookingInfoDto).bay_name,
+      });
+      // Enrich the updated booking data
+      const enrichedBooking = enrichBookingData(updatedBooking as BookingInfoDto);
+      console.log("🔍 Enriched booking branch/bay info:", {
+        branch_id: enrichedBooking.branch_id,
+        branch_name: enrichedBooking.branch_name,
+        bay_id: enrichedBooking.bay_id,
+        bay_name: enrichedBooking.bay_name,
+      });
+      setSelectedBooking(enrichedBooking);
+    }
     setUpdateModalOpen(false);
-    setSelectedBooking(null);
+    // Don't clear selectedBooking if detail modal might be open
+    // It will be cleared when detail modal is closed
   };
 
   const handleCreateTrackingSuccess = () => {
@@ -615,8 +651,19 @@ const BookingsPage = () => {
   };
 
   // Function to refresh table data
-  const handleRefreshTable = () => {
-    refetchBookings();
+  const handleRefreshTable = async () => {
+    const result = await refetchBookings();
+    // If selectedBooking exists and detail modal is open, update it with fresh data
+    if (selectedBooking && detailModalOpen && result.data) {
+      const updatedBooking = result.data.find(
+        (b: BookingInfoDto) => b.booking_id === selectedBooking.booking_id
+      );
+      if (updatedBooking) {
+        console.log("🔄 Updating selectedBooking after refresh:", updatedBooking);
+        const enrichedBooking = enrichBookingData(updatedBooking);
+        setSelectedBooking(enrichedBooking);
+      }
+    }
   };
 
   // Handle date range change - Client-side filtering only

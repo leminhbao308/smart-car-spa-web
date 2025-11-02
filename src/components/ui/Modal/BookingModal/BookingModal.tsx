@@ -24,6 +24,7 @@ import {
   Tabs,
   Input,
   Table,
+  App,
 } from "antd";
 import {
   CalendarOutlined,
@@ -221,6 +222,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [bookingDate, setBookingDate] = useState<string>("");
   const [availableSlots, setAvailableSlots] = useState<SlotInfo[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+
+  // Notification
+  const { notification } = App.useApp();
 
   // API hooks
   const createBookingWithSlotMutation = useCreateBookingWithSlot();
@@ -806,6 +810,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
             selectedBranch.branch_id
           );
           console.log("Walk-in booking created:", walkInResponse);
+          
+          // Show success notification
+          notification.success({
+            message: "Đặt lịch thành công!",
+            description: `Đã tạo booking xử lý tại chỗ cho khách hàng ${newCustomer.full_name}`,
+            placement: "topRight",
+            duration: 2,
+          });
+          
+          // Wait a bit before closing modal
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          
           onOk(walkInResponse);
           // Refresh table data
           if (onRefresh) {
@@ -915,6 +931,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
             "Walk-in booking created for existing customer:",
             walkInResponse
           );
+          
+          // Show success notification
+          notification.success({
+            message: "Đặt lịch thành công!",
+            description: `Đã tạo booking xử lý tại chỗ cho khách hàng ${selectedCustomer.full_name}`,
+            placement: "topRight",
+            duration: 2,
+          });
+          
+          // Wait a bit before closing modal
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          
           onOk(walkInResponse);
           // Refresh table data
           if (onRefresh) {
@@ -1017,6 +1045,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
           const createResponse =
             await createBookingWithSlotMutation.mutateAsync(createRequest);
           console.log("📋 Booking creation response:", createResponse);
+          
+          // Show success notification
+          const bookingCode = createResponse?.booking_code || createResponse?.data?.booking_code || "N/A";
+          notification.success({
+            message: "Đặt lịch thành công!",
+            description: `Đã tạo booking đặt trước thành công. Mã booking: ${bookingCode}`,
+            placement: "topRight",
+            duration: 2,
+          });
+          
+          // Wait a bit before closing modal
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          
           onOk(createRequest);
           // Refresh table data
           if (onRefresh) {
@@ -1107,7 +1148,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           <Col span={12}>
             <Card
               size="small"
-              title="Thông tin khách hàng mới"
+              title="Thông tin khách hàng vãng lai"
               style={{ marginBottom: 16 }}
             >
               <Form.Item
@@ -1124,7 +1165,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   placeholder="Nhập họ và tên khách hàng"
                   onChange={(e) => {
                     console.log(
-                      "📝 New customer name changed:",
+                      "New customer name changed:",
                       e.target.value
                     );
                     setNewCustomer((prev) => ({
@@ -1194,7 +1235,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           <Col span={12}>
             <Card
               size="small"
-              title="Thông tin xe mới"
+              title="Thông tin xe"
               style={{ marginBottom: 16 }}
             >
               <Form.Item
@@ -2733,17 +2774,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   return (
-    <Modal
-      title={
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <CalendarOutlined style={{ color: "#1890ff" }} />
-          <span>Đặt lịch chăm sóc xe</span>
-        </div>
-      }
-      open={open}
-      onCancel={onCancel}
-      width={1200}
-      footer={[
+    <App>
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <CalendarOutlined style={{ color: "#1890ff" }} />
+            <span>Đặt lịch chăm sóc xe</span>
+          </div>
+        }
+        open={open}
+        onCancel={onCancel}
+        width={1200}
+        footer={[
         <Button key="cancel" onClick={onCancel}>
           Hủy
         </Button>,
@@ -2838,6 +2880,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         {renderAllContent()}
       </Form>
     </Modal>
+    </App>
   );
 };
 
