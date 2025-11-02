@@ -1349,15 +1349,22 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       }
 
       const bay = serviceBays?.find((b) => b.bay_id === bayId);
+      
+      // IMPORTANT: Always reset slot when changing bay
+      // Slot from old bay is not valid for new bay
+      setSelectedSlot(null);
+      setIsSlotChanged(false);
+      
       setSelectedBay(bay || null);
 
       // Restore slot state for the new bay, but only if it matches current branch and date
+      // Only restore if the slot actually belongs to the new bay
       if (bay && baySlotStates[bay.bay_id]) {
         const bayState = baySlotStates[bay.bay_id];
-        // Only restore slot if it belongs to current branch and date
+        // Only restore slot if it belongs to current branch and date AND the new bay
         if (
           bayState.slot &&
-          bayState.slot.bayId === bay.bay_id &&
+          bayState.slot.bayId === bay.bay_id && // Ensure slot belongs to the new bay
           bayState.slot.date === bookingDate &&
           selectedBranch &&
           bay.branch_id === selectedBranch.branch_id
@@ -1385,13 +1392,10 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
               ? bay.branch_id === selectedBranch.branch_id
               : false,
           });
-          setSelectedSlot(null);
-          setIsSlotChanged(false);
+          // Already reset above, no need to reset again
         }
-      } else {
-        setSelectedSlot(null);
-        setIsSlotChanged(false);
       }
+      // If no state found, slot is already reset above
 
       // Restore walk-in bay state for the new bay
       if (bay && bayWalkInStates[bay.bay_id]) {
@@ -3874,9 +3878,12 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                                     <Row gutter={8}>
                                       {availableSlots.map((slot, index) => {
                                         const canSelect = canSelectSlot(slot);
+                                        // Check if slot is selected: must match bayId, date, and startTime
                                         const isSelected =
-                                          selectedSlot?.startTime ===
-                                          slot.startTime;
+                                          selectedSlot &&
+                                          selectedSlot.bayId === slot.bayId &&
+                                          selectedSlot.date === bookingDate &&
+                                          selectedSlot.startTime === slot.startTime;
                                         
                                         // Check why slot is not selectable for multi-slot services
                                         let tooltipMessage = "";
@@ -4057,7 +4064,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                                   )}
                                 </div>
 
-                                {selectedSlot && (() => {
+                                {selectedSlot && selectedBay && selectedSlot.bayId === selectedBay.bay_id && (() => {
+                                  // Only show selected slot alert if it belongs to current bay
                                   // Calculate consecutive slots if service duration > 60 minutes
                                   const requiredSlots = totalDuration > 60 ? Math.ceil(totalDuration / 60) : 1;
                                   const selectedSlotIndex = availableSlots.findIndex(
