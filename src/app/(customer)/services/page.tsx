@@ -1,201 +1,260 @@
 "use client";
-import React from "react";
-import { Typography, Card, Row, Col, Button } from "antd";
-import { CarOutlined, ToolOutlined } from "@ant-design/icons";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Row,
+  Col,
+  Card,
+  Select,
+  Input,
+  Button,
+  Pagination,
+  Skeleton,
+  Empty,
+  Typography,
+  Breadcrumb,
+} from "antd";
+import { SearchOutlined, FilterOutlined } from "@ant-design/icons";
+import Link from "next/link";
+import { useServices } from "@/lib/api/hooks/useServices";
+import ServiceCard from "@/components/ui/Services/ServiceCard";
+import type { ServiceFilterParam } from "@/lib/api/types/service.types";
+import { PricingService } from "@/lib/api/services/pricing.service";
+import { MediaService } from "@/lib/api/services/media.service";
 
-const { Title, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
-export default function ServicesPage() {
-  const services = [
-    {
-      id: 1,
-      title: "Rửa xe cơ bản",
-      description: "Dịch vụ rửa xe cơ bản với chất lượng cao",
-      icon: <CarOutlined style={{ fontSize: "24px", color: "#1890ff" }} />,
-      price: "50,000 VNĐ",
-    },
-    {
-      id: 2,
-      title: "Rửa xe cao cấp",
-      description: "Dịch vụ rửa xe cao cấp với wax và đánh bóng",
-      icon: <ToolOutlined style={{ fontSize: "24px", color: "#52c41a" }} />,
-      price: "100,000 VNĐ",
-    },
-    {
-      id: 3,
-      title: "Bảo dưỡng định kỳ",
-      description: "Dịch vụ bảo dưỡng định kỳ cho xe của bạn",
-      icon: <ToolOutlined style={{ fontSize: "24px", color: "#52c41a" }} />,
-      price: "200,000 VNĐ",
-    },
-  ];
+interface Service {
+  service_id: string;
+  service_url: string;
+  service_name: string;
+  service_type_name?: string;
+  estimated_duration?: number;
+}
+
+export default function ServicesListingPage() {
+  const [params, setParams] = useState<ServiceFilterParam>({
+    page: 0,
+    size: 12,
+    sort: "createdDate",
+    direction: "DESC",
+  });
+
+  const { data: servicesResponse, isLoading } = useServices(params);
+  const [servicePrices, setServicePrices] = useState<Record<string, number>>(
+    {}
+  );
+  const [serviceImages, setServiceImages] = useState<Record<string, string>>(
+    {}
+  );
+  const [pricesLoading, setPricesLoading] = useState(false);
+
+  // Memoize services array to prevent unnecessary re-renders
+  const services = useMemo(() => {
+    return Array.isArray(servicesResponse?.data)
+      ? servicesResponse?.data
+      : servicesResponse?.data?.content || [];
+  }, [servicesResponse]);
+
+  const totalElements =
+    !Array.isArray(servicesResponse?.data) && servicesResponse?.data
+      ? servicesResponse?.data?.totalElements || 0
+      : 0;
+
+  // Batch fetch prices and images for all services
+  useEffect(() => {
+    const fetchBatchData = async () => {
+      if (services.length > 0) {
+        try {
+          setPricesLoading(true);
+          const serviceIds = services.map((s: Service) => s.service_id);
+
+          // Fetch all prices in one batch call
+          const pricesMap = await PricingService.getServicePricesBatch(
+            serviceIds
+          );
+          setServicePrices(pricesMap);
+
+          // Fetch all main images in one batch call
+          const imagesMap = await MediaService.getMainImagesBatch(
+            serviceIds,
+            "SERVICE"
+          );
+          setServiceImages(imagesMap);
+        } catch (error) {
+          console.error("Error fetching batch data:", error);
+        } finally {
+          setPricesLoading(false);
+        }
+      }
+    };
+    fetchBatchData();
+  }, [services]);
+
+  const handleSearch = () => {
+    setParams({ ...params, page: 0 });
+  };
+
+  const handlePageChange = (page: number) => {
+    setParams({ ...params, page: page - 1 });
+  };
+
+  const handleSortChange = (value: string) => {
+    const [sort, direction] = value.split("-");
+    setParams({
+      ...params,
+      sort,
+      direction: direction as "ASC" | "DESC",
+      page: 0,
+    });
+  };
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ textAlign: "center", marginBottom: "48px" }}>
-        <Title level={1} style={{ color: "#1B2559", marginBottom: "16px" }}>
-          Dịch vụ của chúng tôi
-        </Title>
-        <Paragraph
-          style={{
-            fontSize: "16px",
-            color: "#8B92A5",
-            maxWidth: "600px",
-            margin: "0 auto",
-          }}
-        >
-          Chúng tôi cung cấp các dịch vụ chăm sóc xe hơi chuyên nghiệp với chất
-          lượng cao và giá cả hợp lý
-        </Paragraph>
+    <div
+      style={{
+        padding: "20px",
+        maxWidth: "1200px",
+        margin: "0 auto",
+        minHeight: "100vh",
+      }}
+    >
+      <Breadcrumb
+        style={{ marginBottom: "20px" }}
+        items={[
+          { title: <Link href="/">Trang chủ</Link> },
+          { title: "Dịch vụ" },
+        ]}
+      />
+      <div style={{ marginBottom: "30px" }}>
+        <Title level={1}>Danh Sách Dịch Vụ</Title>
+        <Text type="secondary">
+          Khám phá các dịch vụ chuyên nghiệp của Smart Car Spa
+        </Text>
       </div>
-
-      <Row gutter={[24, 24]}>
-        {services.map((service) => (
-          <Col xs={24} sm={12} lg={8} key={service.id}>
-            <Card
-              hoverable
-              style={{
-                height: "100%",
-                borderRadius: "12px",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-                border: "1px solid #E5E7EB",
-              }}
-              bodyStyle={{ padding: "24px" }}
+      <Card style={{ marginBottom: "30px" }}>
+        <Row gutter={[16, 16]}>
+          <Col
+            xs={24}
+            sm={24}
+            md={12}
+            lg={6}
+          >
+            <Input.Search
+              placeholder="Tìm kiếm dịch vụ..."
+              prefix={<SearchOutlined />}
+              onSearch={handleSearch}
+            />
+          </Col>
+          <Col
+            xs={24}
+            sm={24}
+            md={12}
+            lg={6}
+          >
+            <Select
+              defaultValue="createdDate-DESC"
+              onChange={handleSortChange}
+              style={{ width: "100%" }}
+              options={[
+                { label: "Mới nhất", value: "createdDate-DESC" },
+                { label: "Cũ nhất", value: "createdDate-ASC" },
+                { label: "Tên (A-Z)", value: "service_name-ASC" },
+                { label: "Tên (Z-A)", value: "service_name-DESC" },
+              ]}
+            />
+          </Col>
+          <Col
+            xs={24}
+            sm={24}
+            md={12}
+            lg={6}
+          >
+            <Select
+              placeholder="Loại dịch vụ"
+              style={{ width: "100%" }}
+              allowClear
+              options={[{ label: "Tất cả", value: "" }]}
+            />
+          </Col>
+          <Col
+            xs={24}
+            sm={24}
+            md={12}
+            lg={6}
+          >
+            <Button
+              type="primary"
+              block
+              style={{ height: "40px", backgroundColor: "#6C7BEA" }}
+              icon={<FilterOutlined />}
             >
-              <div style={{ textAlign: "center", marginBottom: "20px" }}>
-                {service.icon}
-              </div>
-
-              <Title
-                level={3}
-                style={{
-                  textAlign: "center",
-                  marginBottom: "12px",
-                  color: "#1B2559",
-                }}
-              >
-                {service.title}
-              </Title>
-
-              <Paragraph
-                style={{
-                  textAlign: "center",
-                  color: "#8B92A5",
-                  marginBottom: "20px",
-                }}
-              >
-                {service.description}
-              </Paragraph>
-
-              <div style={{ textAlign: "center" }}>
-                <Title
-                  level={4}
-                  style={{ color: "#6C7BEA", marginBottom: "16px" }}
-                >
-                  {service.price}
-                </Title>
-
-                <Button
-                  type="primary"
-                  size="large"
-                  style={{
-                    backgroundColor: "#6C7BEA",
-                    border: "none",
-                    borderRadius: "8px",
-                    height: "40px",
-                    padding: "0 24px",
-                  }}
-                >
-                  Đặt dịch vụ
-                </Button>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      <div style={{ textAlign: "center", marginTop: "48px" }}>
-        <Title level={2} style={{ color: "#1B2559", marginBottom: "16px" }}>
-          Tại sao chọn chúng tôi?
-        </Title>
-
-        <Row gutter={[24, 24]} style={{ marginTop: "32px" }}>
-          <Col xs={24} md={8}>
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  width: "60px",
-                  height: "60px",
-                  backgroundColor: "#E6F7FF",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 16px",
-                }}
-              >
-                <CarOutlined style={{ fontSize: "24px", color: "#1890ff" }} />
-              </div>
-              <Title level={4} style={{ color: "#1B2559" }}>
-                Chất lượng cao
-              </Title>
-              <Paragraph style={{ color: "#8B92A5" }}>
-                Sử dụng các sản phẩm và thiết bị chuyên nghiệp
-              </Paragraph>
-            </div>
-          </Col>
-
-          <Col xs={24} md={8}>
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  width: "60px",
-                  height: "60px",
-                  backgroundColor: "#F6FFED",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 16px",
-                }}
-              >
-                <ToolOutlined style={{ fontSize: "24px", color: "#52c41a" }} />
-              </div>
-              <Title level={4} style={{ color: "#1B2559" }}>
-                Đội ngũ chuyên nghiệp
-              </Title>
-              <Paragraph style={{ color: "#8B92A5" }}>
-                Nhân viên được đào tạo bài bản và có kinh nghiệm
-              </Paragraph>
-            </div>
-          </Col>
-
-          <Col xs={24} md={8}>
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  width: "60px",
-                  height: "60px",
-                  backgroundColor: "#FFF7E6",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 16px",
-                }}
-              >
-                <ToolOutlined style={{ fontSize: "24px", color: "#fa8c16" }} />
-              </div>
-              <Title level={4} style={{ color: "#1B2559" }}>
-                Giá cả hợp lý
-              </Title>
-              <Paragraph style={{ color: "#8B92A5" }}>
-                Cung cấp dịch vụ với mức giá cạnh tranh và minh bạch
-              </Paragraph>
-            </div>
+              Lọc
+            </Button>
           </Col>
         </Row>
-      </div>
+      </Card>
+      <Row
+        gutter={[24, 24]}
+        style={{ marginBottom: "30px" }}
+      >
+        {isLoading && (
+          <>
+            {new Array(12).fill(0).map((_, i) => (
+              <Col
+                key={"skeleton-" + i}
+                xs={24}
+                sm={12}
+                md={8}
+                lg={6}
+              >
+                <Card style={{ borderRadius: "12px" }}>
+                  <Skeleton
+                    active
+                    paragraph={{ rows: 4 }}
+                  />
+                </Card>
+              </Col>
+            ))}
+          </>
+        )}
+
+        {!isLoading && services.length > 0 && (
+          <>
+            {services.map((service: Service) => (
+              <Col
+                key={service.service_id}
+                xs={24}
+                sm={12}
+                md={8}
+                lg={6}
+              >
+                <ServiceCard
+                  service={service}
+                  price={servicePrices[service.service_id]}
+                  imageUrl={serviceImages[service.service_id]}
+                  pricesLoading={pricesLoading}
+                />
+              </Col>
+            ))}
+          </>
+        )}
+
+        {!isLoading && services.length === 0 && (
+          <Col xs={24}>
+            <Empty description="Không tìm thấy dịch vụ nào" />
+          </Col>
+        )}
+      </Row>
+      {services.length > 0 && totalElements > 0 && (
+        <div style={{ textAlign: "center", marginBottom: "30px" }}>
+          <Pagination
+            current={(params.page || 0) + 1}
+            total={totalElements}
+            pageSize={params.size || 12}
+            onChange={handlePageChange}
+            showSizeChanger={false}
+          />
+        </div>
+      )}
     </div>
   );
 }
