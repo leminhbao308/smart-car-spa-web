@@ -168,7 +168,7 @@ const LoginForm = () => {
         }}
       >
         {/* Header */}
-        <CustomerHeader />
+        <CustomerHeader isLoginPage={true} />
 
         {/* Form Container */}
         <div

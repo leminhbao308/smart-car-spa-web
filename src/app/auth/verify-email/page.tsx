@@ -1,44 +1,48 @@
 "use client";
-import React, { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Spin, Result, Button, message } from 'antd';
-import { CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined } from '@ant-design/icons';
-import CustomerHeader from '@/components/layout/Header/customer.header';
-import { AuthIntegrationService } from '@/lib/firebase';
+import React, { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Spin, Result, Button, message } from "antd";
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
+import CustomerHeader from "@/components/layout/Header/customer.header";
+import { AuthIntegrationService } from "@/lib/firebase";
 
-type VerificationStatus = 'verifying' | 'success' | 'error' | 'expired';
+type VerificationStatus = "verifying" | "success" | "error" | "expired";
 
 const VerifyEmailPage = () => {
-  const [status, setStatus] = useState<VerificationStatus>('verifying');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [status, setStatus] = useState<VerificationStatus>("verifying");
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get('email');
+  const email = searchParams.get("email");
 
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        setStatus('verifying');
-        
+        setStatus("verifying");
+
         // Verify email link
         const user = await AuthIntegrationService.verifyEmailLink();
-        
+
         if (user) {
-          setStatus('success');
-          message.success('Xác thực email thành công!');
-          
+          setStatus("success");
+          message.success("Xác thực email thành công!");
+
           // Redirect to signup step 3 after 2 seconds
           setTimeout(() => {
             router.push(`/auth/signup?step=3&email=${user.email}`);
           }, 2000);
         } else {
-          setStatus('error');
-          setErrorMessage('Link xác thực không hợp lệ hoặc đã hết hạn');
+          setStatus("error");
+          setErrorMessage("Link xác thực không hợp lệ hoặc đã hết hạn");
         }
       } catch (error: any) {
-        console.log('Email verification error:', error);
-        setStatus('error');
-        setErrorMessage(error.message || 'Có lỗi xảy ra khi xác thực email');
+        console.log("Email verification error:", error);
+        setStatus("error");
+        setErrorMessage(error.message || "Có lỗi xảy ra khi xác thực email");
       }
     };
 
@@ -49,55 +53,76 @@ const VerifyEmailPage = () => {
     if (email) {
       router.push(`/auth/signup?step=2&email=${email}`);
     } else {
-      router.push('/auth/signup');
+      router.push("/auth/signup");
     }
   };
 
   const handleGoToSignup = () => {
-    router.push('/auth/signup');
+    router.push("/auth/signup");
   };
 
   const renderContent = () => {
     switch (status) {
-      case 'verifying':
+      case "verifying":
         return (
           <Result
-            icon={<LoadingOutlined style={{ fontSize: '64px', color: '#6C7BEA' }} />}
+            icon={
+              <LoadingOutlined style={{ fontSize: "64px", color: "#6C7BEA" }} />
+            }
             title="Đang xác thực email..."
             subTitle="Vui lòng chờ trong giây lát"
-            extra={
-              <Spin size="large" />
-            }
+            extra={<Spin size="large" />}
           />
         );
 
-      case 'success':
+      case "success":
         return (
           <Result
-            icon={<CheckCircleOutlined style={{ fontSize: '64px', color: '#52c41a' }} />}
+            icon={
+              <CheckCircleOutlined
+                style={{ fontSize: "64px", color: "#52c41a" }}
+              />
+            }
             title="Xác thực thành công!"
             subTitle="Email của bạn đã được xác thực. Đang chuyển hướng..."
             extra={
-              <Button type="primary" onClick={() => router.push(`/auth/signup?step=3&email=${email}`)}>
+              <Button
+                type="primary"
+                onClick={() =>
+                  router.push(`/auth/signup?step=3&email=${email}`)
+                }
+              >
                 Tiếp tục đăng ký
               </Button>
             }
           />
         );
 
-      case 'error':
+      case "error":
         return (
           <Result
-            icon={<CloseCircleOutlined style={{ fontSize: '64px', color: '#ff4d4f' }} />}
+            icon={
+              <CloseCircleOutlined
+                style={{ fontSize: "64px", color: "#ff4d4f" }}
+              />
+            }
             title="Xác thực thất bại"
             subTitle={errorMessage}
             extra={[
-              <Button type="primary" key="retry" onClick={handleRetry}>
+              <Button
+                type="primary"
+                key="retry"
+                onClick={handleRetry}
+              >
                 Thử lại
               </Button>,
-              <Button key="signup" onClick={handleGoToSignup} style={{ marginLeft: '8px' }}>
+              <Button
+                key="signup"
+                onClick={handleGoToSignup}
+                style={{ marginLeft: "8px" }}
+              >
                 Về trang đăng ký
-              </Button>
+              </Button>,
             ]}
           />
         );
@@ -131,7 +156,7 @@ const VerifyEmailPage = () => {
           }
         }
       `}</style>
-      
+
       {/* Container */}
       <div
         style={{
@@ -141,7 +166,7 @@ const VerifyEmailPage = () => {
         }}
       >
         {/* Header */}
-        <CustomerHeader />
+        <CustomerHeader isLoginPage={true} />
 
         {/* Content Container */}
         <div

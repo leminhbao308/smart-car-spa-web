@@ -331,7 +331,7 @@ const SignupPage = () => {
         }}
       >
         {/* Header */}
-        <CustomerHeader />
+        <CustomerHeader isLoginPage={true} />
 
         {/* reCAPTCHA Container - Global container for all steps */}
         <div

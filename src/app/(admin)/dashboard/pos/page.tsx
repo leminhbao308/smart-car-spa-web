@@ -946,6 +946,15 @@ const POSPage = () => {
             ? (cartSummary.totalDiscount / cartSummary.subtotal) * 100
             : 0,
         earned_points: earnedPoints, // Loyalty points earned from this purchase
+        // Shipping address - default to branch address for POS orders
+        shipping_full_name:
+          selectedCustomer?.full_name || "Khách hàng tại quầy",
+        shipping_phone: selectedCustomer?.email || selectedBranch.phone,
+        shipping_address: selectedBranch.address,
+        shipping_ward: "",
+        shipping_district: "",
+        shipping_city: "",
+        shipping_notes: "Đơn hàng bán tại quầy",
         lines: cart.map((item) => {
           const lineItem: any = {
             qty: item.quantity,

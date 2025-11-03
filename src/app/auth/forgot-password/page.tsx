@@ -28,7 +28,7 @@ const ForgotPasswordPage: React.FC = () => {
   const [otp, setOtp] = useState("");
   const [otpTimer, setOtpTimer] = useState(0);
   const [otpExpired, setOtpExpired] = useState(false);
-  
+
   // Phone Auth states
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
   const confirmationResultRef = useRef<ConfirmationResult | null>(null);
@@ -36,7 +36,7 @@ const ForgotPasswordPage: React.FC = () => {
   // Countdown timer effect
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     if (otpTimer > 0) {
       interval = setInterval(() => {
         setOtpTimer((prev) => {
@@ -71,7 +71,7 @@ const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
     try {
       setPhoneNumber(values.phoneNumber);
-      
+
       // Create Recaptcha Verifier
       if (recaptchaVerifierRef.current) {
         AuthIntegrationService.clearRecaptchaVerifier(
@@ -146,7 +146,10 @@ const ForgotPasswordPage: React.FC = () => {
     }
   };
 
-  const handlePasswordSubmit = async (values: { newPassword: string; confirmPassword: string }) => {
+  const handlePasswordSubmit = async (values: {
+    newPassword: string;
+    confirmPassword: string;
+  }) => {
     setLoading(true);
     try {
       // Prepare forgot password request
@@ -157,7 +160,7 @@ const ForgotPasswordPage: React.FC = () => {
 
       // Call API to reset password
       await AuthService.forgotPassword(request);
-      
+
       setCurrentStep(4);
       message.success("Đặt lại mật khẩu thành công!");
     } catch (error: unknown) {
@@ -331,7 +334,7 @@ const ForgotPasswordPage: React.FC = () => {
         }}
       >
         {/* Header */}
-        <CustomerHeader />
+        <CustomerHeader isLoginPage={true} />
 
         {/* reCAPTCHA Container - Global container for all steps */}
         <div
@@ -367,12 +370,23 @@ const ForgotPasswordPage: React.FC = () => {
             }}
           >
             <div style={{ textAlign: "center" }}>
-              <Title level={2} style={{ color: "#1B2559", marginBottom: "8px" }}>
+              <Title
+                level={2}
+                style={{ color: "#1B2559", marginBottom: "8px" }}
+              >
                 {getStepTitle()}
               </Title>
 
               {getStepDescription() && (
-                <Text style={{ color: "#8B92A5", fontSize: "16px", lineHeight: "24px", display: "block", marginBottom: "32px" }}>
+                <Text
+                  style={{
+                    color: "#8B92A5",
+                    fontSize: "16px",
+                    lineHeight: "24px",
+                    display: "block",
+                    marginBottom: "32px",
+                  }}
+                >
                   {getStepDescription()}
                 </Text>
               )}
@@ -421,7 +435,7 @@ const ForgotPasswordPage: React.FC = () => {
             </div>
           </div>
         </div>
-    </div>
+      </div>
     </>
   );
 };
