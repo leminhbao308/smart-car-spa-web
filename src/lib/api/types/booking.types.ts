@@ -131,6 +131,7 @@ export interface BookingFilterParam {
 
 // Related DTOs
 export interface BookingItemInfoDto {
+  booking_item_id?: string; // ID của booking item (cần để xóa item)
   service_id?: string;
   item_name: string;
   item_description?: string;
@@ -138,6 +139,9 @@ export interface BookingItemInfoDto {
   tax_amount?: number;
   unit_price?: number;
   quantity?: number;
+  total_amount?: number;
+  duration_minutes?: number;
+  item_status?: string;
 }
 
 export interface BookingAssignmentInfoDto {
@@ -254,6 +258,17 @@ export interface CreateBookingWithSlotRequest {
   special_requests?: string[];
 }
 
+// CreateBookingItemRequest - Dùng trong booking_items array
+export interface CreateBookingItemRequest {
+  service_id?: string; // UUID, optional - ID của service
+  item_name?: string; // String, optional - Tên item
+  item_description?: string; // String, optional - Mô tả item
+  discount_amount?: number; // BigDecimal, optional - Số tiền chiết khấu
+  tax_amount?: number; // BigDecimal, optional - Số tiền thuế
+  operation?: "DELETE"; // String enum, optional - Operation type - chỉ có giá trị "DELETE"
+  booking_item_id?: string; // UUID, optional - ID của booking item - chỉ cần khi operation = "DELETE"
+}
+
 export interface UpdateBookingRequest {
   // Customer information
   customer_name?: string;
@@ -299,6 +314,9 @@ export interface UpdateBookingRequest {
   coupon_code?: string;
   notes?: string;
   special_requests?: string[];
+  
+  // Booking items - Array of items to add/update/delete
+  booking_items?: CreateBookingItemRequest[];
 }
 
 export interface BookingStatisticsDto {

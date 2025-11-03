@@ -32,7 +32,7 @@ import {
   LoginOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { BookingInfoDto, BookingStatus, Priority } from "@/lib/api/types";
+import { BookingInfoDto, BookingStatus, Priority, CreateBookingItemRequest } from "@/lib/api/types";
 import {
   useUpdateBooking,
   useCreateBookingWithSlot,
@@ -903,6 +903,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           console.log("🔍 Processing booking item:", {
             service_id: item.service_id,
             item_name: item.item_name,
+            booking_item_id: item.booking_item_id,
           });
 
           if (item.service_id && !seenServiceIds.has(item.service_id)) {
@@ -918,6 +919,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                   ? priceBookItem.service.service_name
                   : null,
                 duration: priceBookItem.service?.estimated_duration || 60,
+                booking_item_id: item.booking_item_id,
               });
               services.push(priceBookItem);
               seenServiceIds.add(item.service_id);
@@ -1205,9 +1207,10 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   // Handle service selection change
   const handleServiceChange = useCallback(
     (selectedServiceIds: string[]) => {
-      console.log("🔄 Service selection changed:", {
+      console.log("🔄 Service selection changed (from Select component):", {
         selectedServiceIds,
         selectedServiceIdsCount: selectedServiceIds.length,
+        currentSelectedItemsCount: selectedItems.length,
         availableServicesCount: availableServices.length,
       });
 
@@ -1218,31 +1221,41 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         uniqueServiceIds.includes(service.item_id)
       );
 
-      console.log("✅ Selected services:", {
-        uniqueIdsCount: uniqueServiceIds.length,
-        selectedServicesCount: selectedServices.length,
-        services: selectedServices.map((s) => ({
-          item_id: s.item_id,
-          item_name: s.item_name,
-          duration: s.service?.estimated_duration || 60,
-          service: s.service ? s.service.service_name : null,
-        })),
-      });
-
       // Ensure no duplicates in selectedServices
       const uniqueSelectedServices = selectedServices.filter((service, index, self) =>
         index === self.findIndex((s) => s.item_id === service.item_id)
       );
 
-      console.log("📋 Unique selected services:", {
-        count: uniqueSelectedServices.length,
-        itemIds: uniqueSelectedServices.map((s) => s.item_id),
+      // Log comparison with previous state to detect deletions
+      const previousServiceIds = new Set(
+        selectedItems.map((item) => item.service?.service_id).filter((id): id is string => !!id)
+      );
+      const newServiceIds = new Set(
+        uniqueSelectedServices.map((item) => item.service?.service_id).filter((id): id is string => !!id)
+      );
+      
+      // Find removed services
+      const removedServiceIds = Array.from(previousServiceIds).filter(
+        (id) => !newServiceIds.has(id)
+      );
+
+      console.log("✅ Selected services:", {
+        uniqueIdsCount: uniqueServiceIds.length,
+        selectedServicesCount: uniqueSelectedServices.length,
+        previousCount: selectedItems.length,
+        services: uniqueSelectedServices.map((s) => ({
+          item_id: s.item_id,
+          item_name: s.item_name,
+          service_id: s.service?.service_id,
+          duration: s.service?.estimated_duration || 60,
+        })),
+        removedServiceIds: removedServiceIds.length > 0 ? removedServiceIds : undefined,
       });
 
       setSelectedItems(uniqueSelectedServices);
       calculateTotals(uniqueSelectedServices);
     },
-    [availableServices, calculateTotals]
+    [availableServices, calculateTotals, selectedItems]
   );
 
   // Handle vehicle change
@@ -1513,6 +1526,110 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     }
   };
 
+  // Helper function to build booking_items array for API
+  const buildBookingItemsArray = useCallback((): CreateBookingItemRequest[] => {
+    const bookingItems: CreateBookingItemRequest[] = [];
+    
+    // Get service IDs from original and selected items
+    const originalServiceIds = new Set(
+      originalItems
+        .map((item) => item.service?.service_id)
+        .filter((id): id is string => !!id)
+    );
+    const selectedServiceIds = new Set(
+      selectedItems
+        .map((item) => item.service?.service_id)
+        .filter((id): id is string => !!id)
+    );
+
+    console.log("🔍 Building booking_items array:", {
+      originalServiceIds: Array.from(originalServiceIds),
+      selectedServiceIds: Array.from(selectedServiceIds),
+      originalItemsCount: originalItems.length,
+      selectedItemsCount: selectedItems.length,
+      originalItems: originalItems.map((i) => ({
+        item_name: i.item_name,
+        service_id: i.service?.service_id,
+      })),
+      selectedItems: selectedItems.map((i) => ({
+        item_name: i.item_name,
+        service_id: i.service?.service_id,
+      })),
+    });
+
+    // Step 1: Handle DELETE operations (items in original but not in selected)
+    // Backend processes DELETE first, so we add them first
+    // Use service_id only for deletion (not booking_item_id)
+    originalServiceIds.forEach((serviceId) => {
+      if (!selectedServiceIds.has(serviceId) && serviceId) {
+        // Item needs to be deleted - use service_id only
+        const originalItem = originalItems.find(
+          (item) => item.service?.service_id === serviceId
+        );
+        bookingItems.push({
+          service_id: serviceId,
+          operation: "DELETE",
+        });
+        console.log("🗑️ Adding DELETE item (by service_id):", {
+          service_id: serviceId,
+          item_name: originalItem?.item_name,
+          reason: "Item exists in original but not in selected",
+        });
+      }
+    });
+
+    // Step 2: Handle ADD/UPDATE operations (items in selected)
+    // For items that exist in both original and selected, it's an UPDATE
+    // For items only in selected, it's an ADD
+    selectedItems.forEach((item) => {
+      const serviceId = item.service?.service_id;
+      if (!serviceId) {
+        console.warn("⚠️ Skipping item without service_id:", item);
+        return;
+      }
+
+      const isUpdate = originalServiceIds.has(serviceId);
+      const originalItem = originalItems.find(
+        (orig) => orig.service?.service_id === serviceId
+      );
+
+      if (isUpdate && originalItem) {
+        // UPDATE: Only send fields that can be updated (discount_amount, tax_amount, item_name, item_description)
+        // Note: We don't send all fields, only if they changed or if we want to update them
+        // For now, we'll send service_id to indicate update, and let backend handle it
+        // Backend will update discount_amount, tax_amount, item_name, item_description if provided
+        const bookingItem: CreateBookingItemRequest = {
+          service_id: serviceId,
+          item_name: item.item_name,
+        };
+
+        // Only include optional fields if they exist
+        // Note: Since we don't have discount/tax in PriceBookItem, we can't update them here
+        // But we include the structure for future use
+        bookingItems.push(bookingItem);
+        console.log("✏️ Adding UPDATE item:", {
+          service_id: serviceId,
+          item_name: item.item_name,
+        });
+      } else {
+        // ADD: New item - send service_id and item_name
+        const bookingItem: CreateBookingItemRequest = {
+          service_id: serviceId,
+          item_name: item.item_name,
+        };
+        bookingItems.push(bookingItem);
+        console.log("➕ Adding NEW item:", {
+          service_id: serviceId,
+          item_name: item.item_name,
+          reason: "Item exists in selected but not in original",
+        });
+      }
+    });
+
+    console.log("📦 Final booking_items array:", bookingItems);
+    return bookingItems;
+  }, [originalItems, selectedItems]);
+
   // Handle submit
   const handleSubmit = async () => {
     try {
@@ -1583,6 +1700,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
 
         console.log("Updating walk-in booking");
         try {
+          // Build booking_items array for API
+          const bookingItems = buildBookingItemsArray();
+
           // For walk-in booking, we need to use the regular updateBooking API
           // but with walk-in specific data structure
           const updateRequest = {
@@ -1637,6 +1757,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             coupon_code: values.couponCode || undefined,
             notes: values.notes || "",
             special_requests: values.specialRequests || [],
+            // Booking items - send array for add/update/delete
+            booking_items: bookingItems.length > 0 ? bookingItems : undefined,
           };
 
           console.log(
@@ -1720,6 +1842,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             return;
           }
 
+          // Build booking_items array for API
+          const bookingItems = buildBookingItemsArray();
+
           const updateRequest = {
             customer_name: isNewCustomer
               ? newCustomer!.full_name
@@ -1776,6 +1901,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             coupon_code: values.couponCode || undefined,
             notes: values.notes || "",
             special_requests: values.specialRequests || [],
+            // Booking items - send array for add/update/delete
+            booking_items: bookingItems.length > 0 ? bookingItems : undefined,
           };
 
           console.log("🚀 Updating slot booking with request:", updateRequest);
@@ -2510,12 +2637,25 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                       <Tag
                         key={item.item_id}
                         closable
-                        onClose={() => {
+                        onClose={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           const newItems = selectedItems.filter(
                             (i) => i.item_id !== item.item_id
                           );
+                          console.log("🗑️ Removed service from Tag:", {
+                            removedItem: item.item_name,
+                            removedServiceId: item.service?.service_id,
+                            remainingItems: newItems.map((i) => i.item_name),
+                            remainingServiceIds: newItems.map((i) => i.service?.service_id),
+                          });
                           setSelectedItems(newItems);
                           calculateTotals(newItems);
+                          // Sync form value to match selectedItems (without triggering onChange)
+                          // Use setTimeout to avoid circular reference
+                          setTimeout(() => {
+                            form.setFieldValue("services", newItems.map((i) => i.item_id));
+                          }, 0);
                         }}
                         style={{ marginBottom: 4 }}
                       >
