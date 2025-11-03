@@ -4,6 +4,7 @@ import {
   FeaturedServices,
   ProductCategories,
   NewsSection,
+  FeaturedProductsSection,
 } from "@/components/ui/Home";
 
 export default function HomePage() {
@@ -14,10 +15,15 @@ export default function HomePage() {
         <FeaturedServices />
       </div>
 
-      {/* Product Categories Section */}
+      {/* Featured Products Section */}
       <div style={{ paddingBottom: "40px" }}>
-        <ProductCategories />
+        <FeaturedProductsSection />
       </div>
+
+      {/* Product Categories Section */}
+      {/*<div style={{ paddingBottom: "40px" }}>*/}
+      {/*  <ProductCategories />*/}
+      {/*</div>*/}
 
       {/* News Section */}
       <div style={{ paddingBottom: "60px" }}>

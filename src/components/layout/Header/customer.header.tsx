@@ -5,6 +5,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import {
+  Badge,
   Button,
   Col,
   Divider,
@@ -23,6 +24,7 @@ import { AccountPopup } from "@/components/ui/AccountPopup";
 import { LoginRequiredModal } from "@/components/ui/Modal/LoginRequiredModal";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import { useCart } from "@/contexts/CartContext";
 
 // Định nghĩa type cho menu items
 export interface MenuItem {
@@ -40,6 +42,7 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const { cartSummary } = useCart();
 
   // Tự động đóng drawer khi màn hình từ 768px trở lên
   useEffect(() => {
@@ -68,6 +71,12 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
         // Nếu chưa đăng nhập, hiển thị modal yêu cầu đăng nhập
         setLoginModalVisible(true);
       }
+    } else if (key === "aboutUs") {
+      // Chuyển đến trang về chúng tôi
+      router.push("/about");
+    } else if (key === "shop") {
+      // Chuyển đến trang sản phẩm
+      router.push("/products");
     } else {
       // Các menu item khác có thể xử lý tương tự nếu cần
       console.log("Menu clicked:", key);
@@ -109,7 +118,10 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
         }}
       >
         {/* Menu Button - Mobile - hiển thị dưới 768px */}
-        <Col xs={4} md={0}>
+        <Col
+          xs={4}
+          md={0}
+        >
           <Button
             type="text"
             icon={<MenuOutlined />}
@@ -143,7 +155,10 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
         </Col>
 
         {/* Menu - Desktop - hiển thị từ 768px trở lên */}
-        <Col xs={0} md={16}>
+        <Col
+          xs={0}
+          md={16}
+        >
           <Menu
             mode="horizontal"
             items={antdMenuItems}
@@ -168,18 +183,46 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
             alignItems: "center",
           }}
         >
-          <Row>
-            <Col xs={24} sm={24} md={12}>
-              <Button
-                type="text"
-                icon={<ShoppingCartOutlined />}
-                style={{
-                  fontSize: "2rem",
-                  marginRight: "1em",
-                }}
-              />
+          <Row
+            gutter={8}
+            style={{ width: "100%" }}
+          >
+            <Col
+              xs={24}
+              sm={24}
+              md={12}
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                paddingRight: "8px",
+              }}
+            >
+              <Badge
+                count={cartSummary.itemCount}
+                showZero
+                offset={[-8, 8]}
+                style={{ boxShadow: "0 0 0 1px #fff" }}
+              >
+                <Button
+                  type="text"
+                  icon={<ShoppingCartOutlined />}
+                  style={{
+                    fontSize: "2rem",
+                  }}
+                  onClick={() => router.push("/cart")}
+                />
+              </Badge>
             </Col>
-            <Col xs={0} sm={0} md={12}>
+            <Col
+              xs={0}
+              sm={0}
+              md={12}
+              style={{
+                display: "flex",
+                justifyContent: "flex-start",
+                paddingLeft: "8px",
+              }}
+            >
               <AccountPopup>
                 <Button
                   type="text"
@@ -210,7 +253,11 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
         closable={true}
       >
         {/* Menu */}
-        <Menu mode="inline" items={antdMenuItems} style={{ border: "none" }} />
+        <Menu
+          mode="inline"
+          items={antdMenuItems}
+          style={{ border: "none" }}
+        />
         <Divider style={{ marginTop: "10px", marginBottom: "10px" }} />
         {/* Account */}
         <Space
