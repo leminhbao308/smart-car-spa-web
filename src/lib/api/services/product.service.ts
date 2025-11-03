@@ -28,13 +28,45 @@ export const productService = {
   getAllProducts: async (
     params: ProductSearchParams = {}
   ): Promise<ProductResponse> => {
-    const response = await api.get("/products/get-all", { params });
+    const {
+      page = 0,
+      size = 10,
+      sort = "createdDate",
+      direction = "DESC",
+      filters = {},
+    } = params;
+
+    const queryParams = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sort: sort,
+      direction: direction,
+    });
+
+    // Flatten filters into query params
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const response = await api.get(
+      `/products/get-all?${queryParams.toString()}`
+    );
     return response.data;
   },
 
   // Get product by ID
   getProductById: async (productId: string): Promise<Product> => {
     const response = await api.get(`/products/${productId}`);
+    return response.data.data;
+  },
+
+  // Get product by URL (for customer-facing pages)
+  getProductByUrl: async (productUrl: string): Promise<Product> => {
+    const response = await api.get(
+      `/products/url/${encodeURIComponent(productUrl)}`
+    );
     return response.data.data;
   },
 
