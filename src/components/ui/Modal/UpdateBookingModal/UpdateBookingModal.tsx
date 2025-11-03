@@ -907,12 +907,12 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           });
 
           if (item.service_id && !seenServiceIds.has(item.service_id)) {
-            // Find the service in price books
+            // Find the service in price books by service_id
             const priceBookItem = availableServices.find(
               (service) => service.service?.service_id === item.service_id
             );
             if (priceBookItem && !seenServiceIds.has(priceBookItem.item_id)) {
-              console.log("✅ Found matching service:", {
+              console.log("✅ Found matching service by service_id:", {
                 item_id: priceBookItem.item_id,
                 item_name: priceBookItem.item_name,
                 service: priceBookItem.service
@@ -930,6 +930,46 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                 item.service_id
               );
             }
+          } else if (!item.service_id && item.item_name) {
+            // FALLBACK: Backend trả về service_id null (BUG BACKEND)
+            // Tạm thời match bằng item_name để frontend không crash
+            console.warn(
+              "⚠️ BACKEND BUG: Booking item has null service_id! Attempting fallback match by item_name:",
+              item.item_name
+            );
+            const priceBookItem = availableServices.find(
+              (service) =>
+                service.item_name === item.item_name &&
+                service.service && // Ensure it's a service, not a product
+                !seenServiceIds.has(service.item_id)
+            );
+            if (priceBookItem) {
+              console.log("✅ Fallback match successful by item_name:", {
+                item_id: priceBookItem.item_id,
+                item_name: priceBookItem.item_name,
+                service: priceBookItem.service
+                  ? priceBookItem.service.service_name
+                  : null,
+                duration: priceBookItem.service?.estimated_duration || 60,
+                booking_item_id: item.booking_item_id,
+              });
+              services.push(priceBookItem);
+              if (priceBookItem.service?.service_id) {
+                seenServiceIds.add(priceBookItem.service.service_id);
+              }
+              seenServiceIds.add(priceBookItem.item_id);
+            } else {
+              console.error(
+                "❌ Fallback match failed - cannot find service by item_name:",
+                item.item_name,
+                "- This booking item will be missing!"
+              );
+            }
+          } else {
+            console.warn(
+              "⚠️ Skipping booking item - missing both service_id and item_name:",
+              item
+            );
           }
         });
 
@@ -960,6 +1000,11 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           return sum;
         }, 0);
         setOriginalTotalDuration(originalDuration);
+        
+        // Update form value to sync with selectedItems (only item_ids, not null values)
+        // This ensures form displays correctly even if backend returns null service_ids
+        const serviceItemIds = uniqueServices.map((s) => s.item_id).filter((id): id is string => !!id);
+        form.setFieldValue("services", serviceItemIds);
       } else {
         console.log("⚠️ No booking items found in initialData");
         setOriginalItems([]);
@@ -1000,7 +1045,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           ? dayjs(initialData.scheduled_start_at)
           : null,
         services:
-          initialData.booking_items?.map((item) => item.service_id) || [],
+          initialData.booking_items
+            ?.map((item) => item.service_id)
+            .filter((id): id is string => !!id) || [], // Filter out null/undefined to prevent duplicate key error
         notes: initialData.notes,
         priority: initialData.priority,
       });
