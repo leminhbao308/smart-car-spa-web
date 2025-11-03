@@ -7,7 +7,6 @@ import {
   Row,
   Col,
   Statistic,
-  Progress,
   Button,
   App,
   Modal,
@@ -20,8 +19,6 @@ import {
   PauseCircleOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  StarOutlined,
-  CreditCardOutlined,
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
 import VehicleTrackingModal from "@/components/ui/Modal/VehicleTrackingModal";
@@ -38,7 +35,11 @@ import {
 import { useBookingWithInventory } from "@/lib/api/hooks/useBookingWithInventory";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookingInfoDto, BookingStatus } from "@/lib/api/types/booking.types";
-import { ServiceProcessTrackingInfoDto, CreateServiceProcessTrackingRequest, TrackingStatus } from "@/lib/api/types/service-process-tracking.types";
+import {
+  ServiceProcessTrackingInfoDto,
+  CreateServiceProcessTrackingRequest,
+  TrackingStatus,
+} from "@/lib/api/types/service-process-tracking.types";
 import { ServiceProcessService } from "@/lib/api/services/service-process.service";
 import { ServiceProcessTrackingService } from "@/lib/api/services/service-process-tracking.service";
 
@@ -111,7 +112,8 @@ const VehiclesInCarePage = () => {
   const [selectedTracking, setSelectedTracking] =
     useState<ServiceProcessTrackingInfoDto | null>(null);
   const [selectedStepName, setSelectedStepName] = useState<string>("");
-  const [bookingTrackingModalOpen, setBookingTrackingModalOpen] = useState(false);
+  const [bookingTrackingModalOpen, setBookingTrackingModalOpen] =
+    useState(false);
   const { notification } = App.useApp();
 
   // API hooks - Load bookings with multiple statuses
@@ -145,12 +147,10 @@ const VehiclesInCarePage = () => {
   const startServiceMutation = useStartService();
   const cancelBookingMutation = useCancelBooking();
   const queryClient = useQueryClient();
-  
+
   // Enhanced hooks with inventory management
-  const {
-    startServiceWithInventory,
-    cancelBookingWithInventory,
-  } = useBookingWithInventory();
+  const { startServiceWithInventory, cancelBookingWithInventory } =
+    useBookingWithInventory();
 
   // Combine bookings with their trackings
   const checkedInData = checkedInBookings?.data || [];
@@ -204,9 +204,7 @@ const VehiclesInCarePage = () => {
       width: 60,
       align: "center" as const,
       render: (_: unknown, __: unknown, index: number) => (
-        <Text style={{ fontSize: 12, fontWeight: 500 }}>
-          {index + 1}
-        </Text>
+        <Text style={{ fontSize: 12, fontWeight: 500 }}>{index + 1}</Text>
       ),
     },
     {
@@ -375,7 +373,6 @@ const VehiclesInCarePage = () => {
   // Auto-create tracking function
   const autoCreateTrackingForBooking = async (booking: BookingInfoDto) => {
     try {
-
       if (!booking.booking_items || booking.booking_items.length === 0) {
         return;
       }
@@ -397,22 +394,31 @@ const VehiclesInCarePage = () => {
       for (const item of booking.booking_items || []) {
         if (item.service_id) {
           try {
-            const serviceProcess = await ServiceProcessService.getServiceProcessByServiceId(item.service_id);
+            const serviceProcess =
+              await ServiceProcessService.getServiceProcessByServiceId(
+                item.service_id
+              );
             if (serviceProcess?.process_steps || serviceProcess?.processSteps) {
-              const steps = serviceProcess.process_steps || serviceProcess.processSteps || [];
-              
+              const steps =
+                serviceProcess.process_steps ||
+                serviceProcess.processSteps ||
+                [];
+
               serviceStepsByService.push({
                 service_id: item.service_id,
                 service_name: item.item_name,
-                steps: steps.map(step => ({
+                steps: steps.map((step) => ({
                   ...step,
                   service_id: item.service_id!,
-                  service_name: item.item_name
-                }))
+                  service_name: item.item_name,
+                })),
               });
             }
           } catch (error) {
-            console.warn(`Failed to get service process for service ${item.service_id}:`, error);
+            console.warn(
+              `Failed to get service process for service ${item.service_id}:`,
+              error
+            );
           }
         }
       }
@@ -429,14 +435,20 @@ const VehiclesInCarePage = () => {
               status: TrackingStatus.PENDING,
               notes: `Tự động tạo tracking cho bước: ${step.name} (${serviceData.service_name})`,
             };
-            const createdTracking = await ServiceProcessTrackingService.createTracking(trackingRequest);
+            const createdTracking =
+              await ServiceProcessTrackingService.createTracking(
+                trackingRequest
+              );
             createdTrackings.push(createdTracking);
           } catch (error) {
-            console.error(`❌ Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`, error);
+            console.log(
+              `❌ Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`,
+              error
+            );
           }
         }
       }
-      
+
       if (createdTrackings.length > 0) {
         notification.success({
           message: "Thành công",
@@ -444,9 +456,8 @@ const VehiclesInCarePage = () => {
           placement: "topRight",
         });
       }
-
     } catch (error) {
-      console.error("❌ Error in auto-create tracking:", error);
+      console.log("❌ Error in auto-create tracking:", error);
       notification.error({
         message: "Lỗi",
         description: "Có lỗi xảy ra khi tự động tạo tracking",
@@ -461,7 +472,10 @@ const VehiclesInCarePage = () => {
     try {
       if (confirmAction.type === "start") {
         // Use enhanced hook with inventory fulfillment
-        await startServiceWithInventory(confirmAction.record, confirmAction.record.branch_id);
+        await startServiceWithInventory(
+          confirmAction.record,
+          confirmAction.record.branch_id
+        );
         notification.success({
           message: "Thành công",
           description: "Bắt đầu chăm sóc và xuất sản phẩm thành công",
@@ -551,13 +565,6 @@ const VehiclesInCarePage = () => {
   const cancelledVehicles = data.filter(
     (item: BookingInfoDto) => item.status === BookingStatus.CANCELLED
   ).length;
-  const averageProgress = 0; // Will be calculated from tracking data
-  const urgentVehicles = data.filter(
-    (item: BookingInfoDto) => item.priority === "URGENT"
-  ).length;
-  const highPriorityVehicles = data.filter(
-    (item: BookingInfoDto) => item.priority === "HIGH"
-  ).length;
 
   return (
     <App>
@@ -567,7 +574,7 @@ const VehiclesInCarePage = () => {
           <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
-                title="Tổng xe đang chăm sóc và đã hoàn thành"
+                title="Tổng xe"
                 value={totalVehicles}
                 valueStyle={{ color: "#1890ff" }}
                 prefix={<CarOutlined />}
@@ -591,11 +598,6 @@ const VehiclesInCarePage = () => {
                 value={inProgressVehicles}
                 valueStyle={{ color: "#52c41a" }}
                 prefix={<PlayCircleOutlined />}
-              />
-              <Progress
-                percent={Math.round((inProgressVehicles / totalVehicles) * 100)}
-                size="small"
-                strokeColor="#52c41a"
               />
             </Card>
           </Col>
@@ -621,44 +623,8 @@ const VehiclesInCarePage = () => {
           </Col>
         </Row>
 
-        {/* Thống kê bổ sung */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Tiến độ TB"
-                value={averageProgress}
-                precision={1}
-                valueStyle={{ color: "#722ed1" }}
-                prefix={<ClockCircleOutlined />}
-                suffix="%"
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Khẩn cấp"
-                value={urgentVehicles}
-                valueStyle={{ color: "#f5222d" }}
-                prefix={<ExclamationCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Ưu tiên cao"
-                value={highPriorityVehicles}
-                valueStyle={{ color: "#fa8c16" }}
-                prefix={<StarOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
-
         <AdminTable
-          title="Danh sách xe đang chăm sóc và đã hoàn thành"
+          title="Quản lý chăm sóc xe"
           dataSource={data}
           columns={columns}
           actions={actions}

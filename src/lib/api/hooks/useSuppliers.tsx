@@ -58,7 +58,7 @@ export const useCreateSupplier = () => {
       });
     },
     onError: (error) => {
-      console.error("Failed to create supplier:", error);
+      console.log("Failed to create supplier:", error);
     },
   });
 };
@@ -90,7 +90,7 @@ export const useUpdateSupplier = () => {
       });
     },
     onError: (error) => {
-      console.error("Failed to update supplier:", error);
+      console.log("Failed to update supplier:", error);
     },
   });
 };
@@ -116,7 +116,7 @@ export const useDeleteSupplier = () => {
       });
     },
     onError: (error) => {
-      console.error("Failed to delete supplier:", error);
+      console.log("Failed to delete supplier:", error);
     },
   });
 };

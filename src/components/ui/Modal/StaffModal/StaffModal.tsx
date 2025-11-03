@@ -78,7 +78,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
         setStaffRoles([]);
       }
     } catch (error) {
-      console.error("StaffModal: Error loading roles:", error);
+      console.log("StaffModal: Error loading roles:", error);
       message.error("Không thể tải danh sách vai trò. Vui lòng thử lại.");
       setStaffRoles([]);
     } finally {
@@ -161,7 +161,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
 
           message.success("Cập nhật nhân viên thành công!");
         } catch (apiError) {
-          console.error("StaffModal: API Error in updateUser:", apiError);
+          console.log("StaffModal: API Error in updateUser:", apiError);
           throw apiError; // Re-throw to be caught by outer catch
         }
       } else {
@@ -209,7 +209,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
 
           message.success("Tạo nhân viên thành công!");
         } catch (apiError) {
-          console.error("StaffModal: API Error in createUser:", apiError);
+          console.log("StaffModal: API Error in createUser:", apiError);
           throw apiError; // Re-throw to be caught by outer catch
         }
       }
@@ -221,25 +221,25 @@ const StaffModal: React.FC<StaffModalProps> = ({
       console.log("StaffModal: Success flow completed");
     } catch (error: unknown) {
       // Enhanced error logging
-      console.error("=== StaffModal Error Debug ===");
-      console.error("Raw error:", error);
-      console.error("Error type:", typeof error);
-      console.error("Error constructor:", error?.constructor?.name);
-      console.error("Error string:", String(error));
-      console.error("Error JSON:", JSON.stringify(error, null, 2));
+      console.log("=== StaffModal Error Debug ===");
+      console.log("Raw error:", error);
+      console.log("Error type:", typeof error);
+      console.log("Error constructor:", error?.constructor?.name);
+      console.log("Error string:", String(error));
+      console.log("Error JSON:", JSON.stringify(error, null, 2));
 
       if (error instanceof Error) {
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-        console.error("Error name:", error.name);
+        console.log("Error message:", error.message);
+        console.log("Error stack:", error.stack);
+        console.log("Error name:", error.name);
       }
 
       if (error && typeof error === "object") {
-        console.error("Error keys:", Object.keys(error));
-        console.error("Error values:", Object.values(error));
+        console.log("Error keys:", Object.keys(error));
+        console.log("Error values:", Object.values(error));
       }
 
-      console.error("=== End Error Debug ===");
+      console.log("=== End Error Debug ===");
 
       let errorMessage = "Có lỗi xảy ra. Vui lòng thử lại!";
 
@@ -260,7 +260,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
         }
       }
 
-      console.error("Final error message:", errorMessage);
+      console.log("Final error message:", errorMessage);
       message.error(errorMessage);
     } finally {
       setLoading(false);

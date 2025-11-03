@@ -271,7 +271,7 @@ const PriceTableEditModal: React.FC<PriceTableEditModalProps> = ({
       setItems([]);
       setActiveTab("basic");
     } catch (error: any) {
-      console.error("Submit failed:", error);
+      console.log("Submit failed:", error);
       message.error(error?.message || "Có lỗi xảy ra khi lưu bảng giá");
     } finally {
       setLoading(false);

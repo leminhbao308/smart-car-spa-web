@@ -76,7 +76,7 @@ export class SupplierService {
         throw new Error(response.data.message || "Failed to fetch suppliers");
       }
     } catch (error) {
-      console.error("Get all suppliers error:", error);
+      console.log("Get all suppliers error:", error);
       throw error;
     }
   }
@@ -99,7 +99,7 @@ export class SupplierService {
         throw new Error(response.data.message || "Failed to fetch supplier");
       }
     } catch (error) {
-      console.error("Get supplier by ID error:", error);
+      console.log("Get supplier by ID error:", error);
       throw error;
     }
   }
@@ -123,7 +123,7 @@ export class SupplierService {
         throw new Error(response.data.message || "Failed to create supplier");
       }
     } catch (error) {
-      console.error("Create supplier error:", error);
+      console.log("Create supplier error:", error);
       throw error;
     }
   }
@@ -150,7 +150,7 @@ export class SupplierService {
         throw new Error(response.data.message || "Failed to update supplier");
       }
     } catch (error) {
-      console.error("Update supplier error:", error);
+      console.log("Update supplier error:", error);
       throw error;
     }
   }
@@ -173,7 +173,7 @@ export class SupplierService {
         throw new Error(response.data.message || "Failed to delete supplier");
       }
     } catch (error) {
-      console.error("Delete supplier error:", error);
+      console.log("Delete supplier error:", error);
       throw error;
     }
   }

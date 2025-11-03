@@ -24,6 +24,7 @@ import {
   Tabs,
   Input,
   Table,
+  App,
 } from "antd";
 import {
   CalendarOutlined,
@@ -116,6 +117,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   loading = false,
   onRefresh,
 }) => {
+  // Lazy initialization: only create form instance when modal is open or was opened
   const [form] = Form.useForm();
   const formRef = useRef(form);
 
@@ -221,6 +223,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const [availableSlots, setAvailableSlots] = useState<SlotInfo[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  // Notification
+  const { notification } = App.useApp();
+
   // API hooks
   const createBookingWithSlotMutation = useCreateBookingWithSlot();
   const { createWalkInBooking, recommendBay, getBayQueue } = useWalkInBooking();
@@ -278,7 +283,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // Get all services from price books (filter for services only, not service packages)
   const availableServices = useMemo(() => {
     if (priceBooksError) {
-      console.error("Error loading price books:", priceBooksError);
+      console.log("Error loading price books:", priceBooksError);
       return [];
     }
 
@@ -341,7 +346,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       );
       setAvailableSlots(uniqueSlots);
     } catch (error) {
-      console.error("Error loading available slots:", error);
+      console.log("Error loading available slots:", error);
       setAvailableSlots([]);
     } finally {
       setLoadingSlots(false);
@@ -425,7 +430,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           setQueueItems([]);
         }
       } catch (error) {
-        console.error("❌ Error getting bay recommendation:", error);
+        console.log("❌ Error getting bay recommendation:", error);
         setBayRecommendation(null);
         setQueueItems([]);
       } finally {
@@ -712,8 +717,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       console.log("Customer checks:", { isNewCustomer, isExistingCustomer });
 
       if (!isNewCustomer && !isExistingCustomer) {
-        console.error("❌ Missing required information for booking");
-        console.error(
+        console.log("❌ Missing required information for booking");
+        console.log(
           "isNewCustomer:",
           isNewCustomer,
           "isExistingCustomer:",
@@ -754,7 +759,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       // Handle new customer (walk-in booking)
       if (isNewCustomer) {
         if (!selectedBranch || !selectedWalkInBay) {
-          console.error("Missing branch or bay information for new customer");
+          console.log("Missing branch or bay information for new customer");
           return;
         }
 
@@ -805,6 +810,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
             selectedBranch.branch_id
           );
           console.log("Walk-in booking created:", walkInResponse);
+          
+          // Show success notification
+          notification.success({
+            message: "Đặt lịch thành công!",
+            description: `Đã tạo booking xử lý tại chỗ cho khách hàng ${newCustomer.full_name}`,
+            placement: "topRight",
+            duration: 2,
+          });
+          
+          // Wait a bit before closing modal
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          
           onOk(walkInResponse);
           // Refresh table data
           if (onRefresh) {
@@ -812,7 +829,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           return;
         } catch (walkInError) {
-          console.error("Error creating walk-in booking:", walkInError);
+          console.log("Error creating walk-in booking:", walkInError);
           onOk({
             customerType: "new",
             customer: newCustomer,
@@ -847,7 +864,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         !selectedSlot
       ) {
         if (!selectedBranch) {
-          console.error(
+          console.log(
             "Missing branch information for existing customer walk-in"
           );
           return;
@@ -914,6 +931,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
             "Walk-in booking created for existing customer:",
             walkInResponse
           );
+          
+          // Show success notification
+          notification.success({
+            message: "Đặt lịch thành công!",
+            description: `Đã tạo booking xử lý tại chỗ cho khách hàng ${selectedCustomer.full_name}`,
+            placement: "topRight",
+            duration: 2,
+          });
+          
+          // Wait a bit before closing modal
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          
           onOk(walkInResponse);
           // Refresh table data
           if (onRefresh) {
@@ -921,7 +950,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           return;
         } catch (walkInError) {
-          console.error(
+          console.log(
             "Error creating walk-in booking for existing customer:",
             walkInError
           );
@@ -950,7 +979,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       if (isExistingCustomer && selectedSlot && !selectedWalkInBay) {
         console.log("🎯 Processing existing customer slot booking...");
         if (!selectedBranch) {
-          console.error(
+          console.log(
             "Missing branch information for existing customer slot booking"
           );
           return;
@@ -1016,6 +1045,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
           const createResponse =
             await createBookingWithSlotMutation.mutateAsync(createRequest);
           console.log("📋 Booking creation response:", createResponse);
+          
+          // Show success notification
+          const bookingCode = createResponse?.booking_code || createResponse?.data?.booking_code || "N/A";
+          notification.success({
+            message: "Đặt lịch thành công!",
+            description: `Đã tạo booking đặt trước thành công. Mã booking: ${bookingCode}`,
+            placement: "topRight",
+            duration: 2,
+          });
+          
+          // Wait a bit before closing modal
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+          
           onOk(createRequest);
           // Refresh table data
           if (onRefresh) {
@@ -1023,7 +1065,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           return;
         } catch (bookingError) {
-          console.error("Error creating slot booking:", bookingError);
+          console.log("Error creating slot booking:", bookingError);
           onOk({
             customerType: "existing",
             customer: selectedCustomer,
@@ -1050,7 +1092,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         selectedBranch: !!selectedBranch,
       });
     } catch (error) {
-      console.error("Booking submission failed:", error);
+      console.log("Booking submission failed:", error);
 
       // Debug form validation errors
       if (error && typeof error === "object" && "errorFields" in error) {
@@ -1063,9 +1105,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
             }>;
           }
         ).errorFields;
-        console.error("Validation errors:", errorFields);
+        console.log("Validation errors:", errorFields);
         errorFields.forEach((field, index: number) => {
-          console.error(`Field ${index + 1}:`, {
+          console.log(`Field ${index + 1}:`, {
             name: field.name,
             errors: field.errors,
             warnings: field.warnings,
@@ -1106,7 +1148,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           <Col span={12}>
             <Card
               size="small"
-              title="Thông tin khách hàng mới"
+              title="Thông tin khách hàng vãng lai"
               style={{ marginBottom: 16 }}
             >
               <Form.Item
@@ -1123,7 +1165,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   placeholder="Nhập họ và tên khách hàng"
                   onChange={(e) => {
                     console.log(
-                      "📝 New customer name changed:",
+                      "New customer name changed:",
                       e.target.value
                     );
                     setNewCustomer((prev) => ({
@@ -1193,7 +1235,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           <Col span={12}>
             <Card
               size="small"
-              title="Thông tin xe mới"
+              title="Thông tin xe"
               style={{ marginBottom: 16 }}
             >
               <Form.Item
@@ -1917,7 +1959,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               );
                             }
                           } catch (error) {
-                            console.error(
+                            console.log(
                               "❌ Error loading queue for recommended bay:",
                               error
                             );
@@ -1990,7 +2032,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               queue as unknown as typeof queueItems
                             );
                           } catch (error) {
-                            console.error(
+                            console.log(
                               "❌ Error loading queue for bay:",
                               error
                             );
@@ -2344,7 +2386,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               queue as unknown as typeof queueItems
                             );
                           } catch (error) {
-                            console.error(
+                            console.log(
                               "❌ Error loading queue for bay:",
                               error
                             );
@@ -2732,17 +2774,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   return (
-    <Modal
-      title={
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <CalendarOutlined style={{ color: "#1890ff" }} />
-          <span>Đặt lịch chăm sóc xe</span>
-        </div>
-      }
-      open={open}
-      onCancel={onCancel}
-      width={1200}
-      footer={[
+    <App>
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <CalendarOutlined style={{ color: "#1890ff" }} />
+            <span>Đặt lịch chăm sóc xe</span>
+          </div>
+        }
+        open={open}
+        onCancel={onCancel}
+        width={1200}
+        footer={[
         <Button key="cancel" onClick={onCancel}>
           Hủy
         </Button>,
@@ -2828,6 +2871,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       <Form
         form={form}
         layout="vertical"
+        preserve={false}
         initialValues={{
           priority: "NORMAL",
         }}
@@ -2836,6 +2880,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         {renderAllContent()}
       </Form>
     </Modal>
+    </App>
   );
 };
 

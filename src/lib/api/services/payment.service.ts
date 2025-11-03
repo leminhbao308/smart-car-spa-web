@@ -20,7 +20,7 @@ export const PaymentService = {
       console.log(`📊 PaymentService.verifyPayment: API response:`, response.data);
       return response.data.data;
     } catch (error) {
-      console.error(`❌ PaymentService.verifyPayment: API error:`, error);
+      console.log(`❌ PaymentService.verifyPayment: API error:`, error);
       throw error;
     }
   },

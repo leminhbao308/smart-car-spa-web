@@ -110,7 +110,7 @@ const StockTransactionHistoryModal: React.FC<
       setTransactions(sortedData);
       setFilteredTransactions(sortedData);
     } catch (error) {
-      console.error("Failed to fetch transaction history:", error);
+      console.log("Failed to fetch transaction history:", error);
       setTransactions([]);
       setFilteredTransactions([]);
     } finally {
@@ -480,7 +480,7 @@ const StockTransactionHistoryModal: React.FC<
             {/* Transaction Types Legend - Simplified */}
             <Card
               style={{ marginBottom: 16 }}
-              bodyStyle={{ padding: 12 }}
+              styles={{ body: { padding: 12 } }}
             >
               <div
                 style={{

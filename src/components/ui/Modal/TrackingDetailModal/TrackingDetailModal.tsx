@@ -61,7 +61,7 @@ const TrackingDetailModal: React.FC<TrackingDetailModalProps> = ({
         console.log("Setting technicians array:", techArray);
         setTechnicians(techArray);
       } catch (e) {
-        console.error("Failed to load bay technicians:", e);
+        console.log("Failed to load bay technicians:", e);
         setTechnicians([]);
       }
     };

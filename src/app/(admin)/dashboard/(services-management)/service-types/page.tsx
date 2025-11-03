@@ -233,7 +233,7 @@ const ServiceTypesPage = () => {
       setEditData(null);
     } catch (error) {
       message.error("Có lỗi xảy ra khi lưu loại dịch vụ");
-      console.error("Error saving service type:", error);
+      console.log("Error saving service type:", error);
     }
   };
 

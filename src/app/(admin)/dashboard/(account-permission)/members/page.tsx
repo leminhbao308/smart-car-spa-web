@@ -248,7 +248,7 @@ const MembersPage = () => {
     try {
       await refreshUsers();
     } catch (error) {
-      console.error("MembersPage: Error refreshing data:", error);
+      console.log("MembersPage: Error refreshing data:", error);
     }
   };
 
@@ -257,7 +257,7 @@ const MembersPage = () => {
       <AdminTable
         title="Quản lý khách hàng"
         dataSource={users}
-        columns={columns}
+        columns={columns} 
         loading={isLoading}
         onAdd={handleAdd}
         addButtonText="Thêm khách hàng"

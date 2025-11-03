@@ -61,7 +61,7 @@ const VehicleBrandAddModal: React.FC<VehicleBrandAddModalProps> = ({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error("Error creating vehicle brand:", error);
+      console.log("Error creating vehicle brand:", error);
       const errorMessage =
         error instanceof Error
           ? error.message

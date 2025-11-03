@@ -53,7 +53,7 @@ const ProductSearchSelect: React.FC<ProductSearchSelectProps> = ({
           setProducts(response.data.content);
         }
       } catch (error) {
-        console.error("Load products error:", error);
+        console.log("Load products error:", error);
       } finally {
         setLoading(false);
       }

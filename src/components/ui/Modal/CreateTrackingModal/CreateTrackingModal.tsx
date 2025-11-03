@@ -71,7 +71,7 @@ const CreateTrackingModal: React.FC<CreateTrackingModalProps> = ({
       onSuccess();
     } catch (error) {
       message.error("Có lỗi xảy ra khi tạo tracking");
-      console.error("Create tracking error:", error);
+      console.log("Create tracking error:", error);
     }
   };
 

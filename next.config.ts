@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   // React 19 compatibility settings
   experimental: {
     // Enable React 19 features
-    reactCompiler: false, // Disable React Compiler for now
   },
+  reactCompiler: true,
 
   // Image configuration for external domains
   images: {

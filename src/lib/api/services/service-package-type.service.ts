@@ -252,7 +252,7 @@ export const servicePackageTypeService = {
         );
       }
     } catch (error: unknown) {
-      console.error("Update service package type error:", error);
+      console.log("Update service package type error:", error);
 
       const errorMessage =
         error && typeof error === "object" && "message" in error

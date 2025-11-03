@@ -454,7 +454,7 @@ const POSPage = () => {
               `Đã tự động chọn khách hàng: ${customerInfo.full_name}`
             );
           } catch (error) {
-            console.error(
+            console.log(
               `❌ Failed to fetch customer info for ${booking.customer_id}:`,
               error
             );
@@ -567,7 +567,7 @@ const POSPage = () => {
           return [...prevCart, ...newServiceItems];
         });
       } catch (error) {
-        console.error("Error adding booking to cart:", error);
+        console.log("Error adding booking to cart:", error);
         message.error("Lỗi khi thêm booking vào giỏ hàng");
       }
     },
@@ -739,7 +739,7 @@ const POSPage = () => {
         // Refresh bookings list to remove paid bookings
         refetchBookings();
       } catch (error: unknown) {
-        console.error("❌ Error marking bookings as paid:", error);
+        console.log("❌ Error marking bookings as paid:", error);
         message.error(
           "Thanh toán thành công nhưng lỗi khi cập nhật trạng thái booking: " +
             (error instanceof Error ? error.message : "")
@@ -754,7 +754,7 @@ const POSPage = () => {
         hide();
         message.success("Thanh toán thành công và đã hoàn thành đơn hàng!");
       } catch (error: unknown) {
-        console.error("❌ Error fulfilling order:", error);
+        console.log("❌ Error fulfilling order:", error);
         message.error(
           "Thanh toán thành công nhưng lỗi khi hoàn thành đơn hàng: " +
             (error instanceof Error ? error.message : "")
@@ -1042,7 +1042,7 @@ const POSPage = () => {
             // Refresh bookings list to remove paid bookings
             refetchBookings();
           } catch (error: unknown) {
-            console.error("❌ CASH Error marking bookings as paid:", error);
+            console.log("❌ CASH Error marking bookings as paid:", error);
             message.error(
               "Thanh toán thành công nhưng lỗi khi cập nhật trạng thái booking: " +
                 (error instanceof Error ? error.message : "")

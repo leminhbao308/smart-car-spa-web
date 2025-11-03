@@ -6,14 +6,25 @@ import UpdateBookingModal from "@/components/ui/Modal/UpdateBookingModal/UpdateB
 import CreateTrackingModal from "@/components/ui/Modal/CreateTrackingModal";
 import ServiceTrackingModal from "@/components/ui/Modal/ServiceTrackingModal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Modal, Typography, Button, App } from "antd";
+import {
+  Tag,
+  Modal,
+  Typography,
+  Button,
+  App,
+  DatePicker,
+  Select,
+  Space,
+  Card,
+} from "antd";
 import {
   PhoneOutlined,
   EyeOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  FilterOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import formatCurrency from "@/components/utils/helper/currency.format.helper";
 import { formatDurationVer01 } from "@/components/utils/helper/duration.format.helper";
 import { getTimeRemaining } from "@/components/utils/helper/booking.time.helper";
@@ -24,6 +35,7 @@ import {
 } from "@/lib/api/hooks/useBooking";
 import { useCustomersDropdown } from "@/lib/api/hooks/useUsers";
 import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
+import { useBranches } from "@/lib/api/hooks/useBranches";
 import {
   BookingInfoDto,
   BookingStatus,
@@ -31,6 +43,7 @@ import {
 } from "@/lib/api/types/booking.types";
 
 const { Text } = Typography;
+const { RangePicker } = DatePicker;
 
 // Extended booking type with enrichment indicators
 interface EnrichedBookingInfoDto extends BookingInfoDto {
@@ -128,30 +141,44 @@ const BookingsPage = () => {
   const [createTrackingModalOpen, setCreateTrackingModalOpen] = useState(false);
   const [serviceTrackingModalOpen, setServiceTrackingModalOpen] =
     useState(false);
-  const [filterParams, setFilterParams] = useState({
+  const [filterParams, setFilterParams] = useState<{
+    page: number;
+    size: number;
+  }>({
     page: 0,
     size: 10,
   });
 
+  // Filter states
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>(
+    undefined
+  );
+  const [selectedBookingType, setSelectedBookingType] = useState<
+    "advance" | "walk-in" | undefined
+  >(undefined);
+
   const { notification } = App.useApp();
 
-  // API hooks
+  // API hooks - Load all data for client-side filtering
   const {
     data: bookingsResponse,
     isLoading,
     error,
     refetch: refetchBookings,
-  } = useBookings(filterParams);
+  } = useBookings({ page: 0, size: 1000 }); // Load large dataset for client-side filtering
   const completeServiceMutation = useCompleteService();
   const startServiceMutation = useStartService();
-  
 
   // Fetch additional data for enrichment
   const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
   const { profiles: allVehicles, loading: isLoadingVehicles } =
     useVehicleProfiles({ params: { size: 1000 } });
+  const { branches, loading: isLoadingBranches } = useBranches();
 
-  // Helper function to enrich booking data with customer and vehicle info
+  // Helper function to enrich booking data with customer, vehicle, branch and bay info
   const enrichBookingData = (
     booking: BookingInfoDto
   ): EnrichedBookingInfoDto => {
@@ -159,6 +186,7 @@ const BookingsPage = () => {
     let isCustomerEnriched = false;
     let isVehicleEnriched = false;
     console.log("Đây là booking:", booking);
+
     // Enrich customer info if missing
     if (
       booking.customer_id &&
@@ -214,14 +242,89 @@ const BookingsPage = () => {
       }
     }
 
+    // Enrich branch info if missing
+    if (booking.branch_id && (!booking.branch_name || !booking.branch_code)) {
+      const branch = branches.find((b) => b.branch_id === booking.branch_id);
+      if (branch) {
+        enrichedBooking = {
+          ...enrichedBooking,
+          branch_name: enrichedBooking.branch_name || branch.branch_name,
+          branch_code: enrichedBooking.branch_code || branch.branch_code,
+        };
+      }
+    }
+
+    // Enrich bay info if missing (we need to load service bays by branch_id)
+    // For now, we'll rely on backend to return bay_name, but we can enhance this later
+    // if needed by loading service bays per branch
+
     return { ...enrichedBooking, isCustomerEnriched, isVehicleEnriched };
   };
 
   // Extract and enrich data from response
   const rawData =
     bookingsResponse?.data?.content || bookingsResponse?.data || [];
-  const data = rawData.map(enrichBookingData);
-  const totalElements = bookingsResponse?.data?.totalElements || 0;
+  const enrichedData = rawData.map(enrichBookingData);
+
+  // Client-side filtering with useMemo
+  const filteredData = React.useMemo(() => {
+    let result = enrichedData;
+
+    // Filter by date range
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      const startDate = dateRange[0].startOf("day");
+      const endDate = dateRange[1].endOf("day");
+      result = result.filter((booking: EnrichedBookingInfoDto) => {
+        const bookingDate =
+          booking.scheduled_start_at ||
+          booking.preferred_start_at ||
+          booking.created_at;
+        if (!bookingDate) return false;
+        const date = dayjs(bookingDate).startOf("day");
+        const startUnix = startDate.unix();
+        const endUnix = endDate.unix();
+        const dateUnix = date.unix();
+        return dateUnix >= startUnix && dateUnix <= endUnix;
+      });
+    }
+
+    // Filter by branch
+    if (selectedBranchId) {
+      result = result.filter(
+        (booking: EnrichedBookingInfoDto) =>
+          booking.branch_id === selectedBranchId
+      );
+    }
+
+    // Filter by booking type based on booking_code
+    if (selectedBookingType) {
+      result = result.filter((booking: EnrichedBookingInfoDto) => {
+        const bookingCode = booking.booking_code?.toUpperCase() || "";
+        // Đặt trước (advance booking): booking_code bắt đầu bằng "BK"
+        if (selectedBookingType === "advance") {
+          return bookingCode.startsWith("BK");
+        }
+        // Đặt xử lý tại chỗ (walk-in): booking_code bắt đầu bằng "WALK-IN" hoặc "WALK"
+        if (selectedBookingType === "walk-in") {
+          return (
+            bookingCode.startsWith("WALK-IN") || bookingCode.startsWith("WALK")
+          );
+        }
+        return true;
+      });
+    }
+
+    return result;
+  }, [enrichedData, dateRange, selectedBranchId, selectedBookingType]);
+
+  // Client-side pagination
+  const data = React.useMemo(() => {
+    const start = filterParams.page * filterParams.size;
+    const end = start + filterParams.size;
+    return filteredData.slice(start, end);
+  }, [filteredData, filterParams.page, filterParams.size]);
+
+  const totalElements = filteredData.length;
 
   // Error handling
   useEffect(() => {
@@ -507,24 +610,46 @@ const BookingsPage = () => {
     setUpdateModalOpen(true);
   };
 
-
   const handleView = (record: BookingInfoDto) => {
     setSelectedBooking(record);
     setDetailModalOpen(true);
   };
-
 
   const handleModalOk = async () => {
     // This will be handled by the BookingModal component
     setModalOpen(false);
   };
 
-  const handleUpdateModalOk = async () => {
-    // This will be handled by the UpdateBookingModal component
+  const handleUpdateModalOk = async (updatedBooking?: unknown) => {
+    // Update selectedBooking with the updated data from backend
+    if (
+      updatedBooking &&
+      typeof updatedBooking === "object" &&
+      "booking_id" in updatedBooking
+    ) {
+      console.log("🔄 Updating selectedBooking with new data:", updatedBooking);
+      console.log("🔍 Updated booking branch/bay info:", {
+        branch_id: (updatedBooking as BookingInfoDto).branch_id,
+        branch_name: (updatedBooking as BookingInfoDto).branch_name,
+        bay_id: (updatedBooking as BookingInfoDto).bay_id,
+        bay_name: (updatedBooking as BookingInfoDto).bay_name,
+      });
+      // Enrich the updated booking data
+      const enrichedBooking = enrichBookingData(
+        updatedBooking as BookingInfoDto
+      );
+      console.log("🔍 Enriched booking branch/bay info:", {
+        branch_id: enrichedBooking.branch_id,
+        branch_name: enrichedBooking.branch_name,
+        bay_id: enrichedBooking.bay_id,
+        bay_name: enrichedBooking.bay_name,
+      });
+      setSelectedBooking(enrichedBooking);
+    }
     setUpdateModalOpen(false);
-    setSelectedBooking(null);
+    // Don't clear selectedBooking if detail modal might be open
+    // It will be cleared when detail modal is closed
   };
-
 
   const handleCreateTrackingSuccess = () => {
     setCreateTrackingModalOpen(false);
@@ -532,12 +657,128 @@ const BookingsPage = () => {
   };
 
   // Function to refresh table data
-  const handleRefreshTable = () => {
-    refetchBookings();
+  const handleRefreshTable = async () => {
+    const result = await refetchBookings();
+    // If selectedBooking exists and detail modal is open, update it with fresh data
+    if (selectedBooking && detailModalOpen && result.data) {
+      const updatedBooking = result.data.find(
+        (b: BookingInfoDto) => b.booking_id === selectedBooking.booking_id
+      );
+      if (updatedBooking) {
+        console.log(
+          "🔄 Updating selectedBooking after refresh:",
+          updatedBooking
+        );
+        const enrichedBooking = enrichBookingData(updatedBooking);
+        setSelectedBooking(enrichedBooking);
+      }
+    }
   };
+
+  // Handle date range change - Client-side filtering only
+  const handleDateRangeChange = (
+    dates: [Dayjs | null, Dayjs | null] | null
+  ) => {
+    setDateRange(dates);
+    // Reset to first page when filter changes
+    setFilterParams((prev) => ({
+      ...prev,
+      page: 0,
+    }));
+  };
+
+  // Handle branch filter change - Client-side filtering only
+  const handleBranchFilterChange = (branchId: string | undefined) => {
+    setSelectedBranchId(branchId);
+    // Reset to first page when filter changes
+    setFilterParams((prev) => ({
+      ...prev,
+      page: 0,
+    }));
+  };
+
+  // Handle booking type filter change - Client-side filtering only
+  const handleBookingTypeFilterChange = (
+    bookingType: "advance" | "walk-in" | undefined
+  ) => {
+    setSelectedBookingType(bookingType);
+    // Reset to first page when filter changes
+    setFilterParams((prev) => ({
+      ...prev,
+      page: 0,
+    }));
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setDateRange(null);
+    setSelectedBranchId(undefined);
+    setSelectedBookingType(undefined);
+    setFilterParams({
+      page: 0,
+      size: filterParams.size,
+    });
+  };
+
+  // Prepare branch options
+  const branchOptions = branches.map((branch) => ({
+    label: branch.branch_name || branch.branch_code || "N/A",
+    value: branch.branch_id,
+  }));
 
   return (
     <App>
+      {/* Filter Section */}
+      <Card
+        style={{
+          marginBottom: 16,
+          backgroundColor: "#fafafa",
+        }}
+        styles={{ body: { padding: 16 } }}
+      >
+        <Space size="middle" wrap>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <FilterOutlined style={{ color: "#1890ff" }} />
+            <span style={{ fontWeight: 500, fontSize: 14 }}>Bộ lọc:</span>
+          </div>
+          <RangePicker
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            placeholder={["Từ ngày", "Đến ngày"]}
+            format="DD/MM/YYYY"
+            style={{ width: 280 }}
+            allowClear
+          />
+          <Select
+            placeholder="Chọn chi nhánh"
+            style={{ width: 250 }}
+            allowClear
+            value={selectedBranchId}
+            onChange={handleBranchFilterChange}
+            loading={isLoadingBranches}
+            options={branchOptions}
+            showSearch
+            optionFilterProp="label"
+          />
+          <Select
+            placeholder="Loại đặt lịch"
+            style={{ width: 200 }}
+            allowClear
+            value={selectedBookingType}
+            onChange={handleBookingTypeFilterChange}
+            options={[
+              { label: "Đặt trước", value: "advance" },
+              { label: "Đặt xử lý tại chỗ", value: "walk-in" },
+            ]}
+          />
+          {(dateRange || selectedBranchId || selectedBookingType) && (
+            <Button onClick={handleClearFilters} size="small">
+              Xóa bộ lọc
+            </Button>
+          )}
+        </Space>
+      </Card>
+
       <AdminTable
         title="Quản lý đặt lịch"
         dataSource={data}
@@ -548,6 +789,7 @@ const BookingsPage = () => {
           isLoading ||
           isLoadingCustomers ||
           isLoadingVehicles ||
+          isLoadingBranches ||
           completeServiceMutation.isPending ||
           startServiceMutation.isPending
         }
@@ -691,7 +933,12 @@ const BookingsPage = () => {
                   </div>
                   <div style={{ fontSize: 12, color: "#666" }}>
                     {formatDurationVer01(
-                      selectedBooking.estimated_duration_minutes || 0
+                      (() => {
+                        const estimated =
+                          selectedBooking.estimated_duration_minutes || 0;
+
+                        return estimated;
+                      })()
                     )}
                   </div>
                 </div>
@@ -919,16 +1166,6 @@ const BookingsPage = () => {
                                     8
                                   )}...`}
                               </div>
-                              <div
-                                style={{
-                                  fontSize: 12,
-                                  color: "#666",
-                                  marginTop: 2,
-                                }}
-                              >
-                                {formatCurrency(item.unit_price || 0)} • Số
-                                lượng: {item.quantity || 1}
-                              </div>
                               {item.item_description && (
                                 <div
                                   style={{
@@ -960,7 +1197,12 @@ const BookingsPage = () => {
                           <div style={{ fontSize: 12, color: "#666" }}>
                             Thời gian ước tính:{" "}
                             {formatDurationVer01(
-                              selectedBooking.estimated_duration_minutes || 0
+                              (() => {
+                                const estimated =
+                                  selectedBooking.estimated_duration_minutes ||
+                                  0;
+                                return estimated;
+                              })()
                             )}
                           </div>
                         </div>

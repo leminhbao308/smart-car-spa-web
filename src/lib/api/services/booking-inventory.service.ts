@@ -92,7 +92,7 @@ export class BookingInventoryService {
       );
       return inventoryItems;
     } catch (error) {
-      console.error("❌ Error getting booking required products:", error);
+      console.log("❌ Error getting booking required products:", error);
       throw error;
     }
   }
@@ -133,7 +133,7 @@ export class BookingInventoryService {
         `✅ Successfully reserved inventory for booking: ${booking.booking_id}`
       );
     } catch (error) {
-      console.error(
+      console.log(
         `❌ Error reserving inventory for booking ${booking.booking_id}:`,
         error
       );
@@ -171,7 +171,7 @@ export class BookingInventoryService {
         booking.booking_id
       );
     } catch (error) {
-      console.error(
+      console.log(
         `❌ Error fulfilling inventory for booking ${booking.booking_id}:`,
         error
       );
@@ -209,7 +209,7 @@ export class BookingInventoryService {
         booking.booking_id
       );
     } catch (error) {
-      console.error(
+      console.log(
         `❌ Error releasing inventory for booking ${booking.booking_id}:`,
         error
       );

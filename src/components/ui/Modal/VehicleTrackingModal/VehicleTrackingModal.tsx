@@ -208,7 +208,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
 
         setServicesWithSteps(servicesData);
       } catch (error) {
-        console.error("Failed to load trackings by booking:", error);
+        console.log("Failed to load trackings by booking:", error);
       } finally {
         setIsInitializing(false);
       }
@@ -237,7 +237,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
         console.log("Setting technicians array:", techArray);
         setTechnicians(techArray);
       } catch (e) {
-        console.error("Failed to load bay technicians:", e);
+        console.log("Failed to load bay technicians:", e);
         setTechnicians([]);
       }
     };
@@ -331,7 +331,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
               createdTrackings.push(createdTracking);
               console.log(`✅ Created tracking for step: ${step.name} in service: ${serviceData.service_name}`);
             } catch (error) {
-              console.error(`❌ Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`, error);
+              console.log(`❌ Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`, error);
             }
           }
         }
@@ -360,7 +360,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
           });
         }
     } catch (error) {
-        console.error("❌ Auto-create tracking error:", error);
+        console.log("❌ Auto-create tracking error:", error);
       notification.error({
         message: "Lỗi",
           description: "Có lỗi xảy ra khi tạo tracking tự động",

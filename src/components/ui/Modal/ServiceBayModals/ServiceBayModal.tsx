@@ -229,7 +229,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           ]);
         }
       } catch (error) {
-        console.error("Error validating bay name:", error);
+        console.log("Error validating bay name:", error);
       } finally {
         setNameValidating(false);
       }

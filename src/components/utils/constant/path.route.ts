@@ -12,6 +12,7 @@ export const ROUTES = {
 
   // Admin Dashboard
   DASHBOARD: "/dashboard",
+  DASHBOARD_PROFILE: "/dashboard/profile",
   
   // Account & Permission Management
   DASHBOARD_PERMISSIONS: "/dashboard/permissions",

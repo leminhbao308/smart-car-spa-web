@@ -11,7 +11,7 @@ const getTimeRemaining = (bookingDate: string, bookingTime: string) => {
   const now = dayjs();
   const diffMinutes = bookingDateTime.diff(now, "minute");
 
-  if (diffMinutes < 0) return "Quá hạn";
+  if (diffMinutes < 0) return "";
   if (diffMinutes < 60) return `${diffMinutes} phút`;
   if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)} giờ`;
   return `${Math.floor(diffMinutes / 1440)} ngày`;

@@ -118,7 +118,7 @@ const PriceBookPage = () => {
       }
       setDataLoaded(true);
     } catch (error: any) {
-      console.error("Failed to fetch master data:", error);
+      console.log("Failed to fetch master data:", error);
       message.error("Không thể tải dữ liệu sản phẩm/dịch vụ");
     }
   }, [dataLoaded]);
@@ -133,7 +133,7 @@ const PriceBookPage = () => {
       message.success("Tải danh sách bảng giá thành công");
     } catch (error: any) {
       message.error(error?.message || "Không thể tải danh sách bảng giá");
-      console.error("Failed to fetch price books:", error);
+      console.log("Failed to fetch price books:", error);
     } finally {
       setLoading(false);
     }
@@ -154,7 +154,7 @@ const PriceBookPage = () => {
       setDetailModalVisible(true);
     } catch (error: any) {
       message.error(error?.message || "Không thể tải chi tiết bảng giá");
-      console.error("Failed to fetch price book details:", error);
+      console.log("Failed to fetch price book details:", error);
     } finally {
       setViewDetailLoading(false);
     }

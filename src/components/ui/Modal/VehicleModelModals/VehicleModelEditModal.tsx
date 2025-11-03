@@ -77,7 +77,7 @@ const VehicleModelEditModal: React.FC<VehicleModelEditModalProps> = ({
           onClose();
         },
         onError: (error) => {
-          console.error("Error updating model:", error);
+          console.log("Error updating model:", error);
         }
       }
     );

@@ -15,7 +15,7 @@ export const useBookingsPendingPayment = () => {
         return result;
       } catch (error) {
         console.log("=== /bookings/pending-payment API ERROR ===");
-        console.error("API Error:", error);
+        console.log("API Error:", error);
         throw error;
       }
     },

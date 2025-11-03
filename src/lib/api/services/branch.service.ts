@@ -83,7 +83,7 @@ export class BranchService {
         throw new Error(response.data.message || "Failed to fetch branches");
       }
     } catch (error) {
-      console.error("Get all branches error:", error);
+      console.log("Get all branches error:", error);
       throw error;
     }
   }
@@ -104,7 +104,7 @@ export class BranchService {
         throw new Error(response.data.message || "Failed to fetch branch");
       }
     } catch (error) {
-      console.error("Get branch by ID error:", error);
+      console.log("Get branch by ID error:", error);
       throw error;
     }
   }
@@ -125,7 +125,7 @@ export class BranchService {
         throw new Error(response.data.message || "Failed to create branch");
       }
     } catch (error) {
-      console.error("Create branch error:", error);
+      console.log("Create branch error:", error);
       throw error;
     }
   }
@@ -149,7 +149,7 @@ export class BranchService {
         throw new Error(response.data.message || "Failed to update branch");
       }
     } catch (error) {
-      console.error("Update branch error:", error);
+      console.log("Update branch error:", error);
       throw error;
     }
   }
@@ -172,7 +172,7 @@ export class BranchService {
         throw new Error(response.data.message || "Failed to delete branch");
       }
     } catch (error) {
-      console.error("Delete branch error:", error);
+      console.log("Delete branch error:", error);
       throw error;
     }
   }

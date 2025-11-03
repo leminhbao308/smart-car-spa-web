@@ -130,7 +130,7 @@ export class WalkInBookingService {
       );
       return response.data;
     } catch (error) {
-      console.error('Error recommending bay:', error);
+      console.log('Error recommending bay:', error);
       throw error;
     }
   }
@@ -146,7 +146,7 @@ export class WalkInBookingService {
       );
       return response.data;
     } catch (error) {
-      console.error('Error creating walk-in booking:', error);
+      console.log('Error creating walk-in booking:', error);
       throw error;
     }
   }
@@ -174,7 +174,7 @@ export class WalkInBookingService {
       
       return response.data;
     } catch (error) {
-      console.error('Error getting bay queue:', error);
+      console.log('Error getting bay queue:', error);
       throw error;
     }
   }
@@ -190,7 +190,7 @@ export class WalkInBookingService {
       );
       return response.data;
     } catch (error) {
-      console.error('Error transferring booking:', error);
+      console.log('Error transferring booking:', error);
       throw error;
     }
   }
@@ -205,7 +205,7 @@ export class WalkInBookingService {
       );
       return response.data;
     } catch (error) {
-      console.error('Error getting booking queue info:', error);
+      console.log('Error getting booking queue info:', error);
       throw error;
     }
   }
@@ -220,7 +220,7 @@ export class WalkInBookingService {
       );
       return response.data;
     } catch (error) {
-      console.error('Error getting branch queue stats:', error);
+      console.log('Error getting branch queue stats:', error);
       throw error;
     }
   }

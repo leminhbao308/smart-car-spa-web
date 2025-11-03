@@ -133,7 +133,7 @@ const EditVehicleProfileModalInner: React.FC<EditVehicleProfileModalProps> = ({
       message.success("Cập nhật hồ sơ xe thành công!");
       onSuccess(updatedProfile);
     } catch (error: unknown) {
-      console.error("Update vehicle profile error:", error);
+      console.log("Update vehicle profile error:", error);
       const errorMessage =
         error instanceof Error
           ? error.message

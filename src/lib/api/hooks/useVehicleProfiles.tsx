@@ -45,7 +45,7 @@ export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) =
         total_pages: response.data.total_pages,
       });
     } catch (err) {
-      console.error("Failed to fetch vehicle profiles:", err);
+      console.log("Failed to fetch vehicle profiles:", err);
       setError("Failed to load vehicle profiles.");
     } finally {
       setLoading(false);
@@ -65,7 +65,7 @@ export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) =
         total_pages: response.data.total_pages,
       });
     } catch (err) {
-      console.error("Failed to fetch vehicle profiles by ownerId:", err);
+      console.log("Failed to fetch vehicle profiles by ownerId:", err);
       setError("Failed to load vehicle profiles by owner id.");
     } finally {
       setLoading(false);
@@ -100,7 +100,7 @@ export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) =
 
       return response;
     } catch (err) {
-      console.error("Failed to create vehicle profile:", err);
+      console.log("Failed to create vehicle profile:", err);
       throw err;
     }
   }, [fetchProfiles]);
@@ -117,7 +117,7 @@ export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) =
 
       return response;
     } catch (err) {
-      console.error("Failed to update vehicle profile:", err);
+      console.log("Failed to update vehicle profile:", err);
       throw err;
     }
   }, [fetchProfiles]);
@@ -133,7 +133,7 @@ export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) =
         await fetchProfiles(paramsRef.current);
       }
     } catch (err) {
-      console.error("Failed to delete vehicle profile:", err);
+      console.log("Failed to delete vehicle profile:", err);
       throw err;
     }
   }, [fetchProfiles]);
@@ -161,7 +161,7 @@ export const useVehicleProfile = (profileId: string | null) => {
       const fetchedProfile = await VehicleProfileService.getVehicleProfileById(profileId);
       setProfile(fetchedProfile);
     } catch (err) {
-      console.error(`Failed to fetch vehicle profile with ID ${profileId}:`, err);
+      console.log(`Failed to fetch vehicle profile with ID ${profileId}:`, err);
       setError("Failed to load vehicle profile details.");
     } finally {
       setLoading(false);

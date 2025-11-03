@@ -19,6 +19,7 @@
     "@tanstack/react-query-devtools": "^5.90.2",
     "antd": "^5.27.3",
     "axios": "^1.12.2",
+    "babel-plugin-react-compiler": "^1.0.0",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.18",
     "firebase": "^12.2.1",

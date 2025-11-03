@@ -159,7 +159,7 @@ export class CenterService {
         throw new Error(response.data.message || "Failed to fetch centers");
       }
     } catch (error) {
-      console.error("Get all centers error:", error);
+      console.log("Get all centers error:", error);
       throw error;
     }
   }
@@ -182,7 +182,7 @@ export class CenterService {
         throw new Error(response.data.message || "Failed to fetch center");
       }
     } catch (error) {
-      console.error("Get center by ID error:", error);
+      console.log("Get center by ID error:", error);
       throw error;
     }
   }
@@ -206,7 +206,7 @@ export class CenterService {
         throw new Error(response.data.message || "Failed to create center");
       }
     } catch (error) {
-      console.error("Create center error:", error);
+      console.log("Create center error:", error);
       throw error;
     }
   }
@@ -240,7 +240,7 @@ export class CenterService {
         throw new Error(response.data.message || "Failed to update center");
       }
     } catch (error) {
-      console.error("Update center error:", error);
+      console.log("Update center error:", error);
       throw error;
     }
   }
@@ -274,7 +274,7 @@ export class CenterService {
         throw new Error(response.data.message || "Failed to delete center");
       }
     } catch (error) {
-      console.error("Delete center error:", error);
+      console.log("Delete center error:", error);
       throw error;
     }
   }
@@ -301,7 +301,7 @@ export class CenterService {
         throw new Error(response.data.message || "Failed to fetch branches");
       }
     } catch (error) {
-      console.error("Get branches by center ID error:", error);
+      console.log("Get branches by center ID error:", error);
       throw error;
     }
   }

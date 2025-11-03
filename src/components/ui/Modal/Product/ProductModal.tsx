@@ -96,7 +96,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
           isMain: pendingImage.isMain,
         });
       } catch (error) {
-        console.error("Failed to upload image:", error);
+        console.log("Failed to upload image:", error);
         hasErrors = true;
         message.warning("Có lỗi khi upload ảnh sản phẩm");
       }
@@ -124,7 +124,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
       );
       return false;
     } catch (error) {
-      console.error("Failed to create attributes:", error);
+      console.log("Failed to create attributes:", error);
       message.warning("Có lỗi khi tạo thuộc tính sản phẩm");
       return true;
     }
@@ -267,7 +267,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
                     onSuccess();
                   })
                   .catch((error) => {
-                    console.error("Failed to update attributes:", error);
+                    console.log("Failed to update attributes:", error);
                     message.warning(
                       "Cập nhật sản phẩm thành công nhưng có lỗi khi cập nhật thuộc tính"
                     );

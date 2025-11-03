@@ -82,7 +82,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Get vehicle brand by ID error:", error);
+      console.log("Get vehicle brand by ID error:", error);
       throw error;
     }
   }
@@ -103,7 +103,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Get vehicle brands dropdown error:", error);
+      console.log("Get vehicle brands dropdown error:", error);
       throw error;
     }
   }
@@ -131,7 +131,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Create vehicle brand error:", error);
+      console.log("Create vehicle brand error:", error);
       throw error;
     }
   }
@@ -160,7 +160,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Update vehicle brand error:", error);
+      console.log("Update vehicle brand error:", error);
       throw error;
     }
   }
@@ -186,7 +186,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Delete vehicle brand error:", error);
+      console.log("Delete vehicle brand error:", error);
       throw error;
     }
   }
@@ -271,7 +271,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Get vehicle type by ID error:", error);
+      console.log("Get vehicle type by ID error:", error);
       throw error;
     }
   }
@@ -292,7 +292,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Get vehicle types dropdown error:", error);
+      console.log("Get vehicle types dropdown error:", error);
       throw error;
     }
   }
@@ -317,7 +317,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Create vehicle type error:", error);
+      console.log("Create vehicle type error:", error);
       throw error;
     }
   }
@@ -346,7 +346,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Update vehicle type error:", error);
+      console.log("Update vehicle type error:", error);
       throw error;
     }
   }
@@ -370,7 +370,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Delete vehicle type error:", error);
+      console.log("Delete vehicle type error:", error);
       throw error;
     }
   }
@@ -457,7 +457,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Get vehicle model by ID error:", error);
+      console.log("Get vehicle model by ID error:", error);
       throw error;
     }
   }
@@ -478,7 +478,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Get vehicle models dropdown error:", error);
+      console.log("Get vehicle models dropdown error:", error);
       throw error;
     }
   }
@@ -506,7 +506,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Create vehicle model error:", error);
+      console.log("Create vehicle model error:", error);
       throw error;
     }
   }
@@ -535,7 +535,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Update vehicle model error:", error);
+      console.log("Update vehicle model error:", error);
       throw error;
     }
   }
@@ -561,7 +561,7 @@ export class VehicleService {
         );
       }
     } catch (error) {
-      console.error("Delete vehicle model error:", error);
+      console.log("Delete vehicle model error:", error);
       throw error;
     }
   }

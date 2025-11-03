@@ -59,7 +59,7 @@ const VehicleModelAddModal: React.FC<VehicleModelAddModalProps> = ({
       form.resetFields();
       onCancel();
     } catch (error) {
-      console.error("Error creating model:", error);
+      console.log("Error creating model:", error);
       message.error("Có lỗi xảy ra khi thêm model xe!");
     } finally {
       setLoading(false);

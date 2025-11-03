@@ -47,7 +47,7 @@ const PriceHistoryModal: React.FC<PriceHistoryModalProps> = ({
       );
       setHistory(sortedData);
     } catch (error) {
-      console.error("Failed to fetch price history:", error);
+      console.log("Failed to fetch price history:", error);
       setHistory([]);
     } finally {
       setLoading(false);

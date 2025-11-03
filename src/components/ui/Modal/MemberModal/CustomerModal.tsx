@@ -67,7 +67,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
         setCustomerRoles(customerOnlyRoles);
       }
     } catch (error) {
-      console.error("Error loading roles:", error);
+      console.log("Error loading roles:", error);
       message.error("Không thể tải danh sách vai trò. Vui lòng thử lại.");
     } finally {
       setRolesLoading(false);
@@ -157,7 +157,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({
         console.log("CustomerModal: Success flow completed");
       }
     } catch (error: unknown) {
-      console.error("Error:", error);
+      console.log("Error:", error);
       const errorMessage =
         error instanceof Error
           ? error.message

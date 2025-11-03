@@ -62,7 +62,7 @@ export class MediaService {
         throw new Error(response.data.message || "Failed to fetch media");
       }
     } catch (error) {
-      console.error("Get all media error:", error);
+      console.log("Get all media error:", error);
       throw error;
     }
   }
@@ -80,7 +80,7 @@ export class MediaService {
         throw new Error(response.data.message || "Failed to fetch media");
       }
     } catch (error) {
-      console.error("Get media by ID error:", error);
+      console.log("Get media by ID error:", error);
       throw error;
     }
   }
@@ -105,7 +105,7 @@ export class MediaService {
         );
       }
     } catch (error) {
-      console.error("Get media by entity error:", error);
+      console.log("Get media by entity error:", error);
       throw error;
     }
   }
@@ -128,7 +128,7 @@ export class MediaService {
         throw new Error(response.data.message || "Failed to fetch main media");
       }
     } catch (error) {
-      console.error("Get main media by entity error:", error);
+      console.log("Get main media by entity error:", error);
       throw error;
     }
   }
@@ -148,7 +148,7 @@ export class MediaService {
         );
       }
     } catch (error) {
-      console.error("Get media by type error:", error);
+      console.log("Get media by type error:", error);
       throw error;
     }
   }
@@ -171,7 +171,7 @@ export class MediaService {
         throw new Error(response.data.message || "Failed to create media");
       }
     } catch (error) {
-      console.error("Create media error:", error);
+      console.log("Create media error:", error);
       throw error;
     }
   }
@@ -230,7 +230,7 @@ export class MediaService {
         throw new Error(response.data.message || "Failed to update media");
       }
     } catch (error) {
-      console.error("Update media error:", error);
+      console.log("Update media error:", error);
       throw error;
     }
   }
@@ -249,7 +249,7 @@ export class MediaService {
         throw new Error(response.data.message || "Failed to delete media");
       }
     } catch (error) {
-      console.error("Delete media error:", error);
+      console.log("Delete media error:", error);
       throw error;
     }
   }
@@ -278,7 +278,7 @@ export class MediaService {
         );
       }
     } catch (error) {
-      console.error("Update media main status error:", error);
+      console.log("Update media main status error:", error);
       throw error;
     }
   }
@@ -304,7 +304,7 @@ export class MediaService {
         );
       }
     } catch (error) {
-      console.error("Bulk update media order error:", error);
+      console.log("Bulk update media order error:", error);
       throw error;
     }
   }
@@ -326,7 +326,7 @@ export class MediaService {
         );
       }
     } catch (error) {
-      console.error("Validate media URL error:", error);
+      console.log("Validate media URL error:", error);
       throw error;
     }
   }
@@ -346,7 +346,7 @@ export class MediaService {
         );
       }
     } catch (error) {
-      console.error("Get media statistics error:", error);
+      console.log("Get media statistics error:", error);
       throw error;
     }
   }

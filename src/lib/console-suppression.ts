@@ -7,7 +7,7 @@
 if (typeof window !== "undefined") {
   // Store original console methods
   const originalConsoleWarn = console.warn;
-  const originalConsoleError = console.error;
+  const originalConsoleError = console.log;
 
   // Override console.warn
   console.warn = (...args: any[]) => {
@@ -40,8 +40,8 @@ if (typeof window !== "undefined") {
     originalConsoleWarn.apply(console, args);
   };
 
-  // Override console.error
-  console.error = (...args: any[]) => {
+  // Override console.log
+  console.log = (...args: any[]) => {
     const message = args[0];
     
     // Check for Ant Design React 19 compatibility warnings

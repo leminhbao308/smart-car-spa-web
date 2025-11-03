@@ -120,7 +120,7 @@ const PromotionSnapshot: React.FC<PromotionSnapshotProps> = ({
     try {
       return JSON.parse(snapshotJson);
     } catch (error) {
-      console.error("Failed to parse promotion snapshot:", error);
+      console.log("Failed to parse promotion snapshot:", error);
       return [];
     }
   }, [snapshotJson]);

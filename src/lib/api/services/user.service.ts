@@ -405,4 +405,122 @@ export class UserService {
       throw new Error(errorMessage);
     }
   }
+
+  /**
+   * Upload user avatar
+   */
+  static async uploadAvatar(
+    userId: string,
+    file: File
+  ): Promise<UpdateUserResponse> {
+    try {
+      console.log("Uploading avatar for user:", userId);
+      console.log("File details:", {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+      });
+
+      // Validate file type
+      const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        throw new Error(
+          "Chỉ chấp nhận file hình ảnh: JPG, PNG, GIF, WebP"
+        );
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+      if (file.size > maxSize) {
+        throw new Error("Kích thước file tối đa là 5MB");
+      }
+
+      // Create FormData
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await apiClient.post(
+        `/users/${userId}/avatar/upload`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 60000, // 60 seconds timeout for file upload
+        }
+      );
+
+      console.log("Upload avatar API response:", response);
+
+      if (response.data.success && response.data.data) {
+        return response.data;
+      } else {
+        throw new Error(
+          response.data.message || "Failed to upload avatar"
+        );
+      }
+    } catch (error: unknown) {
+      console.log("Upload avatar error details:", error);
+
+      // Handle specific error cases
+      if (error && typeof error === "object" && "response" in error) {
+        const errorResponse = error as {
+          response?: {
+            status?: number;
+            data?: { message?: string };
+          };
+        };
+
+        if (errorResponse.response?.status === 400) {
+          // Bad Request - validation errors
+          const errorMessage =
+            errorResponse.response.data?.message ||
+            "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại file ảnh.";
+          throw new Error(errorMessage);
+        } else if (errorResponse.response?.status === 404) {
+          // Not Found - user not found
+          throw new Error("Không tìm thấy người dùng.");
+        } else if (errorResponse.response?.status === 413) {
+          // Payload Too Large
+          throw new Error("File quá lớn. Kích thước tối đa là 5MB.");
+        } else if (errorResponse.response?.status === 415) {
+          // Unsupported Media Type
+          throw new Error(
+            "Định dạng file không được hỗ trợ. Chỉ chấp nhận file hình ảnh."
+          );
+        } else if (errorResponse.response?.status === 500) {
+          // Server error
+          throw new Error("Lỗi máy chủ. Vui lòng thử lại sau.");
+        } else if (errorResponse.response?.status === 401) {
+          // Unauthorized
+          throw new Error(
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+          );
+        } else if (errorResponse.response?.status === 403) {
+          // Forbidden
+          throw new Error("Bạn không có quyền thực hiện thao tác này.");
+        }
+      }
+
+      // Handle timeout errors specifically
+      if (error instanceof Error && error.message.includes("timeout")) {
+        throw new Error(
+          "Upload mất quá nhiều thời gian. File có thể quá lớn hoặc kết nối chậm. Vui lòng thử lại với file nhỏ hơn hoặc kiểm tra kết nối mạng."
+        );
+      }
+
+      // Other errors (including validation errors thrown before API call)
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Không thể upload avatar. Vui lòng thử lại.";
+      throw new Error(errorMessage);
+    }
+  }
 }

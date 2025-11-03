@@ -72,7 +72,7 @@ export const servicePackageService = {
           return response.data;
         }
       } else {
-        console.error("API response error:", response.data);
+        console.log("API response error:", response.data);
         throw new Error(
           response.data.message || "Failed to fetch service packages"
         );
@@ -255,7 +255,7 @@ export const servicePackageService = {
         );
       }
     } catch (error: unknown) {
-      console.error("Update service package error:", error);
+      console.log("Update service package error:", error);
 
       // Handle network errors or other issues
       const errorMessage =
@@ -440,7 +440,7 @@ export const servicePackageService = {
         );
       }
     } catch (error: unknown) {
-      console.error("Remove service from package error:", error);
+      console.log("Remove service from package error:", error);
 
       // Handle specific error cases
       if (error && typeof error === "object" && "response" in error) {

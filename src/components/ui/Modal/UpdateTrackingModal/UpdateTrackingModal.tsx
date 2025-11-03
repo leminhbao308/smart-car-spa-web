@@ -63,7 +63,7 @@ const UpdateTrackingModal: React.FC<UpdateTrackingModalProps> = ({
       onSuccess();
       form.resetFields();
     } catch (error) {
-      console.error("Update tracking error:", error);
+      console.log("Update tracking error:", error);
       message.error("Có lỗi xảy ra khi cập nhật tracking");
     } finally {
       setLoading(false);

@@ -30,7 +30,7 @@ export const useBookingInventory = () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
     },
     onError: (error: any, { booking }) => {
-      console.error(`❌ Failed to reserve inventory for booking ${booking.booking_id}:`, error);
+      console.log(`❌ Failed to reserve inventory for booking ${booking.booking_id}:`, error);
       const errorMessage = error?.response?.data?.message || error?.message || "Lỗi khi đặt chỗ sản phẩm";
       message.error(`Không thể đặt chỗ sản phẩm: ${errorMessage}`);
     },
@@ -56,7 +56,7 @@ export const useBookingInventory = () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
     },
     onError: (error: any, { booking }) => {
-      console.error(`❌ Failed to fulfill inventory for booking ${booking.booking_id}:`, error);
+      console.log(`❌ Failed to fulfill inventory for booking ${booking.booking_id}:`, error);
       const errorMessage = error?.response?.data?.message || error?.message || "Lỗi khi xuất sản phẩm";
       message.error(`Không thể xuất sản phẩm: ${errorMessage}`);
     },
@@ -82,7 +82,7 @@ export const useBookingInventory = () => {
       queryClient.invalidateQueries({ queryKey: ["bookings"] });
     },
     onError: (error: any, { booking }) => {
-      console.error(`❌ Failed to release inventory for booking ${booking.booking_id}:`, error);
+      console.log(`❌ Failed to release inventory for booking ${booking.booking_id}:`, error);
       const errorMessage = error?.response?.data?.message || error?.message || "Lỗi khi hoàn trả sản phẩm";
       message.error(`Không thể hoàn trả sản phẩm: ${errorMessage}`);
     },

@@ -41,7 +41,7 @@ const VehicleTypeDetailModal: React.FC<VehicleTypeDetailModalProps> = ({
       const fetchedType = await VehicleService.getVehicleTypeById(typeId);
       setType(fetchedType);
     } catch (error) {
-      console.error("Failed to fetch vehicle type details:", error);
+      console.log("Failed to fetch vehicle type details:", error);
       message.error("Không thể tải thông tin loại xe");
     } finally {
       setLoading(false);
