@@ -762,22 +762,32 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     [totalDuration, availableSlots]
   );
 
-  // Check if service duration exceeds total time of originally booked slots
-  // Compare: total service duration vs total slot time (number of slots × 60 minutes per slot)
+  // Check if service duration exceeds original duration
+  // For slot booking: Compare with total slot time (number of slots × 60 minutes per slot)
+  // For walk-in booking: Compare with total duration of original services
   const isDurationExceedsOriginal = useMemo(() => {
-    const isSlotBooking = initialData.booking_code?.startsWith("BK") || false;
-    if (!isSlotBooking || !originalTotalDuration) {
+    if (!originalTotalDuration) {
       return false;
     }
-    
-    // Calculate number of slots originally booked based on original service duration
-    // Each slot is 60 minutes
-    const SLOT_DURATION_MINUTES = 60;
-    const originalSlotCount = Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES);
-    const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
-    
-    // Compare new service duration with total original slot time
-    return totalDuration > totalOriginalSlotTime;
+
+    const isSlotBooking = initialData.booking_code?.startsWith("BK") || false;
+    const isWalkInBooking = initialData.booking_code?.startsWith("WALK") || false;
+
+    if (isSlotBooking) {
+      // For slot booking: Compare with total slot time (number of slots × 60 minutes per slot)
+      const SLOT_DURATION_MINUTES = 60;
+      const originalSlotCount = Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES);
+      const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
+      
+      // Compare new service duration with total original slot time
+      return totalDuration > totalOriginalSlotTime;
+    } else if (isWalkInBooking) {
+      // For walk-in booking: Compare with total duration of original services
+      // Dịch vụ mới phải có tổng thời gian <= tổng thời gian của các dịch vụ cũ
+      return totalDuration > originalTotalDuration;
+    }
+
+    return false;
   }, [totalDuration, originalTotalDuration, initialData.booking_code]);
 
   // Check if slot can be selected (available and suitable)
@@ -1745,6 +1755,16 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           return;
         }
 
+        // Validate: Check if total duration exceeds total duration of original services
+        // For walk-in booking, dịch vụ mới phải có tổng thời gian <= tổng thời gian của các dịch vụ cũ
+        if (isDurationExceedsOriginal && originalTotalDuration) {
+          message.error({
+            content: `Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các dịch vụ ban đầu (${originalTotalDuration} phút). Vui lòng chọn lại dịch vụ phù hợp.`,
+            duration: 5,
+          });
+          return;
+        }
+
         console.log("Updating walk-in booking");
         try {
           // Build booking_items array for API
@@ -2546,135 +2566,61 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   };
 
   const renderServiceSelectionStep = () => {
-    // Determine if this is a walk-in booking based on booking code prefix
-    const isWalkInBookingType =
-      initialData.booking_code?.startsWith("WALK") || false;
-
     return (
       <div>
         <Card size="small" title="Dịch vụ" style={{ marginBottom: 16 }}>
-          {isWalkInBookingType ? (
-            // For walk-in bookings, show services as read-only
-            <div>
-              {selectedItems.length > 0 && (
-                <div>
-                  <Text strong>Dịch vụ đã chọn:</Text>
-                  <div style={{ marginTop: 8 }}>
-                    {selectedItems.map((item) => (
-                      <Tag
-                        key={item.item_id}
-                        color="blue"
-                        style={{ marginBottom: 4 }}
-                      >
-                        {item.item_name} - {item.fixed_price?.toLocaleString()}{" "}
-                        VNĐ
-                      </Tag>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <Divider />
-              <Row gutter={16}>
-                <Col span={12}>
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: 16,
-                      backgroundColor: "#f0f0f0",
-                      borderRadius: 8,
-                    }}
+          {/* Show editable service selection for both walk-in and slot bookings */}
+          <div>
+            <Form.Item name="services" label="Dịch vụ chăm sóc xe" rules={[]}>
+              <Select
+                mode="multiple"
+                placeholder="Chọn dịch vụ chăm sóc xe"
+                onChange={handleServiceChange}
+                optionLabelProp="label"
+                loading={isLoadingPriceBooks}
+                notFoundContent={
+                  isLoadingPriceBooks
+                    ? "Đang tải dịch vụ..."
+                    : priceBooksError
+                    ? `Lỗi tải dịch vụ: ${
+                        (priceBooksError as { response?: { data?: unknown } })
+                          ?.response?.data ||
+                        "Không thể tải danh sách dịch vụ"
+                      }`
+                    : availableServices.length === 0
+                    ? "Không có dịch vụ nào khả dụng"
+                    : "Không tìm thấy dịch vụ phù hợp"
+                }
+                filterOption={(input, option) => {
+                  const label = option?.label?.toString() || "";
+                  return label.toLowerCase().includes(input.toLowerCase());
+                }}
+              >
+                {availableServices.map((item) => (
+                  <Option
+                    key={item.item_id}
+                    value={item.item_id}
+                    label={item.item_name}
                   >
-                    <DollarOutlined
-                      style={{ color: "#52c41a", fontSize: 24 }}
-                    />
-                    <div style={{ marginTop: 8 }}>
-                      <Text strong style={{ color: "#52c41a", fontSize: 18 }}>
-                        {totalPrice.toLocaleString()} VNĐ
-                      </Text>
-                    </div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      Tổng giá
-                    </Text>
-                  </div>
-                </Col>
-                <Col span={12}>
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: 16,
-                      backgroundColor: "#f0f0f0",
-                      borderRadius: 8,
-                    }}
-                  >
-                    <ClockCircleOutlined
-                      style={{ color: "#1890ff", fontSize: 24 }}
-                    />
-                    <div style={{ marginTop: 8 }}>
-                      <Text strong style={{ color: "#1890ff", fontSize: 18 }}>
-                        {totalDuration} phút
-                      </Text>
-                    </div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      Tổng thời gian
-                    </Text>
-                  </div>
-                </Col>
-              </Row>
-            </div>
-          ) : (
-            // For slot bookings, show editable service selection
-            <div>
-              <Form.Item name="services" label="Dịch vụ chăm sóc xe" rules={[]}>
-                <Select
-                  mode="multiple"
-                  placeholder="Chọn dịch vụ chăm sóc xe"
-                  onChange={handleServiceChange}
-                  optionLabelProp="label"
-                  loading={isLoadingPriceBooks}
-                  notFoundContent={
-                    isLoadingPriceBooks
-                      ? "Đang tải dịch vụ..."
-                      : priceBooksError
-                      ? `Lỗi tải dịch vụ: ${
-                          (priceBooksError as { response?: { data?: unknown } })
-                            ?.response?.data ||
-                          "Không thể tải danh sách dịch vụ"
-                        }`
-                      : availableServices.length === 0
-                      ? "Không có dịch vụ nào khả dụng"
-                      : "Không tìm thấy dịch vụ phù hợp"
-                  }
-                  filterOption={(input, option) => {
-                    const label = option?.label?.toString() || "";
-                    return label.toLowerCase().includes(input.toLowerCase());
-                  }}
-                >
-                  {availableServices.map((item) => (
-                    <Option
-                      key={item.item_id}
-                      value={item.item_id}
-                      label={item.item_name}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 500 }}>
-                          {item.item_name}
-                          <Tag
-                            color="blue"
-                            style={{ marginLeft: 8, fontSize: 10 }}
-                          >
-                            Dịch vụ
-                          </Tag>
-                        </div>
-                        <div style={{ fontSize: 12, color: "#666" }}>
-                          {item.service?.service_name} •{" "}
-                          {item.fixed_price?.toLocaleString()} VNĐ
-                        </div>
+                    <div>
+                      <div style={{ fontWeight: 500 }}>
+                        {item.item_name}
+                        <Tag
+                          color="blue"
+                          style={{ marginLeft: 8, fontSize: 10 }}
+                        >
+                          Dịch vụ
+                        </Tag>
                       </div>
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
+                      <div style={{ fontSize: 12, color: "#666" }}>
+                        {item.service?.service_name} •{" "}
+                        {item.fixed_price?.toLocaleString()} VNĐ
+                      </div>
+                    </div>
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
 
               {selectedItems.length > 0 && (
                 <div style={{ marginTop: 16 }}>
@@ -2714,11 +2660,21 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                 </div>
               )}
 
-              {/* Warning when service duration exceeds slot duration for slot bookings */}
+              {/* Warning when service duration exceeds original duration */}
               {(() => {
                 const isSlotBooking =
                   initialData.booking_code?.startsWith("BK") || false;
-                if (!isSlotBooking || !selectedSlot) return null;
+                const isWalkInBooking =
+                  initialData.booking_code?.startsWith("WALK") || false;
+                
+                // For slot bookings: show warning when exceeds slot time
+                if (isSlotBooking && !selectedSlot) return null;
+                
+                // For walk-in bookings: show warning when exceeds original service duration
+                if (isWalkInBooking && !isDurationExceedsOriginal) return null;
+                
+                // Skip if neither slot nor walk-in booking
+                if (!isSlotBooking && !isWalkInBooking) return null;
 
                 // Calculate total time of originally booked slots
                 const SLOT_DURATION_MINUTES = 60;
@@ -2734,7 +2690,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                     originalItems.map((item) => item.item_id).sort()
                   );
 
-                if (isServicesChanged && totalDuration > totalOriginalSlotTime) {
+                // For slot booking: show warning when exceeds slot time
+                if (isSlotBooking && isServicesChanged && totalDuration > totalOriginalSlotTime) {
                   return (
                     <Alert
                       message="Cảnh báo thời gian dịch vụ"
@@ -2760,6 +2717,35 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                     />
                   );
                 }
+
+                // For walk-in booking: show warning when exceeds original service duration
+                if (isWalkInBooking && isServicesChanged && isDurationExceedsOriginal && originalTotalDuration) {
+                  return (
+                    <Alert
+                      message="Cảnh báo thời gian dịch vụ"
+                      description={
+                        <div>
+                          <div>
+                            Tổng thời gian dịch vụ hiện tại:{" "}
+                            <strong>{totalDuration} phút</strong>
+                          </div>
+                          <div>
+                            Tổng thời gian các dịch vụ ban đầu:{" "}
+                            <strong>{originalTotalDuration} phút</strong>
+                          </div>
+                          <div style={{ marginTop: 8, color: "#ff4d4f" }}>
+                            ⚠️ Tổng thời gian dịch vụ vượt quá tổng thời gian các dịch vụ ban đầu.
+                            Vui lòng chọn lại dịch vụ phù hợp.
+                          </div>
+                        </div>
+                      }
+                      type="error"
+                      showIcon
+                      style={{ marginTop: 16 }}
+                    />
+                  );
+                }
+
                 return null;
               })()}
 
@@ -2810,8 +2796,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                   </div>
                 </Col>
               </Row>
-            </div>
-          )}
+          </div>
         </Card>
       </div>
     );
