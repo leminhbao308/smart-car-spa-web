@@ -177,6 +177,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
         sku: editData.sku,
         barcode: editData.barcode,
         isFeatured: editData.is_featured,
+        isReward: editData.is_reward,
         description: editData.description,
         unitOfMeasure: editData.unit_of_measure,
         is_active: editData.is_active,
@@ -234,6 +235,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
           sku: values.sku,
           barcode: values.barcode,
           is_featured: values.isFeatured,
+          is_reward: values.isReward || false,
           is_active: values.is_active,
         };
 
@@ -291,6 +293,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
           sku: values.sku,
           barcode: values.barcode,
           is_featured: values.isFeatured,
+          is_reward: values.isReward || false,
           is_active: values.is_active,
         };
 
@@ -338,7 +341,7 @@ const ProductModal: React.FC<ProductModalProps> = ({
         <Row gutter={16}>
           <Col
             xs={24}
-            sm={12}
+            sm={8}
           >
             <Form.Item
               label="Sản phẩm nổi bật"
@@ -350,7 +353,20 @@ const ProductModal: React.FC<ProductModalProps> = ({
           </Col>
           <Col
             xs={24}
-            sm={12}
+            sm={8}
+          >
+            <Form.Item
+              label="Sản phẩm tặng"
+              name="isReward"
+              valuePropName="checked"
+              tooltip="Sản phẩm chỉ dùng để tặng, không bán"
+            >
+              <Switch />
+            </Form.Item>
+          </Col>
+          <Col
+            xs={24}
+            sm={8}
           >
             <Form.Item
               label="Trạng thái hoạt động"

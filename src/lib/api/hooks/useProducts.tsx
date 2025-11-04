@@ -10,7 +10,7 @@ import {
   ProductSearchParams,
   ProductResponse,
 } from "../types/product.types";
-import { useAppMessage } from './useAppMessage';
+import { useAppMessage } from "./useAppMessage";
 
 export const useProducts = (params: ProductSearchParams = {}) => {
   const queryClient = useQueryClient();
@@ -58,18 +58,42 @@ export const useProduct = (productId: string) => {
   };
 };
 
+export const useProductByUrl = (productUrl: string) => {
+  const {
+    data: product,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["product-url", productUrl],
+    queryFn: () => productService.getProductByUrl(productUrl),
+    enabled: !!productUrl,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    product,
+    isLoading,
+    error,
+    refetch,
+  };
+};
+
 export const useCreateProduct = () => {
   const queryClient = useQueryClient();
   const message = useAppMessage();
 
   return useMutation({
-    mutationFn: (data: CreateProductRequest) => productService.createProduct(data),
+    mutationFn: (data: CreateProductRequest) =>
+      productService.createProduct(data),
     onSuccess: (newProduct) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       message.success("Tạo sản phẩm thành công!");
     },
     onError: (error: any) => {
-      message.error(error?.response?.data?.message || "Có lỗi xảy ra khi tạo sản phẩm");
+      message.error(
+        error?.response?.data?.message || "Có lỗi xảy ra khi tạo sản phẩm"
+      );
     },
   });
 };
@@ -79,15 +103,24 @@ export const useUpdateProduct = () => {
   const message = useAppMessage();
 
   return useMutation({
-    mutationFn: ({ productId, data }: { productId: string; data: UpdateProductRequest }) => 
-      productService.updateProduct(productId, data),
+    mutationFn: ({
+      productId,
+      data,
+    }: {
+      productId: string;
+      data: UpdateProductRequest;
+    }) => productService.updateProduct(productId, data),
     onSuccess: (updatedProduct) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product", updatedProduct.product_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["product", updatedProduct.product_id],
+      });
       message.success("Cập nhật sản phẩm thành công!");
     },
     onError: (error: any) => {
-      message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật sản phẩm");
+      message.error(
+        error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật sản phẩm"
+      );
     },
   });
 };
@@ -98,15 +131,25 @@ export const useUpdateProductStatus = () => {
   const message = useAppMessage();
 
   return useMutation({
-    mutationFn: ({ productId, data }: { productId: string; data: { is_active: boolean } }) => 
-      productService.updateProductStatus(productId, data),
+    mutationFn: ({
+      productId,
+      data,
+    }: {
+      productId: string;
+      data: { is_active: boolean };
+    }) => productService.updateProductStatus(productId, data),
     onSuccess: (updatedProduct) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product", updatedProduct.product_id] });
+      queryClient.invalidateQueries({
+        queryKey: ["product", updatedProduct.product_id],
+      });
       message.success("Cập nhật trạng thái sản phẩm thành công!");
     },
     onError: (error: any) => {
-      message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật trạng thái");
+      message.error(
+        error?.response?.data?.message ||
+          "Có lỗi xảy ra khi cập nhật trạng thái"
+      );
     },
   });
 };
@@ -122,9 +165,9 @@ export const useDeleteProduct = () => {
       message.success("Xóa sản phẩm thành công!");
     },
     onError: (error: any) => {
-      message.error(error?.response?.data?.message || "Có lỗi xảy ra khi xóa sản phẩm");
+      message.error(
+        error?.response?.data?.message || "Có lỗi xảy ra khi xóa sản phẩm"
+      );
     },
   });
 };
-
-

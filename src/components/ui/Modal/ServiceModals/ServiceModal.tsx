@@ -11,18 +11,21 @@ import {
   Row,
   Col,
   Card,
-  Upload,
-  Image,
-  InputNumber,
   Alert,
+  Space,
+  Badge,
+  Tabs,
+  Avatar,
+  Typography,
 } from "antd";
 import {
-  UploadOutlined,
-  DeleteOutlined,
-  EyeOutlined,
   PlusOutlined,
   MinusCircleOutlined,
   InfoCircleOutlined,
+  TagOutlined,
+  PictureOutlined,
+  EditOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
 import {
   MemoizedInput,
@@ -45,6 +48,9 @@ import {
 } from "@/lib/api/hooks";
 import { ServiceService } from "@/lib/api/services/service.service";
 import { ServiceProcessService } from "@/lib/api/services/service-process.service";
+import ServiceImageGallery from "@/components/ui/Service/ServiceImageGallery";
+
+const { Title, Text } = Typography;
 
 const { Option } = Select;
 
@@ -87,7 +93,6 @@ interface ServiceModalProps {
     };
     image_urls?: string[];
   };
-  title?: string;
 }
 
 const ServiceModal: React.FC<ServiceModalProps> = ({
@@ -95,11 +100,9 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
   onCancel,
   onSuccess,
   editData,
-  title = "Thêm dịch vụ mới",
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<
     ServiceProductRequest[]
   >([]);
@@ -123,10 +126,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
   const { data: serviceTypesData, isLoading: serviceTypesLoading } =
     useServiceTypes({});
   const { data: serviceProcessesData } = useServiceProcesses({});
-  const { data: categoriesData, isLoading: categoriesLoading } = useCategories(
-    0,
-    1000
-  );
+  const { data: categoriesData } = useCategories(0, 1000);
   const { products: productsData } = useProducts({
     page: 0,
     size: 1000,
@@ -151,7 +151,6 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           isActive: editData.is_active,
           serviceProcessId: editData.service_process_id,
         });
-        setImageUrls(editData.image_urls || []);
 
         // Set products and process steps for edit mode
         if (editData.service_products) {
@@ -183,7 +182,6 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
       } else {
         // Create mode - reset form
         form.resetFields();
-        setImageUrls([]);
         setSelectedProducts([]);
         setProcessSteps([]);
         setDeletedProductIds([]);
@@ -329,7 +327,6 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
 
   const handleCancel = () => {
     form.resetFields();
-    setImageUrls([]);
     setSelectedProducts([]);
     setProcessSteps([]);
     setDeletedProductIds([]);
@@ -429,553 +426,678 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
     setProcessSteps(updated);
   };
 
-  return (
-    <Modal
-      title={title}
-      open={visible}
-      onCancel={handleCancel}
-      onOk={handleSubmit}
-      confirmLoading={
-        loading ||
-        createServiceMutation.isPending ||
-        updateServiceMutation.isPending
-      }
-      width="90%"
-      style={{ maxWidth: 1000 }}
-      destroyOnHidden
-      styles={{
-        body: {
-          overflowX: "hidden",
-          maxHeight: "80vh",
-          overflowY: "auto",
-        },
-      }}
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          isFeatured: false,
-          isActive: true,
+  // Tab 1: Thông tin cơ bản
+  const generalInfoTab = (
+    <>
+      {/* Trạng thái và tính năng */}
+      <Card
+        size="small"
+        style={{
+          marginBottom: 16,
+          border: "1px solid #f0f0f0",
+          borderRadius: 8,
         }}
       >
-        {/* Trạng thái và tính năng */}
-        <Card
-          title="Trạng thái và tính năng"
-          size="small"
-          style={{ marginBottom: 16 }}
-        >
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Trạng thái"
-                name="isActive"
-                valuePropName="checked"
-                extra="Bật/tắt trạng thái hoạt động của dịch vụ"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Dịch vụ nổi bật"
-                name="isFeatured"
-                valuePropName="checked"
-                extra="Đánh dấu dịch vụ là nổi bật"
-              >
-                <Switch />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Card>
-        {/* Thông tin cơ bản */}
-        <Card title="Thông tin cơ bản" size="small">
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Tên dịch vụ"
-                name="serviceName"
-                rules={[
-                  { required: true, message: "Vui lòng nhập tên dịch vụ!" },
-                  {
-                    min: 2,
-                    max: 500,
-                    message: "Tên dịch vụ phải từ 2-500 ký tự!",
-                  },
-                ]}
-              >
-                <MemoizedInput placeholder="Nhập tên dịch vụ" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="URL dịch vụ"
-                name="serviceUrl"
-                rules={[
-                  { required: true, message: "Vui lòng nhập URL dịch vụ!" },
-                  { max: 1000, message: "URL không được quá 1000 ký tự!" },
-                ]}
-              >
-                <MemoizedInput placeholder="Nhập URL dịch vụ" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Danh mục"
-                name="categoryId"
-                rules={[{ required: true, message: "Vui lòng chọn danh mục!" }]}
-                initialValue={editData?.category_id}
-              >
-                <Select
-                  placeholder="Chọn danh mục"
-                  allowClear
-                  loading={categoriesLoading}
-                  showSearch
-                  optionFilterProp="label"
-                  filterOption={(input, option) => {
-                    const label = String(option?.label ?? "");
-                    return label.toLowerCase().includes(input.toLowerCase());
-                  }}
-                >
-                  {categoriesData?.data?.content &&
-                    categoriesData.data.content.length > 0 &&
-                    categoriesData.data.content.map((category) => (
-                      <Option
-                        key={category.category_id}
-                        value={category.category_id}
-                        label={category.category_name}
-                      >
-                        {category.category_name}
-                      </Option>
-                    ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Loại dịch vụ"
-                name="serviceTypeId"
-                rules={[
-                  { required: true, message: "Vui lòng chọn loại dịch vụ!" },
-                ]}
-                initialValue={editData?.service_type_id}
-              >
-                <Select
-                  placeholder="Chọn loại dịch vụ"
-                  loading={serviceTypesLoading}
-                  showSearch
-                  optionFilterProp="children"
-                  filterOption={(input, option) =>
-                    String(option?.label ?? "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                >
-                  {serviceTypesData?.data?.content &&
-                    serviceTypesData.data.content.length > 0 &&
-                    serviceTypesData.data.content.map((serviceType) => (
-                      <Option
-                        key={serviceType.service_type_id}
-                        value={serviceType.service_type_id}
-                      >
-                        {serviceType.name}
-                      </Option>
-                    ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Thời gian ước tính (phút)"
-                name="estimatedDuration"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập thời gian ước tính!",
-                  },
-                  {
-                    type: "number",
-                    min: 1,
-                    message: "Thời gian phải lớn hơn 0!",
-                  },
-                ]}
-                initialValue={editData?.estimated_duration}
-              >
-                <MemoizedInputNumber
-                  min={1}
-                  style={{ width: "100%" }}
-                  placeholder="Nhập thời gian"
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="Cấp độ kỹ năng"
-                name="requiredSkillLevel"
-                rules={[
-                  { required: true, message: "Vui lòng chọn cấp độ kỹ năng!" },
-                ]}
-                initialValue={editData?.required_skill_level}
-              >
-                <Select placeholder="Chọn cấp độ">
-                  <Option value="BEGINNER">Cơ bản</Option>
-                  <Option value="INTERMEDIATE">Trung bình</Option>
-                  <Option value="ADVANCED">Nâng cao</Option>
-                  <Option value="EXPERT">Chuyên gia</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            label="Mô tả"
-            name="description"
-            rules={[{ max: 2000, message: "Mô tả không được quá 2000 ký tự!" }]}
-            initialValue={editData?.description}
+        <Row gutter={16}>
+          <Col
+            xs={24}
+            sm={12}
           >
-            <MemoizedTextArea rows={3} placeholder="Nhập mô tả dịch vụ" />
-          </Form.Item>
-        </Card>
-
-        {/* Quản lý sản phẩm dịch vụ */}
-        <Card
-          title="Sản phẩm dịch vụ"
-          size="small"
-          style={{ marginTop: 16 }}
-          extra={
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={addProduct}
-              size="small"
+            <Form.Item
+              label="Trạng thái hoạt động"
+              name="isActive"
+              valuePropName="checked"
             >
-              Thêm sản phẩm
-            </Button>
-          }
-        >
-          {selectedProducts.length > 0 ? (
-            <div>
-              {selectedProducts.map((product, index) => (
-                <Card
-                  key={index}
-                  size="small"
-                  style={{ marginBottom: 12 }}
-                  title={`Sản phẩm ${index + 1}`}
-                  extra={
-                    <Button
-                      type="text"
-                      danger
-                      icon={<MinusCircleOutlined />}
-                      onClick={() => removeProduct(index)}
-                      size="small"
-                    />
-                  }
-                >
-                  <Row gutter={[16, 16]}>
-                    <Col span={12}>
-                      <div style={{ marginBottom: 8 }}>
-                        <label style={{ fontSize: 12, color: "#666" }}>
-                          Sản phẩm
-                        </label>
-                        <Select
-                          placeholder="Chọn sản phẩm"
-                          value={product.product_id}
-                          onChange={(value) =>
-                            updateProduct(index, "product_id", value)
-                          }
-                          style={{ width: "100%" }}
-                          showSearch
-                          optionFilterProp="children"
-                          filterOption={(input, option) =>
-                            String(option?.children)
-                              .toLowerCase()
-                              .includes(input.toLowerCase())
-                          }
-                        >
-                          {productsData?.map((prod) => (
-                            <Option
-                              key={prod.product_id}
-                              value={prod.product_id}
-                            >
-                              {prod.product_name}
-                            </Option>
-                          ))}
-                        </Select>
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div style={{ marginBottom: 8 }}>
-                        <label style={{ fontSize: 12, color: "#666" }}>
-                          Số lượng
-                        </label>
-                        <InputNumber
-                          min={0.1}
-                          step={0.1}
-                          value={product.quantity}
-                          onChange={(value) =>
-                            updateProduct(index, "quantity", value || 0)
-                          }
-                          style={{ width: "100%" }}
-                        />
-                      </div>
-                    </Col>
-                  </Row>
-                  <Row gutter={[16, 16]}>
-                    <Col span={12}>
-                      <div style={{ marginBottom: 8 }}>
-                        <label style={{ fontSize: 12, color: "#666" }}>
-                          Ghi chú
-                        </label>
-                        <MemoizedInput
-                          placeholder="Ghi chú về sản phẩm"
-                          value={product.notes}
-                          onChange={(e) =>
-                            updateProduct(index, "notes", e.target.value)
-                          }
-                        />
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div style={{ marginBottom: 8 }}>
-                        <label style={{ fontSize: 12, color: "#666" }}>
-                          Bắt buộc
-                        </label>
-                        <Select
-                          value={product.is_required}
-                          onChange={(value) =>
-                            updateProduct(index, "is_required", value)
-                          }
-                          style={{ width: "100%" }}
-                        >
-                          <Option value={true}>Bắt buộc</Option>
-                          <Option value={false}>Tùy chọn</Option>
-                        </Select>
-                      </div>
-                    </Col>
-                  </Row>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Alert
-              message="Chưa có sản phẩm nào"
-              description="Nhấn 'Thêm sản phẩm' để thêm sản phẩm cho dịch vụ này"
-              type="info"
-              showIcon
-              icon={<InfoCircleOutlined />}
-            />
-          )}
-        </Card>
-
-        {/* Tạo quy trình dịch vụ */}
-        <Card
-          title="Quy trình dịch vụ"
-          size="small"
-          style={{ marginTop: 16 }}
-          extra={
-            <Button
-              type="dashed"
-              icon={<PlusOutlined />}
-              onClick={addProcessStep}
-              size="small"
-            >
-              Thêm bước
-            </Button>
-          }
-        >
-          <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-            <Col span={12}>
-              <Form.Item
-                label="Mã quy trình"
-                name="processCode"
-                rules={[
-                  {
-                    required: processSteps.length > 0 && !editData,
-                    message: "Vui lòng nhập mã quy trình!",
-                  },
-                ]}
-                initialValue={editData?.service_process?.code}
-              >
-                <MemoizedInput
-                  placeholder="VD: BD-CAMRY-001"
-                  disabled={!!editData}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Tên quy trình"
-                name="processName"
-                rules={[
-                  {
-                    required: processSteps.length > 0,
-                    message: "Vui lòng nhập tên quy trình!",
-                  },
-                ]}
-                initialValue={editData?.service_process?.name}
-              >
-                <MemoizedInput placeholder="Tên quy trình" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            label="Mô tả quy trình"
-            name="processDescription"
-            initialValue={editData?.service_process?.description}
+              <Switch />
+            </Form.Item>
+          </Col>
+          <Col
+            xs={24}
+            sm={12}
           >
-            <MemoizedTextArea rows={2} placeholder="Mô tả quy trình dịch vụ" />
-          </Form.Item>
+            <Form.Item
+              label="Dịch vụ nổi bật"
+              name="isFeatured"
+              valuePropName="checked"
+            >
+              <Switch />
+            </Form.Item>
+          </Col>
+        </Row>
+      </Card>
 
-          {processSteps.length > 0 ? (
-            <div>
-              {processSteps.map((step, index) => (
-                <Card
-                  key={index}
+      {/* Thông tin cơ bản */}
+      <Card
+        title={
+          <Space>
+            <InfoCircleOutlined style={{ color: "#1890ff" }} />
+            <span>Thông tin cơ bản</span>
+          </Space>
+        }
+        size="small"
+        style={{
+          marginBottom: 16,
+          border: "1px solid #f0f0f0",
+          borderRadius: 8,
+        }}
+      >
+        <Row gutter={16}>
+          <Col
+            xs={24}
+            sm={12}
+          >
+            <Form.Item
+              label="Tên dịch vụ"
+              name="serviceName"
+              rules={[
+                { required: true, message: "Vui lòng nhập tên dịch vụ!" },
+                {
+                  min: 2,
+                  max: 500,
+                  message: "Tên dịch vụ phải từ 2-500 ký tự!",
+                },
+              ]}
+            >
+              <MemoizedInput placeholder="Nhập tên dịch vụ" />
+            </Form.Item>
+          </Col>
+          <Col
+            xs={24}
+            sm={12}
+          >
+            <Form.Item
+              label="URL dịch vụ"
+              name="serviceUrl"
+              rules={[
+                { required: true, message: "Vui lòng nhập URL dịch vụ!" },
+                { max: 1000, message: "URL không được quá 1000 ký tự!" },
+              ]}
+            >
+              <MemoizedInput placeholder="Nhập URL dịch vụ" />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col
+            xs={24}
+            sm={12}
+          >
+            <Form.Item
+              label="Danh mục"
+              name="categoryId"
+              rules={[{ required: true, message: "Vui lòng chọn danh mục!" }]}
+              initialValue={editData?.category_id}
+            >
+              <Select
+                placeholder="Chọn danh mục"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                filterOption={(input, option) =>
+                  String(option?.label || "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              >
+                {categoriesData?.data?.content?.map((category: any) => (
+                  <Option
+                    key={category.category_id}
+                    value={category.category_id}
+                    label={category.category_name}
+                  >
+                    {category.category_name}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col
+            xs={24}
+            sm={12}
+          >
+            <Form.Item
+              label="Loại dịch vụ"
+              name="serviceTypeId"
+              rules={[
+                { required: true, message: "Vui lòng chọn loại dịch vụ!" },
+              ]}
+              initialValue={editData?.service_type_id}
+            >
+              <Select
+                placeholder="Chọn loại dịch vụ"
+                loading={serviceTypesLoading}
+                showSearch
+                optionFilterProp="label"
+                filterOption={(input, option) =>
+                  String(option?.label || "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              >
+                {serviceTypesData?.data?.content?.map((serviceType: any) => (
+                  <Option
+                    key={serviceType.service_type_id}
+                    value={serviceType.service_type_id}
+                    label={serviceType.name}
+                  >
+                    {serviceType.name}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col
+            xs={24}
+            sm={12}
+          >
+            <Form.Item
+              label="Thời gian ước tính (phút)"
+              name="estimatedDuration"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng nhập thời gian ước tính!",
+                },
+                {
+                  type: "number",
+                  min: 1,
+                  message: "Thời gian phải lớn hơn 0!",
+                },
+              ]}
+              initialValue={editData?.estimated_duration}
+            >
+              <MemoizedInputNumber
+                min={1}
+                style={{ width: "100%" }}
+                placeholder="Nhập thời gian"
+              />
+            </Form.Item>
+          </Col>
+          <Col
+            xs={24}
+            sm={12}
+          >
+            <Form.Item
+              label="Cấp độ kỹ năng"
+              name="requiredSkillLevel"
+              rules={[
+                { required: true, message: "Vui lòng chọn cấp độ kỹ năng!" },
+              ]}
+              initialValue={editData?.required_skill_level}
+            >
+              <Select placeholder="Chọn cấp độ kỹ năng">
+                <Option value="BASIC">Cơ bản</Option>
+                <Option value="INTERMEDIATE">Trung bình</Option>
+                <Option value="ADVANCED">Nâng cao</Option>
+                <Option value="EXPERT">Chuyên gia</Option>
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Form.Item
+          label="Mô tả"
+          name="description"
+          rules={[{ max: 2000, message: "Mô tả không được quá 2000 ký tự!" }]}
+          initialValue={editData?.description}
+        >
+          <MemoizedTextArea
+            rows={3}
+            placeholder="Nhập mô tả dịch vụ"
+            maxLength={2000}
+            showCount
+          />
+        </Form.Item>
+      </Card>
+    </>
+  );
+
+  // Tab 2: Sản phẩm dịch vụ
+  const productsTab = (
+    <Card
+      title="Sản phẩm dịch vụ"
+      size="small"
+      extra={
+        <Button
+          type="dashed"
+          icon={<PlusOutlined />}
+          onClick={addProduct}
+          size="small"
+        >
+          Thêm sản phẩm
+        </Button>
+      }
+    >
+      {selectedProducts.length > 0 ? (
+        <div>
+          {selectedProducts.map((product, index) => (
+            <Card
+              key={index}
+              size="small"
+              style={{ marginBottom: 12 }}
+              title={`Sản phẩm ${index + 1}`}
+              extra={
+                <Button
+                  type="text"
+                  danger
+                  icon={<MinusCircleOutlined />}
+                  onClick={() => removeProduct(index)}
                   size="small"
-                  style={{ marginBottom: 12 }}
-                  title={`Bước ${step.step_order}`}
-                  extra={
-                    <Button
-                      type="text"
-                      danger
-                      icon={<MinusCircleOutlined />}
-                      onClick={() => removeProcessStep(index)}
-                      size="small"
-                    />
-                  }
-                >
-                  <Row gutter={[16, 16]}>
-                    <Col span={18}>
-                      <div style={{ marginBottom: 8 }}>
-                        <label style={{ fontSize: 12, color: "#666" }}>
-                          Tên bước
-                        </label>
-                        <MemoizedInput
-                          placeholder="Tên bước"
-                          value={step.name}
-                          onChange={(e) =>
-                            updateProcessStep(index, "name", e.target.value)
-                          }
-                        />
-                      </div>
-                    </Col>
-                    <Col span={6}>
-                      <div style={{ marginBottom: 8 }}>
-                        <label style={{ fontSize: 12, color: "#666" }}>
-                          Bắt buộc
-                        </label>
-                        <Select
-                          value={step.is_required}
-                          onChange={(value) =>
-                            updateProcessStep(index, "is_required", value)
-                          }
-                          style={{ width: "100%" }}
-                        >
-                          <Option value={true}>Bắt buộc</Option>
-                          <Option value={false}>Tùy chọn</Option>
-                        </Select>
-                      </div>
-                    </Col>
-                  </Row>
+                />
+              }
+            >
+              <Row gutter={[16, 16]}>
+                <Col span={24}>
                   <div style={{ marginBottom: 8 }}>
-                    <label style={{ fontSize: 12, color: "#666" }}>Mô tả</label>
-                    <MemoizedTextArea
-                      rows={2}
-                      placeholder="Mô tả chi tiết bước này"
-                      value={step.description}
+                    <label style={{ fontSize: 12, color: "#666" }}>
+                      Sản phẩm
+                    </label>
+                    <Select
+                      placeholder="Chọn sản phẩm"
+                      value={product.product_id}
+                      onChange={(value) =>
+                        updateProduct(index, "product_id", value)
+                      }
+                      showSearch
+                      optionFilterProp="label"
+                      filterOption={(input, option) =>
+                        String(option?.label || "")
+                          .toLowerCase()
+                          .includes(input.toLowerCase())
+                      }
+                      style={{ width: "100%" }}
+                    >
+                      {productsData?.map((prod: any) => (
+                        <Option
+                          key={prod.product_id}
+                          value={prod.product_id}
+                          label={prod.product_name}
+                        >
+                          {prod.product_name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </div>
+                </Col>
+              </Row>
+              <Row gutter={[16, 16]}>
+                <Col
+                  xs={24}
+                  sm={8}
+                >
+                  <div style={{ marginBottom: 8 }}>
+                    <label style={{ fontSize: 12, color: "#666" }}>
+                      Số lượng
+                    </label>
+                    <MemoizedInputNumber
+                      min={1}
+                      value={product.quantity}
+                      onChange={(value) =>
+                        updateProduct(index, "quantity", value || 1)
+                      }
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                </Col>
+                <Col
+                  xs={24}
+                  sm={8}
+                >
+                  <div style={{ marginBottom: 8 }}>
+                    <label style={{ fontSize: 12, color: "#666" }}>
+                      Bắt buộc
+                    </label>
+                    <Select
+                      value={product.is_required}
+                      onChange={(value) =>
+                        updateProduct(index, "is_required", value)
+                      }
+                      style={{ width: "100%" }}
+                    >
+                      <Option value={true}>Bắt buộc</Option>
+                      <Option value={false}>Tùy chọn</Option>
+                    </Select>
+                  </div>
+                </Col>
+                <Col
+                  xs={24}
+                  sm={8}
+                >
+                  <div style={{ marginBottom: 8 }}>
+                    <label style={{ fontSize: 12, color: "#666" }}>
+                      Vị trí
+                    </label>
+                    <MemoizedInputNumber
+                      min={1}
+                      value={product.sort_order}
+                      onChange={(value) =>
+                        updateProduct(index, "sort_order", value || 1)
+                      }
+                      style={{ width: "100%" }}
+                    />
+                  </div>
+                </Col>
+              </Row>
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ fontSize: 12, color: "#666" }}>Ghi chú</label>
+                <MemoizedTextArea
+                  rows={2}
+                  placeholder="Ghi chú về sản phẩm"
+                  value={product.notes}
+                  onChange={(e) =>
+                    updateProduct(index, "notes", e.target.value)
+                  }
+                />
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Alert
+          message="Chưa có sản phẩm nào"
+          description="Nhấn 'Thêm sản phẩm' để thêm sản phẩm cho dịch vụ này"
+          type="info"
+          showIcon
+          icon={<InfoCircleOutlined />}
+        />
+      )}
+    </Card>
+  );
+
+  // Tab 3: Quy trình dịch vụ
+  const processTab = (
+    <Card
+      title="Quy trình dịch vụ"
+      size="small"
+      extra={
+        <Button
+          type="dashed"
+          icon={<PlusOutlined />}
+          onClick={addProcessStep}
+          size="small"
+        >
+          Thêm bước
+        </Button>
+      }
+    >
+      <Row
+        gutter={[16, 16]}
+        style={{ marginBottom: 16 }}
+      >
+        <Col span={12}>
+          <Form.Item
+            label="Mã quy trình"
+            name="processCode"
+            rules={[
+              {
+                required: processSteps.length > 0 && !editData,
+                message: "Vui lòng nhập mã quy trình!",
+              },
+            ]}
+            initialValue={editData?.service_process?.code}
+          >
+            <MemoizedInput
+              placeholder="VD: BD-CAMRY-001"
+              disabled={!!editData}
+            />
+          </Form.Item>
+        </Col>
+        <Col span={12}>
+          <Form.Item
+            label="Tên quy trình"
+            name="processName"
+            rules={[
+              {
+                required: processSteps.length > 0,
+                message: "Vui lòng nhập tên quy trình!",
+              },
+            ]}
+            initialValue={editData?.service_process?.name}
+          >
+            <MemoizedInput placeholder="Tên quy trình" />
+          </Form.Item>
+        </Col>
+      </Row>
+
+      <Form.Item
+        label="Mô tả quy trình"
+        name="processDescription"
+        initialValue={editData?.service_process?.description}
+      >
+        <MemoizedTextArea
+          rows={2}
+          placeholder="Mô tả quy trình dịch vụ"
+        />
+      </Form.Item>
+
+      {processSteps.length > 0 ? (
+        <div>
+          {processSteps.map((step, index) => (
+            <Card
+              key={index}
+              size="small"
+              style={{ marginBottom: 12 }}
+              title={`Bước ${step.step_order}`}
+              extra={
+                <Button
+                  type="text"
+                  danger
+                  icon={<MinusCircleOutlined />}
+                  onClick={() => removeProcessStep(index)}
+                  size="small"
+                />
+              }
+            >
+              <Row gutter={[16, 16]}>
+                <Col span={18}>
+                  <div style={{ marginBottom: 8 }}>
+                    <label style={{ fontSize: 12, color: "#666" }}>
+                      Tên bước
+                    </label>
+                    <MemoizedInput
+                      placeholder="Tên bước"
+                      value={step.name}
                       onChange={(e) =>
-                        updateProcessStep(index, "description", e.target.value)
+                        updateProcessStep(index, "name", e.target.value)
                       }
                     />
                   </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Alert
-              message="Chưa có bước nào"
-              description="Nhấn 'Thêm bước' để tạo quy trình cho dịch vụ này"
-              type="info"
-              showIcon
-              icon={<InfoCircleOutlined />}
-            />
-          )}
-        </Card>
+                </Col>
+                <Col span={6}>
+                  <div style={{ marginBottom: 8 }}>
+                    <label style={{ fontSize: 12, color: "#666" }}>
+                      Bắt buộc
+                    </label>
+                    <Select
+                      value={step.is_required}
+                      onChange={(value) =>
+                        updateProcessStep(index, "is_required", value)
+                      }
+                      style={{ width: "100%" }}
+                    >
+                      <Option value={true}>Bắt buộc</Option>
+                      <Option value={false}>Tùy chọn</Option>
+                    </Select>
+                  </div>
+                </Col>
+              </Row>
+              <div style={{ marginBottom: 8 }}>
+                <label style={{ fontSize: 12, color: "#666" }}>Mô tả</label>
+                <MemoizedTextArea
+                  rows={2}
+                  placeholder="Mô tả chi tiết bước này"
+                  value={step.description}
+                  onChange={(e) =>
+                    updateProcessStep(index, "description", e.target.value)
+                  }
+                />
+              </div>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Alert
+          message="Chưa có bước nào"
+          description="Nhấn 'Thêm bước' để tạo quy trình cho dịch vụ này"
+          type="info"
+          showIcon
+          icon={<InfoCircleOutlined />}
+        />
+      )}
+    </Card>
+  );
 
-        {/* Quản lý hình ảnh */}
-        {/* <Card
-          title="Hình ảnh dịch vụ"
-          size="small"
-          style={{ marginTop: 16 }}
-          extra={
-            <Upload
-              accept="image/*"
-              showUploadList={false}
-              beforeUpload={() => false}
-              onChange={(info) => {
-                if (info.file) {
-                  const reader = new FileReader();
-                  reader.onload = (e) => {
-                    const newImageUrl = e.target?.result as string;
-                    setImageUrls((prev) => [...prev, newImageUrl]);
-                  };
-                  reader.readAsDataURL(info.file as unknown as File);
-                }
-              }}
-            >
-              <Button size="small" icon={<UploadOutlined />}>
-                Thêm hình ảnh
-              </Button>
-            </Upload>
-          }
-        >
-          {imageUrls.length > 0 ? (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {imageUrls.map((url, index) => (
-                <div key={index} style={{ position: "relative" }}>
-                  <Image
-                    src={url}
-                    alt={`Service image ${index + 1}`}
-                    style={{ width: 100, height: 100, objectFit: "cover" }}
-                    preview={{
-                      mask: <EyeOutlined />,
-                    }}
-                  />
-                  <Button
-                    type="text"
-                    danger
-                    size="small"
-                    icon={<DeleteOutlined />}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      right: 0,
-                      backgroundColor: "rgba(255, 255, 255, 0.8)",
-                    }}
-                    onClick={() => {
-                      setImageUrls((prev) =>
-                        prev.filter((_, i) => i !== index)
-                      );
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div
-              style={{ textAlign: "center", color: "#999", padding: "20px" }}
-            >
-              Chưa có hình ảnh nào
-            </div>
+  // Tab 4: Hình ảnh dịch vụ
+  const imagesTab = editData?.service_id ? (
+    <ServiceImageGallery serviceId={editData.service_id} />
+  ) : (
+    <Card>
+      <Alert
+        message="Lưu dịch vụ trước"
+        description="Bạn cần tạo dịch vụ trước để có thể thêm hình ảnh"
+        type="info"
+        showIcon
+      />
+    </Card>
+  );
+
+  const tabItems = [
+    {
+      key: "general",
+      label: (
+        <Space>
+          <InfoCircleOutlined />
+          Thông tin chung
+        </Space>
+      ),
+      children: generalInfoTab,
+    },
+    {
+      key: "products",
+      label: (
+        <Space>
+          <TagOutlined />
+          Sản phẩm
+          {selectedProducts.length > 0 && (
+            <Badge count={selectedProducts.length} />
           )}
-        </Card> */}
-      </Form>
+        </Space>
+      ),
+      children: productsTab,
+    },
+    {
+      key: "process",
+      label: (
+        <Space>
+          <InfoCircleOutlined />
+          Quy trình
+          {processSteps.length > 0 && <Badge count={processSteps.length} />}
+        </Space>
+      ),
+      children: processTab,
+    },
+    {
+      key: "images",
+      label: (
+        <Space>
+          <PictureOutlined />
+          Hình ảnh
+        </Space>
+      ),
+      children: imagesTab,
+    },
+  ];
+
+  return (
+    <>
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Avatar
+              size={40}
+              icon={editData ? <EditOutlined /> : <PlusOutlined />}
+              style={{
+                backgroundColor: editData ? "#1890ff" : "#52c41a",
+                color: "white",
+              }}
+            />
+            <div>
+              <Title
+                level={4}
+                style={{ margin: 0, color: "#262626" }}
+              >
+                {editData ? "Chỉnh sửa dịch vụ" : "Thêm dịch vụ mới"}
+              </Title>
+              <Text
+                type="secondary"
+                style={{ fontSize: 12 }}
+              >
+                {editData
+                  ? "Cập nhật thông tin dịch vụ"
+                  : "Nhập thông tin dịch vụ mới"}
+              </Text>
+            </div>
+          </div>
+        }
+        open={visible}
+        onCancel={handleCancel}
+        width={1200}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={handleCancel}
+            size="large"
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={
+              loading ||
+              createServiceMutation.isPending ||
+              updateServiceMutation.isPending
+            }
+            onClick={handleSubmit}
+            icon={<SaveOutlined />}
+            size="large"
+            style={{
+              background: editData ? "#1890ff" : "#52c41a",
+              borderColor: editData ? "#1890ff" : "#52c41a",
+            }}
+          >
+            {editData ? "Cập nhật dịch vụ" : "Thêm dịch vụ"}
+          </Button>,
+        ]}
+        destroyOnHidden
+        styles={{
+          body: {
+            padding: "24px",
+            maxHeight: "80vh",
+            overflowY: "auto",
+          },
+        }}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          requiredMark={false}
+          scrollToFirstError
+          initialValues={{
+            isFeatured: false,
+            isActive: true,
+          }}
+        >
+          <Tabs
+            defaultActiveKey="general"
+            items={tabItems}
+          />
+        </Form>
+      </Modal>
 
       {/* Delete Product Confirmation Modal */}
       <Modal
@@ -1035,7 +1157,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
           </p>
         )}
       </Modal>
-    </Modal>
+    </>
   );
 };
 

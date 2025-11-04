@@ -12,6 +12,7 @@ export const menuItems: MenuItem[] = [
       { key: "care4", label: "VỆ SINH KHOANG MÁY" },
     ],
   },
+  { key: "shop", label: "Sản phẩm" },
   { key: "toys", label: "Đồ chơi xe" },
   { key: "system", label: "Hệ thống" },
   { key: "aboutUs", label: "Về chúng tôi" },

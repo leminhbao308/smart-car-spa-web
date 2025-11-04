@@ -4,7 +4,12 @@ import { AdminTable } from "@/components/ui/Table";
 import { ServiceDetailModal, ServiceModal } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
 import { Tag, Card, Row, Col, Select, Input, Button, Space, App } from "antd";
-import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  EyeOutlined,
+  FilterOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import { Service } from "@/lib/api/types/service.types";
 import { ServiceService } from "@/lib/api/services/service.service";
 import { useServiceTypes } from "@/lib/api/hooks/useServiceTypes";
@@ -290,6 +295,30 @@ const ServicesPage = () => {
         return true;
       },
     },
+    {
+      title: "Hành động",
+      key: "actions",
+      width: 100,
+      fixed: "right",
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="default"
+            onClick={() => handleView(record)}
+            icon={<EyeOutlined />}
+            title="Xem chi tiết"
+          />
+          {!record.audit?.is_deleted && (
+            <Button
+              type="default"
+              onClick={() => handleEdit(record)}
+              icon={<EditOutlined />}
+              title="Chỉnh sửa dịch vụ"
+            />
+          )}
+        </Space>
+      ),
+    },
   ];
 
   // Handlers
@@ -350,7 +379,11 @@ const ServicesPage = () => {
         }
       >
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={6}>
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
             <div>
               <label
                 style={{
@@ -372,7 +405,11 @@ const ServicesPage = () => {
               />
             </div>
           </Col>
-          <Col xs={24} sm={12} md={6}>
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
             <div>
               <label
                 style={{
@@ -396,7 +433,11 @@ const ServicesPage = () => {
               </Select>
             </div>
           </Col>
-          <Col xs={24} sm={12} md={6}>
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
             <div>
               <label
                 style={{
@@ -446,9 +487,6 @@ const ServicesPage = () => {
         columns={serviceColumns}
         loading={loading}
         onAdd={handleAdd}
-        onEdit={handleEdit}
-        onEditCondition={(record: Service) => !record.audit?.is_deleted}
-        onView={handleView}
         addButtonText="Thêm dịch vụ"
         searchable={false}
         scroll={{ x: 2000 }}

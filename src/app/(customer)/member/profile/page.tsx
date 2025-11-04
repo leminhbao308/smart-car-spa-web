@@ -33,6 +33,7 @@ import {
   CameraOutlined,
   CheckCircleOutlined,
   LockOutlined,
+  ShoppingOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { useUser } from "@/lib/api/hooks/useUsers";
@@ -343,42 +344,42 @@ const ProfileMemberPage = () => {
         // Update auth context by updating user in storage with new avatar_url
         try {
           console.log("Profile: Updating user in storage with avatar_url from response:", newAvatarUrl);
-          
+
           // Get current user from storage
           const currentUser = AuthService.getCurrentUserFromStorage();
           console.log("Profile: Current user from storage:", currentUser);
-          
+
           if (currentUser && newAvatarUrl) {
             // Update user with new avatar_url
             const updatedUser = {
               ...currentUser,
               avatar_url: newAvatarUrl,
             };
-            
+
             console.log("Profile: Updated user object with avatar_url:", updatedUser.avatar_url);
-            
+
             // Save updated user to storage
             TokenManager.setUserInfo(updatedUser);
-            
+
             // Verify it was saved correctly
             const verifyUser = AuthService.getCurrentUserFromStorage();
             console.log("Profile: Verified user from storage after save:", verifyUser);
             console.log("Profile: Verified avatar_url from storage:", verifyUser?.avatar_url);
-            
+
             // Also sync to cookies for consistency
             const accessToken = TokenManager.getAccessToken();
             const refreshToken = TokenManager.getRefreshToken();
             if (accessToken && refreshToken) {
               TokenManager.syncToCookies(accessToken, refreshToken, updatedUser);
             }
-            
+
             // Trigger a custom event to notify AccountPopup to refresh
             if (typeof window !== "undefined") {
               console.log("Profile: Dispatching userAvatarUpdated event with avatar_url:", updatedUser.avatar_url);
               window.dispatchEvent(new CustomEvent("userAvatarUpdated", {
                 detail: updatedUser
               }));
-              
+
               // Also dispatch a simpler event with just the avatar URL for immediate update
               window.dispatchEvent(new CustomEvent("avatarUrlUpdated", {
                 detail: { avatar_url: updatedUser.avatar_url }
@@ -390,7 +391,7 @@ const ProfileMemberPage = () => {
             const updatedUser = await AuthService.getCurrentUser();
             console.log("Profile: Updated user from API:", updatedUser);
             console.log("Profile: Avatar URL in updated user:", updatedUser?.avatar_url);
-            
+
             if (updatedUser) {
               TokenManager.setUserInfo(updatedUser);
               const accessToken = TokenManager.getAccessToken();
@@ -398,7 +399,7 @@ const ProfileMemberPage = () => {
               if (accessToken && refreshToken) {
                 TokenManager.syncToCookies(accessToken, refreshToken, updatedUser);
               }
-              
+
               if (typeof window !== "undefined") {
                 window.dispatchEvent(new CustomEvent("userAvatarUpdated", {
                   detail: updatedUser
@@ -433,11 +434,11 @@ const ProfileMemberPage = () => {
       console.log("Upload in progress, ignoring onChange");
       return;
     }
-    
+
     console.log("handleAvatarChange called:", info);
     console.log("File status:", info.file?.status);
     console.log("FileList:", info.fileList);
-    
+
     // Only process if fileList exists and beforeUpload hasn't already triggered
     // Since we handle upload in beforeUpload, we can safely ignore onChange
     // This prevents duplicate calls
@@ -501,7 +502,10 @@ const ProfileMemberPage = () => {
 
         <Row gutter={[24, 24]}>
           {/* Profile Card */}
-          <Col xs={24} lg={8}>
+          <Col
+            xs={24}
+            lg={8}
+          >
             <Card
               style={{
                 textAlign: "center",
@@ -522,7 +526,10 @@ const ProfileMemberPage = () => {
                   }}
                 />
                 <div style={{ marginTop: "16px" }}>
-                  <Title level={3} style={{ margin: 0 }}>
+                  <Title
+                    level={3}
+                    style={{ margin: 0 }}
+                  >
                     {user.full_name}
                   </Title>
                   <Text type="secondary">Khách hàng VIP</Text>
@@ -541,13 +548,13 @@ const ProfileMemberPage = () => {
                   beforeUpload={(file) => {
                     // Prevent auto upload
                     console.log("beforeUpload called with file:", file);
-                    
+
                     // Trigger upload immediately when file is selected
                     // Only if upload is not already in progress
                     if (file instanceof File && !uploadInProgressRef.current) {
                       handleAvatarUpload(file);
                     }
-                    
+
                     return false;
                   }}
                   accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
@@ -591,7 +598,10 @@ const ProfileMemberPage = () => {
                 <div style={{ marginBottom: "12px" }}>
                   <Text strong>Trạng thái tài khoản:</Text>
                   <div style={{ marginTop: "4px" }}>
-                    <Tag color="green" icon={<CheckCircleOutlined />}>
+                    <Tag
+                      color="green"
+                      icon={<CheckCircleOutlined />}
+                    >
                       Đã xác thực
                     </Tag>
                   </div>
@@ -612,7 +622,10 @@ const ProfileMemberPage = () => {
           </Col>
 
           {/* Profile Information */}
-          <Col xs={24} lg={16}>
+          <Col
+            xs={24}
+            lg={16}
+          >
             <Card
               title={
                 <div
@@ -647,7 +660,10 @@ const ProfileMemberPage = () => {
                 style={{ marginTop: "16px" }}
               >
                 <Row gutter={[16, 16]}>
-                  <Col xs={24} sm={12}>
+                  <Col
+                    xs={24}
+                    sm={12}
+                  >
                     <Form.Item
                       label="Họ và tên"
                       name="full_name"
@@ -663,7 +679,10 @@ const ProfileMemberPage = () => {
                     </Form.Item>
                   </Col>
 
-                  <Col xs={24} sm={12}>
+                  <Col
+                    xs={24}
+                    sm={12}
+                  >
                     <Form.Item
                       label="Số điện thoại"
                       name="phone_number"
@@ -686,7 +705,10 @@ const ProfileMemberPage = () => {
                     </Form.Item>
                   </Col>
 
-                  <Col xs={24} sm={12}>
+                  <Col
+                    xs={24}
+                    sm={12}
+                  >
                     <Form.Item
                       label="Email"
                       name="email"
@@ -702,8 +724,14 @@ const ProfileMemberPage = () => {
                     </Form.Item>
                   </Col>
 
-                  <Col xs={24} sm={12}>
-                    <Form.Item label="Ngày sinh" name="date_of_birth">
+                  <Col
+                    xs={24}
+                    sm={12}
+                  >
+                    <Form.Item
+                      label="Ngày sinh"
+                      name="date_of_birth"
+                    >
                       <DatePicker
                         style={{ width: "100%" }}
                         placeholder="Chọn ngày sinh"
@@ -713,9 +741,18 @@ const ProfileMemberPage = () => {
                     </Form.Item>
                   </Col>
 
-                  <Col xs={24} sm={12}>
-                    <Form.Item label="Giới tính" name="gender">
-                      <Select placeholder="Chọn giới tính" size="large">
+                  <Col
+                    xs={24}
+                    sm={12}
+                  >
+                    <Form.Item
+                      label="Giới tính"
+                      name="gender"
+                    >
+                      <Select
+                        placeholder="Chọn giới tính"
+                        size="large"
+                      >
                         <Option value="Nam">Nam</Option>
                         <Option value="Nữ">Nữ</Option>
                       </Select>
@@ -723,7 +760,10 @@ const ProfileMemberPage = () => {
                   </Col>
 
                   <Col xs={24}>
-                    <Form.Item label="Địa chỉ" name="address">
+                    <Form.Item
+                      label="Địa chỉ"
+                      name="address"
+                    >
                       <Input.TextArea
                         placeholder="Nhập địa chỉ"
                         rows={3}
@@ -762,11 +802,25 @@ const ProfileMemberPage = () => {
         </Row>
 
         {/* Quick Actions */}
-        <Row gutter={[24, 24]} style={{ marginTop: "24px" }}>
-          <Col xs={24} sm={8}>
+        <Row
+          gutter={[24, 24]}
+          style={{ marginTop: "24px" }}
+        >
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
             <Card
               hoverable
-              style={{ textAlign: "center", borderRadius: "12px" }}
+              style={{
+                textAlign: "center",
+                borderRadius: "12px",
+                height: "200px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
               onClick={() => router.push("/member/vehicle")}
             >
               <CarOutlined
@@ -776,15 +830,42 @@ const ProfileMemberPage = () => {
                   marginBottom: "12px",
                 }}
               />
-              <Title level={4}>Quản lý xe</Title>
-              <Text type="secondary">Xem và quản lý thông tin xe của bạn</Text>
+              <Title
+                level={4}
+                style={{ margin: "0 0 8px 0" }}
+              >
+                Quản lý xe
+              </Title>
+              <div
+                style={{
+                  minHeight: "42px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text type="secondary">
+                  Xem và quản lý thông tin xe của bạn
+                </Text>
+              </div>
             </Card>
           </Col>
 
-          <Col xs={24} sm={8}>
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
             <Card
               hoverable
-              style={{ textAlign: "center", borderRadius: "12px" }}
+              style={{
+                textAlign: "center",
+                borderRadius: "12px",
+                height: "200px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
               onClick={() => router.push("/member/booking")}
             >
               <CalendarOutlined
@@ -794,15 +875,40 @@ const ProfileMemberPage = () => {
                   marginBottom: "12px",
                 }}
               />
-              <Title level={4}>Đặt lịch</Title>
-              <Text type="secondary">Đặt lịch chăm sóc xe mới</Text>
+              <Title
+                level={4}
+                style={{ margin: "0 0 8px 0" }}
+              >
+                Đặt lịch
+              </Title>
+              <div
+                style={{
+                  minHeight: "42px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text type="secondary">Đặt lịch chăm sóc xe mới</Text>
+              </div>
             </Card>
           </Col>
 
-          <Col xs={24} sm={8}>
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
             <Card
               hoverable
-              style={{ textAlign: "center", borderRadius: "12px" }}
+              style={{
+                textAlign: "center",
+                borderRadius: "12px",
+                height: "200px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
               onClick={() => router.push("/member/booking-list")}
             >
               <HistoryOutlined
@@ -812,8 +918,65 @@ const ProfileMemberPage = () => {
                   marginBottom: "12px",
                 }}
               />
-              <Title level={4}>Lịch sử đặt</Title>
-              <Text type="secondary">Xem lịch sử đặt lịch của bạn</Text>
+              <Title
+                level={4}
+                style={{ margin: "0 0 8px 0" }}
+              >
+                Lịch sử đặt
+              </Title>
+              <div
+                style={{
+                  minHeight: "42px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text type="secondary">Xem lịch sử đặt lịch của bạn</Text>
+              </div>
+            </Card>
+          </Col>
+
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
+            <Card
+              hoverable
+              style={{
+                textAlign: "center",
+                borderRadius: "12px",
+                height: "200px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+              onClick={() => router.push("/member/orders")}
+            >
+              <ShoppingOutlined
+                style={{
+                  fontSize: "32px",
+                  color: "#722ed1",
+                  marginBottom: "12px",
+                }}
+              />
+              <Title
+                level={4}
+                style={{ margin: "0 0 8px 0" }}
+              >
+                Lịch sử mua hàng
+              </Title>
+              <div
+                style={{
+                  minHeight: "42px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text type="secondary">Xem đơn hàng và sản phẩm đã mua</Text>
+              </div>
             </Card>
           </Col>
         </Row>

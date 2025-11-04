@@ -57,10 +57,17 @@ export const SalesOrderService = {
     page: number = 0,
     size: number = 10,
     sortBy: string = "createdDate",
-    sortDirection: "ASC" | "DESC" = "DESC"
+    sortDirection: "ASC" | "DESC" = "DESC",
+    userId?: string
   ): Promise<PagedSaleOrderResponse> => {
     const response = await api.get(`/so/paged`, {
-      params: { page, size, sortBy, sortDirection },
+      params: {
+        page,
+        size,
+        sortBy,
+        sortDirection,
+        ...(userId && { userId }),
+      },
     });
     return response.data.data;
   },

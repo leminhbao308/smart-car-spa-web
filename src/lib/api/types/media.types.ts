@@ -4,24 +4,25 @@
  */
 
 export interface MediaInfoDto {
-  id: string;
-  entityType: string;
-  entityId: string;
-  mediaType: MediaType;
-  mediaUrl: string;
-  fileName?: string;
-  fileSize?: number;
-  mimeType?: string;
-  isMain: boolean;
-  isActive: boolean;
-  sortOrder?: number;
+  media_id: string;
+  entity_type: string;
+  entity_id: string;
+  media_type: MediaType;
+  media_url: string;
+  file_name?: string;
+  file_size?: number;
+  mime_type?: string;
+  is_main: boolean;
+  is_active?: boolean;
+  sort_order?: number;
   metadata?: Record<string, any>;
-  altText?: string;
+  alt_text?: string;
   caption?: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy?: string;
-  updatedBy?: string;
+  created_date: string;
+  updated_date?: string;
+  created_by?: string;
+  updated_by?: string;
+  is_deleted?: boolean;
 }
 
 export enum MediaType {
@@ -29,7 +30,7 @@ export enum MediaType {
   VIDEO = "VIDEO",
   DOCUMENT = "DOCUMENT",
   AUDIO = "AUDIO",
-  OTHER = "OTHER"
+  OTHER = "OTHER",
 }
 
 export interface MediaFilterParam {

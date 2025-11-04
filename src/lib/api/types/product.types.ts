@@ -73,6 +73,7 @@ export interface Product extends BaseAuditEntity {
   supplier_id: string;
   is_featured: boolean;
   is_active: boolean;
+  is_reward: boolean; // Sản phẩm chỉ tặng, không bán
   attribute_values?: ProductAttributeValue[];
 }
 
@@ -95,6 +96,7 @@ export interface BaseProductData {
   barcode?: string;
   supplier_id?: string;
   is_featured?: boolean;
+  is_reward?: boolean;
   attribute_values?: ProductAttributeValueRequest[];
 }
 
@@ -158,6 +160,7 @@ export interface ProductFormData {
   supplierId?: string;
   isFeatured?: boolean;
   isActive?: boolean;
+  isReward?: boolean;
   attributeValues?: ProductAttributeValue[];
 }
 
@@ -171,7 +174,8 @@ export interface ProductFilters {
   productTypeId?: string;
   brand?: string;
   isFeatured?: boolean;
-  is_active?: boolean | "deleted";
+  isActive?: boolean | "deleted";
+  isReward?: boolean;
   searchText?: string;
 }
 

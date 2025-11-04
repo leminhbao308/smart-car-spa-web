@@ -32,6 +32,7 @@ const ProductsPage = () => {
     productTypeId: undefined,
     is_active: undefined,
     isFeatured: undefined,
+    is_reward: undefined,
     brand: undefined,
   });
 
@@ -76,9 +77,9 @@ const ProductsPage = () => {
     }
 
     // Apply status filter
-    if (filters.is_active !== undefined) {
+    if (filters.isActive !== undefined) {
       filteredData = filteredData.filter(
-        (product: Product) => product.is_active === filters.is_active
+        (product: Product) => product.is_active === filters.isActive
       );
     }
 
@@ -89,14 +90,22 @@ const ProductsPage = () => {
       );
     }
 
+    // Apply reward filter
+    if (filters.isReward !== undefined) {
+      filteredData = filteredData.filter(
+        (product: Product) => product.is_reward === filters.isReward
+      );
+    }
+
     return filteredData;
   }, [
     productsData,
     filters.searchText,
     filters.brand,
     filters.productTypeId,
-    filters.is_active,
+    filters.isActive,
     filters.isFeatured,
+    filters.isReward,
   ]);
 
   // Client-side pagination for filtered data
@@ -118,6 +127,7 @@ const ProductsPage = () => {
       productTypeId: undefined,
       is_active: undefined,
       isFeatured: undefined,
+      is_reward: undefined,
       brand: undefined,
     });
     setCurrentPage(1);
@@ -171,6 +181,42 @@ const ProductsPage = () => {
       key: "unit_of_measure",
       width: 80,
       render: (unit: string) => <Tag color="green">{unit}</Tag>,
+    },
+    {
+      title: "Phân loại",
+      key: "product_tags",
+      width: 150,
+      render: (_: unknown, record: Product) => (
+        <Space
+          direction="vertical"
+          size={4}
+        >
+          {record.is_featured && (
+            <Tag
+              color="orange"
+              style={{ fontSize: 11 }}
+            >
+              Nổi bật
+            </Tag>
+          )}
+          {record.is_reward && (
+            <Tag
+              color="purple"
+              style={{ fontSize: 11 }}
+            >
+              Sản phẩm tặng
+            </Tag>
+          )}
+          {!record.is_featured && !record.is_reward && (
+            <Tag
+              color="default"
+              style={{ fontSize: 11 }}
+            >
+              Thường
+            </Tag>
+          )}
+        </Space>
+      ),
     },
     {
       title: "Trạng thái",
@@ -276,7 +322,7 @@ const ProductsPage = () => {
               </label>
               <Select
                 placeholder="Chọn trạng thái"
-                value={filters.is_active}
+                value={filters.isActive}
                 onChange={(value) =>
                   setFilters({ ...filters, is_active: value })
                 }
@@ -353,6 +399,37 @@ const ProductsPage = () => {
               >
                 <Option value={true}>Nổi bật</Option>
                 <Option value={false}>Không nổi bật</Option>
+              </Select>
+            </div>
+          </Col>
+
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
+            <div>
+              <label
+                style={{
+                  fontSize: 12,
+                  color: "#666",
+                  marginBottom: 4,
+                  display: "block",
+                }}
+              >
+                Loại sản phẩm
+              </label>
+              <Select
+                placeholder="Chọn loại sản phẩm"
+                value={filters.isReward}
+                onChange={(value) =>
+                  setFilters({ ...filters, is_reward: value })
+                }
+                allowClear
+                style={{ width: "100%" }}
+              >
+                <Option value={false}>Sản phẩm bán</Option>
+                <Option value={true}>Sản phẩm tặng</Option>
               </Select>
             </div>
           </Col>

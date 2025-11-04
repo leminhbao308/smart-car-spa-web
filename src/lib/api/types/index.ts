@@ -75,3 +75,5 @@ export * from "./media.types";
 export * from "./product-attribute.types";
 // Payment types
 export * from "./payment.types";
+// Customer Order types
+export * from "./customer-order.types";

@@ -23,7 +23,7 @@ export class MediaService {
   ): Promise<MediaInfoDto[]> {
     try {
       const queryParams = new URLSearchParams();
-      
+
       if (filterParam) {
         if (filterParam.page !== undefined) {
           queryParams.append("page", filterParam.page.toString());
@@ -51,7 +51,9 @@ export class MediaService {
         }
       }
 
-      const url = `/media/get-all${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const url = `/media/get-all${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`;
       const response = await apiClient.get(url);
 
       if (response.data.success) {
@@ -91,12 +93,16 @@ export class MediaService {
     entityId: string
   ): Promise<MediaInfoDto[]> {
     try {
-      const response = await apiClient.get(`/media/entity/${entityType}/${entityId}`);
+      const response = await apiClient.get(
+        `/media/entity/${entityType}/${entityId}`
+      );
 
       if (response.data.success && response.data.data) {
         return response.data.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch media by entity");
+        throw new Error(
+          response.data.message || "Failed to fetch media by entity"
+        );
       }
     } catch (error) {
       console.log("Get media by entity error:", error);
@@ -112,7 +118,9 @@ export class MediaService {
     entityId: string
   ): Promise<MediaInfoDto> {
     try {
-      const response = await apiClient.get(`/media/entity/${entityType}/${entityId}/main`);
+      const response = await apiClient.get(
+        `/media/entity/${entityType}/${entityId}/main`
+      );
 
       if (response.data.success && response.data.data) {
         return response.data.data;
@@ -135,7 +143,9 @@ export class MediaService {
       if (response.data.success && response.data.data) {
         return response.data.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch media by type");
+        throw new Error(
+          response.data.message || "Failed to fetch media by type"
+        );
       }
     } catch (error) {
       console.log("Get media by type error:", error);
@@ -146,7 +156,9 @@ export class MediaService {
   /**
    * Create new media
    */
-  static async createMedia(mediaData: CreateMediaRequest): Promise<MediaInfoDto> {
+  static async createMedia(
+    mediaData: CreateMediaRequest
+  ): Promise<MediaInfoDto> {
     try {
       console.log("Creating media with data:", mediaData);
 
@@ -165,6 +177,38 @@ export class MediaService {
   }
 
   /**
+   * Upload service image file (FormData with file)
+   */
+  static async uploadServiceMedia(
+    serviceId: string,
+    formData: FormData
+  ): Promise<MediaInfoDto> {
+    try {
+      console.log("Uploading service image for service ID:", serviceId);
+
+      const response = await apiClient.post(
+        `/media/upload/service/${serviceId}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      console.log("Upload service media API response:", response);
+
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        throw new Error(response.data.message || "Failed to upload media");
+      }
+    } catch (error) {
+      console.error("Upload service media error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Update existing media
    */
   static async updateMedia(
@@ -174,7 +218,10 @@ export class MediaService {
     try {
       console.log("Updating media with data:", mediaData);
 
-      const response = await apiClient.post(`/media/${mediaId}/update`, mediaData);
+      const response = await apiClient.post(
+        `/media/${mediaId}/update`,
+        mediaData
+      );
       console.log("Update media API response:", response);
 
       if (response.data.success && response.data.data) {
@@ -217,13 +264,18 @@ export class MediaService {
     try {
       console.log("Updating media main status with data:", statusData);
 
-      const response = await apiClient.post(`/media/${mediaId}/main-status`, statusData);
+      const response = await apiClient.post(
+        `/media/${mediaId}/main-status`,
+        statusData
+      );
       console.log("Update media main status API response:", response);
 
       if (response.data.success && response.data.data) {
         return response.data.data;
       } else {
-        throw new Error(response.data.message || "Failed to update media main status");
+        throw new Error(
+          response.data.message || "Failed to update media main status"
+        );
       }
     } catch (error) {
       console.log("Update media main status error:", error);
@@ -240,11 +292,16 @@ export class MediaService {
     try {
       console.log("Bulk updating media order with data:", bulkData);
 
-      const response = await apiClient.post("/media/bulk-update-order", bulkData);
+      const response = await apiClient.post(
+        "/media/bulk-update-order",
+        bulkData
+      );
       console.log("Bulk update media order API response:", response);
 
       if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to bulk update media order");
+        throw new Error(
+          response.data.message || "Failed to bulk update media order"
+        );
       }
     } catch (error) {
       console.log("Bulk update media order error:", error);
@@ -257,12 +314,16 @@ export class MediaService {
    */
   static async validateMediaUrl(mediaUrl: string): Promise<boolean> {
     try {
-      const response = await apiClient.get(`/media/validate-url?url=${encodeURIComponent(mediaUrl)}`);
+      const response = await apiClient.get(
+        `/media/validate-url?url=${encodeURIComponent(mediaUrl)}`
+      );
 
       if (response.data.success) {
         return response.data.data;
       } else {
-        throw new Error(response.data.message || "Failed to validate media URL");
+        throw new Error(
+          response.data.message || "Failed to validate media URL"
+        );
       }
     } catch (error) {
       console.log("Validate media URL error:", error);
@@ -280,10 +341,54 @@ export class MediaService {
       if (response.data.success && response.data.data) {
         return response.data.data;
       } else {
-        throw new Error(response.data.message || "Failed to fetch media statistics");
+        throw new Error(
+          response.data.message || "Failed to fetch media statistics"
+        );
       }
     } catch (error) {
       console.log("Get media statistics error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get main images for multiple entities in parallel
+   * This optimizes N+1 queries by fetching all main images concurrently
+   *
+   * @param entityIds - Array of entity IDs to fetch main images for
+   * @param entityType - Type of entities (e.g., "SERVICE", "PRODUCT")
+   * @returns Record mapping entity_id to media_url
+   */
+  static async getMainImagesBatch(
+    entityIds: string[],
+    entityType: string
+  ): Promise<Record<string, string>> {
+    try {
+      // Fetch all main images in parallel using Promise.all
+      const results = await Promise.allSettled(
+        entityIds.map(async (entityId) => {
+          try {
+            const media = await this.getMainMediaByEntity(entityType, entityId);
+            return { entityId, url: media.media_url || "" };
+          } catch {
+            // If no main image found, return empty string
+            console.warn(`No main image for ${entityType}:${entityId}`);
+            return { entityId, url: "" };
+          }
+        })
+      );
+
+      // Build result map from successful responses
+      const imageMap: Record<string, string> = {};
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value) {
+          imageMap[result.value.entityId] = result.value.url;
+        }
+      }
+
+      return imageMap;
+    } catch (error) {
+      console.error("Get main images batch error:", error);
       throw error;
     }
   }
