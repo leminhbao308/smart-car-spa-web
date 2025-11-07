@@ -32,6 +32,7 @@ const LoginForm = () => {
   const [form] = Form.useForm();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [mounted, setMounted] = useState(false);
   const { login, isAuthenticated, isLoading, error, clearError } = useAuth();
   const router = useRouter();
   const { message } = App.useApp();
@@ -121,14 +122,21 @@ const LoginForm = () => {
     }
   };
 
-  // Load remembered email on component mount
+  // Set mounted flag to prevent hydration mismatch
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Load remembered email on component mount (only on client)
+  useEffect(() => {
+    if (!mounted) return;
+    
     const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
     if (rememberedEmail) {
       setIdentifier(rememberedEmail);
       form.setFieldsValue({ identifier: rememberedEmail, remember: true });
     }
-  }, [form]);
+  }, [form, mounted]);
 
   // Handle Google login (placeholder for future implementation)
   const handleGoogleLogin = () => {
@@ -137,28 +145,6 @@ const LoginForm = () => {
 
   return (
     <>
-      <style jsx>{`
-        .login-form-container {
-          padding: 40px;
-          max-width: 400px;
-        }
-
-        @media (max-width: 767px) {
-          .login-form-container {
-            padding: 24px;
-            max-width: 350px;
-            margin: 0 16px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .login-form-container {
-            padding: 20px;
-            max-width: 320px;
-            margin: 0 12px;
-          }
-        }
-      `}</style>
       {/* Container */}
       <div
         style={{
@@ -181,7 +167,6 @@ const LoginForm = () => {
         >
           {/* Login Form Container */}
           <div
-            className="login-form-container"
             style={{
               backgroundColor: "#FFFFFF",
               borderRadius: "16px",
@@ -336,7 +321,7 @@ const LoginForm = () => {
                     // Dynamically change icon based on input
                   }}
                   prefix={
-                    identifier.includes("@") ? (
+                    mounted && identifier.includes("@") ? (
                       <MailOutlined style={{ color: "#8B92A5" }} />
                     ) : (
                       <PhoneOutlined style={{ color: "#8B92A5" }} />
