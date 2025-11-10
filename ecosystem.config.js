@@ -13,6 +13,8 @@ module.exports = {
         NODE_ENV: "development",
         PORT: 3000,
         HOSTNAME: "0.0.0.0",
+        // Tăng Node.js heap size để tránh out of memory
+        NODE_OPTIONS: "--max-old-space-size=512",
       },
       error_file: "./logs/pm2-error.log",
       out_file: "./logs/pm2-out.log",
