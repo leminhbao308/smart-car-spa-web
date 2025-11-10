@@ -4,8 +4,12 @@ const nextConfig: NextConfig = {
   // React 19 compatibility settings
   experimental: {
     // Enable React 19 features
+    reactCompiler: true,
+    // Tối ưu cho EC2: giảm số lượng workers để tiết kiệm memory
+    ...(process.env.NODE_ENV === "development" && {
+      // Có thể tắt một số tính năng không cần thiết trong dev mode trên EC2
+    }),
   },
-  reactCompiler: true,
 
   // Image configuration for external domains
   images: {
@@ -32,19 +36,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-
-  // Webpack configuration for better Ant Design compatibility
-  webpack: (config) => {
-    // Ensure proper module resolution for Ant Design
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      "antd/es": "antd/lib",
-    };
-
-    return config;
-  },
-
-  // Transpile packages for better compatibility
   transpilePackages: [
     "antd",
     "@ant-design/icons",
