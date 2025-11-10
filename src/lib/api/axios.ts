@@ -8,7 +8,7 @@ import { TokenManager } from "./utils/token.manager";
 import { ApiResponse, ApiError } from "./types/common.types";
 
 // Base URL configuration
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://3.0.78.229:8081/api";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://52.77.172.44:8081/api";
 
 // Token refresh state management
 let isRefreshing = false;
