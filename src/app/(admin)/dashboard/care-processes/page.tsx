@@ -131,7 +131,7 @@ const CareProcessesPage = () => {
       width: 150,
       render: (isActive: boolean, record: ServiceProcessInfoDto) => (
         <div style={{ textAlign: "center" }}>
-          {record.audit?.is_deleted ? (
+          {record.is_deleted ? (
             <Tag color="red" icon={<DeleteOutlined />}>
               Đã xóa
             </Tag>
@@ -156,8 +156,8 @@ const CareProcessesPage = () => {
       label: (record: ServiceProcessInfoDto) =>
         record.is_active ? "Tạm dừng" : "Kích hoạt",
       type: "default" as const,
-      danger: (record: ServiceProcessInfoDto) => record.is_active,
-      condition: (record: ServiceProcessInfoDto) => !record.audit?.is_deleted,
+      danger: (record: ServiceProcessInfoDto) => !!record.is_active,
+      condition: (record: ServiceProcessInfoDto) => !record.is_deleted,
       onClick: (record: ServiceProcessInfoDto) => {
         const isActivating = !record.is_active;
         showModal({
@@ -241,16 +241,16 @@ const CareProcessesPage = () => {
   const data = serviceProcessesData?.content || serviceProcessesData?.data || serviceProcessesData || [];
   const totalProcesses = data?.length || 0;
   const activeProcesses = data?.filter(
-    (item) => item?.is_active && !item?.audit?.is_deleted
+    (item:any) => item?.is_active && !item?.is_deleted
   )?.length || 0;
   const inactiveProcesses = data?.filter(
-    (item) => !item?.is_active && !item?.audit?.is_deleted
+    (item:any) => !item?.is_active && !item?.is_deleted
   )?.length || 0;
-  const deletedProcesses = data?.filter((item) => item?.audit?.is_deleted)?.length || 0;
-  const totalSteps = data?.reduce((sum, item) => sum + (item?.step_count || 0), 0) || 0;
+  const deletedProcesses = data?.filter((item:any) => item?.is_deleted)?.length || 0;
+  const totalSteps = data?.reduce((sum:any, item:any) => sum + (item?.step_count || 0), 0) || 0;
   const averageDuration =
     data?.length > 0
-      ? data.reduce((sum, item) => sum + (item?.estimated_duration || 0), 0) /
+      ? data.reduce((sum:any, item:any) => sum + (item?.estimated_duration || 0), 0) /
         data.length
       : 0;
 

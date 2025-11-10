@@ -95,6 +95,7 @@ export interface UpdateServiceProcessRequest {
   description?: string;
   code?: string;
   is_default?: boolean;
+  is_active?: boolean;
   estimated_duration?: number;
   branch_id?: string;
   process_steps?: UpdateServiceProcessStepRequest[];
