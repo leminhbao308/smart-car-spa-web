@@ -1,14 +1,14 @@
 "use client";
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useState, Suspense} from "react";
 import {useRouter, useSearchParams} from "next/navigation";
-import {Card, Result, Button, Space, Typography, Alert, Descriptions} from "antd";
+import {Card, Result, Button, Space, Typography, Alert, Descriptions, Spin} from "antd";
 import {CloseCircleOutlined, HomeOutlined, ShoppingOutlined, ReloadOutlined} from "@ant-design/icons";
 import {useCancelPayment, useVerifyPayment} from "@/lib/api/hooks";
 import {message} from "antd";
 
 const {Title, Text} = Typography;
 
-const CancelPaymentPage = () => {
+const CancelPaymentContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isCancelling, setIsCancelling] = useState(false);
@@ -134,6 +134,24 @@ const CancelPaymentPage = () => {
         </Result>
       </Card>
     </div>
+  );
+};
+
+const CancelPaymentPage = () => {
+  return (
+    <Suspense fallback={
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        backgroundColor: "#f0f2f5",
+      }}>
+        <Spin size="large" />
+      </div>
+    }>
+      <CancelPaymentContent />
+    </Suspense>
   );
 };
 

@@ -1,5 +1,5 @@
 "use client";
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useState, Suspense} from "react";
 import {useRouter, useSearchParams} from "next/navigation";
 import {Card, Result, Button, Spin, Space, Typography, Descriptions} from "antd";
 import {CheckCircleOutlined, HomeOutlined, ShoppingOutlined} from "@ant-design/icons";
@@ -7,7 +7,7 @@ import {useVerifyPayment} from "@/lib/api/hooks";
 
 const {Title, Text} = Typography;
 
-const SuccessPaymentPage = () => {
+const SuccessPaymentContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isVerifying, setIsVerifying] = useState(true);
@@ -155,6 +155,24 @@ const SuccessPaymentPage = () => {
         </Result>
       </Card>
     </div>
+  );
+};
+
+const SuccessPaymentPage = () => {
+  return (
+    <Suspense fallback={
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        backgroundColor: "#f0f2f5",
+      }}>
+        <Spin size="large" />
+      </div>
+    }>
+      <SuccessPaymentContent />
+    </Suspense>
   );
 };
 

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Spin, Result, Button, message } from "antd";
 import {
@@ -12,7 +12,7 @@ import { AuthIntegrationService } from "@/lib/firebase";
 
 type VerificationStatus = "verifying" | "success" | "error" | "expired";
 
-const VerifyEmailPage = () => {
+const VerifyEmailPageContent = () => {
   const [status, setStatus] = useState<VerificationStatus>("verifying");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const router = useRouter();
@@ -196,6 +196,24 @@ const VerifyEmailPage = () => {
         </div>
       </div>
     </>
+  );
+};
+
+const VerifyEmailPage = () => {
+  return (
+    <Suspense fallback={
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        backgroundColor: "#F4F7FE",
+      }}>
+        <Spin size="large" />
+      </div>
+    }>
+      <VerifyEmailPageContent />
+    </Suspense>
   );
 };
 
