@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
-import { App, Form, Button } from "antd";
+import React, { useState, useEffect, useRef, Suspense } from "react";
+import { App, Form, Button, Spin } from "antd";
 import { useRouter, useSearchParams } from "next/navigation";
 import CustomerHeader from "@/components/layout/Header/customer.header";
 import {
@@ -27,7 +27,7 @@ interface PasswordFormData {
   confirmPassword: string;
 }
 
-const SignupPage = () => {
+const SignupPageContent = () => {
   const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -392,6 +392,24 @@ const SignupPage = () => {
         </div>
       </div>
     </>
+  );
+};
+
+const SignupPage = () => {
+  return (
+    <Suspense fallback={
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        backgroundColor: "#F4F7FE",
+      }}>
+        <Spin size="large" />
+      </div>
+    }>
+      <SignupPageContent />
+    </Suspense>
   );
 };
 
