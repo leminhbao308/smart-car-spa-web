@@ -4,11 +4,9 @@ const nextConfig: NextConfig = {
   // React 19 compatibility settings
   experimental: {
     // Enable React 19 features
-    reactCompiler: true,
-    // Tối ưu cho EC2: giảm số lượng workers để tiết kiệm memory
-    ...(process.env.NODE_ENV === "development" && {
-      // Có thể tắt một số tính năng không cần thiết trong dev mode trên EC2
-    }),
+    // Tắt React Compiler trong dev mode trên EC2 để tiết kiệm memory
+    // reactCompiler: process.env.NODE_ENV === "production",
+    reactCompiler: false, // Giữ lại nếu memory đủ, tắt nếu thiếu memory
   },
 
   // Image configuration for external domains
