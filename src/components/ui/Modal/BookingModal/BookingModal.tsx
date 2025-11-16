@@ -596,7 +596,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
       setManualBaySelection(false);
       setTotalPrice(0);
       setTotalDuration(0);
-      setBookingDate("");
+      // Set default date to today when modal opens
+      const today = dayjs().format("YYYY-MM-DD");
+      setBookingDate(today);
+      form.setFieldsValue({ bookingDate: dayjs(today) });
     }
     // Note: form is stable (same reference) so including it won't cause re-renders
     // but it's required to keep dependency array size constant
@@ -1790,7 +1793,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   // return current && current < today.startOf("day");
                 }}
                 onChange={(date) => {
-                  setBookingDate(date ? date.format("YYYY-MM-DD") : "");
+                  const newDate = date ? date.format("YYYY-MM-DD") : "";
+                  setBookingDate(newDate);
                 }}
               />
             </Form.Item>
@@ -2853,6 +2857,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         preserve={false}
         initialValues={{
           priority: "NORMAL",
+          bookingDate: dayjs(), // Set default date to today
         }}
       >
         {/* All Content */}

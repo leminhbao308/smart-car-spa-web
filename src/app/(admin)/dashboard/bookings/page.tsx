@@ -1151,25 +1151,15 @@ const BookingsPage = () => {
                         Thời gian đặt lịch
                       </div>
                       <div style={{ fontWeight: 500 }}>
-                        {dayjs(
-                          selectedBooking.scheduled_start_at ||
-                            selectedBooking.preferred_start_at ||
-                            selectedBooking.created_at
-                        ).format("DD/MM/YYYY HH:mm")}
+                        {dayjs(selectedBooking.scheduled_start_at).format(
+                          "DD/MM/YYYY"
+                        )}
                       </div>
                       <div style={{ fontSize: 11, color: "#1890ff" }}>
-                        {getTimeRemaining(
-                          dayjs(
-                            selectedBooking.scheduled_start_at ||
-                              selectedBooking.preferred_start_at ||
-                              selectedBooking.created_at
-                          ).format("YYYY-MM-DD"),
-                          dayjs(
-                            selectedBooking.scheduled_start_at ||
-                              selectedBooking.preferred_start_at ||
-                              selectedBooking.created_at
-                          ).format("HH:mm")
-                        )}
+                        Thời gian bắt đầu: {dayjs(selectedBooking.scheduled_start_at).format("HH:mm")}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#1890ff" }}>
+                        Thời gian kết thúc: {dayjs(selectedBooking.scheduled_start_at).add(selectedBooking.estimated_duration_minutes || 0, "minutes").format("HH:mm")}
                       </div>
                     </div>
 
