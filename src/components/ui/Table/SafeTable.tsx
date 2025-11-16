@@ -82,11 +82,35 @@ const SafeTable = <T = unknown,>(props: SafeTableProps<T>) => {
     );
   }
 
+  // Determine the rowKey to use
+  // If rowKey is provided, use it. Otherwise, try common ID fields
+  const getRowKey = () => {
+    if (props.rowKey) {
+      return props.rowKey;
+    }
+    
+    // If dataSource exists, try to find a common ID field
+    if (props.dataSource && Array.isArray(props.dataSource) && props.dataSource.length > 0) {
+      const firstRow = props.dataSource[0];
+      // Try common ID field names
+      if (firstRow && typeof firstRow === 'object') {
+        if ('service_id' in firstRow) return 'service_id';
+        if ('booking_id' in firstRow) return 'booking_id';
+        if ('customer_id' in firstRow) return 'customer_id';
+        if ('product_id' in firstRow) return 'product_id';
+        if ('id' in firstRow) return 'id';
+      }
+    }
+    
+    // Default fallback
+    return 'id';
+  };
+
   return (
     <Table 
       {...props} 
       // Use rowKey as string or function without index parameter
-      rowKey={props.rowKey || 'id'}
+      rowKey={getRowKey()}
     />
   );
 };

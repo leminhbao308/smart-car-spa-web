@@ -8,6 +8,7 @@ export interface BookingInfoDto {
   // Core booking info
   booking_id: string;
   booking_code: string;
+  booking_type: BookingType; // SCHEDULED or WALK_IN - REQUIRED
   
   // Customer information
   customer_id?: string;
@@ -32,13 +33,6 @@ export interface BookingInfoDto {
   bay_name?: string;
   bay_type?: string;
   
-  // Slot information
-  slot_id?: string;
-  slot_start_time?: string;
-  slot_end_time?: string;
-  slot_duration_minutes?: number;
-  slot_status?: string;
-  
   // Scheduling information
   preferred_start_at?: string;
   scheduled_start_at?: string;
@@ -49,23 +43,18 @@ export interface BookingInfoDto {
   
   // Duration information
   estimated_duration_minutes?: number;
-  buffer_minutes?: number;
   actual_duration_minutes?: number;
   
   // Pricing information
   total_price?: number;
   currency?: string;
-  deposit_amount?: number;
   
   // Status information
   payment_status?: PaymentStatus;
   status: BookingStatus;
-  priority?: Priority;
   
   // Additional information
-  coupon_code?: string;
   notes?: string;
-  special_requests?: string[];
   
   // Cancellation information
   cancellation_reason?: string;
@@ -80,8 +69,6 @@ export interface BookingInfoDto {
   
   // Related data
   booking_items?: BookingItemInfoDto[];
-  assignments?: BookingAssignmentInfoDto[];
-  payments?: BookingPaymentInfoDto[];
   
   // Computed fields
   is_active?: boolean;
@@ -90,6 +77,11 @@ export interface BookingInfoDto {
   needs_payment?: boolean;
   is_fully_paid?: boolean;
   total_estimated_duration?: number;
+}
+
+export enum BookingType {
+  SCHEDULED = "SCHEDULED",
+  WALK_IN = "WALK_IN"
 }
 
 export enum BookingStatus {
@@ -110,12 +102,6 @@ export enum PaymentStatus {
   REFUNDED = "REFUNDED"
 }
 
-export enum Priority {
-  NORMAL = "NORMAL",
-  HIGH = "HIGH", 
-  URGENT = "URGENT"
-}
-
 export interface BookingFilterParam {
   page?: number;
   size?: number;
@@ -133,93 +119,27 @@ export interface BookingFilterParam {
 export interface BookingItemInfoDto {
   booking_item_id?: string; // ID của booking item (cần để xóa item)
   service_id?: string;
-  item_name: string;
-  item_description?: string;
-  discount_amount?: number;
-  tax_amount?: number;
+  service_name?: string;
+  service_description?: string;
   unit_price?: number;
-  quantity?: number;
-  total_amount?: number;
   duration_minutes?: number;
   item_status?: string;
-}
-
-export interface BookingAssignmentInfoDto {
-  assignmentId: string;
-  technicianId: string;
-  technicianName: string;
-  technicianCode: string;
-  role: string;
-  assignedAt: string;
-}
-
-export interface BookingPaymentInfoDto {
-  paymentId: string;
-  amount: number;
-  paymentMethod: string;
-  paymentStatus: PaymentStatus;
-  paidAt?: string;
   notes?: string;
-}
-
-export interface CreateBookingRequest {
-  customer_id: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_email?: string;
-  vehicle_id: string;
-  vehicle_license_plate: string;
-  vehicle_brand_id: string;
-  vehicle_brand_name?: string;
-  vehicle_model_name?: string;
-  vehicle_type_name?: string;
-  vehicle_year?: number;
-  vehicle_color?: string;
-  branch_id: string;
-  bay_id?: string;
-  preferred_start_at: string;
-  scheduled_start_at?: string;
-  scheduled_end_at?: string;
-  estimated_duration_minutes?: number;
-  buffer_minutes?: number;
-  total_price?: number;
-  currency?: string;
-  deposit_amount?: number;
-  priority?: Priority;
-  coupon_code?: string;
-  notes?: string;
-  special_requests?: string[];
-  booking_items: {
-    item_type: string;
-    item_id: string;
-    item_name: string;
-    item_url?: string;
-    item_description?: string;
-    unit_price: number;
-    quantity: number;
-    duration_minutes?: number;
-    discount_amount?: number;
-    tax_amount?: number;
-    notes?: string;
-    display_order?: number;
-  }[];
-  assignments: {
-    technician_id: string;
-    role: string;
-  }[];
-  payments?: unknown[];
+  display_order?: number;
+  is_completed?: boolean;
+  is_in_progress?: boolean;
 }
 
 // New integrated booking request type based on BookingInfoDto
-export interface CreateBookingWithSlotRequest {
+export interface CreateBookingWithScheduleRequest {
   // Customer information
-  customer_id?: string;
+  customer_id?: string; // nullable nếu là guest
   customer_name: string;
   customer_phone: string;
   customer_email?: string;
   
   // Vehicle information
-  vehicle_id?: string;
+  vehicle_id?: string; // nullable nếu chưa có profile
   vehicle_license_plate: string;
   vehicle_brand_name?: string;
   vehicle_model_name?: string;
@@ -227,11 +147,11 @@ export interface CreateBookingWithSlotRequest {
   vehicle_year?: number;
   vehicle_color?: string;
   
-  // Branch and slot information
+  // Branch information
   branch_id: string;
   
-  // Selected slot information
-  selected_slot: {
+  // Scheduling information - REQUIRED for this integrated API
+  selected_schedule: {
     bay_id: string;
     date: string; // YYYY-MM-DD format
     start_time: string; // HH:mm format
@@ -239,32 +159,29 @@ export interface CreateBookingWithSlotRequest {
   };
   
   // Booking items
-  booking_items: {
-    service_id: string;
-    item_name?: string;
-    item_description?: string;
-    discount_amount?: number;
-    tax_amount?: number;
-  }[];
+  booking_items: CreateBookingItemRequest[];
   
   // Pricing information
   total_price: number;
-  currency?: string;
-  deposit_amount?: number;
+  currency?: string; // Default: "VND"
+  
+  // Scheduling information
+  estimated_duration_minutes?: number;
+  preferred_start_at?: string; // ISO string format
+  scheduled_start_at?: string; // ISO string format
+  scheduled_end_at?: string; // ISO string format
   
   // Additional information
-  coupon_code?: string;
   notes?: string;
-  special_requests?: string[];
+  
+  // Note: bookingType is automatically set to SCHEDULED by backend for this API
 }
 
 // CreateBookingItemRequest - Dùng trong booking_items array
 export interface CreateBookingItemRequest {
   service_id?: string; // UUID, optional - ID của service
-  item_name?: string; // String, optional - Tên item
-  item_description?: string; // String, optional - Mô tả item
-  discount_amount?: number; // BigDecimal, optional - Số tiền chiết khấu
-  tax_amount?: number; // BigDecimal, optional - Số tiền thuế
+  service_name: string; // String, REQUIRED - Tên service
+  service_description?: string; // String, optional - Mô tả service
   operation?: "DELETE"; // String enum, optional - Operation type - chỉ có giá trị "DELETE"
   booking_item_id?: string; // UUID, optional - ID của booking item - chỉ cần khi operation = "DELETE"
 }
@@ -292,31 +209,39 @@ export interface UpdateBookingRequest {
   scheduled_start_at?: string;
   scheduled_end_at?: string;
   
-  // Slot information
-  slot_date?: string;
-  slot_start_time?: string;
+  // Scheduling information (for calculating scheduled times)
+  schedule_date?: string; // YYYY-MM-DD format
+  schedule_start_time?: string; // HH:mm format
   
   // Duration information
   estimated_duration_minutes?: number;
-  buffer_minutes?: number;
   
   // Pricing information
   total_price?: number;
   currency?: string;
-  deposit_amount?: number;
   
   // Status information
   payment_status?: PaymentStatus;
   status?: BookingStatus;
-  priority?: Priority;
   
   // Additional information
-  coupon_code?: string;
   notes?: string;
-  special_requests?: string[];
   
   // Booking items - Array of items to add/update/delete
   booking_items?: CreateBookingItemRequest[];
+}
+
+/**
+ * Request to change booking schedule
+ * Renamed from ChangeSlotRequest
+ */
+export interface ChangeScheduleRequest {
+  new_bay_id: string;
+  new_schedule_date: string; // YYYY-MM-DD format
+  new_schedule_start_time: string; // HH:mm format
+  service_duration_minutes: number;
+  reason?: string;
+  changed_by?: string;
 }
 
 export interface BookingStatisticsDto {
@@ -332,20 +257,43 @@ export interface BookingStatisticsDto {
   customerSatisfactionScore?: number;
 }
 
-export interface BookingResponse {
-  success: boolean;
-  message: string;
-  data: BookingInfoDto;
+// ==================== TIME RANGE TYPES ====================
+
+/**
+ * Time range DTO - represents an available time range
+ * Backend uses snake_case in JSON response
+ */
+export interface TimeRangeDto {
+  start_time: string; // HH:mm format
+  end_time: string; // HH:mm format
 }
 
-export interface BookingListResponse {
-  success: boolean;
-  message: string;
-  data: BookingInfoDto[];
+/**
+ * Working hours DTO
+ * Backend uses snake_case: "start" and "end" (not "start_time" and "end_time")
+ */
+export interface WorkingHoursDto {
+  start: string; // HH:mm format
+  end: string; // HH:mm format
 }
 
-export interface BookingStatisticsResponse {
-  success: boolean;
-  message: string;
-  data: BookingStatisticsDto;
+/**
+ * Available time ranges response
+ * Backend uses snake_case in JSON response
+ */
+export interface AvailableTimeRangesResponse {
+  date: string; // YYYY-MM-DD format
+  bay_id: string;
+  bay_name: string;
+  working_hours: WorkingHoursDto;
+  available_time_ranges: TimeRangeDto[];
+}
+
+/**
+ * Request to get available time ranges
+ */
+export interface GetAvailableTimeRangesRequest {
+  bay_id: string;
+  date: string; // YYYY-MM-DD format
+  duration_minutes?: number; // Optional - for future filtering
 }

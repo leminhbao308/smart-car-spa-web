@@ -384,7 +384,7 @@ const BookingSection: React.FC<BookingSectionProps> = ({
                       key={index}
                       style={{ fontSize: 11, color: "#999" }}
                     >
-                      • {item.item_name}
+                      • {item.service_name}
                     </div>
                   ))}
                   {(booking.booking_items?.length || 0) > 2 && (

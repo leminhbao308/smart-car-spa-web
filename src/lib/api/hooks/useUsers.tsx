@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserService } from "../services/user.service";
-import { BookingService } from "../services/booking.service";
+import { BookingService } from "../services/bookingService";
 import {
   GetAllUsersRequest,
   CreateUserRequest,

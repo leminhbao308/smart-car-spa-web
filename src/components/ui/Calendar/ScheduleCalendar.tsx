@@ -18,12 +18,12 @@ import { Branch, CareSlot } from "@/components/utils/data/branches.data";
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-interface SlotCalendarProps {
+interface ScheduleCalendarProps {
   branch: Branch;
   onDateSelect?: (date: Dayjs, slot: CareSlot) => void;
 }
 
-const SlotCalendar: React.FC<SlotCalendarProps> = ({ branch }) => {
+const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ branch }) => {
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [selectedSlotType, setSelectedSlotType] = useState<string>("all");
 
@@ -251,4 +251,5 @@ const SlotCalendar: React.FC<SlotCalendarProps> = ({ branch }) => {
   );
 };
 
-export default SlotCalendar;
+export default ScheduleCalendar;
+

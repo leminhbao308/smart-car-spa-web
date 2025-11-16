@@ -8,8 +8,7 @@ import { BookingService } from '../services/bookingService';
 import {
   BookingInfoDto,
   BookingFilterParam,
-  CreateBookingRequest,
-  CreateBookingWithSlotRequest,
+  CreateBookingWithScheduleRequest,
   UpdateBookingRequest,
   BookingStatus
 } from '../types/booking.types';
@@ -86,22 +85,11 @@ export const useBookingStatistics = (branchId: string, date: string) => {
 };
 
 // Mutations
-export const useCreateBooking = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (request: CreateBookingRequest) => BookingService.createBooking(request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
-    },
-  });
-};
-
 export const useCreateBookingWithSlot = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (request: CreateBookingWithSlotRequest) => BookingService.createBookingWithSlot(request),
+    mutationFn: (request: CreateBookingWithScheduleRequest) => BookingService.createBookingWithSlot(request),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
     },

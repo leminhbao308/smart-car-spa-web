@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { BookingService } from "../services/booking.service";
+import { BookingService } from "../services/bookingService";
 import { BookingInfoDto } from "../types/booking.types";
 
 export const useBookingsPendingPayment = () => {

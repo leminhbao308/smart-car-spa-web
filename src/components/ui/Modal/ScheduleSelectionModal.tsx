@@ -28,7 +28,7 @@ import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 
-interface SlotSelectionModalProps {
+interface ScheduleSelectionModalProps {
   open: boolean;
   onCancel: () => void;
   onSelectSlot: (
@@ -42,7 +42,7 @@ interface SlotSelectionModalProps {
   estimatedDuration: number; // in minutes
 }
 
-const SlotSelectionModal: React.FC<SlotSelectionModalProps> = ({
+const ScheduleSelectionModal: React.FC<ScheduleSelectionModalProps> = ({
   open,
   onCancel,
   onSelectSlot,
@@ -274,4 +274,5 @@ const SlotSelectionModal: React.FC<SlotSelectionModalProps> = ({
   );
 };
 
-export default SlotSelectionModal;
+export default ScheduleSelectionModal;
+

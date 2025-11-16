@@ -5,7 +5,7 @@ export interface BayRecommendationRequest {
   branch_id: string;
   service_type?: string;
   service_duration_minutes: number;
-  priority?: string;
+  booking_date?: string;
 }
 
 export interface BayRecommendationResponse {
@@ -42,6 +42,7 @@ export interface BookingQueueItem {
 }
 
 export interface WalkInBookingRequest {
+  booking_type: 'WALK_IN'; // REQUIRED - must be WALK_IN
   customer_type: 'EXISTING' | 'NEW';
   // For existing customer
   customer_id?: string;
@@ -62,9 +63,11 @@ export interface WalkInBookingRequest {
   services: ServiceRequest[];
   total_price: number;
   currency: string;
+  estimated_duration_minutes?: number;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
   notes?: string;
-  priority?: string;
-  special_requests?: string[];
+  booking_date?: string;
 }
 
 export interface ServiceRequest {
@@ -119,15 +122,18 @@ export class WalkInBookingService {
 
   /**
    * Đề xuất bay tốt nhất cho walk-in booking
+   * Endpoint: /walk-in/recommend-bay
    */
   async recommendBay(request: BayRecommendationRequest, queueDate?: string): Promise<BayRecommendationResponse> {
     try {
-      const params = queueDate ? { queueDate } : {};
+      const params = queueDate ? { queueDate: queueDate } : {};
       const response = await apiClient.post<BayRecommendationResponse>(
         '/walk-in/recommend-bay',
         request,
         { params }
       );
+      
+      // Walk-in APIs return direct DTO, not wrapped in ApiResponse
       return response.data;
     } catch (error) {
       console.log('Error recommending bay:', error);
@@ -137,13 +143,23 @@ export class WalkInBookingService {
 
   /**
    * Tạo walk-in booking
+   * Endpoint: /walk-in/create-booking
+   * Note: booking_type must be WALK_IN (REQUIRED)
    */
   async createWalkInBooking(request: WalkInBookingRequest): Promise<WalkInBookingResponse> {
     try {
+      // Ensure booking_type is set
+      const requestWithType = {
+        ...request,
+        booking_type: 'WALK_IN' as const,
+      };
+      
       const response = await apiClient.post<WalkInBookingResponse>(
         '/walk-in/create-booking',
-        request
+        requestWithType
       );
+      
+      // Walk-in APIs return direct DTO, not wrapped in ApiResponse
       return response.data;
     } catch (error) {
       console.log('Error creating walk-in booking:', error);
@@ -153,26 +169,32 @@ export class WalkInBookingService {
 
   /**
    * Lấy thông tin hàng chờ của một bay
+   * Endpoint: /walk-in/bay-queue/{bayId}
+   * Trả về các WALK_IN bookings, không còn BayQueue entity riêng
+   * Returns direct array, not wrapped in ApiResponse
    */
   async getBayQueue(bayId: string, queueDate?: string): Promise<BookingQueueItem[]> {
     try {
-      const params = queueDate ? { queueDate } : {};
+      const params = queueDate ? { queueDate: queueDate } : {};
       console.log('🔍 DEBUG: getBayQueue called with:', { bayId, queueDate, params });
       
-      const response = await apiClient.get<BookingQueueItem[]>(
+      const response = await apiClient.get(
         `/walk-in/bay-queue/${bayId}`,
         { params }
       );
       
+      // Walk-in APIs return direct DTO/array, not wrapped in ApiResponse
+      const data = response.data;
+      
       console.log('🔍 DEBUG: getBayQueue response:', {
         status: response.status,
-        data: response.data,
-        dataType: typeof response.data,
-        isArray: Array.isArray(response.data),
-        length: response.data?.length
+        data: data,
+        dataType: typeof data,
+        isArray: Array.isArray(data),
+        length: data?.length
       });
       
-      return response.data;
+      return Array.isArray(data) ? data : [];
     } catch (error) {
       console.log('Error getting bay queue:', error);
       throw error;

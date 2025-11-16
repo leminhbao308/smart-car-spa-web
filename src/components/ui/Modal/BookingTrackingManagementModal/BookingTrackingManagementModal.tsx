@@ -120,7 +120,7 @@ const BookingTrackingManagementModal: React.FC<
       for (const bookingItem of booking.booking_items || []) {
         if (bookingItem.service_id) {
           const serviceId = bookingItem.service_id;
-          const serviceName = bookingItem.item_name || "Unknown Service";
+          const serviceName = bookingItem.service_name || "Unknown Service";
 
           if (!serviceMap.has(serviceId)) {
             serviceMap.set(serviceId, {
@@ -193,7 +193,7 @@ const BookingTrackingManagementModal: React.FC<
           const service = serviceMap.get(assignedServiceId)!;
           service.trackings.push(tracking);
         } else {
-          console.warn(
+          console.log(
             `❌ Could not assign tracking ${tracking.trackingId} to any service`
           );
         }

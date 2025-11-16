@@ -167,7 +167,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
           if (item.service_id && !serviceMap.has(item.service_id)) {
             serviceMap.set(item.service_id, {
               serviceId: item.service_id,
-              serviceName: item.item_name || "Dịch vụ",
+              serviceName: item.service_name || "Dịch vụ",
               processId: "",
               steps: [],
             });
@@ -184,7 +184,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
               serviceId: svcId,
               serviceName:
                 booking.booking_items?.find((bi) => bi.service_id === svcId)
-                  ?.item_name || "Dịch vụ",
+                  ?.service_name || "Dịch vụ",
               processId: "",
               steps: [],
             });
@@ -278,7 +278,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
         for (const item of booking.booking_items || []) {
           if (item.service_id) {
             try {
-              console.log(`🔍 Processing service: ${item.service_id} - ${item.item_name}`);
+              console.log(`🔍 Processing service: ${item.service_id} - ${item.service_name}`);
               // Get service process for this service
               const serviceProcess = await ServiceProcessService.getServiceProcessByServiceId(item.service_id);
               if (serviceProcess?.process_steps || serviceProcess?.processSteps) {
@@ -287,7 +287,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
                 
                 serviceStepsByService.push({
                   service_id: item.service_id,
-                  service_name: item.item_name,
+                  service_name: item.service_name,
                   steps: steps.map(step => ({
                     ...step,
                     service_id: item.service_id,

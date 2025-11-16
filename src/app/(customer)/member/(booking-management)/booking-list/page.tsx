@@ -39,7 +39,7 @@ import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
 import VehicleTrackingModal from "@/components/ui/Modal/VehicleTrackingModal/VehicleTrackingModal";
 import CustomerUpdateBookingModal from "@/components/ui/Modal/CustomerUpdateBookingModal";
-import { BookingInfoDto } from "@/lib/api/types/booking.types";
+import { BookingInfoDto, BookingType } from "@/lib/api/types/booking.types";
 import { ServiceProcessTrackingInfoDto } from "@/lib/api/types/service-process-tracking.types";
 
 const { Title, Text } = Typography;
@@ -305,19 +305,16 @@ const CustomerBookingListPage = () => {
       );
     }
 
-    // Filter by booking type based on booking_code
+    // Filter by booking type based on booking_type field
     if (selectedBookingType) {
       result = result.filter((booking: BookingInfoDto) => {
-        const bookingCode = booking.booking_code?.toUpperCase() || "";
-        // Đặt trước (advance booking): booking_code bắt đầu bằng "BK"
+        // Đặt trước (advance booking): booking_type === SCHEDULED
         if (selectedBookingType === "advance") {
-          return bookingCode.startsWith("BK");
+          return booking.booking_type === BookingType.SCHEDULED;
         }
-        // Đặt xử lý tại chỗ (walk-in): booking_code bắt đầu bằng "WALK-IN" hoặc "WALK"
+        // Đặt xử lý tại chỗ (walk-in): booking_type === WALK_IN
         if (selectedBookingType === "walk-in") {
-          return (
-            bookingCode.startsWith("WALK-IN") || bookingCode.startsWith("WALK")
-          );
+          return booking.booking_type === BookingType.WALK_IN;
         }
         return true;
       });
@@ -382,9 +379,15 @@ const CustomerBookingListPage = () => {
 
   // Function to check if booking can be cancelled
   const canCancelBooking = (booking: BookingInfoDto) => {
-    // Only allow cancellation for BK bookings
-    const isBKBooking = booking.booking_code?.startsWith("BK");
-    if (!isBKBooking) return false;
+    // Only allow cancellation for SCHEDULED bookings
+    // Fallback: Nếu booking_type không có, kiểm tra booking_code
+    // Booking code bắt đầu bằng "BK-" là SCHEDULED, "WALK-IN-" là WALK_IN
+    const bookingType = booking.booking_type as string | undefined;
+    const isScheduledBooking = 
+      bookingType === BookingType.SCHEDULED || 
+      bookingType === "SCHEDULED" ||
+      (!bookingType && booking.booking_code?.startsWith("BK-"));
+    if (!isScheduledBooking) return false;
 
     // Only allow cancellation for PENDING or CONFIRMED status
     const allowedStatuses = ["PENDING", "CONFIRMED"];
@@ -400,6 +403,7 @@ const CustomerBookingListPage = () => {
 
     // Debug logging
     console.log("🔍 Cancel booking check:", {
+      bookingType: booking.booking_type,
       bookingCode: booking.booking_code,
       status: booking.status,
       scheduledStartAt: booking.scheduled_start_at,
@@ -653,7 +657,7 @@ const CustomerBookingListPage = () => {
       dataIndex: "scheduled_start_at",
       key: "scheduled_start_at",
       width: 160,
-      render: (date: string) => (
+      render: (date: string, record: BookingInfoDto) => (
         <Space direction="vertical" size="small" style={{ fontSize: "13px" }}>
           <Space>
             <CalendarOutlined style={{ color: "#1890ff" }} />
@@ -662,6 +666,10 @@ const CustomerBookingListPage = () => {
           <Space>
             <ClockCircleOutlined style={{ color: "#52c41a" }} />
             <Text>Bắt đầu lúc: {dayjs(date).format("HH:mm")}</Text>
+          </Space>
+          <Space>
+            <ClockCircleOutlined style={{ color: "#52c41a" }} />
+            <Text>Kết thúc lúc: {dayjs(date).add(record.estimated_duration_minutes || 0, "minutes").format("HH:mm")}</Text>
           </Space>
         </Space>
       ),
@@ -746,9 +754,32 @@ const CustomerBookingListPage = () => {
       align: "center",
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       render: (_: any, record: any) => {
-        const isBookingCode = record.booking_code?.startsWith("BK");
-        const isPending = record.status === "PENDING";
-        const canEdit = isBookingCode && isPending;
+        // So sánh với cả enum và string để đảm bảo tương thích
+        // Fallback: Nếu booking_type không có, kiểm tra booking_code
+        // Booking code bắt đầu bằng "BK-" là SCHEDULED, "WALK-IN-" là WALK_IN
+        const bookingType = record.booking_type as string | undefined;
+        const isScheduledBooking = 
+          bookingType === BookingType.SCHEDULED || 
+          bookingType === "SCHEDULED" ||
+          (!bookingType && record.booking_code?.startsWith("BK-"));
+        
+        // Cho phép chỉnh sửa khi booking ở trạng thái PENDING hoặc CONFIRMED (giống admin)
+        const allowedStatuses = ["PENDING", "CONFIRMED"];
+        const canEdit = isScheduledBooking && allowedStatuses.includes(record.status);
+
+        // Debug logging
+        console.log("🔍 Edit button check:", {
+          bookingCode: record.booking_code,
+          bookingType: record.booking_type,
+          bookingTypeEnum: BookingType.SCHEDULED,
+          bookingTypeString: "SCHEDULED",
+          bookingCodeStartsWithBK: record.booking_code?.startsWith("BK-"),
+          isScheduledBooking,
+          status: record.status,
+          allowedStatuses,
+          statusIncluded: allowedStatuses.includes(record.status),
+          canEdit,
+        });
 
         return canEdit ? (
           <Button

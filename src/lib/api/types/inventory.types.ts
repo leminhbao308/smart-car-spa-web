@@ -45,6 +45,13 @@ export interface InventoryLevelsBatchRequest {
 }
 
 
+// Inventory view from batch API (simplified, no audit fields)
+export interface InventoryViewSimple {
+  on_hand: number;
+  reserved: number;
+  available: number;
+}
+
 export interface InventoryLevelsBatchResponse {
-  items: { [productId: string]: InventoryView };
+  items: { [productId: string]: InventoryViewSimple };
 }

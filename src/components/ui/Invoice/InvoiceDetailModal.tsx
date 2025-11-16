@@ -341,7 +341,7 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
                           const serviceItem = bookingInfo.booking_items?.find(
                             (item) => item.service_id === record.service_id
                           );
-                          displayName = serviceItem?.item_name || name;
+                          displayName = serviceItem?.service_name || name;
                         }
 
                         return (

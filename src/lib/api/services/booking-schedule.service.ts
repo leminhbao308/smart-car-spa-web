@@ -1,149 +1,116 @@
 import apiClient from "../axios";
 import { ApiResponse } from "../types/common.types";
+import { 
+  AvailableTimeRangesResponse, 
+  GetAvailableTimeRangesRequest 
+} from "../types/booking.types";
 
-export interface TimeSlotDto {
-  bayId: string;
-  bayName: string;
-  bayCode: string;
-  startTime: string;
-  endTime: string;
-  estimatedEndTime: string;
-  status: string;
-  notes?: string;
-  isAvailable: boolean;
-  durationMinutes: number;
-}
-
-export interface AvailableSlotsRequest {
-  branchId: string;
-  date: string;
-  serviceDurationMinutes: number;
-  bayId?: string;
-  fromHour?: number;
-  toHour?: number;
-}
-
-export interface BookSlotRequest {
-  bayId: string;
-  date: string;
-  startTime: string;
-  serviceDurationMinutes: number;
-  bookingId: string;
-}
-
+/**
+ * Booking Schedule Service
+ * Updated to use time-range-based system instead of slot-based
+ */
 export class BookingScheduleService {
   /**
-   * Lấy các slot available cho booking
+   * Lấy các available time ranges cho booking
+   * Backend trả về time ranges, frontend tự xử lý để hiển thị slots
+   * 
+   * @param request - Request parameters
+   * @returns AvailableTimeRangesResponse với time ranges và working hours
    */
-  static async getAvailableSlots(request: AvailableSlotsRequest): Promise<TimeSlotDto[]> {
-    const params = new URLSearchParams({
-      branchId: request.branchId,
-      date: request.date,
-      serviceDurationMinutes: request.serviceDurationMinutes.toString(),
-    });
+  static async getAvailableTimeRanges(
+    request: GetAvailableTimeRangesRequest
+  ): Promise<AvailableTimeRangesResponse> {
+    try {
+      const params = new URLSearchParams({
+        bayId: request.bay_id,
+        date: request.date,
+      });
 
-    if (request.bayId) {
-      params.append('bayId', request.bayId);
+      if (request.duration_minutes) {
+        params.append('durationMinutes', request.duration_minutes.toString());
+      }
+
+      const response = await apiClient.get<ApiResponse<AvailableTimeRangesResponse>>(
+        `/booking-schedule/available-time-ranges?${params.toString()}`
+      );
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        throw new Error("Failed to get available time ranges");
+      }
+    } catch (error) {
+      console.error("Get available time ranges error:", error);
+      throw error;
     }
-    if (request.fromHour !== undefined) {
-      params.append('fromHour', request.fromHour.toString());
-    }
-    if (request.toHour !== undefined) {
-      params.append('toHour', request.toHour.toString());
-    }
-
-    const response = await apiClient.get<ApiResponse<TimeSlotDto[]>>(
-      `/booking-schedule/available-slots?${params.toString()}`
-    );
-    return response.data.data;
   }
 
   /**
-   * Đặt slot cho booking
+   * Helper method: Convert time ranges to time slots for UI display
+   * Frontend tự xử lý để hiển thị các mốc thời gian cố định (8:00, 8:30, 9:00, ...)
+   * 
+   * @param timeRanges - Available time ranges from backend
+   * @param workingHours - Working hours from backend
+   * @param serviceDurationMinutes - Duration of service in minutes
+   * @param slotIntervalMinutes - Interval between slots (default: 30 minutes)
+   * @returns Array of time slots with availability status
    */
-  static async bookSlot(request: BookSlotRequest): Promise<void> {
-    await apiClient.post<ApiResponse<void>>('/booking-schedule/book-slot', request);
-  }
+  static convertTimeRangesToSlots(
+    timeRanges: Array<{ start_time: string; end_time: string }>,
+    workingHours: { start: string; end: string },
+    serviceDurationMinutes: number,
+    slotIntervalMinutes: number = 30
+  ): Array<{ time: string; isAvailable: boolean }> {
+    const slots: Array<{ time: string; isAvailable: boolean }> = [];
 
-  /**
-   * Hoàn thành dịch vụ sớm và mở slot trống
-   */
-  static async completeEarly(request: {
-    bookingId: string;
-    actualCompletionTime: string;
-  }): Promise<void> {
-    await apiClient.post<ApiResponse<void>>('/booking-schedule/complete-early', request);
-  }
+    // Generate slots from working hours
+    const workingStart = this.parseTime(workingHours.start);
+    const workingEnd = this.parseTime(workingHours.end);
 
-  /**
-   * Tạo lịch cho tất cả bay trong chi nhánh trong ngày
-   */
-  static async generateDailySchedule(branchId: string, date: string): Promise<void> {
-    const params = new URLSearchParams({
-      branchId,
-      date,
-    });
+    let current = workingStart;
+    while (current < workingEnd) {
+      const timeStr = this.formatTime(current);
+      const slotEnd = current + serviceDurationMinutes;
+      
+      // Check if this slot fits within any available time range
+      const isAvailable = timeRanges.some((range) => {
+        const rangeStart = this.parseTime(range.start_time);
+        const rangeEnd = this.parseTime(range.end_time);
+        // Slot is available if it starts within range and ends before range ends
+        return current >= rangeStart && slotEnd <= rangeEnd;
+      });
 
-    await apiClient.post<ApiResponse<void>>(
-      `/booking-schedule/generate-daily-schedule?${params.toString()}`
-    );
-  }
-
-  /**
-   * Lấy thống kê slot của bay trong ngày
-   */
-  static async getBaySlotStatistics(bayId: string, date: string): Promise<{
-    bayId: string;
-    date: string;
-    totalSlots: number;
-    availableSlots: number;
-    bookedSlots: number;
-    inProgressSlots: number;
-    completedSlots: number;
-    cancelledSlots: number;
-    utilizationRate: number;
-  }> {
-    const params = new URLSearchParams({
-      bayId,
-      date,
-    });
-
-    const response = await apiClient.get<ApiResponse<{
-      bayId: string;
-      date: string;
-      totalSlots: number;
-      availableSlots: number;
-      bookedSlots: number;
-      inProgressSlots: number;
-      completedSlots: number;
-      cancelledSlots: number;
-      utilizationRate: number;
-    }>>(
-      `/booking-schedule/bay-statistics?${params.toString()}`
-    );
-    return response.data.data;
-  }
-
-  /**
-   * Lấy các slot có thể mở rộng (hoàn thành sớm)
-   */
-  static async getExpandableSlots(
-    branchId: string, 
-    date: string, 
-    fromTime?: string
-  ): Promise<TimeSlotDto[]> {
-    const params = new URLSearchParams({
-      branchId,
-      date,
-    });
-
-    if (fromTime) {
-      params.append('fromTime', fromTime);
+      slots.push({
+        time: timeStr,
+        isAvailable,
+      });
+      current = this.addMinutes(current, slotIntervalMinutes);
     }
 
-    const response = await apiClient.get<ApiResponse<TimeSlotDto[]>>(
-      `/booking-schedule/expandable-slots?${params.toString()}`
-    );
-    return response.data.data;
+    return slots;
+  }
+
+  /**
+   * Helper: Parse time string (HH:mm) to minutes since midnight
+   */
+  private static parseTime(timeStr: string): number {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  /**
+   * Helper: Format minutes since midnight to time string (HH:mm)
+   */
+  private static formatTime(minutes: number): string {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Helper: Add minutes to time
+   */
+  private static addMinutes(timeMinutes: number, minutesToAdd: number): number {
+    return timeMinutes + minutesToAdd;
   }
 }

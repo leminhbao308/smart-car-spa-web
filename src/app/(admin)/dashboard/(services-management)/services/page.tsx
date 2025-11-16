@@ -489,6 +489,7 @@ const ServicesPage = () => {
         onAdd={handleAdd}
         addButtonText="Thêm dịch vụ"
         searchable={false}
+        rowKey="service_id"
         scroll={{ x: 2000 }}
         pagination={{
           current: pagination.current,

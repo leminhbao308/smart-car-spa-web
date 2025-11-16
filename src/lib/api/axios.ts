@@ -8,9 +8,9 @@ import { TokenManager } from "./utils/token.manager";
 import { ApiResponse, ApiError } from "./types/common.types";
 
 // Base URL configuration
-const BASE_URL = "http://52.77.172.44:8081/api";
+const BASE_URL = "http://192.168.1.16:8081/api";
 
-// Token refresh state management
+// Token refresh state management 
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value?: unknown) => void;
@@ -112,7 +112,7 @@ const refreshToken = async (): Promise<string | null> => {
     if (error.response?.status === 401) {
       console.log("Refresh token is invalid or expired, clearing all tokens");
       TokenManager.clearAll();
-      
+
       // Redirect to login if on client side
       if (typeof window !== "undefined") {
         console.log("Redirecting to login due to invalid refresh token");
@@ -120,7 +120,9 @@ const refreshToken = async (): Promise<string | null> => {
       }
     } else {
       // For other errors, don't clear tokens immediately
-      console.log("Non-401 error during token refresh, keeping tokens for retry");
+      console.log(
+        "Non-401 error during token refresh, keeping tokens for retry"
+      );
     }
 
     throw error;

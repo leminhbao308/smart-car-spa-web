@@ -1,9 +1,3 @@
-/**
- * Customer Update Booking Modal
- * Modal chuyên dụng cho việc cập nhật booking của khách hàng
- * Tối ưu hóa cho customer context - chỉ cho phép cập nhật thông tin cần thiết
- */
-
 import React, {
   useState,
   useEffect,
@@ -40,7 +34,12 @@ import {
   EnvironmentOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { BookingInfoDto, BookingStatus, CreateBookingItemRequest } from "@/lib/api/types";
+import {
+  BookingInfoDto,
+  BookingStatus,
+  BookingType,
+  CreateBookingItemRequest,
+} from "@/lib/api/types";
 import { useUpdateBooking } from "@/lib/api/hooks/useBooking";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
@@ -51,10 +50,8 @@ import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
 import { BranchDisplay } from "@/lib/api/types/branch.types";
 import { PriceBookItem } from "@/lib/api/types/price-book.types";
 import { ServiceBay } from "@/lib/api/types/service-bay.types";
-import {
-  BookingScheduleService,
-  TimeSlotDto,
-} from "@/lib/api/services/booking-schedule.service";
+import { BookingScheduleService } from "@/lib/api/services/booking-schedule.service";
+import { AvailableTimeRangesResponse } from "@/lib/api/types/booking.types";
 import { MemoizedTextArea } from "@/components/ui/MemoizedComponents";
 
 const { Option } = Select;
@@ -146,8 +143,11 @@ interface CustomerUpdateBookingModalProps {
   onRefresh?: () => void;
 }
 
-// Types for slot selection
-type SlotInfo = TimeSlotDto;
+// Types for slot selection - using time-range-based system
+interface SlotInfo {
+  time: string; // HH:mm format
+  isAvailable: boolean;
+}
 
 interface SelectedSlot {
   bayId: string;
@@ -187,6 +187,8 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   const [bookingDate, setBookingDate] = useState<string>("");
   const [availableSlots, setAvailableSlots] = useState<SlotInfo[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [timeRangesData, setTimeRangesData] =
+    useState<AvailableTimeRangesResponse | null>(null);
 
   // Use refs and state to track initialization to prevent infinite loops
   const isInitialized = useRef(false);
@@ -249,7 +251,9 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       }
       // Also include selectedBay if it exists (might be from allServiceBays)
       if (selectedBay && !bayInList) {
-        const selectedBayInList = bays.find((b) => b.bay_id === selectedBay.bay_id);
+        const selectedBayInList = bays.find(
+          (b) => b.bay_id === selectedBay.bay_id
+        );
         if (!selectedBayInList) {
           console.log("🔍 Adding selectedBay to displayBays:", selectedBay);
           bays.push(selectedBay);
@@ -288,37 +292,46 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     return allItems;
   }, [priceBooksData, priceBooksError]);
 
-  // Load available slots from API
+  // Load available time ranges from API and convert to slots
   const loadAvailableSlots = useCallback(
     async (duration: number) => {
       if (!selectedBranch || !selectedBay || !bookingDate || duration <= 0) {
         setAvailableSlots([]);
+        setTimeRangesData(null);
         return;
       }
 
       setLoadingSlots(true);
       try {
-        const slots = await BookingScheduleService.getAvailableSlots({
-          branchId: selectedBranch.branch_id,
-          date: bookingDate,
-          serviceDurationMinutes: duration,
-          bayId: selectedBay.bay_id,
-        });
+        // Get available time ranges from backend
+        const timeRangesResponse =
+          await BookingScheduleService.getAvailableTimeRanges({
+            bay_id: selectedBay.bay_id,
+            date: bookingDate,
+            duration_minutes: duration,
+          });
 
-        // Remove duplicate slots
-        const uniqueSlots = slots.filter(
-          (slot, index, self) =>
-            index ===
-            self.findIndex(
-              (s) =>
-                s.startTime === slot.startTime && s.endTime === slot.endTime
-            )
-        );
+        setTimeRangesData(timeRangesResponse);
 
-        setAvailableSlots(uniqueSlots);
+        // Convert time ranges to slots for UI display
+        if (
+          timeRangesResponse.working_hours &&
+          timeRangesResponse.available_time_ranges
+        ) {
+          const slots = BookingScheduleService.convertTimeRangesToSlots(
+            timeRangesResponse.available_time_ranges,
+            timeRangesResponse.working_hours,
+            duration,
+            30 // 30 minutes interval
+          );
+          setAvailableSlots(slots);
+        } else {
+          setAvailableSlots([]);
+        }
       } catch (error) {
-        console.log("Error loading available slots:", error);
+        console.log("Error loading available time ranges:", error);
         setAvailableSlots([]);
+        setTimeRangesData(null);
       } finally {
         setLoadingSlots(false);
       }
@@ -346,8 +359,9 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   // Calculate totals function - same as UpdateBookingModal
   const calculateTotals = useCallback((items: PriceBookItem[]) => {
     // Remove duplicates by item_id to prevent double counting
-    const uniqueItems = items.filter((item, index, self) => 
-      index === self.findIndex((i) => i.item_id === item.item_id)
+    const uniqueItems = items.filter(
+      (item, index, self) =>
+        index === self.findIndex((i) => i.item_id === item.item_id)
     );
 
     console.log("🧮 Calculating totals:", {
@@ -366,7 +380,10 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       })),
     });
 
-    const price = uniqueItems.reduce((sum, item) => sum + (item.fixed_price || 0), 0);
+    const price = uniqueItems.reduce(
+      (sum, item) => sum + (item.fixed_price || 0),
+      0
+    );
     const duration = uniqueItems.reduce((sum, item) => {
       if (item.service) {
         const duration = item.service.estimated_duration || 60;
@@ -376,7 +393,11 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       return sum;
     }, 0);
 
-    console.log("💰 Calculated totals:", { price, duration, fromItems: uniqueItems.length });
+    console.log("💰 Calculated totals:", {
+      price,
+      duration,
+      fromItems: uniqueItems.length,
+    });
     // Note: CustomerUpdateBookingModal uses useMemo for totals, so we don't need to set state here
     // The totals will be calculated automatically from selectedItems
   }, []);
@@ -405,13 +426,12 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       // Set booking date
       console.log("🔍 Setting booking date:", {
         scheduled_start_at: initialData.scheduled_start_at,
-        slot_start_time: initialData.slot_start_time,
         booking_code: initialData.booking_code,
       });
 
       // Determine booking type first
       const isWalkInBookingForDate =
-        initialData.booking_code?.startsWith("WALK") || false;
+        initialData.booking_type === BookingType.WALK_IN;
 
       if (isWalkInBookingForDate) {
         // For walk-in bookings, always use current date (processing date)
@@ -439,7 +459,10 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             (v) => v.vehicle_id === initialData.vehicle_id
           );
           if (vehicle) {
-            console.log("🔧 Setting selectedVehicle from initialData:", vehicle);
+            console.log(
+              "🔧 Setting selectedVehicle from initialData:",
+              vehicle
+            );
             setSelectedVehicle(vehicle);
           } else {
             console.warn("⚠️ Vehicle not found in userVehicles:", {
@@ -448,7 +471,9 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             });
           }
         } else {
-          console.log("⏳ userVehicles not loaded yet, will set in separate useEffect");
+          console.log(
+            "⏳ userVehicles not loaded yet, will set in separate useEffect"
+          );
         }
       }
 
@@ -482,7 +507,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
       setIsSlotChanged(false); // Reset slot change flag
       setIsFormInitialized(true);
-      
+
       // Update refs
       isInitialized.current = true;
       lastInitialData.current = initialData;
@@ -513,24 +538,30 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       // Only initialize services once when availableServices are loaded
       // Check if services haven't been initialized yet (avoid re-initializing if user already made changes)
       // Initialize if selectedItems is empty OR if selectedItems don't match booking_items
-      const shouldInitialize = selectedItems.length === 0 || 
-        !selectedItems.some(item => 
-          initialData.booking_items?.some(bookingItem => bookingItem.service_id === item.service?.service_id)
+      const shouldInitialize =
+        selectedItems.length === 0 ||
+        !selectedItems.some((item) =>
+          initialData.booking_items?.some(
+            (bookingItem) => bookingItem.service_id === item.service?.service_id
+          )
         );
-      
+
       if (shouldInitialize) {
-        console.log("🔍 Initializing services from booking items (after availableServices loaded):", {
-          booking_items: initialData.booking_items,
-          availableServicesCount: availableServices.length,
-        });
+        console.log(
+          "🔍 Initializing services from booking items (after availableServices loaded):",
+          {
+            booking_items: initialData.booking_items,
+            availableServicesCount: availableServices.length,
+          }
+        );
 
         const services: PriceBookItem[] = [];
         const seenServiceIds = new Set<string>(); // Track already added services
-        
+
         initialData.booking_items.forEach((item) => {
           console.log("🔍 Processing booking item:", {
             service_id: item.service_id,
-            item_name: item.item_name,
+            service_name: item.service_name,
           });
 
           if (item.service_id && !seenServiceIds.has(item.service_id)) {
@@ -560,8 +591,9 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         });
 
         // Remove duplicates by item_id (additional safety check)
-        const uniqueServices = services.filter((service, index, self) =>
-          index === self.findIndex((s) => s.item_id === service.item_id)
+        const uniqueServices = services.filter(
+          (service, index, self) =>
+            index === self.findIndex((s) => s.item_id === service.item_id)
         );
 
         console.log("📋 Final services array:", {
@@ -607,7 +639,12 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       setOriginalTotalDuration(originalDuration);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData?.booking_id, open, isFormInitialized, availableServices.length]);
+  }, [
+    initialData?.booking_id,
+    open,
+    isFormInitialized,
+    availableServices.length,
+  ]);
 
   // Initialize vehicle when userVehicles are loaded
   useEffect(() => {
@@ -625,13 +662,16 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         (v) => v.vehicle_id === initialData.vehicle_id
       );
       if (vehicle) {
-        console.log("🔧 Setting selectedVehicle from initialData (after userVehicles loaded):", vehicle);
+        console.log(
+          "🔧 Setting selectedVehicle from initialData (after userVehicles loaded):",
+          vehicle
+        );
         setSelectedVehicle(vehicle);
       } else {
         console.warn("⚠️ Vehicle not found in userVehicles:", {
           vehicleId: initialData.vehicle_id,
           userVehiclesLength: userVehicles.length,
-          vehicleIds: userVehicles.map(v => v.vehicle_id),
+          vehicleIds: userVehicles.map((v) => v.vehicle_id),
         });
       }
     }
@@ -660,7 +700,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     }
 
     const isSlotBookingType =
-      initialData.booking_code?.startsWith("BK") || false;
+      initialData.booking_type === BookingType.SCHEDULED;
 
     // Set bay for slot booking (need serviceBays to be loaded)
     if (isSlotBookingType && initialData.bay_id && !selectedBay) {
@@ -673,7 +713,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       let bay = serviceBays.find(
         (b: ServiceBay) => b.bay_id === initialData.bay_id
       );
-      
+
       // If not found in filtered list, try allServiceBays as fallback
       // This ensures we can set the bay even if it doesn't pass the allow_booking filter
       if (!bay && allServiceBays && allServiceBays.length > 0) {
@@ -681,7 +721,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           (b: ServiceBay) => b.bay_id === initialData.bay_id
         );
       }
-      
+
       if (bay) {
         console.log("🔧 Setting selectedBay from initialData:", bay);
         setSelectedBay(bay);
@@ -708,18 +748,21 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       const slotDate = dayjs(initialData.scheduled_start_at).format(
         "YYYY-MM-DD"
       );
-      const slotTime = initialData.slot_start_time;
+      const slotTime = initialData.scheduled_start_at
+        ? dayjs(initialData.scheduled_start_at).format("HH:mm")
+        : "";
 
       // Calculate actual service duration from booking items (not slot duration which may include buffer)
-      const actualServiceDuration = selectedItems.length > 0
-        ? selectedItems.reduce((sum, item) => {
-            if (item.service) {
-              return sum + (item.service.estimated_duration || 60);
-            }
-            return sum;
-          }, 0)
-        : (initialData.estimated_duration_minutes || 60);
-      
+      const actualServiceDuration =
+        selectedItems.length > 0
+          ? selectedItems.reduce((sum, item) => {
+              if (item.service) {
+                return sum + (item.service.estimated_duration || 60);
+              }
+              return sum;
+            }, 0)
+          : initialData.estimated_duration_minutes || 60;
+
       const initialSlot = {
         bayId: initialData.bay_id || "",
         bayName: initialData.bay_name || "",
@@ -730,7 +773,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
       console.log("🔧 Setting selectedSlot from initialData:", initialSlot);
       setSelectedSlot(initialSlot);
-      
+
       // Only set originalSlot if it hasn't been set yet (first time initialization)
       if (!originalSlot) {
         setOriginalSlot(initialSlot); // Store original slot for restoration
@@ -750,11 +793,10 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     selectedItems,
   ]);
 
-
   // Helper function to build booking_items array for API
   const buildBookingItemsArray = useCallback((): CreateBookingItemRequest[] => {
     const bookingItems: CreateBookingItemRequest[] = [];
-    
+
     // Get service IDs from original and selected items
     const originalServiceIds = new Set(
       originalItems
@@ -791,13 +833,19 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         const originalItem = originalItems.find(
           (item) => item.service?.service_id === serviceId
         );
+        // service_name is required in CreateBookingItemRequest, so we need to include it
         bookingItems.push({
           service_id: serviceId,
+          service_name:
+            originalItem?.service?.service_name ||
+            originalItem?.item_name ||
+            "",
           operation: "DELETE",
         });
         console.log("🗑️ Adding DELETE item (by service_id):", {
           service_id: serviceId,
-          item_name: originalItem?.item_name,
+          service_name:
+            originalItem?.service?.service_name || originalItem?.item_name,
           reason: "Item exists in original but not in selected",
         });
       }
@@ -819,13 +867,11 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       );
 
       if (isUpdate && originalItem) {
-        // UPDATE: Only send fields that can be updated (discount_amount, tax_amount, item_name, item_description)
-        // Note: We don't send all fields, only if they changed or if we want to update them
-        // For now, we'll send service_id to indicate update, and let backend handle it
-        // Backend will update discount_amount, tax_amount, item_name, item_description if provided
+        // UPDATE: Send service_id and service_name
         const bookingItem: CreateBookingItemRequest = {
           service_id: serviceId,
-          item_name: item.item_name,
+          service_name: item.service?.service_name || item.item_name, // REQUIRED - Use service_name from service object if available
+          service_description: item.service?.description,
         };
 
         // Only include optional fields if they exist
@@ -834,18 +880,19 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         bookingItems.push(bookingItem);
         console.log("✏️ Adding UPDATE item:", {
           service_id: serviceId,
-          item_name: item.item_name,
+          service_name: item.service?.service_name || item.item_name,
         });
       } else {
-        // ADD: New item - send service_id and item_name
+        // ADD: New item - send service_id and service_name
         const bookingItem: CreateBookingItemRequest = {
           service_id: serviceId,
-          item_name: item.item_name,
+          service_name: item.service?.service_name || item.item_name, // REQUIRED - Use service_name from service object if available
+          service_description: item.service?.description,
         };
         bookingItems.push(bookingItem);
         console.log("➕ Adding NEW item:", {
           service_id: serviceId,
-          item_name: item.item_name,
+          service_name: item.service?.service_name || item.item_name,
           reason: "Item exists in selected but not in original",
         });
       }
@@ -867,24 +914,29 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
       // Remove duplicates from selectedServiceIds
       const uniqueServiceIds = Array.from(new Set(selectedServiceIds));
-      
+
       const selectedServices = availableServices.filter((service) =>
         uniqueServiceIds.includes(service.item_id)
       );
 
       // Ensure no duplicates in selectedServices
-      const uniqueSelectedServices = selectedServices.filter((service, index, self) =>
-        index === self.findIndex((s) => s.item_id === service.item_id)
+      const uniqueSelectedServices = selectedServices.filter(
+        (service, index, self) =>
+          index === self.findIndex((s) => s.item_id === service.item_id)
       );
 
       // Log comparison with previous state to detect deletions
       const previousServiceIds = new Set(
-        selectedItems.map((item) => item.service?.service_id).filter((id): id is string => !!id)
+        selectedItems
+          .map((item) => item.service?.service_id)
+          .filter((id): id is string => !!id)
       );
       const newServiceIds = new Set(
-        uniqueSelectedServices.map((item) => item.service?.service_id).filter((id): id is string => !!id)
+        uniqueSelectedServices
+          .map((item) => item.service?.service_id)
+          .filter((id): id is string => !!id)
       );
-      
+
       // Find removed services
       const removedServiceIds = Array.from(previousServiceIds).filter(
         (id) => !newServiceIds.has(id)
@@ -900,7 +952,8 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           service_id: s.service?.service_id,
           duration: s.service?.estimated_duration || 60,
         })),
-        removedServiceIds: removedServiceIds.length > 0 ? removedServiceIds : undefined,
+        removedServiceIds:
+          removedServiceIds.length > 0 ? removedServiceIds : undefined,
       });
 
       setSelectedItems(uniqueSelectedServices);
@@ -941,63 +994,18 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     [serviceBays]
   );
 
-  // Check if slot is suitable for service duration (same logic as UpdateBookingModal)
-  const isSlotSuitable = useCallback(
-    (slot: SlotInfo) => {
-      // For single slot services (≤ 60 minutes)
-      if (totalDuration <= 60) {
-        return slot.isAvailable && slot.durationMinutes >= totalDuration;
-      }
-
-      // For multi-slot services (> 60 minutes)
-      // Check if this slot and consecutive slots are available
-      const requiredSlots = Math.ceil(totalDuration / 60);
-      
-      // Find slots that belong to the same bay and are sorted by time
-      const baySlots = availableSlots
-        .filter((s) => s.bayId === slot.bayId)
-        .sort((a, b) => {
-          // Sort by startTime
-          return a.startTime.localeCompare(b.startTime);
-        });
-
-      const currentSlotIndex = baySlots.findIndex(
-        (s) => s.startTime === slot.startTime && s.bayId === slot.bayId
-      );
-
-      if (currentSlotIndex === -1) return false;
-
-      // Check if we have enough consecutive available slots
-      for (let i = 0; i < requiredSlots; i++) {
-        const checkSlotIndex = currentSlotIndex + i;
-        if (checkSlotIndex >= baySlots.length) return false;
-
-        const checkSlot = baySlots[checkSlotIndex];
-        
-        // Verify that slots are actually consecutive in time
-        if (i > 0) {
-          const previousSlot = baySlots[checkSlotIndex - 1];
-          // Check if current slot starts when previous slot ends
-          if (previousSlot.endTime !== checkSlot.startTime) {
-            return false;
-          }
-        }
-        
-        // Check if slot is available
-        if (!checkSlot.isAvailable || checkSlot.status !== "AVAILABLE") {
-          return false;
-        }
-      }
-
-      return true;
-    },
-    [totalDuration, availableSlots]
-  );
+  // Check if slot is suitable for service duration
+  // With time-range-based system, availability is already calculated in convertTimeRangesToSlots
+  const isSlotSuitable = useCallback((slot: SlotInfo) => {
+    // Slot is suitable if it's available
+    // convertTimeRangesToSlots already validates that slot + serviceDuration fits within range
+    return slot.isAvailable;
+  }, []);
 
   // Check if service duration exceeds total time of originally booked slots
   // Compare: total service duration vs total slot time (number of slots × 60 minutes per slot)
   const isDurationExceedsOriginal = useMemo(() => {
-    const isSlotBooking = initialData.booking_code?.startsWith("BK") || false;
+    const isSlotBooking = initialData.booking_type === BookingType.SCHEDULED;
     if (!isSlotBooking || !originalTotalDuration) {
       return false;
     }
@@ -1021,32 +1029,30 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       if (isDurationExceedsOriginal) {
         return false;
       }
-      return (
-        slot.isAvailable && slot.status === "AVAILABLE" && isSlotSuitable(slot)
-      );
+      return isSlotSuitable(slot);
     },
     [isSlotSuitable, isDurationExceedsOriginal]
   );
 
-  // Handle slot selection
+  // Handle time selection
   const handleSlotSelect = useCallback(
     (slot: SlotInfo) => {
-      // Prevent slot selection if duration exceeds original slot
+      // Prevent time selection if duration exceeds original time
       if (isDurationExceedsOriginal) {
         message.warning({
           content:
-            "Không thể đổi slot khi dịch vụ vượt quá thời gian slot ban đầu. Vui lòng chọn lại dịch vụ.",
+            "Không thể đổi thời gian khi dịch vụ vượt quá thời gian chăm sóc ban đầu. Vui lòng chọn lại dịch vụ.",
           duration: 4,
         });
         return;
       }
 
-      if (canSelectSlot(slot)) {
+      if (canSelectSlot(slot) && selectedBay) {
         const newSlot = {
-          bayId: slot.bayId,
-          bayName: slot.bayName,
+          bayId: selectedBay.bay_id,
+          bayName: selectedBay.bay_name,
           date: bookingDate,
-          startTime: slot.startTime,
+          startTime: slot.time,
           serviceDurationMinutes: totalDuration,
         };
 
@@ -1069,7 +1075,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       const values = await form.validateFields();
 
       // Check if this is a slot booking
-      const isSlotBooking = initialData.booking_code?.startsWith("BK") || false;
+      const isSlotBooking = initialData.booking_type === BookingType.SCHEDULED;
 
       if (!selectedBranch || !selectedVehicle) {
         message.error("Vui lòng điền đầy đủ thông tin");
@@ -1078,7 +1084,9 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
       // Only require slot for slot bookings
       if (isSlotBooking && !selectedSlot) {
-        message.error("Vui lòng chọn slot cho lịch đặt slot booking");
+        message.error(
+          "Vui lòng chọn thời gian chăm sóc cho lịch đặt thời gian chăm sóc"
+        );
         return;
       }
 
@@ -1092,7 +1100,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
 
         message.error({
-          content: `Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các slot đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} slot × ${SLOT_DURATION_MINUTES} phút/slot). Vui lòng chọn lại dịch vụ phù hợp với thời gian slot hiện tại.`,
+          content: `Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các thời gian đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} thời gian × ${SLOT_DURATION_MINUTES} phút/thời gian). Vui lòng chọn lại dịch vụ phù hợp với thời gian thời gian chăm sóc hiện tại.`,
           duration: 5,
         });
         return;
@@ -1115,21 +1123,22 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         // For slot booking, always send slot info if slot is selected (backend will handle if changed)
         service_bay_id: selectedSlot ? selectedSlot.bayId : undefined,
 
-        // Slot information - only allow changing if slot changed and is slot booking
-        // Always send slot info if slot is selected - backend will determine if it changed
-        slot_date: selectedSlot && isSlotBooking ? selectedSlot.date : undefined,
-        slot_start_time: selectedSlot && isSlotBooking ? selectedSlot.startTime : undefined,
         // Calculate scheduled_start_at and scheduled_end_at for backend
-        scheduled_start_at: selectedSlot && isSlotBooking
-          ? dayjs(`${selectedSlot.date} ${selectedSlot.startTime}`).toISOString()
-          : undefined,
-        scheduled_end_at: selectedSlot && isSlotBooking
-          ? dayjs(`${selectedSlot.date} ${selectedSlot.startTime}`)
-              .add(totalDuration, "minute")
-              .toISOString()
-          : undefined,
+        // Use format() instead of toISOString() to avoid timezone conversion
+        // Backend expects LocalDateTime format (YYYY-MM-DDTHH:mm:ss) without timezone
+        scheduled_start_at:
+          selectedSlot && isSlotBooking
+            ? dayjs(
+                `${selectedSlot.date} ${selectedSlot.startTime}`
+              ).format("YYYY-MM-DDTHH:mm:ss")
+            : undefined,
+        scheduled_end_at:
+          selectedSlot && isSlotBooking
+            ? dayjs(`${selectedSlot.date} ${selectedSlot.startTime}`)
+                .add(totalDuration, "minute")
+                .format("YYYY-MM-DDTHH:mm:ss")
+            : undefined,
         estimated_duration_minutes: totalDuration, // Always use totalDuration (actual service duration)
-        buffer_minutes: 15,
 
         // Pricing - recalculate based on selected services
         total_price: totalPrice,
@@ -1142,34 +1151,17 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         booking_items: bookingItems.length > 0 ? bookingItems : undefined,
       };
 
-      console.log("🚀 Updating customer booking with request:", updateRequest);
-      console.log("🔍 Slot booking data:", {
-        selectedSlot: selectedSlot,
-        service_bay_id: selectedSlot?.bayId,
-        slot_date: selectedSlot?.date,
-        slot_start_time: selectedSlot?.startTime,
-        scheduled_start_at: updateRequest.scheduled_start_at,
-        scheduled_end_at: updateRequest.scheduled_end_at,
-        estimated_duration_minutes: selectedSlot?.serviceDurationMinutes,
-        isSlotChanged,
-        originalSlot,
-        branch_id: selectedBranch.branch_id,
-        initialBranchId: initialData.branch_id,
-        initialBayId: initialData.bay_id,
-      });
-      
       const updateResponse = await updateBookingMutation.mutateAsync({
         bookingId: initialData.booking_id,
         request: updateRequest,
       });
-      console.log("📋 Booking update response:", updateResponse);
-      
+
       // Show success message
       message.success({
         content: "Cập nhật booking thành công!",
         duration: 3,
       });
-      
+
       // Wait for message to disappear before closing modal
       setTimeout(() => {
         onOk(updateResponse); // Pass response data instead of request
@@ -1321,14 +1313,19 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                     removedItem: item.item_name,
                     removedServiceId: item.service?.service_id,
                     remainingItems: newItems.map((i) => i.item_name),
-                    remainingServiceIds: newItems.map((i) => i.service?.service_id),
+                    remainingServiceIds: newItems.map(
+                      (i) => i.service?.service_id
+                    ),
                   });
                   setSelectedItems(newItems);
                   calculateTotals(newItems);
                   // Sync form value to match selectedItems (without triggering onChange)
                   // Use setTimeout to avoid circular reference
                   setTimeout(() => {
-                    form.setFieldValue("services", newItems.map((i) => i.item_id));
+                    form.setFieldValue(
+                      "services",
+                      newItems.map((i) => i.item_id)
+                    );
                   }, 0);
                 }}
                 style={{ marginBottom: 4 }}
@@ -1341,54 +1338,54 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       )}
 
       {/* Warning when service duration exceeds slot duration for slot bookings */}
-          {/* Warning when service duration exceeds slot duration for slot bookings */}
-          {(() => {
-            const isSlotBooking =
-              initialData.booking_code?.startsWith("BK") || false;
-            if (!isSlotBooking || !selectedSlot) return null;
+      {/* Warning when service duration exceeds slot duration for slot bookings */}
+      {(() => {
+        const isSlotBooking =
+          initialData.booking_type === BookingType.SCHEDULED;
+        if (!isSlotBooking || !selectedSlot) return null;
 
-            // Calculate total time of originally booked slots
-            const SLOT_DURATION_MINUTES = 60;
-            const originalSlotCount = originalTotalDuration > 0 
-              ? Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES)
-              : 1;
-            const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
-            const isServicesChanged =
-              JSON.stringify(
-                selectedItems.map((item) => item.item_id).sort()
-              ) !==
-              JSON.stringify(
-                originalItems.map((item) => item.item_id).sort()
-              );
+        // Calculate total time of originally booked slots
+        const SLOT_DURATION_MINUTES = 60;
+        const originalSlotCount =
+          originalTotalDuration > 0
+            ? Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES)
+            : 1;
+        const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
+        const isServicesChanged =
+          JSON.stringify(selectedItems.map((item) => item.item_id).sort()) !==
+          JSON.stringify(originalItems.map((item) => item.item_id).sort());
 
-            if (isServicesChanged && totalDuration > totalOriginalSlotTime) {
-              return (
-                <Alert
-                  message="Cảnh báo thời gian dịch vụ"
-                  description={
-                    <div>
-                      <div>
-                        Tổng thời gian dịch vụ hiện tại:{" "}
-                        <strong>{totalDuration} phút</strong>
-                      </div>
-                      <div>
-                        Tổng thời gian các slot đã đặt:{" "}
-                        <strong>{totalOriginalSlotTime} phút</strong> ({originalSlotCount} slot × {SLOT_DURATION_MINUTES} phút/slot)
-                      </div>
-                      <div style={{ marginTop: 8, color: "#ff4d4f" }}>
-                        ⚠️ Tổng thời gian dịch vụ vượt quá tổng thời gian các slot đã đặt ban đầu.
-                        Vui lòng chọn lại dịch vụ hoặc đặt lại slot.
-                      </div>
-                    </div>
-                  }
-                  type="error"
-                  showIcon
-                  style={{ marginTop: 16 }}
-                />
-              );
-            }
-            return null;
-          })()}
+        if (isServicesChanged && totalDuration > totalOriginalSlotTime) {
+          return (
+            <Alert
+              message="Cảnh báo thời gian dịch vụ"
+              description={
+                <div>
+                  <div>
+                    Tổng thời gian dịch vụ hiện tại:{" "}
+                    <strong>{totalDuration} phút</strong>
+                  </div>
+                  <div>
+                    Tổng thời gian các slot đã đặt:{" "}
+                    <strong>{totalOriginalSlotTime} phút</strong> (
+                    {originalSlotCount} slot × {SLOT_DURATION_MINUTES}{" "}
+                    phút/slot)
+                  </div>
+                  <div style={{ marginTop: 8, color: "#ff4d4f" }}>
+                    ⚠️ Tổng thời gian dịch vụ vượt quá tổng thời gian các thời
+                    gian đã đặt ban đầu. Vui lòng chọn lại dịch vụ hoặc đặt lại
+                    thời gian.
+                  </div>
+                </div>
+              }
+              type="error"
+              showIcon
+              style={{ marginTop: 16 }}
+            />
+          );
+        }
+        return null;
+      })()}
 
       <Divider />
       <Row gutter={16}>
@@ -1507,28 +1504,33 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
         {selectedBranch && bookingDate && (
           <div style={{ marginTop: 16 }}>
-            <Text strong>Chọn Service Bay cho đặt lịch:</Text>
-            {isDurationExceedsOriginal && (() => {
-              const SLOT_DURATION_MINUTES = 60;
-              const originalSlotCount = originalTotalDuration > 0 
-                ? Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES)
-                : 1;
-              const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
-              
-              return (
-                <Alert
-                  message="Không thể đổi slot"
-                  description={`Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các slot đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} slot × ${SLOT_DURATION_MINUTES} phút/slot). Bạn chỉ có thể chọn lại dịch vụ phù hợp với thời gian slot hiện tại.`}
-                  type="error"
-                  showIcon
-                  style={{ marginTop: 8, marginBottom: 8 }}
-                />
-              );
-            })()}
+            <Text strong>Chọn Khu Vực Chăm Sóc Cho Đặt Lịch:</Text>
+            {isDurationExceedsOriginal &&
+              (() => {
+                const SLOT_DURATION_MINUTES = 60;
+                const originalSlotCount =
+                  originalTotalDuration > 0
+                    ? Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES)
+                    : 1;
+                const totalOriginalSlotTime =
+                  originalSlotCount * SLOT_DURATION_MINUTES;
+
+                return (
+                  <Alert
+                    message="Không thể đổi thời gian"
+                    description={`Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các thời gian đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} thời gian × ${SLOT_DURATION_MINUTES} phút/thời gian). Bạn chỉ có thể chọn lại dịch vụ phù hợp với thời gian thời gian chăm sóc hiện tại.`}
+                    type="error"
+                    showIcon
+                    style={{ marginTop: 8, marginBottom: 8 }}
+                  />
+                );
+              })()}
             {totalDuration > 60 && !isDurationExceedsOriginal && (
               <Alert
-                message={`Dịch vụ yêu cầu ${Math.ceil(totalDuration / 60)} slot liên tiếp (${totalDuration} phút)`}
-                description="Vui lòng chọn slot đầu tiên, hệ thống sẽ tự động sử dụng các slot liên tiếp sau đó."
+                message={`Dịch vụ yêu cầu ${Math.ceil(
+                  totalDuration / 60
+                )} thời gian chăm sóc liên tiếp (${totalDuration} phút)`}
+                description="Vui lòng chọn thời gian chăm sóc đầu tiên, hệ thống sẽ tự động sử dụng các thời gian chăm sóc liên tiếp sau đó."
                 type="info"
                 showIcon
                 style={{ marginTop: 8, marginBottom: 8 }}
@@ -1563,18 +1565,14 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                         <div style={{ marginTop: 8 }}>
                           <Text strong>{bay.bay_name}</Text>
                         </div>
-                        <div style={{ fontSize: 12, color: "#666" }}>
-                          {bay.bay_code || `Bay ${bay.bay_id.slice(-2)}`} • 60
-                          phút/slot
-                        </div>
                       </Card>
                     </Col>
                   ))}
                 </Row>
               ) : (
                 <Alert
-                  message="Không có service bay nào khả dụng"
-                  description="Chi nhánh này chưa có service bay nào cho phép đặt lịch"
+                  message="Không có khu vực chăm sóc nào khả dụng"
+                  description="Chi nhánh này chưa có khu vực chăm sóc nào cho phép đặt lịch"
                   type="warning"
                   showIcon
                 />
@@ -1586,80 +1584,51 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         {selectedBay && (
           <div style={{ marginTop: 16 }}>
             <Divider />
-            <Text strong>Chọn Slot trong {selectedBay.bay_name}:</Text>
+            <Text strong>
+              Chọn Thời Gian Chăm Sóc Trong {selectedBay.bay_name}:
+            </Text>
             <div style={{ marginTop: 8 }}>
               {loadingSlots ? (
                 <div style={{ textAlign: "center", padding: 20 }}>
                   <Spin size="large" />
-                  <div style={{ marginTop: 8 }}>Đang tải danh sách slot...</div>
+                  <div style={{ marginTop: 8 }}>
+                    Đang tải danh sách thời gian...
+                  </div>
                 </div>
               ) : availableSlots.length > 0 ? (
                 <Row gutter={8}>
                   {availableSlots.map((slot, index) => {
                     const canSelect = canSelectSlot(slot);
-                    // Check if slot is selected: must match bayId, date, and startTime
+                    // Check if slot is selected: must match date and startTime
                     const isSelected =
                       selectedSlot &&
-                      selectedSlot.bayId === slot.bayId &&
                       selectedSlot.date === bookingDate &&
-                      selectedSlot.startTime === slot.startTime;
-                    
+                      selectedSlot.startTime === slot.time;
+
                     // Check why slot is not selectable for multi-slot services
                     let tooltipMessage = "";
                     if (canSelect) {
-                      if (totalDuration > 60) {
-                        const requiredSlots = Math.ceil(totalDuration / 60);
-                        tooltipMessage = `Chọn ${requiredSlots} slot liên tiếp từ ${slot.startTime} (${totalDuration} phút)`;
-                      } else {
-                        tooltipMessage = `Chọn slot ${slot.startTime} - ${slot.endTime}`;
-                      }
+                      tooltipMessage = `Chọn thời gian ${slot.time} (${totalDuration} phút)`;
                     } else {
                       if (isDurationExceedsOriginal) {
                         const SLOT_DURATION_MINUTES = 60;
-                        const originalSlotCount = originalTotalDuration > 0 
-                          ? Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES)
-                          : 1;
-                        const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
-                        tooltipMessage = `Không thể đổi slot. Dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các slot đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} slot). Vui lòng chọn lại dịch vụ.`;
-                      } else if (slot.status === "BOOKED") {
-                        tooltipMessage = "Slot đã được đặt";
-                      } else if (slot.status === "IN_PROGRESS") {
-                        tooltipMessage = "Slot đang được sử dụng";
-                      } else if (slot.status === "COMPLETED") {
-                        tooltipMessage = "Slot đã hoàn thành";
-                      } else if (slot.status === "CANCELLED") {
-                        tooltipMessage = "Slot đã bị hủy";
-                      } else if (totalDuration > 60) {
-                        const requiredSlots = Math.ceil(totalDuration / 60);
-                        // Check which consecutive slots are missing
-                        const consecutiveAvailable = [];
-                        for (let i = 0; i < requiredSlots; i++) {
-                          const checkIndex = index + i;
-                          if (checkIndex < availableSlots.length) {
-                            const checkSlot = availableSlots[checkIndex];
-                            if (checkSlot.isAvailable && checkSlot.status === "AVAILABLE") {
-                              consecutiveAvailable.push(checkSlot.startTime);
-                            }
-                          }
-                        }
-                        if (consecutiveAvailable.length < requiredSlots) {
-                          tooltipMessage = `Cần ${requiredSlots} slot liên tiếp bắt đầu từ ${slot.startTime}. Không đủ slot available.`;
-                        } else {
-                          tooltipMessage = `Cần ${requiredSlots} slot liên tiếp - không đủ`;
-                        }
+                        const originalSlotCount =
+                          originalTotalDuration > 0
+                            ? Math.ceil(
+                                originalTotalDuration / SLOT_DURATION_MINUTES
+                              )
+                            : 1;
+                        const totalOriginalSlotTime =
+                          originalSlotCount * SLOT_DURATION_MINUTES;
+                        tooltipMessage = `Không thể đổi thời gian. Dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các thời gian đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} thời gian). Vui lòng chọn lại dịch vụ.`;
                       } else {
-                        tooltipMessage = "Slot không khả dụng";
+                        tooltipMessage = "Thời gian không khả dụng";
                       }
                     }
 
                     return (
-                      <Col
-                        span={4}
-                        key={`${slot.startTime}-${slot.endTime}-${index}`}
-                      >
-                        <Tooltip
-                          title={tooltipMessage}
-                        >
+                      <Col span={4} key={`${slot.time}-${index}`}>
+                        <Tooltip title={tooltipMessage}>
                           <Card
                             size="small"
                             hoverable={canSelect}
@@ -1674,10 +1643,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                                 ? "#f6ffed"
                                 : canSelect
                                 ? "#fff"
-                                : slot.status === "BOOKED"
-                                ? "#fff2f0"
-                                : slot.status === "IN_PROGRESS"
-                                ? "#e6f7ff"
                                 : "#f5f5f5",
                               cursor: canSelect ? "pointer" : "not-allowed",
                               opacity: canSelect ? 1 : 0.6,
@@ -1687,18 +1652,15 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                           >
                             <div
                               style={{
-                                color:
-                                  slotStatusColors[
-                                    slot.status as keyof typeof slotStatusColors
-                                  ],
+                                color: canSelect ? "#52c41a" : "#ff4d4f",
                                 fontSize: 16,
                               }}
                             >
-                              {
-                                slotStatusIcons[
-                                  slot.status as keyof typeof slotStatusIcons
-                                ]
-                              }
+                              {canSelect ? (
+                                <CheckCircleOutlined />
+                              ) : (
+                                <CloseCircleOutlined />
+                              )}
                             </div>
                             <div
                               style={{
@@ -1708,23 +1670,8 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                                 color: canSelect ? "#000" : "#999",
                               }}
                             >
-                              {slot.startTime}
+                              {slot.time}
                             </div>
-                            <div style={{ fontSize: 10, color: "#666" }}>
-                              {slot.endTime}
-                            </div>
-                            {totalDuration > 60 && canSelect && (
-                              <div
-                                style={{
-                                  fontSize: 8,
-                                  color: "#52c41a",
-                                  marginTop: 2,
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {Math.ceil(totalDuration / 60)} slot
-                              </div>
-                            )}
                             {!canSelect && (
                               <div
                                 style={{
@@ -1733,13 +1680,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                                   marginTop: 2,
                                 }}
                               >
-                                {slot.status === "BOOKED"
-                                  ? "Đã đặt"
-                                  : slot.status === "IN_PROGRESS"
-                                  ? "Đang dùng"
-                                  : totalDuration > 60
-                                  ? "Không đủ slot"
-                                  : "Không khả dụng"}
+                                Không khả dụng
                               </div>
                             )}
                           </Card>
@@ -1750,8 +1691,8 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                 </Row>
               ) : (
                 <Alert
-                  message="Không có slot khả dụng"
-                  description="Không có slot nào phù hợp với thời gian dịch vụ đã chọn"
+                  message="Không có thời gian khả dụng"
+                  description="Không có thời gian nào phù hợp với thời gian dịch vụ đã chọn"
                   type="warning"
                   showIcon
                 />
@@ -1762,12 +1703,20 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
               selectedBay &&
               selectedSlot.bayId === selectedBay.bay_id && (
                 <Alert
-                  message={`Slot đã chọn: ${selectedSlot.startTime} - ${dayjs(
-                    `2000-01-01 ${selectedSlot.startTime}`
+                  message={`Thời Gian Đã Chọn: ${selectedSlot.startTime}`}
+                  description={`Khu Vực Chăm Sóc: ${
+                    selectedSlot.bayName
+                  } • Ngày: ${selectedSlot.date} - Thời lượng: ${
+                    selectedSlot.serviceDurationMinutes
+                  } phút - Thời gian kết thúc dự kiến: ${dayjs(
+                    selectedSlot.startTime,
+                    "HH:mm"
                   )
-                    .add(selectedSlot.serviceDurationMinutes, "minute")
+                    .add(
+                      selectedSlot.serviceDurationMinutes,
+                      "minute"
+                    )
                     .format("HH:mm")}`}
-                  description={`Service Bay: ${selectedSlot.bayName} • Ngày: ${selectedSlot.date}`}
                   type={isSlotChanged ? "success" : "info"}
                   showIcon
                   style={{ marginTop: 16 }}
@@ -1786,7 +1735,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                           setIsSlotChanged(false);
                         }}
                       >
-                        Hủy chọn slot
+                        Hủy chọn thời gian
                       </Button>
                     ) : null
                   }

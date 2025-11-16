@@ -12,7 +12,6 @@ export interface BayRecommendationRequest {
   branch_id: string;
   service_type?: string;
   service_duration_minutes: number;
-  priority?: 'NORMAL' | 'HIGH' | 'URGENT';
   booking_date?: string;
 }
 
@@ -20,6 +19,8 @@ export interface BayRecommendationRequest {
  * Request để tạo walk-in booking
  */
 export interface WalkInBookingRequest {
+  booking_type: 'WALK_IN'; // REQUIRED - must be WALK_IN
+  
   customer_type: 'EXISTING' | 'NEW';
   
   // Cho khách hàng có sẵn
@@ -43,16 +44,10 @@ export interface WalkInBookingRequest {
   services: ServiceRequest[];
   total_price: number;
   currency: string;
-  deposit_amount?: number;
   estimated_duration_minutes?: number;
-  preferred_start_at?: string;
   scheduled_start_at?: string;
   scheduled_end_at?: string;
-  slot_start_time?: string;
-  slot_end_time?: string;
   notes?: string;
-  priority?: 'NORMAL' | 'HIGH' | 'URGENT';
-  special_requests?: string[];
   booking_date?: string; // YYYY-MM-DD format
 }
 
@@ -315,16 +310,10 @@ export interface WalkInBookingFormData {
   services: ServiceRequest[];
   assignedBayId: string;
   notes?: string;
-  priority: Priority;
-  specialRequests?: string[];
   // Additional fields for complete booking data
-  deposit_amount?: number;
   estimated_duration_minutes?: number;
-  preferred_start_at?: string;
   scheduled_start_at?: string;
   scheduled_end_at?: string;
-  slot_start_time?: string;
-  slot_end_time?: string;
   booking_date?: string; // YYYY-MM-DD format
 }
 

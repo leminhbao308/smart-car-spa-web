@@ -15,7 +15,7 @@ import {
   useActivePriceBooks,
   useAllPriceBooks,
 } from "@/lib/api/hooks";
-import { BookingService } from "@/lib/api/services/booking.service";
+import { BookingService } from "@/lib/api/services/bookingService";
 import { Product, UserManagementInfo } from "@/lib/api";
 import { useCategories } from "@/lib/api/hooks/useCategory";
 import type { BranchDisplay } from "@/lib/api/types/branch.types";

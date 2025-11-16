@@ -39,7 +39,7 @@ import { useBranches } from "@/lib/api/hooks/useBranches";
 import {
   BookingInfoDto,
   BookingStatus,
-  Priority,
+  BookingType,
 } from "@/lib/api/types/booking.types";
 
 const { Text } = Typography;
@@ -51,7 +51,7 @@ interface EnrichedBookingInfoDto extends BookingInfoDto {
   isVehicleEnriched?: boolean;
 }
 
-// Helper functions for status and priority
+// Helper functions for status
 const getStatusConfig = (status: BookingStatus) => {
   const statusConfigs = {
     [BookingStatus.PENDING]: {
@@ -97,33 +97,6 @@ const getStatusConfig = (status: BookingStatus) => {
   };
   return (
     statusConfigs[status] || {
-      label: "Unknown",
-      color: "default",
-      icon: <CheckCircleOutlined />,
-    }
-  );
-};
-
-const getPriorityConfig = (priority: Priority) => {
-  const priorityConfigs = {
-    [Priority.NORMAL]: {
-      label: "Bình thường",
-      color: "default",
-      icon: <CheckCircleOutlined />,
-    },
-    [Priority.HIGH]: {
-      label: "Cao",
-      color: "orange",
-      icon: <CheckCircleOutlined />,
-    },
-    [Priority.URGENT]: {
-      label: "Khẩn cấp",
-      color: "red",
-      icon: <CheckCircleOutlined />,
-    },
-  };
-  return (
-    priorityConfigs[priority] || {
       label: "Unknown",
       color: "default",
       icon: <CheckCircleOutlined />,
@@ -262,8 +235,9 @@ const BookingsPage = () => {
   };
 
   // Extract and enrich data from response
-  const rawData =
-    bookingsResponse?.data?.content || bookingsResponse?.data || [];
+  // BookingService.getAllBookings() already extracts content from Page object
+  // So bookingsResponse is already BookingInfoDto[]
+  const rawData = Array.isArray(bookingsResponse) ? bookingsResponse : [];
   const enrichedData = rawData.map(enrichBookingData);
 
   // Client-side filtering with useMemo
@@ -296,19 +270,16 @@ const BookingsPage = () => {
       );
     }
 
-    // Filter by booking type based on booking_code
+    // Filter by booking type based on booking_type field
     if (selectedBookingType) {
       result = result.filter((booking: EnrichedBookingInfoDto) => {
-        const bookingCode = booking.booking_code?.toUpperCase() || "";
-        // Đặt trước (advance booking): booking_code bắt đầu bằng "BK"
+        // Đặt trước (advance booking): booking_type === SCHEDULED
         if (selectedBookingType === "advance") {
-          return bookingCode.startsWith("BK");
+          return booking.booking_type === BookingType.SCHEDULED;
         }
-        // Đặt xử lý tại chỗ (walk-in): booking_code bắt đầu bằng "WALK-IN" hoặc "WALK"
+        // Đặt xử lý tại chỗ (walk-in): booking_type === WALK_IN
         if (selectedBookingType === "walk-in") {
-          return (
-            bookingCode.startsWith("WALK-IN") || bookingCode.startsWith("WALK")
-          );
+          return booking.booking_type === BookingType.WALK_IN;
         }
         return true;
       });
@@ -464,33 +435,14 @@ const BookingsPage = () => {
         return dayjs(aTime).unix() - dayjs(bTime).unix();
       },
       render: (_, record: BookingInfoDto) => {
-        const displayTime =
-          record.scheduled_start_at ||
-          record.preferred_start_at ||
-          record.created_at;
         return (
           <div>
             <div style={{ fontSize: 13, fontWeight: 500 }}>
-              {dayjs(displayTime).format("DD/MM/YYYY")}
+              {dayjs(record.scheduled_start_at).format("DD/MM/YYYY")}
             </div>
             <div style={{ fontSize: 13, color: "#666" }}>
-              {dayjs(displayTime).format("HH:mm")}
-            </div>
-            <div
-              style={{
-                fontSize: 11,
-                color:
-                  record.status === BookingStatus.COMPLETED
-                    ? "#52c41a"
-                    : record.status === BookingStatus.CANCELLED
-                    ? "#ff4d4f"
-                    : "#1890ff",
-              }}
-            >
-              {getTimeRemaining(
-                dayjs(displayTime).format("YYYY-MM-DD"),
-                dayjs(displayTime).format("HH:mm")
-              )}
+              {dayjs(record.scheduled_start_at).format("HH:mm")} -{" "}
+              {dayjs(record.scheduled_end_at).format("HH:mm")}
             </div>
           </div>
         );
@@ -514,31 +466,6 @@ const BookingsPage = () => {
           )}
         </div>
       ),
-    },
-
-    {
-      title: "Ưu tiên",
-      dataIndex: "priority",
-      key: "priority",
-      width: 100,
-      align: "center",
-      render: (priority: Priority) => {
-        const priorityConfig = getPriorityConfig(priority);
-        return (
-          <Tag
-            color={priorityConfig.color}
-            icon={priorityConfig.icon}
-            style={{ fontSize: 12 }}
-          >
-            {priorityConfig.label}
-          </Tag>
-        );
-      },
-      filters: Object.values(Priority).map((priority) => ({
-        text: getPriorityConfig(priority).label,
-        value: priority,
-      })),
-      onFilter: (value, record) => record.priority === value,
     },
     {
       title: "Trạng thái",
@@ -944,26 +871,8 @@ const BookingsPage = () => {
                 </div>
               </div>
 
-              {/* Priority and Status */}
+              {/* Status */}
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <Tag
-                  color={
-                    getPriorityConfig(
-                      selectedBooking.priority || Priority.NORMAL
-                    ).color
-                  }
-                  icon={
-                    getPriorityConfig(
-                      selectedBooking.priority || Priority.NORMAL
-                    ).icon
-                  }
-                >
-                  {
-                    getPriorityConfig(
-                      selectedBooking.priority || Priority.NORMAL
-                    ).label
-                  }
-                </Tag>
                 {selectedBooking.payment_status && (
                   <Tag color="blue">
                     Thanh toán: {selectedBooking.payment_status}
@@ -1160,13 +1069,13 @@ const BookingsPage = () => {
                               }}
                             >
                               <div style={{ fontWeight: 500, fontSize: 13 }}>
-                                {item.item_name ||
+                                {item.service_name ||
                                   `Service ${item.service_id?.substring(
                                     0,
                                     8
                                   )}...`}
                               </div>
-                              {item.item_description && (
+                              {item.service_description && (
                                 <div
                                   style={{
                                     fontSize: 11,
@@ -1174,7 +1083,7 @@ const BookingsPage = () => {
                                     marginTop: 2,
                                   }}
                                 >
-                                  Ghi chú: {item.item_description}
+                                  {item.service_description}
                                 </div>
                               )}
                             </div>
@@ -1295,10 +1204,7 @@ const BookingsPage = () => {
             </div>
 
             {/* Additional Info */}
-            {(selectedBooking.notes ||
-              selectedBooking.special_requests?.length ||
-              selectedBooking.deposit_amount ||
-              selectedBooking.coupon_code) && (
+            {selectedBooking.notes && (
               <div style={{ marginTop: 24 }}>
                 <div
                   style={{
@@ -1328,57 +1234,6 @@ const BookingsPage = () => {
                       <div style={{ fontSize: 13 }}>
                         {selectedBooking.notes}
                       </div>
-                    </div>
-                  )}
-
-                  {selectedBooking.special_requests &&
-                    selectedBooking.special_requests.length > 0 && (
-                      <div style={{ marginBottom: 12 }}>
-                        <div
-                          style={{
-                            fontSize: 12,
-                            color: "#666",
-                            marginBottom: 4,
-                          }}
-                        >
-                          Yêu cầu đặc biệt
-                        </div>
-                        <div>
-                          {selectedBooking.special_requests.map(
-                            (request: string, index: number) => (
-                              <Tag
-                                key={index}
-                                color="purple"
-                                style={{ marginBottom: 4, marginRight: 4 }}
-                              >
-                                {request}
-                              </Tag>
-                            )
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                  {(selectedBooking.deposit_amount ||
-                    selectedBooking.coupon_code) && (
-                    <div style={{ marginBottom: 12 }}>
-                      <div
-                        style={{ fontSize: 12, color: "#666", marginBottom: 4 }}
-                      >
-                        Thanh toán
-                      </div>
-                      {selectedBooking.deposit_amount && (
-                        <div style={{ fontSize: 13, marginBottom: 2 }}>
-                          Đặt cọc:{" "}
-                          {formatCurrency(selectedBooking.deposit_amount)}{" "}
-                          {selectedBooking.currency || "VND"}
-                        </div>
-                      )}
-                      {selectedBooking.coupon_code && (
-                        <div style={{ fontSize: 13, color: "#52c41a" }}>
-                          Mã giảm giá: {selectedBooking.coupon_code}
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>

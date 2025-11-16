@@ -134,6 +134,7 @@ export const useWalkInBooking = () => {
       const totalDuration = formData.estimated_duration_minutes || formData.services.reduce((sum, service) => sum + service.duration_minutes, 0);
 
       const request: WalkInBookingRequest = {
+        booking_type: 'WALK_IN', // Set booking type as WALK_IN
         customer_type: formData.customerType,
         customer_id: formData.customerId,
         vehicle_id: formData.vehicleId,
@@ -152,12 +153,9 @@ export const useWalkInBooking = () => {
         services: formData.services,
         total_price: formData.services.reduce((sum, service) => sum + service.price, 0),
         currency: 'VND',
-        deposit_amount: formData.deposit_amount || 0, // No deposit for walk-in booking
         estimated_duration_minutes: totalDuration,
         // Let backend calculate timing based on queue position
         notes: formData.notes,
-        priority: formData.priority,
-        special_requests: formData.specialRequests,
         booking_date: formData['booking_date'], // Add booking_date field
       };
 
@@ -368,7 +366,6 @@ export const useBayRecommendation = () => {
     branchId: string,
     serviceDuration: number,
     serviceType?: string,
-    priority?: Priority,
     bookingDate?: string
   ) => {
     try {
@@ -378,7 +375,6 @@ export const useBayRecommendation = () => {
         branch_id: branchId,
         service_duration_minutes: serviceDuration,
         service_type: serviceType,
-        priority,
         booking_date: bookingDate,
       };
 

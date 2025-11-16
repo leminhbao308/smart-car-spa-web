@@ -406,11 +406,11 @@ const VehiclesInCarePage = () => {
 
               serviceStepsByService.push({
                 service_id: item.service_id,
-                service_name: item.item_name,
+                service_name: item.service_name,
                 steps: steps.map((step) => ({
                   ...step,
                   service_id: item.service_id!,
-                  service_name: item.item_name,
+                  service_name: item.service_name,
                 })),
               });
             }
