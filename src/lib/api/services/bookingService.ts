@@ -195,6 +195,7 @@ export class BookingService {
           bayId: request.bay_id,
           date: request.date,
           ...(request.duration_minutes && { durationMinutes: request.duration_minutes }),
+          ...(request.exclude_booking_id && { excludeBookingId: request.exclude_booking_id }),
         },
       });
       

@@ -171,6 +171,48 @@ interface SelectedSlot {
   serviceDurationMinutes: number;
 }
 
+// Helper function to detect booking type with fallback to booking_code
+const detectBookingType = (
+  booking: BookingInfoDto
+): {
+  isWalkIn: boolean;
+  isSlot: boolean;
+  bookingType: BookingType | null;
+} => {
+  // First, try to use booking_type from backend
+  if (booking.booking_type === BookingType.WALK_IN) {
+    return { isWalkIn: true, isSlot: false, bookingType: BookingType.WALK_IN };
+  }
+  if (booking.booking_type === BookingType.SCHEDULED) {
+    return {
+      isWalkIn: false,
+      isSlot: true,
+      bookingType: BookingType.SCHEDULED,
+    };
+  }
+
+  // Fallback: detect from booking_code if booking_type is undefined
+  if (booking.booking_code) {
+    if (booking.booking_code.startsWith("WALK-IN-")) {
+      return {
+        isWalkIn: true,
+        isSlot: false,
+        bookingType: BookingType.WALK_IN,
+      };
+    }
+    if (booking.booking_code.startsWith("BK-")) {
+      return {
+        isWalkIn: false,
+        isSlot: true,
+        bookingType: BookingType.SCHEDULED,
+      };
+    }
+  }
+
+  // Default: unknown type
+  return { isWalkIn: false, isSlot: false, bookingType: null };
+};
+
 const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   open,
   onCancel,
@@ -420,14 +462,24 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
 
   // Load available time ranges from API and convert to slots
   const loadAvailableSlots = useCallback(async () => {
+    // Only load if we have all required data
     if (!selectedBranch || !selectedBay || !bookingDate || totalDuration <= 0) {
-      setAvailableSlots([]);
-      setTimeRangesData(null);
+      // Clear slots if we don't have all required data
+      if (!selectedBranch || !selectedBay || !bookingDate) {
+        setAvailableSlots([]);
+        setTimeRangesData(null);
+      }
       return;
     }
 
     setLoadingSlots(true);
     try {
+      console.log("🔄 Loading available slots:", {
+        bay_id: selectedBay.bay_id,
+        date: bookingDate,
+        duration_minutes: totalDuration,
+      });
+
       // Get available time ranges from backend
       const timeRangesResponse =
         await BookingScheduleService.getAvailableTimeRanges({
@@ -435,6 +487,28 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           date: bookingDate,
           duration_minutes: totalDuration,
         });
+
+      console.log("📊 Backend time ranges response (UpdateBookingModal):", {
+        working_hours: timeRangesResponse.working_hours,
+        available_time_ranges: timeRangesResponse.available_time_ranges,
+        rangesCount: timeRangesResponse.available_time_ranges?.length || 0,
+        rangesDetail: timeRangesResponse.available_time_ranges?.map(
+          (range) => ({
+            start_time: range.start_time,
+            end_time: range.end_time,
+            note: `Range: ${range.start_time} to ${range.end_time}`,
+          })
+        ),
+        requestedDuration: totalDuration,
+        currentBooking: initialData?.booking_id
+          ? {
+              booking_id: initialData.booking_id,
+              scheduled_start_at: initialData.scheduled_start_at,
+              scheduled_end_at: initialData.scheduled_end_at,
+              note: "Current booking time slot - backend should exclude this when calculating available ranges",
+            }
+          : null,
+      });
 
       setTimeRangesData(timeRangesResponse);
 
@@ -449,12 +523,36 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           totalDuration,
           30 // 30 minutes interval
         );
+        console.log("✅ Loaded slots:", slots.length);
+
+        // Debug: Check specific slots
+        const slot8_00 = slots.find((s) => s.time === "08:00");
+        const slot8_30 = slots.find((s) => s.time === "08:30");
+        const slot9_00 = slots.find((s) => s.time === "09:00");
+        const slot17_30 = slots.find((s) => s.time === "17:30");
+        console.log("🔍 Slot availability check:", {
+          slot8_00: slot8_00
+            ? { time: slot8_00.time, isAvailable: slot8_00.isAvailable }
+            : null,
+          slot8_30: slot8_30
+            ? { time: slot8_30.time, isAvailable: slot8_30.isAvailable }
+            : null,
+          slot9_00: slot9_00
+            ? { time: slot9_00.time, isAvailable: slot9_00.isAvailable }
+            : null,
+          slot17_30: slot17_30
+            ? { time: slot17_30.time, isAvailable: slot17_30.isAvailable }
+            : null,
+          note: "If slot 8:30 is unavailable but 17:30 is available, check backend response for range covering 8:30-9:00",
+        });
+
         setAvailableSlots(slots);
       } else {
+        console.log("⚠️ No working hours or time ranges in response");
         setAvailableSlots([]);
       }
     } catch (error) {
-      console.log("Error loading available time ranges:", error);
+      console.error("❌ Error loading available time ranges:", error);
       setAvailableSlots([]);
       setTimeRangesData(null);
     } finally {
@@ -737,8 +835,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       return false;
     }
 
-    const isSlotBooking = initialData.booking_type === BookingType.SCHEDULED;
-    const isWalkInBooking = initialData.booking_type === BookingType.WALK_IN;
+    const { isSlot: isSlotBooking, isWalkIn: isWalkInBooking } =
+      detectBookingType(initialData);
 
     if (isSlotBooking) {
       // For slot booking: Compare with total slot time (number of slots × 60 minutes per slot)
@@ -800,16 +898,18 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       }
 
       // Set booking date
+      const { isWalkIn: isWalkInBookingForLog } =
+        detectBookingType(initialData);
       console.log("🔍 Setting booking date:", {
         scheduled_start_at: initialData.scheduled_start_at,
         booking_type: initialData.booking_type,
         booking_code: initialData.booking_code,
-        isWalkInBooking: initialData.booking_type === BookingType.WALK_IN,
+        isWalkInBooking: isWalkInBookingForLog,
       });
 
       // Determine booking type first
-      const isWalkInBookingForDate =
-        initialData.booking_type === BookingType.WALK_IN;
+      const { isWalkIn: isWalkInBookingForDate } =
+        detectBookingType(initialData);
 
       if (isWalkInBookingForDate) {
         // For walk-in bookings, always use current date (processing date)
@@ -991,11 +1091,16 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         setOriginalTotalDuration(0);
       }
 
-      // Determine if this is a walk-in booking or slot booking based on booking code prefix
-      const isWalkInBooking = initialData.booking_type === BookingType.WALK_IN;
-      const isSlotBooking = initialData.booking_type === BookingType.SCHEDULED;
+      // Determine if this is a walk-in booking or slot booking
+      const {
+        isWalkIn: isWalkInBooking,
+        isSlot: isSlotBooking,
+        bookingType,
+      } = detectBookingType(initialData);
       console.log("Booking type detection:", {
         booking_code: initialData.booking_code,
+        booking_type: initialData.booking_type,
+        detectedType: bookingType,
         isWalkInBooking,
         isSlotBooking,
       });
@@ -1078,24 +1183,39 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       return;
     }
 
-    const isSlotBookingType =
-      initialData.booking_type === BookingType.SCHEDULED;
-    const isWalkInBookingType =
-      initialData.booking_type === BookingType.WALK_IN;
+    const { isSlot: isSlotBookingType, isWalkIn: isWalkInBookingType } =
+      detectBookingType(initialData);
 
     // Set bay for slot booking (need serviceBays to be loaded)
     if (isSlotBookingType && initialData.bay_id) {
-      if (isLoadingServiceBays || serviceBays.length === 0) {
+      if (isLoadingServiceBays) {
         // Wait for serviceBays to load
         return;
       }
 
-      const bay = serviceBays.find(
+      // First try to find in filtered serviceBays
+      let bay = serviceBays.find(
         (b: ServiceBay) => b.bay_id === initialData.bay_id
       );
+
+      // If not found in filtered list, try allServiceBays as fallback
+      // This ensures we can set the bay even if it doesn't pass the allow_booking filter
+      if (!bay && allServiceBays && allServiceBays.length > 0) {
+        bay = allServiceBays.find(
+          (b: ServiceBay) => b.bay_id === initialData.bay_id
+        );
+      }
+
       if (bay && !selectedBay) {
         console.log("🔧 Setting selectedBay from initialData:", bay);
         setSelectedBay(bay);
+      } else if (initialData.bay_id && !bay) {
+        console.warn("⚠️ Bay not found:", {
+          bayId: initialData.bay_id,
+          bayName: initialData.bay_name,
+          serviceBaysLength: serviceBays.length,
+          allServiceBaysLength: allServiceBays?.length || 0,
+        });
       }
     }
 
@@ -1186,6 +1306,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     open,
     selectedBranch,
     serviceBays,
+    allServiceBays,
     isLoadingServiceBays,
     selectedBay,
     selectedSlot,
@@ -1700,9 +1821,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       const values = await form.validateFields();
       console.log("Form values:", values);
 
-      // Determine booking type based on booking code prefix
-      const isWalkInBooking = initialData.booking_type === BookingType.WALK_IN;
-      const isSlotBooking = initialData.booking_type === BookingType.SCHEDULED;
+      // Determine booking type with fallback to booking_code
+      const { isWalkIn: isWalkInBooking, isSlot: isSlotBooking } =
+        detectBookingType(initialData);
 
       console.log("Booking type:", { isWalkInBooking, isSlotBooking });
 
@@ -1937,9 +2058,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             // Use format() instead of toISOString() to avoid timezone conversion
             // Backend expects LocalDateTime format (YYYY-MM-DDTHH:mm:ss) without timezone
             scheduled_start_at: selectedSlot
-              ? dayjs(
-                  `${selectedSlot.date} ${selectedSlot.startTime}`
-                ).format("YYYY-MM-DDTHH:mm:ss")
+              ? dayjs(`${selectedSlot.date} ${selectedSlot.startTime}`).format(
+                  "YYYY-MM-DDTHH:mm:ss"
+                )
               : undefined,
             scheduled_end_at: selectedSlot
               ? dayjs(`${selectedSlot.date} ${selectedSlot.startTime}`)
@@ -2650,10 +2771,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
 
             {/* Warning when service duration exceeds original duration */}
             {(() => {
-              const isSlotBooking =
-                initialData.booking_type === BookingType.SCHEDULED;
-              const isWalkInBooking =
-                initialData.booking_type === BookingType.WALK_IN;
+              const { isSlot: isSlotBooking, isWalkIn: isWalkInBooking } =
+                detectBookingType(initialData);
 
               // For slot bookings: show warning when exceeds slot time
               if (isSlotBooking && !selectedSlot) return null;
@@ -2801,9 +2920,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   };
 
   const renderDateTimeBranchStep = () => {
-    // Determine if this is a walk-in booking based on booking code prefix
-    const isWalkInBookingType =
-      initialData.booking_type === BookingType.WALK_IN;
+    // Determine if this is a walk-in booking with fallback to booking_code
+    const { isWalkIn: isWalkInBookingType } = detectBookingType(initialData);
 
     // Hide time and branch section completely for walk-in bookings
     if (isWalkInBookingType) {
@@ -3400,17 +3518,61 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                   pagination={false}
                   size="small"
                   scroll={{ y: 200 }}
-                  rowKey={(record: unknown, index?: number) =>
-                    (record as { queue_id?: string }).queue_id ||
-                    `queue-${index || 0}`
-                  }
-                  rowClassName={(record: unknown, index?: number) =>
-                    (index || 0) === 0
+                  rowKey={(record: unknown) => {
+                    const queueRecord = record as {
+                      queue_id?: string;
+                      booking_id?: string;
+                      bookingId?: string;
+                      booking_customer_name?: string;
+                      customer_name?: string;
+                      booking_vehicle_license_plate?: string;
+                    };
+                    // Use queue_id first, then booking_id, then create a stable key from record content
+                    if (queueRecord.queue_id) return queueRecord.queue_id;
+                    if (queueRecord.booking_id) return queueRecord.booking_id;
+                    if (queueRecord.bookingId) return queueRecord.bookingId;
+                    // Fallback: create stable key from record content
+                    const customerName =
+                      queueRecord.booking_customer_name ||
+                      queueRecord.customer_name ||
+                      "";
+                    const licensePlate =
+                      queueRecord.booking_vehicle_license_plate || "";
+                    return `queue-${customerName}-${licensePlate}`
+                      .replace(/\s+/g, "-")
+                      .toLowerCase();
+                  }}
+                  rowClassName={(record: unknown, index?: number) => {
+                    // Use index from dataSource array position instead of parameter
+                    const queueItems = getSafeQueueItems();
+                    const recordIndex = queueItems.findIndex((item) => {
+                      const queueRecord = record as {
+                        queue_id?: string;
+                        booking_id?: string;
+                        bookingId?: string;
+                      };
+                      const itemRecord = item as {
+                        queue_id?: string;
+                        booking_id?: string;
+                        bookingId?: string;
+                      };
+                      return (
+                        (queueRecord.queue_id &&
+                          queueRecord.queue_id === itemRecord.queue_id) ||
+                        (queueRecord.booking_id &&
+                          queueRecord.booking_id === itemRecord.booking_id) ||
+                        (queueRecord.bookingId &&
+                          queueRecord.bookingId === itemRecord.bookingId)
+                      );
+                    });
+                    const actualIndex =
+                      recordIndex >= 0 ? recordIndex : index || 0;
+                    return actualIndex === 0
                       ? "queue-first-row"
-                      : (index || 0) % 2 === 0
+                      : actualIndex % 2 === 0
                       ? "queue-even-row"
-                      : "queue-odd-row"
-                  }
+                      : "queue-odd-row";
+                  }}
                   locale={{
                     emptyText: (
                       <div
@@ -3880,11 +4042,11 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       {/* Customer & Vehicle Section */}
       {renderCustomerVehicleStep()}
 
-      {/* Service Selection Section */}
-      {renderServiceSelectionStep()}
-
       {/* Date, Time & Branch Section */}
       {renderDateTimeBranchStep()}
+
+      {/* Service Selection Section */}
+      {renderServiceSelectionStep()}
 
       {/* Slot Selection Section */}
       {renderSlotSelectionStep()}
@@ -3892,11 +4054,17 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   );
 
   const renderSlotSelectionStep = () => {
-    // Determine booking type based on booking code prefix
-    const isWalkInBooking = initialData.booking_type === BookingType.WALK_IN;
-    const isSlotBooking = initialData.booking_type === BookingType.SCHEDULED;
+    // Determine booking type with fallback to booking_code
+    const {
+      isWalkIn: isWalkInBooking,
+      isSlot: isSlotBooking,
+      bookingType,
+    } = detectBookingType(initialData);
 
     console.log("🔍 Booking type detection:", {
+      booking_code: initialData.booking_code,
+      booking_type: initialData.booking_type,
+      detectedType: bookingType,
       isWalkInBooking,
       isSlotBooking,
       scheduled_start_at: initialData.scheduled_start_at,
@@ -3918,458 +4086,558 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
               showIcon
             />
           ) : (
-            <Tabs
-              defaultActiveKey={isWalkInBooking ? "onsite" : "booking"}
-              onChange={(key) => {
-                if (key === "onsite") {
-                  setSelectedBay(null);
-                  setSelectedSlot(null);
-                  setAvailableSlots([]);
-                }
-              }}
-              items={[
-                // Show booking tab only for slot bookings (existing customers with slot)
-                ...(isSlotBooking
-                  ? [
-                      {
-                        key: "booking",
-                        label: <span>📅 Đặt lịch ({serviceBays.length})</span>,
-                        children: (
-                          <div>
-                            <Row gutter={16} style={{ marginBottom: 16 }}>
-                              <Col span={24}>
-                                <Text strong>
-                                  Chọn Service Bay cho đặt lịch:
-                                </Text>
-                                <div style={{ marginTop: 8 }}>
-                                  {isLoadingServiceBays ? (
-                                    <Spin />
-                                  ) : (
-                                    <Row gutter={8}>
-                                      {serviceBays?.slice(0, 8).map((bay) => (
-                                        <Col span={6} key={bay.bay_id}>
-                                          <Card
-                                            size="small"
-                                            hoverable
-                                            style={{
-                                              textAlign: "center",
-                                              border:
-                                                selectedBay?.bay_id ===
-                                                bay.bay_id
-                                                  ? "2px solid #1890ff"
-                                                  : "1px solid #d9d9d9",
-                                              backgroundColor:
-                                                selectedBay?.bay_id ===
-                                                bay.bay_id
-                                                  ? "#e6f7ff"
-                                                  : "#fff",
-                                            }}
-                                            onClick={() =>
-                                              handleBayChange(bay.bay_id)
-                                            }
-                                          >
-                                            <ShopOutlined
-                                              style={{
-                                                fontSize: 24,
-                                                color: "#1890ff",
-                                              }}
-                                            />
-                                            <div style={{ marginTop: 8 }}>
-                                              <Text strong>{bay.bay_name}</Text>
-                                            </div>
-                                          </Card>
-                                        </Col>
-                                      ))}
-                                    </Row>
-                                  )}
-                                </div>
-                              </Col>
-                            </Row>
-
-                            {selectedBay && (
-                              <div>
-                                <Divider />
-                                <Text strong>
-                                  Chọn Thời Gian Chăm Sóc Trong{" "}
-                                  {selectedBay.bay_name}:
-                                </Text>
-                                {isDurationExceedsOriginal &&
-                                  (() => {
-                                    const SLOT_DURATION_MINUTES = 60;
-                                    const originalSlotCount =
-                                      originalTotalDuration > 0
-                                        ? Math.ceil(
-                                            originalTotalDuration /
-                                              SLOT_DURATION_MINUTES
-                                          )
-                                        : 1;
-                                    const totalOriginalSlotTime =
-                                      originalSlotCount * SLOT_DURATION_MINUTES;
-
-                                    return (
-                                      <Alert
-                                        message="Không thể đổi thời gian"
-                                        description={`Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các thời gian đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} thời gian × ${SLOT_DURATION_MINUTES} phút/thời gian). Bạn chỉ có thể chọn lại dịch vụ phù hợp với thời gian thời gian chăm sóc hiện tại.`}
-                                        type="error"
-                                        showIcon
-                                        style={{
-                                          marginTop: 8,
-                                          marginBottom: 8,
-                                        }}
-                                      />
-                                    );
-                                  })()}
-                                {totalDuration > 60 &&
-                                  !isDurationExceedsOriginal && (
-                                    <Alert
-                                      message={`Dịch vụ yêu cầu ${Math.ceil(
-                                        totalDuration / 60
-                                      )} thời gian chăm sóc liên tiếp (${totalDuration} phút)`}
-                                      description="Vui lòng chọn thời gian chăm sóc đầu tiên, hệ thống sẽ tự động sử dụng các thời gian chăm sóc liên tiếp sau đó."
-                                      type="info"
-                                      showIcon
-                                      style={{ marginTop: 8, marginBottom: 8 }}
-                                    />
-                                  )}
-                                <div style={{ marginTop: 8 }}>
-                                  {loadingSlots ? (
-                                    <div
-                                      style={{
-                                        textAlign: "center",
-                                        padding: 20,
-                                      }}
-                                    >
-                                      <Spin size="large" />
-                                      <div style={{ marginTop: 8 }}>
-                                        Đang tải danh sách thời gian...
-                                      </div>
-                                    </div>
-                                  ) : availableSlots.length > 0 ? (
-                                    <Row gutter={8}>
-                                      {availableSlots.map((slot, index) => {
-                                        const canSelect = canSelectSlot(slot);
-                                        // Check if slot is selected: must match date and startTime
-                                        const isSelected =
-                                          selectedSlot &&
-                                          selectedSlot.date === bookingDate &&
-                                          selectedSlot.startTime === slot.time;
-
-                                        // Calculate end time for display
-                                        const slotStartMinutes =
-                                          parseInt(slot.time.split(":")[0]) *
-                                            60 +
-                                          parseInt(slot.time.split(":")[1]);
-                                        const slotEndMinutes =
-                                          slotStartMinutes + totalDuration;
-                                        const slotEndHours = Math.floor(
-                                          slotEndMinutes / 60
-                                        );
-                                        const slotEndMins = slotEndMinutes % 60;
-                                        const slotEndTime = `${slotEndHours
-                                          .toString()
-                                          .padStart(2, "0")}:${slotEndMins
-                                          .toString()
-                                          .padStart(2, "0")}`;
-
-                                        // Check why slot is not selectable
-                                        let tooltipMessage = "";
-                                        if (canSelect) {
-                                          tooltipMessage = `Chọn thời gian ${slot.time} (${totalDuration} phút)`;
-                                        } else {
-                                          if (isDurationExceedsOriginal) {
-                                            const SLOT_DURATION_MINUTES = 60;
-                                            const originalSlotCount =
-                                              originalTotalDuration > 0
-                                                ? Math.ceil(
-                                                    originalTotalDuration /
-                                                      SLOT_DURATION_MINUTES
-                                                  )
-                                                : 1;
-                                            const totalOriginalSlotTime =
-                                              originalSlotCount *
-                                              SLOT_DURATION_MINUTES;
-                                            tooltipMessage = `Không thể đổi slot. Dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các slot đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} slot). Vui lòng chọn lại dịch vụ.`;
-                                          } else {
-                                            tooltipMessage =
-                                              "Thời gian không khả dụng";
-                                          }
-                                        }
-
-                                        return (
-                                          <Col
-                                            span={4}
-                                            key={`${slot.time}-${index}`}
-                                          >
-                                            <Tooltip title={tooltipMessage}>
+            <>
+              {totalDuration <= 0 && (
+                <Alert
+                  message="Vui lòng chọn dịch vụ để xem các mốc thời gian khả dụng"
+                  description="Bạn có thể chọn bay trước, nhưng cần chọn dịch vụ để xem và chọn mốc thời gian phù hợp"
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+              <Tabs
+                defaultActiveKey={isWalkInBooking ? "onsite" : "booking"}
+                onChange={(key) => {
+                  if (key === "onsite") {
+                    setSelectedBay(null);
+                    setSelectedSlot(null);
+                    setAvailableSlots([]);
+                  }
+                }}
+                items={[
+                  // Show booking tab only for slot bookings (existing customers with slot)
+                  ...(isSlotBooking
+                    ? [
+                        {
+                          key: "booking",
+                          label: (
+                            <span>📅 Đặt lịch ({serviceBays.length})</span>
+                          ),
+                          children: (
+                            <div>
+                              <Row gutter={16} style={{ marginBottom: 16 }}>
+                                <Col span={24}>
+                                  <Text strong>
+                                    Chọn Service Bay cho đặt lịch:
+                                  </Text>
+                                  <div style={{ marginTop: 8 }}>
+                                    {isLoadingServiceBays ? (
+                                      <Spin />
+                                    ) : (
+                                      <Row gutter={8}>
+                                        {/* Show selected bay first if it's not in the filtered list */}
+                                        {selectedBay &&
+                                          !serviceBays.find(
+                                            (b) =>
+                                              b.bay_id === selectedBay.bay_id
+                                          ) && (
+                                            <Col
+                                              span={6}
+                                              key={selectedBay.bay_id}
+                                            >
                                               <Card
                                                 size="small"
-                                                hoverable={canSelect}
+                                                hoverable
                                                 style={{
                                                   textAlign: "center",
-                                                  border: isSelected
-                                                    ? "2px solid #52c41a"
-                                                    : canSelect
-                                                    ? "1px solid #d9d9d9"
-                                                    : "1px solid #ff4d4f",
-                                                  backgroundColor: isSelected
-                                                    ? "#f6ffed"
-                                                    : canSelect
-                                                    ? "#fff"
-                                                    : "#f5f5f5",
-                                                  cursor: canSelect
-                                                    ? "pointer"
-                                                    : "not-allowed",
-                                                  opacity: canSelect ? 1 : 0.6,
-                                                  marginBottom: 8,
+                                                  border: "2px solid #1890ff",
+                                                  backgroundColor: "#e6f7ff",
                                                 }}
                                                 onClick={() =>
-                                                  canSelect &&
-                                                  handleSlotSelect(slot)
+                                                  handleBayChange(
+                                                    selectedBay.bay_id
+                                                  )
                                                 }
                                               >
-                                                <div
+                                                <ShopOutlined
                                                   style={{
-                                                    color: canSelect
-                                                      ? "#52c41a"
-                                                      : "#ff4d4f",
-                                                    fontSize: 16,
+                                                    fontSize: 24,
+                                                    color: "#1890ff",
                                                   }}
-                                                >
-                                                  {canSelect ? (
-                                                    <CheckCircleOutlined />
-                                                  ) : (
-                                                    <CloseCircleOutlined />
-                                                  )}
-                                                </div>
-                                                <div
-                                                  style={{
-                                                    marginTop: 4,
-                                                    fontSize: 12,
-                                                    fontWeight: 500,
-                                                    color: canSelect
-                                                      ? "#000"
-                                                      : "#999",
-                                                  }}
-                                                >
-                                                  {slot.time}
+                                                />
+                                                <div style={{ marginTop: 8 }}>
+                                                  <Text strong>
+                                                    {selectedBay.bay_name}
+                                                  </Text>
                                                 </div>
                                                 <div
                                                   style={{
                                                     fontSize: 10,
-                                                    color: "#666",
+                                                    color: "#1890ff",
+                                                    marginTop: 4,
                                                   }}
                                                 >
-                                                  {slotEndTime}
+                                                  (Đã chọn)
                                                 </div>
-                                                {!canSelect && (
-                                                  <div
-                                                    style={{
-                                                      fontSize: 8,
-                                                      color: "#ff4d4f",
-                                                      marginTop: 2,
-                                                    }}
-                                                  >
-                                                    Không khả dụng
-                                                  </div>
-                                                )}
                                               </Card>
-                                            </Tooltip>
-                                          </Col>
-                                        );
-                                      })}
-                                    </Row>
-                                  ) : (
-                                    <Alert
-                                      message="Không có thời gian khả dụng"
-                                      description={
-                                        totalDuration > 60
-                                          ? `Không có ${Math.ceil(
-                                              totalDuration / 60
-                                            )} thời gian chăm sóc liên tiếp khả dụng cho dịch vụ ${totalDuration} phút trong ngày này. Vui lòng thử ngày khác hoặc giảm số lượng dịch vụ.`
-                                          : "Không có thời gian chăm sóc khả dụng trong ngày này."
-                                      }
-                                      type="warning"
-                                      showIcon
-                                    />
-                                  )}
-                                </div>
-
-                                {selectedSlot &&
-                                  selectedBay &&
-                                  selectedSlot.bayId === selectedBay.bay_id &&
-                                  (() => {
-                                    // Only show selected slot alert if it belongs to current bay
-                                    // Calculate consecutive slots if service duration > 60 minutes
-                                    const requiredSlots =
-                                      totalDuration > 60
-                                        ? Math.ceil(totalDuration / 60)
-                                        : 1;
-                                    const selectedSlotIndex =
-                                      availableSlots.findIndex(
-                                        (s) => s.time === selectedSlot.startTime
-                                      );
-
-                                    const consecutiveSlots: Array<{
-                                      time: string;
-                                      endTime: string;
-                                    }> = [];
-                                    if (
-                                      selectedSlotIndex >= 0 &&
-                                      requiredSlots > 1
-                                    ) {
-                                      for (
-                                        let i = 0;
-                                        i < requiredSlots &&
-                                        selectedSlotIndex + i <
-                                          availableSlots.length;
-                                        i++
-                                      ) {
-                                        const slot =
-                                          availableSlots[selectedSlotIndex + i];
-                                        if (slot) {
-                                          // Calculate end time for each slot (30 minutes interval)
-                                          const slotStartMinutes =
-                                            parseInt(slot.time.split(":")[0]) *
-                                              60 +
-                                            parseInt(slot.time.split(":")[1]);
-                                          const slotEndMinutes =
-                                            slotStartMinutes + 30; // 30 minutes per slot
-                                          const slotEndHours = Math.floor(
-                                            slotEndMinutes / 60
-                                          );
-                                          const slotEndMins =
-                                            slotEndMinutes % 60;
-                                          const slotEndTime = `${slotEndHours
-                                            .toString()
-                                            .padStart(2, "0")}:${slotEndMins
-                                            .toString()
-                                            .padStart(2, "0")}`;
-
-                                          consecutiveSlots.push({
-                                            time: slot.time,
-                                            endTime: slotEndTime,
-                                          });
-                                        }
-                                      }
-                                    }
-
-                                    const endTime = dayjs(
-                                      `2000-01-01 ${selectedSlot.startTime}`
-                                    )
-                                      .add(totalDuration, "minute")
-                                      .format("HH:mm");
-
-                                    return (
-                                      <Alert
-                                        message={
-                                          <div>
-                                            <div style={{ marginBottom: 4 }}>
-                                              <strong>
-                                                Thời Gian Đã Chọn:
-                                              </strong>{" "}
-                                              {selectedSlot.startTime}
-                                            </div>
-                                            {consecutiveSlots.length > 1 && (
-                                              <div
+                                            </Col>
+                                          )}
+                                        {/* Show all available bays */}
+                                        {serviceBays?.slice(0, 8).map((bay) => (
+                                          <Col span={6} key={bay.bay_id}>
+                                            <Card
+                                              size="small"
+                                              hoverable
+                                              style={{
+                                                textAlign: "center",
+                                                border:
+                                                  selectedBay?.bay_id ===
+                                                  bay.bay_id
+                                                    ? "2px solid #1890ff"
+                                                    : "1px solid #d9d9d9",
+                                                backgroundColor:
+                                                  selectedBay?.bay_id ===
+                                                  bay.bay_id
+                                                    ? "#e6f7ff"
+                                                    : "#fff",
+                                              }}
+                                              onClick={() =>
+                                                handleBayChange(bay.bay_id)
+                                              }
+                                            >
+                                              <ShopOutlined
                                                 style={{
-                                                  fontSize: 12,
-                                                  color: "#666",
-                                                  marginTop: 4,
+                                                  fontSize: 24,
+                                                  color: "#1890ff",
                                                 }}
+                                              />
+                                              <div style={{ marginTop: 8 }}>
+                                                <Text strong>
+                                                  {bay.bay_name}
+                                                </Text>
+                                              </div>
+                                            </Card>
+                                          </Col>
+                                        ))}
+                                      </Row>
+                                    )}
+                                  </div>
+                                </Col>
+                              </Row>
+
+                              {/* Show slot selection section if bay is selected AND services are selected (need duration to load slots) */}
+                              {(selectedBay || selectedSlot) &&
+                                totalDuration > 0 && (
+                                  <div>
+                                    <Divider />
+                                    <Text strong>
+                                      {selectedBay
+                                        ? `Chọn Thời Gian Chăm Sóc Trong ${selectedBay.bay_name}:`
+                                        : selectedSlot
+                                        ? `Thời Gian Đã Chọn (${selectedSlot.bayName}):`
+                                        : "Chọn Thời Gian Chăm Sóc:"}
+                                    </Text>
+                                    {isDurationExceedsOriginal &&
+                                      (() => {
+                                        const SLOT_DURATION_MINUTES = 60;
+                                        const originalSlotCount =
+                                          originalTotalDuration > 0
+                                            ? Math.ceil(
+                                                originalTotalDuration /
+                                                  SLOT_DURATION_MINUTES
+                                              )
+                                            : 1;
+                                        const totalOriginalSlotTime =
+                                          originalSlotCount *
+                                          SLOT_DURATION_MINUTES;
+
+                                        return (
+                                          <Alert
+                                            message="Không thể đổi thời gian"
+                                            description={`Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các thời gian đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} thời gian × ${SLOT_DURATION_MINUTES} phút/thời gian). Bạn chỉ có thể chọn lại dịch vụ phù hợp với thời gian thời gian chăm sóc hiện tại.`}
+                                            type="error"
+                                            showIcon
+                                            style={{
+                                              marginTop: 8,
+                                              marginBottom: 8,
+                                            }}
+                                          />
+                                        );
+                                      })()}
+                                    {totalDuration > 60 &&
+                                      !isDurationExceedsOriginal && (
+                                        <Alert
+                                          message={`Dịch vụ yêu cầu ${Math.ceil(
+                                            totalDuration / 60
+                                          )} thời gian chăm sóc liên tiếp (${totalDuration} phút)`}
+                                          description="Vui lòng chọn thời gian chăm sóc đầu tiên, hệ thống sẽ tự động sử dụng các thời gian chăm sóc liên tiếp sau đó."
+                                          type="info"
+                                          showIcon
+                                          style={{
+                                            marginTop: 8,
+                                            marginBottom: 8,
+                                          }}
+                                        />
+                                      )}
+                                    <div style={{ marginTop: 8 }}>
+                                      {loadingSlots ? (
+                                        <div
+                                          style={{
+                                            textAlign: "center",
+                                            padding: 20,
+                                          }}
+                                        >
+                                          <Spin size="large" />
+                                          <div style={{ marginTop: 8 }}>
+                                            Đang tải danh sách thời gian...
+                                          </div>
+                                        </div>
+                                      ) : availableSlots.length > 0 ? (
+                                        <Row gutter={8}>
+                                          {availableSlots.map((slot, index) => {
+                                            const canSelect =
+                                              canSelectSlot(slot);
+                                            // Check if slot is selected: must match date and startTime
+                                            const isSelected =
+                                              selectedSlot &&
+                                              selectedSlot.date ===
+                                                bookingDate &&
+                                              selectedSlot.startTime ===
+                                                slot.time;
+
+                                            // Calculate end time for display
+                                            const slotStartMinutes =
+                                              parseInt(
+                                                slot.time.split(":")[0]
+                                              ) *
+                                                60 +
+                                              parseInt(slot.time.split(":")[1]);
+                                            const slotEndMinutes =
+                                              slotStartMinutes + totalDuration;
+                                            const slotEndHours = Math.floor(
+                                              slotEndMinutes / 60
+                                            );
+                                            const slotEndMins =
+                                              slotEndMinutes % 60;
+                                            const slotEndTime = `${slotEndHours
+                                              .toString()
+                                              .padStart(2, "0")}:${slotEndMins
+                                              .toString()
+                                              .padStart(2, "0")}`;
+
+                                            // Check why slot is not selectable
+                                            let tooltipMessage = "";
+                                            if (canSelect) {
+                                              tooltipMessage = `Chọn thời gian ${slot.time} (${totalDuration} phút)`;
+                                            } else {
+                                              if (isDurationExceedsOriginal) {
+                                                const SLOT_DURATION_MINUTES = 60;
+                                                const originalSlotCount =
+                                                  originalTotalDuration > 0
+                                                    ? Math.ceil(
+                                                        originalTotalDuration /
+                                                          SLOT_DURATION_MINUTES
+                                                      )
+                                                    : 1;
+                                                const totalOriginalSlotTime =
+                                                  originalSlotCount *
+                                                  SLOT_DURATION_MINUTES;
+                                                tooltipMessage = `Không thể đổi slot. Dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các slot đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} slot). Vui lòng chọn lại dịch vụ.`;
+                                              } else {
+                                                tooltipMessage =
+                                                  "Thời gian không khả dụng";
+                                              }
+                                            }
+
+                                            return (
+                                              <Col
+                                                span={4}
+                                                key={`${slot.time}-${index}`}
                                               >
+                                                <Tooltip title={tooltipMessage}>
+                                                  <Card
+                                                    size="small"
+                                                    hoverable={canSelect}
+                                                    style={{
+                                                      textAlign: "center",
+                                                      border: isSelected
+                                                        ? "2px solid #52c41a"
+                                                        : canSelect
+                                                        ? "1px solid #d9d9d9"
+                                                        : "1px solid #ff4d4f",
+                                                      backgroundColor:
+                                                        isSelected
+                                                          ? "#f6ffed"
+                                                          : canSelect
+                                                          ? "#fff"
+                                                          : "#f5f5f5",
+                                                      cursor: canSelect
+                                                        ? "pointer"
+                                                        : "not-allowed",
+                                                      opacity: canSelect
+                                                        ? 1
+                                                        : 0.6,
+                                                      marginBottom: 8,
+                                                    }}
+                                                    onClick={() =>
+                                                      canSelect &&
+                                                      handleSlotSelect(slot)
+                                                    }
+                                                  >
+                                                    <div
+                                                      style={{
+                                                        color: canSelect
+                                                          ? "#52c41a"
+                                                          : "#ff4d4f",
+                                                        fontSize: 16,
+                                                      }}
+                                                    >
+                                                      {canSelect ? (
+                                                        <CheckCircleOutlined />
+                                                      ) : (
+                                                        <CloseCircleOutlined />
+                                                      )}
+                                                    </div>
+                                                    <div
+                                                      style={{
+                                                        marginTop: 4,
+                                                        fontSize: 12,
+                                                        fontWeight: 500,
+                                                        color: canSelect
+                                                          ? "#000"
+                                                          : "#999",
+                                                      }}
+                                                    >
+                                                      {slot.time}
+                                                    </div>
+                                                    {!canSelect && (
+                                                      <div
+                                                        style={{
+                                                          fontSize: 8,
+                                                          color: "#ff4d4f",
+                                                          marginTop: 2,
+                                                        }}
+                                                      >
+                                                        Không khả dụng
+                                                      </div>
+                                                    )}
+                                                  </Card>
+                                                </Tooltip>
+                                              </Col>
+                                            );
+                                          })}
+                                        </Row>
+                                      ) : (
+                                        <Alert
+                                          message="Không có thời gian khả dụng"
+                                          description={
+                                            totalDuration > 60
+                                              ? `Không có ${Math.ceil(
+                                                  totalDuration / 60
+                                                )} thời gian chăm sóc liên tiếp khả dụng cho dịch vụ ${totalDuration} phút trong ngày này. Vui lòng thử ngày khác hoặc giảm số lượng dịch vụ.`
+                                              : "Không có thời gian chăm sóc khả dụng trong ngày này."
+                                          }
+                                          type="warning"
+                                          showIcon
+                                        />
+                                      )}
+                                    </div>
+
+                                    {/* Show selected slot info - display even if bay is not yet set */}
+                                    {selectedSlot &&
+                                      (() => {
+                                        // Only show selected slot alert if it belongs to current bay
+                                        // Calculate consecutive slots if service duration > 60 minutes
+                                        const requiredSlots =
+                                          totalDuration > 60
+                                            ? Math.ceil(totalDuration / 60)
+                                            : 1;
+                                        // Only try to find slot index if we have availableSlots and selectedBay
+                                        const selectedSlotIndex =
+                                          selectedBay &&
+                                          availableSlots.length > 0
+                                            ? availableSlots.findIndex(
+                                                (s) =>
+                                                  s.time ===
+                                                  selectedSlot.startTime
+                                              )
+                                            : -1;
+
+                                        const consecutiveSlots: Array<{
+                                          time: string;
+                                          endTime: string;
+                                        }> = [];
+                                        if (
+                                          selectedSlotIndex >= 0 &&
+                                          requiredSlots > 1
+                                        ) {
+                                          for (
+                                            let i = 0;
+                                            i < requiredSlots &&
+                                            selectedSlotIndex + i <
+                                              availableSlots.length;
+                                            i++
+                                          ) {
+                                            const slot =
+                                              availableSlots[
+                                                selectedSlotIndex + i
+                                              ];
+                                            if (slot) {
+                                              // Calculate end time for each slot (30 minutes interval)
+                                              const slotStartMinutes =
+                                                parseInt(
+                                                  slot.time.split(":")[0]
+                                                ) *
+                                                  60 +
+                                                parseInt(
+                                                  slot.time.split(":")[1]
+                                                );
+                                              const slotEndMinutes =
+                                                slotStartMinutes + 30; // 30 minutes per slot
+                                              const slotEndHours = Math.floor(
+                                                slotEndMinutes / 60
+                                              );
+                                              const slotEndMins =
+                                                slotEndMinutes % 60;
+                                              const slotEndTime = `${slotEndHours
+                                                .toString()
+                                                .padStart(2, "0")}:${slotEndMins
+                                                .toString()
+                                                .padStart(2, "0")}`;
+
+                                              consecutiveSlots.push({
+                                                time: slot.time,
+                                                endTime: slotEndTime,
+                                              });
+                                            }
+                                          }
+                                        }
+
+                                        const endTime = dayjs(
+                                          `2000-01-01 ${selectedSlot.startTime}`
+                                        )
+                                          .add(totalDuration, "minute")
+                                          .format("HH:mm");
+
+                                        return (
+                                          <Alert
+                                            message={
+                                              <div>
                                                 <div
-                                                  style={{ marginBottom: 2 }}
+                                                  style={{ marginBottom: 4 }}
                                                 >
                                                   <strong>
-                                                    Bao gồm{" "}
-                                                    {consecutiveSlots.length}{" "}
-                                                    thời gian chăm sóc liên
-                                                    tiếp:
-                                                  </strong>
+                                                    Thời Gian Đã Chọn:
+                                                  </strong>{" "}
+                                                  {selectedSlot.startTime}
                                                 </div>
-                                                <div
-                                                  style={{
-                                                    display: "flex",
-                                                    flexWrap: "wrap",
-                                                    gap: 4,
+                                                {consecutiveSlots.length >
+                                                  1 && (
+                                                  <div
+                                                    style={{
+                                                      fontSize: 12,
+                                                      color: "#666",
+                                                      marginTop: 4,
+                                                    }}
+                                                  >
+                                                    <div
+                                                      style={{
+                                                        marginBottom: 2,
+                                                      }}
+                                                    >
+                                                      <strong>
+                                                        Bao gồm{" "}
+                                                        {
+                                                          consecutiveSlots.length
+                                                        }{" "}
+                                                        thời gian chăm sóc liên
+                                                        tiếp:
+                                                      </strong>
+                                                    </div>
+                                                    <div
+                                                      style={{
+                                                        display: "flex",
+                                                        flexWrap: "wrap",
+                                                        gap: 4,
+                                                      }}
+                                                    >
+                                                      {consecutiveSlots.map(
+                                                        (slot, idx) => (
+                                                          <Tag
+                                                            key={`${slot.time}-${idx}`}
+                                                            color="blue"
+                                                            style={{
+                                                              margin: 0,
+                                                            }}
+                                                          >
+                                                            {slot.time} -{" "}
+                                                            {slot.endTime}
+                                                          </Tag>
+                                                        )
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            }
+                                            description={`Khu Vực Chăm Sóc: ${selectedSlot.bayName} • Ngày: ${selectedSlot.date}`}
+                                            type={
+                                              isSlotChanged ? "success" : "info"
+                                            }
+                                            showIcon
+                                            style={{ marginTop: 16 }}
+                                            action={
+                                              isSlotChanged ? (
+                                                <Button
+                                                  size="small"
+                                                  type="text"
+                                                  danger
+                                                  onClick={() => {
+                                                    // Restore original slot
+                                                    if (originalSlot) {
+                                                      setSelectedSlot(
+                                                        originalSlot
+                                                      );
+                                                    } else {
+                                                      setSelectedSlot(null);
+                                                    }
+                                                    setIsSlotChanged(false);
+
+                                                    // Update bay slot state
+                                                    if (selectedBay) {
+                                                      setBaySlotStates(
+                                                        (prev) => ({
+                                                          ...prev,
+                                                          [selectedBay.bay_id]:
+                                                            {
+                                                              slot: originalSlot,
+                                                              isChanged: false,
+                                                            },
+                                                        })
+                                                      );
+                                                    }
                                                   }}
                                                 >
-                                                  {consecutiveSlots.map(
-                                                    (slot, idx) => (
-                                                      <Tag
-                                                        key={`${slot.time}-${idx}`}
-                                                        color="blue"
-                                                        style={{ margin: 0 }}
-                                                      >
-                                                        {slot.time} -{" "}
-                                                        {slot.endTime}
-                                                      </Tag>
-                                                    )
-                                                  )}
-                                                </div>
-                                              </div>
-                                            )}
-                                          </div>
-                                        }
-                                        description={`Khu Vực Chăm Sóc: ${selectedSlot.bayName} • Ngày: ${selectedSlot.date}`}
-                                        type={
-                                          isSlotChanged ? "success" : "info"
-                                        }
-                                        showIcon
-                                        style={{ marginTop: 16 }}
-                                        action={
-                                          isSlotChanged ? (
-                                            <Button
-                                              size="small"
-                                              type="text"
-                                              danger
-                                              onClick={() => {
-                                                // Restore original slot
-                                                if (originalSlot) {
-                                                  setSelectedSlot(originalSlot);
-                                                } else {
-                                                  setSelectedSlot(null);
-                                                }
-                                                setIsSlotChanged(false);
-
-                                                // Update bay slot state
-                                                if (selectedBay) {
-                                                  setBaySlotStates((prev) => ({
-                                                    ...prev,
-                                                    [selectedBay.bay_id]: {
-                                                      slot: originalSlot,
-                                                      isChanged: false,
-                                                    },
-                                                  }));
-                                                }
-                                              }}
-                                            >
-                                              Hủy chọn thời gian
-                                            </Button>
-                                          ) : null
-                                        }
-                                      />
-                                    );
-                                  })()}
-                              </div>
-                            )}
-                          </div>
-                        ),
-                      },
-                    ]
-                  : []),
-                // Show onsite tab only for walk-in bookings
-                ...(isWalkInBooking
-                  ? [
-                      {
-                        key: "onsite",
-                        label: <span>Xử lý tại chỗ ({onSiteBays.length})</span>,
-                        children: renderBayRecommendation(),
-                      },
-                    ]
-                  : []),
-              ]}
-            />
+                                                  Hủy chọn thời gian
+                                                </Button>
+                                              ) : null
+                                            }
+                                          />
+                                        );
+                                      })()}
+                                  </div>
+                                )}
+                            </div>
+                          ),
+                        },
+                      ]
+                    : []),
+                  // Show onsite tab only for walk-in bookings
+                  ...(isWalkInBooking
+                    ? [
+                        {
+                          key: "onsite",
+                          label: (
+                            <span>Xử lý tại chỗ ({onSiteBays.length})</span>
+                          ),
+                          children: renderBayRecommendation(),
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            </>
           )}
         </Card>
 
@@ -4419,8 +4687,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                 <div style={{ marginTop: 24, textAlign: "right" }}>
                   {(() => {
                     // Check if service duration exceeds slot duration for slot bookings
-                    const isSlotBooking =
-                      initialData.booking_type === BookingType.SCHEDULED;
+                    const { isSlot: isSlotBooking } =
+                      detectBookingType(initialData);
 
                     return (
                       <>

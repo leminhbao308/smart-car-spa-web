@@ -73,12 +73,66 @@ export class BookingScheduleService {
       const slotEnd = current + serviceDurationMinutes;
       
       // Check if this slot fits within any available time range
-      const isAvailable = timeRanges.some((range) => {
+      let isAvailable = false;
+      let matchedRange = null;
+      
+      for (const range of timeRanges) {
         const rangeStart = this.parseTime(range.start_time);
         const rangeEnd = this.parseTime(range.end_time);
-        // Slot is available if it starts within range and ends before range ends
-        return current >= rangeStart && slotEnd <= rangeEnd;
-      });
+        // Slot is available if it starts within range and ends before or at range ends
+        // Note: slotEnd can equal rangeEnd (e.g., slot 8:00-8:30 fits in range 8:00-8:30)
+        // Also handle edge case where range ends at 08:59:59 but slot needs to go to 09:00:00
+        // We allow a small tolerance (1 minute) for rounding differences
+        const TOLERANCE_MINUTES = 1;
+        const fitsInRange = current >= rangeStart && slotEnd <= (rangeEnd + TOLERANCE_MINUTES);
+        
+        // Debug logging for slot 8:00, 8:30, 9:00, and 17:30 with 30min duration
+        if ((timeStr === "08:00" || timeStr === "08:30" || timeStr === "09:00" || timeStr === "17:30") && serviceDurationMinutes === 30) {
+          const condition1Result = current >= rangeStart;
+          const condition2Result = slotEnd <= rangeEnd;
+          console.log(`🔍 Checking slot ${timeStr} (30min) against range:`, {
+            slotStart: timeStr,
+            slotEnd: this.formatTime(slotEnd),
+            slotStartMinutes: current,
+            slotEndMinutes: slotEnd,
+            serviceDurationMinutes,
+            range: {
+              start_time: range.start_time,
+              end_time: range.end_time,
+              rangeStartMinutes: rangeStart,
+              rangeEndMinutes: rangeEnd,
+            },
+            fitsInRange,
+            condition1: `current (${current}) >= rangeStart (${rangeStart})`,
+            condition1Result,
+            condition2: `slotEnd (${slotEnd}) <= rangeEnd (${rangeEnd})`,
+            condition2Result,
+            explanation: fitsInRange 
+              ? "✅ Slot fits in this range" 
+              : `❌ Slot does NOT fit: ${condition1Result ? "start OK" : `start too early (${current} < ${rangeStart})`}, ${condition2Result ? "end OK" : `end too late (${slotEnd} > ${rangeEnd})`}`,
+          });
+        }
+        
+        if (fitsInRange) {
+          isAvailable = true;
+          matchedRange = range;
+          break; // Found a matching range, no need to check others
+        }
+      }
+      
+      // Final debug for slot 8:00, 8:30, 9:00, and 17:30
+      if ((timeStr === "08:00" || timeStr === "08:30" || timeStr === "09:00" || timeStr === "17:30") && serviceDurationMinutes === 30) {
+        console.log(`🔍 Final result for slot ${timeStr}:`, {
+          isAvailable,
+          matchedRange: matchedRange ? {
+            start_time: matchedRange.start_time,
+            end_time: matchedRange.end_time,
+          } : null,
+          allRangesChecked: timeRanges.length,
+          slotEnd: this.formatTime(slotEnd),
+          serviceDurationMinutes,
+        });
+      }
 
       slots.push({
         time: timeStr,
