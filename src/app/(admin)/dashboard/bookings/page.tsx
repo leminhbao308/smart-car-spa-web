@@ -273,13 +273,23 @@ const BookingsPage = () => {
     // Filter by booking type based on booking_type field
     if (selectedBookingType) {
       result = result.filter((booking: EnrichedBookingInfoDto) => {
+        // Nếu booking không có booking_type, thử detect từ booking_code
+        let bookingType = booking.booking_type;
+        if (!bookingType && booking.booking_code) {
+          if (booking.booking_code.startsWith("WALK-IN-")) {
+            bookingType = BookingType.WALK_IN;
+          } else if (booking.booking_code.startsWith("BK-")) {
+            bookingType = BookingType.SCHEDULED;
+          }
+        }
+        
         // Đặt trước (advance booking): booking_type === SCHEDULED
         if (selectedBookingType === "advance") {
-          return booking.booking_type === BookingType.SCHEDULED;
+          return bookingType === BookingType.SCHEDULED;
         }
         // Đặt xử lý tại chỗ (walk-in): booking_type === WALK_IN
         if (selectedBookingType === "walk-in") {
-          return booking.booking_type === BookingType.WALK_IN;
+          return bookingType === BookingType.WALK_IN;
         }
         return true;
       });
@@ -435,15 +445,29 @@ const BookingsPage = () => {
         return dayjs(aTime).unix() - dayjs(bTime).unix();
       },
       render: (_, record: BookingInfoDto) => {
+        const startTime = record.scheduled_start_at || record.preferred_start_at || record.created_at;
+        if (!startTime) {
+          return <span style={{ color: "#999" }}>N/A</span>;
+        }
+        
+        // Tính thời gian kết thúc: ưu tiên scheduled_end_at, nếu không có thì tính từ start + duration
+        const endTime = record.scheduled_end_at 
+          ? dayjs(record.scheduled_end_at)
+          : dayjs(startTime).add(record.estimated_duration_minutes || 0, "minutes");
+        
         return (
           <div>
             <div style={{ fontSize: 13, fontWeight: 500 }}>
-              {dayjs(record.scheduled_start_at).format("DD/MM/YYYY")}
+              {dayjs(startTime).format("DD/MM/YYYY")}
             </div>
             <div style={{ fontSize: 13, color: "#666" }}>
-              {dayjs(record.scheduled_start_at).format("HH:mm")} -{" "}
-              {dayjs(record.scheduled_end_at).format("HH:mm")}
+              {dayjs(startTime).format("HH:mm")} - {endTime.format("HH:mm")}
             </div>
+            {record.booking_type === BookingType.WALK_IN && (
+              <Tag color="orange" style={{ fontSize: 10, marginTop: 2 }}>
+                Walk-in
+              </Tag>
+            )}
           </div>
         );
       },
@@ -1150,17 +1174,49 @@ const BookingsPage = () => {
                       <div style={{ fontSize: 12, color: "#666" }}>
                         Thời gian đặt lịch
                       </div>
-                      <div style={{ fontWeight: 500 }}>
-                        {dayjs(selectedBooking.scheduled_start_at).format(
-                          "DD/MM/YYYY"
-                        )}
-                      </div>
-                      <div style={{ fontSize: 11, color: "#1890ff" }}>
-                        Thời gian bắt đầu: {dayjs(selectedBooking.scheduled_start_at).format("HH:mm")}
-                      </div>
-                      <div style={{ fontSize: 11, color: "#1890ff" }}>
-                        Thời gian kết thúc: {dayjs(selectedBooking.scheduled_start_at).add(selectedBooking.estimated_duration_minutes || 0, "minutes").format("HH:mm")}
-                      </div>
+                      {selectedBooking.scheduled_start_at ? (
+                        <>
+                          <div style={{ fontWeight: 500 }}>
+                            {dayjs(selectedBooking.scheduled_start_at).format(
+                              "DD/MM/YYYY"
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#1890ff" }}>
+                            Thời gian bắt đầu: {dayjs(selectedBooking.scheduled_start_at).format("HH:mm")}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#1890ff" }}>
+                            Thời gian kết thúc: {
+                              selectedBooking.scheduled_end_at
+                                ? dayjs(selectedBooking.scheduled_end_at).format("HH:mm")
+                                : dayjs(selectedBooking.scheduled_start_at)
+                                    .add(selectedBooking.estimated_duration_minutes || 0, "minutes")
+                                    .format("HH:mm")
+                            }
+                          </div>
+                        </>
+                      ) : selectedBooking.preferred_start_at ? (
+                        <>
+                          <div style={{ fontWeight: 500 }}>
+                            {dayjs(selectedBooking.preferred_start_at).format(
+                              "DD/MM/YYYY"
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#ff9800" }}>
+                            Thời gian mong muốn: {dayjs(selectedBooking.preferred_start_at).format("HH:mm")}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 11, color: "#999" }}>
+                          Chưa có thời gian đặt lịch
+                        </div>
+                      )}
+                      {selectedBooking.booking_type && (
+                        <div style={{ marginTop: 4 }}>
+                          <Tag color={selectedBooking.booking_type === BookingType.WALK_IN ? "orange" : "blue"} style={{ fontSize: 10 }}>
+                            {selectedBooking.booking_type === BookingType.WALK_IN ? "Đặt xử lý tại chỗ" : "Đặt trước"}
+                          </Tag>
+                        </div>
+                      )}
                     </div>
 
                     {selectedBooking.actual_start_at && (

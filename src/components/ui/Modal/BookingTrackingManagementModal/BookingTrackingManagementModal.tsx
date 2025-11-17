@@ -102,7 +102,6 @@ const BookingTrackingManagementModal: React.FC<
     if (open && booking.booking_id) {
       loadTrackingData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, booking.booking_id]);
 
   const loadTrackingData = async () => {
@@ -272,9 +271,13 @@ const BookingTrackingManagementModal: React.FC<
     setUpdating(tracking.trackingId);
 
     try {
+      // Trim notes để loại bỏ khoảng trắng thừa
+      const trimmedNotes = values.notes?.trim() || "";
+      
       await ServiceProcessTrackingService.completeStep(tracking.trackingId, {
-        notes: values.notes || "Hoàn thành bước",
-        evidence_media_urls: values.evidence_media_urls || undefined,
+        // Chỉ gửi notes nếu user đã nhập, không gửi fallback text
+        notes: trimmedNotes || undefined,
+        evidence_media_urls: values.evidence_media_urls?.trim() || undefined,
       });
 
       notification.success({
@@ -337,9 +340,13 @@ const BookingTrackingManagementModal: React.FC<
     tracking: ServiceProcessTrackingInfoDto
   ) => {
     setCompletingTracking(tracking.trackingId);
+    // Reset form và chỉ set giá trị nếu tracking chưa được complete
+    // Nếu tracking đã complete, để form trống để user có thể nhập mới (nếu cần update)
+    // Nếu tracking chưa complete, để form trống để user nhập ghi chú mới
+    form.resetFields();
     form.setFieldsValue({
-      notes: tracking.notes || "",
-      evidence_media_urls: tracking.evidenceMediaUrls || "",
+      notes: "", // Luôn để trống để user nhập mới
+      evidence_media_urls: "", // Luôn để trống
     });
   };
 
