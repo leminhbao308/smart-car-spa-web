@@ -34,6 +34,7 @@ import {
   CheckCircleOutlined,
   LockOutlined,
   ShoppingOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { useUser } from "@/lib/api/hooks/useUsers";
@@ -976,6 +977,49 @@ const ProfileMemberPage = () => {
                 }}
               >
                 <Text type="secondary">Xem đơn hàng và sản phẩm đã mua</Text>
+              </div>
+            </Card>
+          </Col>
+
+          <Col
+            xs={24}
+            sm={12}
+            md={6}
+          >
+            <Card
+              hoverable
+              style={{
+                textAlign: "center",
+                borderRadius: "12px",
+                height: "200px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+              onClick={() => router.push("/member/care-tracking")}
+            >
+              <EyeOutlined
+                style={{
+                  fontSize: "32px",
+                  color: "#13c2c2",
+                  marginBottom: "12px",
+                }}
+              />
+              <Title
+                level={4}
+                style={{ margin: "0 0 8px 0" }}
+              >
+                Theo dõi quá trình chăm sóc
+              </Title>
+              <div
+                style={{
+                  minHeight: "42px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text type="secondary">Xem chi tiết quá trình chăm sóc xe</Text>
               </div>
             </Card>
           </Col>

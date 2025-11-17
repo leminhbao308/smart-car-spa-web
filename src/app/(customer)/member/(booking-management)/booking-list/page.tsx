@@ -37,10 +37,9 @@ import { useCancelBooking } from "@/lib/api/hooks/useBooking";
 import { useBranches } from "@/lib/api/hooks/useBranches";
 import { useRouter } from "next/navigation";
 import dayjs, { Dayjs } from "dayjs";
-import VehicleTrackingModal from "@/components/ui/Modal/VehicleTrackingModal/VehicleTrackingModal";
+import CustomerBookingDetailModal from "@/components/ui/Modal/CustomerBookingDetailModal/CustomerBookingDetailModal";
 import CustomerUpdateBookingModal from "@/components/ui/Modal/CustomerUpdateBookingModal";
 import { BookingInfoDto, BookingType } from "@/lib/api/types/booking.types";
-import { ServiceProcessTrackingInfoDto } from "@/lib/api/types/service-process-tracking.types";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -50,13 +49,10 @@ const CustomerBookingListPage = () => {
   const router = useRouter();
   const { message } = App.useApp();
 
-  // State for tracking modal
-  const [trackingModalOpen, setTrackingModalOpen] = useState(false);
+  // State for detail modal
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingInfoDto | null>(
     null
-  );
-  const [trackings, setTrackings] = useState<ServiceProcessTrackingInfoDto[]>(
-    []
   );
 
   // State for update modal
@@ -334,11 +330,10 @@ const CustomerBookingListPage = () => {
   // Cancel booking mutation
   const cancelBookingMutation = useCancelBooking();
 
-  // Function to open tracking modal
-  const handleViewTracking = (booking: BookingInfoDto) => {
+  // Function to open detail modal
+  const handleViewDetail = (booking: BookingInfoDto) => {
     setSelectedBooking(booking);
-    setTrackings([]); // Will be loaded by the modal
-    setTrackingModalOpen(true);
+    setDetailModalOpen(true);
   };
 
   // Function to handle edit booking
@@ -742,7 +737,7 @@ const CustomerBookingListPage = () => {
           type="primary"
           size="small"
           icon={<EyeOutlined />}
-          onClick={() => handleViewTracking(record)}
+          onClick={() => handleViewDetail(record)}
           style={{ fontSize: "12px" }}
         />
       ),
@@ -1047,17 +1042,15 @@ const CustomerBookingListPage = () => {
           )}
         </Card>
 
-        {/* Vehicle Tracking Modal */}
+        {/* Booking Detail Modal */}
         {selectedBooking && (
-          <VehicleTrackingModal
-            open={trackingModalOpen}
+          <CustomerBookingDetailModal
+            open={detailModalOpen}
             onCancel={() => {
-              setTrackingModalOpen(false);
+              setDetailModalOpen(false);
               setSelectedBooking(null);
             }}
             booking={selectedBooking}
-            trackings={trackings}
-            shouldCreateTracking={false}
           />
         )}
 

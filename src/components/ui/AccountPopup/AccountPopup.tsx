@@ -9,6 +9,7 @@ import {
   CarOutlined,
   CalendarOutlined,
   HistoryOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import { Avatar, Dropdown, Typography } from "antd";
 import type { MenuProps } from "antd";
@@ -94,10 +95,6 @@ const AccountPopup = ({ children }: AccountPopupProps) => {
     // Priority 2: Fallback to storage (which might be more up-to-date)
     try {
       const userFromStorage = AuthService.getCurrentUserFromStorage();
-      console.log("AccountPopup: User from storage:", userFromStorage);
-      console.log("AccountPopup: Avatar URL from storage:", userFromStorage?.avatar_url);
-      console.log("AccountPopup: Avatar URL type:", typeof userFromStorage?.avatar_url);
-      console.log("AccountPopup: Avatar URL truthy check:", !!userFromStorage?.avatar_url);
       
       if (userFromStorage?.avatar_url && userFromStorage.avatar_url.trim() !== "") {
         console.log("AccountPopup: Setting avatar from storage:", userFromStorage.avatar_url);
@@ -214,6 +211,14 @@ const AccountPopup = ({ children }: AccountPopupProps) => {
             router.push("/member/booking-list");
           },
         },
+        {
+          key: "care-tracking",
+          icon: <EyeOutlined />,
+          label: "Theo dõi quá trình chăm sóc",
+          onClick: () => {
+            router.push("/member/care-tracking");
+          },
+        },
         ...(user?.role?.role_code === "ADMIN"
           ? [
               {
@@ -248,7 +253,7 @@ const AccountPopup = ({ children }: AccountPopupProps) => {
       placement="bottomRight"
       trigger={["click", "hover"]}
       overlayStyle={{ minWidth: "200px" }}
-      key={avatarUrl || "no-avatar"} // Force re-render when avatar changes
+      key={avatarUrl || "no-avatar"}
     >
       {children}
     </Dropdown>
