@@ -1362,25 +1362,53 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     return slot.isAvailable;
   }, []);
 
+  // Calculate original slot time from scheduled_start_at and scheduled_end_at (actual time range)
+  const calculateOriginalSlotTime = useCallback(() => {
+    // Customer bookings are always slot bookings
+    if (!initialData.scheduled_start_at || !initialData.scheduled_end_at) {
+      // Fallback: use estimated_duration_minutes if available
+      if (initialData.estimated_duration_minutes) {
+        return initialData.estimated_duration_minutes;
+      }
+      // Last fallback: use originalTotalDuration
+      return originalTotalDuration || null;
+    }
+
+    // Use actual time range from scheduled_start_at and scheduled_end_at
+    const startTime = dayjs(initialData.scheduled_start_at);
+    const endTime = dayjs(initialData.scheduled_end_at);
+    const diffMinutes = endTime.diff(startTime, 'minute');
+    
+    if (diffMinutes > 0) {
+      return diffMinutes;
+    }
+
+    // Fallback: use estimated_duration_minutes if available
+    if (initialData.estimated_duration_minutes) {
+      return initialData.estimated_duration_minutes;
+    }
+
+    // Last fallback: use originalTotalDuration
+    return originalTotalDuration || null;
+  }, [initialData, originalTotalDuration]);
+
   // Check if service duration exceeds total time of originally booked slots
-  // Compare: total service duration vs total slot time (number of slots × 60 minutes per slot)
+  // Compare: total service duration vs actual time range from scheduled_start_at and scheduled_end_at
   const isDurationExceedsOriginal = useMemo(() => {
     const { isSlot: isSlotBooking } = detectBookingType(initialData);
-    if (!isSlotBooking || !originalTotalDuration) {
+    if (!isSlotBooking) {
       return false;
     }
 
-    // Calculate number of slots originally booked based on original service duration
-    // Each slot is 60 minutes
-    const SLOT_DURATION_MINUTES = 60;
-    const originalSlotCount = Math.ceil(
-      originalTotalDuration / SLOT_DURATION_MINUTES
-    );
-    const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
+    // Compare with actual time range from scheduled_start_at and scheduled_end_at
+    const totalOriginalSlotTime = calculateOriginalSlotTime();
+    
+    if (totalOriginalSlotTime && totalOriginalSlotTime > 0) {
+      return totalDuration > totalOriginalSlotTime;
+    }
 
-    // Compare new service duration with total original slot time
-    return totalDuration > totalOriginalSlotTime;
-  }, [totalDuration, originalTotalDuration, initialData.booking_code]);
+    return false;
+  }, [totalDuration, calculateOriginalSlotTime, initialData.booking_code]);
 
   // Check if slot can be selected
   const canSelectSlot = useCallback(
@@ -1410,7 +1438,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       if (isDurationExceedsOriginal) {
         message.warning({
           content:
-            "Không thể đổi thời gian khi dịch vụ vượt quá thời gian chăm sóc ban đầu. Vui lòng chọn lại dịch vụ.",
+            "Tổng thời gian dịch vụ bạn chọn vượt quá thời gian slot hiện tại. Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.",
           duration: 4,
         });
         return;
@@ -1469,16 +1497,14 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       // Validate: Check if total duration exceeds total time of originally booked slots
       // User can only select services that fit within the total slot time originally booked
       if (isDurationExceedsOriginal && originalTotalDuration) {
-        const SLOT_DURATION_MINUTES = 60;
-        const originalSlotCount = Math.ceil(
-          originalTotalDuration / SLOT_DURATION_MINUTES
-        );
-        const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
+        const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
 
-        message.error({
-          content: `Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các thời gian đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} thời gian × ${SLOT_DURATION_MINUTES} phút/thời gian). Vui lòng chọn lại dịch vụ phù hợp với thời gian thời gian chăm sóc hiện tại.`,
-          duration: 5,
-        });
+        if (totalOriginalSlotTime > 0) {
+          message.warning({
+            content: `Tổng thời gian dịch vụ bạn đã chọn (${totalDuration} phút) vượt quá thời gian slot đã đặt ban đầu (${totalOriginalSlotTime} phút). Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.`,
+            duration: 5,
+          });
+        }
         return;
       }
 
@@ -1791,27 +1817,26 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         if (isServicesChanged && totalDuration > totalOriginalSlotTime) {
           return (
             <Alert
-              message="Cảnh báo thời gian dịch vụ"
+              message="Thông báo về thời gian dịch vụ"
               description={
                 <div>
                   <div>
-                    Tổng thời gian dịch vụ hiện tại:{" "}
+                    Tổng thời gian dịch vụ bạn đã chọn:{" "}
                     <strong>{totalDuration} phút</strong>
                   </div>
                   <div>
-                    Tổng thời gian các slot đã đặt:{" "}
+                    Tổng thời gian slot đã đặt ban đầu:{" "}
                     <strong>{totalOriginalSlotTime} phút</strong> (
                     {originalSlotCount} slot × {SLOT_DURATION_MINUTES}{" "}
                     phút/slot)
                   </div>
-                  <div style={{ marginTop: 8, color: "#ff4d4f" }}>
-                    ⚠️ Tổng thời gian dịch vụ vượt quá tổng thời gian các thời
-                    gian đã đặt ban đầu. Vui lòng chọn lại dịch vụ hoặc đặt lại
-                    thời gian.
+                  <div style={{ marginTop: 8, color: "#faad14" }}>
+                    ⚠️ Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. 
+                    Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.
                   </div>
                 </div>
               }
-              type="error"
+              type="warning"
               showIcon
               style={{ marginTop: 16 }}
             />
@@ -1976,23 +2001,20 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
               <Text strong>Chọn Khu Vực Chăm Sóc Cho Đặt Lịch:</Text>
               {isDurationExceedsOriginal &&
                 (() => {
-                  const SLOT_DURATION_MINUTES = 60;
-                  const originalSlotCount =
-                    originalTotalDuration > 0
-                      ? Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES)
-                      : 1;
-                  const totalOriginalSlotTime =
-                    originalSlotCount * SLOT_DURATION_MINUTES;
+                  const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
 
-                  return (
-                    <Alert
-                      message="Không thể đổi thời gian"
-                      description={`Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các thời gian đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} thời gian × ${SLOT_DURATION_MINUTES} phút/thời gian). Bạn chỉ có thể chọn lại dịch vụ phù hợp với thời gian thời gian chăm sóc hiện tại.`}
-                      type="error"
-                      showIcon
-                      style={{ marginTop: 8, marginBottom: 8 }}
-                    />
-                  );
+                  if (totalOriginalSlotTime > 0) {
+                    return (
+                      <Alert
+                        message="Lưu ý về thời gian dịch vụ"
+                        description={`Tổng thời gian dịch vụ bạn đã chọn (${totalDuration} phút) vượt quá thời gian slot đã đặt ban đầu (${totalOriginalSlotTime} phút). Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.`}
+                        type="warning"
+                        showIcon
+                        style={{ marginTop: 8, marginBottom: 8 }}
+                      />
+                    );
+                  }
+                  return null;
                 })()}
               {totalDuration > 60 && !isDurationExceedsOriginal && (
                 <Alert
@@ -2132,17 +2154,10 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                           tooltipMessage = `Chọn thời gian ${slot.time} (${totalDuration} phút)`;
                         } else {
                           if (isDurationExceedsOriginal) {
-                            const SLOT_DURATION_MINUTES = 60;
-                            const originalSlotCount =
-                              originalTotalDuration > 0
-                                ? Math.ceil(
-                                    originalTotalDuration /
-                                      SLOT_DURATION_MINUTES
-                                  )
-                                : 1;
-                            const totalOriginalSlotTime =
-                              originalSlotCount * SLOT_DURATION_MINUTES;
-                            tooltipMessage = `Không thể đổi thời gian. Dịch vụ (${totalDuration} phút) vượt quá tổng thời gian các thời gian đã đặt ban đầu (${totalOriginalSlotTime} phút - ${originalSlotCount} thời gian). Vui lòng chọn lại dịch vụ.`;
+                            const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
+                            if (totalOriginalSlotTime > 0) {
+                              tooltipMessage = `Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá thời gian slot hiện tại (${totalOriginalSlotTime} phút). Bạn vẫn có thể chọn slot này, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.`;
+                            }
                           } else {
                             tooltipMessage = "Thời gian không khả dụng";
                           }
