@@ -57,6 +57,7 @@ import { useBranches } from "@/lib/api/hooks/useBranches";
 import { useAllPriceBooks } from "@/lib/api/hooks/usePricing";
 import { useActiveServiceBays } from "@/lib/api/hooks/useServiceBays";
 import { useWalkInBooking } from "@/lib/api/hooks/useWalkInBooking";
+import { useServicesWithInventory } from "@/lib/api/hooks/useServicesWithInventory";
 import { UserManagementInfo } from "@/lib/api/types/user.types";
 import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
 import { BranchDisplay } from "@/lib/api/types/branch.types";
@@ -376,15 +377,37 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         );
 
         // Load queue for the current bay
-        const queue = await getBayQueue(bayId, bookingDate);
-        setQueueItems(queue as unknown as typeof queueItems);
+        // Include current booking ID to ensure it appears in queue even if scheduledEndAt < currentTime
+        const isOriginalBay = bayId === initialData?.bay_id;
+        const includeBookingId = isOriginalBay ? initialData?.booking_id : undefined;
+        const queue = await getBayQueue(bayId, bookingDate, includeBookingId);
+        
+        // Don't filter out current booking when loading queue for the original bay
+        // The current booking should be visible in the queue for its original bay
+        // Only filter when selecting a different bay
+        console.log("🔍 Queue loaded for original bay (including current booking):", {
+          queueLength: queue?.length || 0,
+          currentBookingId: initialData?.booking_id,
+          bayId: bayId,
+          isOriginalBay: isOriginalBay,
+          includeBookingId: includeBookingId,
+        });
+        
+        // Filter out current booking only if selecting a different bay
+        const filteredQueue = initialData?.booking_id && !isOriginalBay
+          ? (queue as any[]).filter(
+              (item: any) => item.booking_id !== initialData.booking_id
+            )
+          : queue;
+        
+        setQueueItems(filteredQueue as unknown as typeof queueItems);
       } catch (error) {
         console.log("❌ Error loading bay recommendation:", error);
       } finally {
         setIsLoadingRecommendation(false);
       }
     },
-    [selectedBranch, totalDuration, bookingDate, recommendBay, getBayQueue]
+    [selectedBranch, totalDuration, bookingDate, recommendBay, getBayQueue, initialData]
   );
 
   // Data hooks
@@ -421,7 +444,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   }, [allVehicles, selectedCustomer]);
 
   // Get all services from price books (filter for services only, not service packages)
-  const availableServices = useMemo(() => {
+  const allPriceBookServices = useMemo(() => {
     if (priceBooksError) {
       console.log("Error loading price books:", priceBooksError);
       return [];
@@ -459,6 +482,73 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     });
     return allItems;
   }, [priceBooksData, priceBooksError]);
+
+  // Extract services from PriceBookItems for inventory check
+  const servicesForInventoryCheck = useMemo(() => {
+    return allPriceBookServices
+      .map((item) => item.service)
+      .filter(
+        (service): service is NonNullable<typeof service> =>
+          service !== undefined
+      );
+  }, [allPriceBookServices]);
+
+  // Check inventory for services when branch is selected
+  const {
+    data: servicesWithInventory,
+    isLoading: isLoadingInventory,
+  } = useServicesWithInventory({
+    services: servicesForInventoryCheck,
+    branchId: selectedBranch?.branch_id || null,
+    enabled: !!selectedBranch && servicesForInventoryCheck.length > 0,
+  });
+
+  // Filter PriceBookItems to only show services with enough inventory
+  const availableServices = useMemo(() => {
+    // If no branch selected, show all services (no inventory check)
+    if (!selectedBranch) {
+      return allPriceBookServices;
+    }
+
+    // If inventory check is still loading, show all services temporarily
+    // (to avoid flickering and allow user to see services while loading)
+    if (isLoadingInventory) {
+      return allPriceBookServices;
+    }
+
+    // If no services with inventory data, return empty array
+    // This means all services are out of stock
+    if (!servicesWithInventory || servicesWithInventory.length === 0) {
+      // Only return empty if we actually have services to check
+      // (if servicesForInventoryCheck is empty, it means no services have products, so show all)
+      if (servicesForInventoryCheck.length === 0) {
+        return allPriceBookServices;
+      }
+      return [];
+    }
+
+    // Create a Set of service IDs that have enough inventory
+    const availableServiceIds = new Set(
+      servicesWithInventory.map((s) => s.service_id)
+    );
+
+    // Filter PriceBookItems to only include services with enough inventory
+    return allPriceBookServices.filter((item) => {
+      const serviceId = item.service?.service_id;
+      // If service doesn't have service_id, show it (assume it doesn't need inventory)
+      if (!serviceId) {
+        return true;
+      }
+      // Only show if service passed inventory check
+      return availableServiceIds.has(serviceId);
+    });
+  }, [
+    allPriceBookServices,
+    selectedBranch,
+    servicesWithInventory,
+    isLoadingInventory,
+    servicesForInventoryCheck.length,
+  ]);
 
   // Load available time ranges from API and convert to slots
   const loadAvailableSlots = useCallback(async () => {
@@ -1091,6 +1181,10 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         setOriginalTotalDuration(0);
       }
 
+      // Filter selectedItems to remove services that are no longer available when branch/inventory changes
+      // Note: This should run after services are initialized, but also when branch/inventory changes
+      // We'll add a separate useEffect for this below
+
       // Determine if this is a walk-in booking or slot booking
       const {
         isWalkIn: isWalkInBooking,
@@ -1316,6 +1410,45 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     loadBayRecommendation,
     selectedItems,
   ]);
+
+  // Filter selectedItems to remove services that are no longer available when branch/inventory changes
+  useEffect(() => {
+    if (!selectedBranch || isLoadingInventory || !servicesWithInventory) {
+      return;
+    }
+
+    // Create a Set of available service IDs
+    const availableServiceIds = new Set(
+      servicesWithInventory.map((s) => s.service_id)
+    );
+
+    // Filter selectedItems to only keep services that are still available
+    const filteredSelectedItems = selectedItems.filter((item) => {
+      if (!item.service) return false;
+
+      // Check if service is still available in the new branch
+      const isStillAvailable = availableServiceIds.has(item.service.service_id);
+
+      if (!isStillAvailable) {
+        console.log(
+          `[UpdateBookingModal] Removing service ${item.service.service_name} from selectedItems - no longer available in branch ${selectedBranch.branch_name}`
+        );
+      }
+
+      return isStillAvailable;
+    });
+
+    // If any items were removed, update selectedItems and form
+    if (filteredSelectedItems.length !== selectedItems.length) {
+      setSelectedItems(filteredSelectedItems);
+      form.setFieldsValue({
+        services: filteredSelectedItems.map((item) => item.item_id),
+      });
+      // Recalculate totals with filtered items
+      calculateTotals(filteredSelectedItems);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranch, servicesWithInventory, isLoadingInventory, selectedItems, form]);
 
   const calculateTotals = useCallback((items: PriceBookItem[]) => {
     // Remove duplicates by item_id to prevent double counting
@@ -1880,6 +2013,41 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           return;
         }
 
+        // Validate: Check inventory for newly added services
+        if (selectedBranch && servicesWithInventory && selectedItems.length > 0) {
+          const availableServiceIds = new Set(
+            servicesWithInventory.map((s) => s.service_id)
+          );
+
+          // Check if any selected service doesn't have enough inventory
+          const servicesWithoutInventory = selectedItems.filter((item) => {
+            const serviceId = item.service?.service_id;
+            if (!serviceId) return false; // Skip items without service_id
+            
+            // Check if this is a new service (not in originalItems)
+            const isNewService = !originalItems.some(
+              (orig) => orig.service?.service_id === serviceId
+            );
+            
+            // Only validate new services
+            if (isNewService && !availableServiceIds.has(serviceId)) {
+              return true;
+            }
+            return false;
+          });
+
+          if (servicesWithoutInventory.length > 0) {
+            const serviceNames = servicesWithoutInventory
+              .map((item) => item.item_name)
+              .join(", ");
+            message.error({
+              content: `Các dịch vụ sau không đủ tồn kho trong chi nhánh ${selectedBranch.branch_name}: ${serviceNames}. Vui lòng chọn dịch vụ khác.`,
+              duration: 5,
+            });
+            return;
+          }
+        }
+
         console.log("Updating walk-in booking");
         try {
           // Build booking_items array for API
@@ -1917,11 +2085,12 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
               : selectedVehicle!.color || "",
             // For walk-in booking, don't send branch_id as it cannot be changed
             branch_id: isWalkInBooking ? undefined : selectedBranch.branch_id,
-            // For walk-in booking, only set service_bay_id if it's different from original
-            service_bay_id:
-              selectedWalkInBay && selectedWalkInBay !== initialData.bay_id
-                ? selectedWalkInBay
-                : undefined,
+            // For walk-in booking, send service_bay_id if we have a selected bay
+            // This tells backend which bay to use (or keep if unchanged)
+            // If user changed bay, send the new bay; otherwise send the original bay
+            service_bay_id: isWalkInBooking
+              ? selectedWalkInBay || initialData.bay_id || undefined
+              : undefined,
             // For walk-in booking, we don't set scheduled times or slot info
             preferred_start_at: undefined,
             scheduled_start_at: undefined,
@@ -2006,6 +2175,41 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             duration: 5,
           });
           return;
+        }
+
+        // Validate: Check inventory for newly added services
+        if (selectedBranch && servicesWithInventory && selectedItems.length > 0) {
+          const availableServiceIds = new Set(
+            servicesWithInventory.map((s) => s.service_id)
+          );
+
+          // Check if any selected service doesn't have enough inventory
+          const servicesWithoutInventory = selectedItems.filter((item) => {
+            const serviceId = item.service?.service_id;
+            if (!serviceId) return false; // Skip items without service_id
+            
+            // Check if this is a new service (not in originalItems)
+            const isNewService = !originalItems.some(
+              (orig) => orig.service?.service_id === serviceId
+            );
+            
+            // Only validate new services
+            if (isNewService && !availableServiceIds.has(serviceId)) {
+              return true;
+            }
+            return false;
+          });
+
+          if (servicesWithoutInventory.length > 0) {
+            const serviceNames = servicesWithoutInventory
+              .map((item) => item.item_name)
+              .join(", ");
+            message.error({
+              content: `Các dịch vụ sau không đủ tồn kho trong chi nhánh ${selectedBranch.branch_name}: ${serviceNames}. Vui lòng chọn dịch vụ khác.`,
+              duration: 5,
+            });
+            return;
+          }
         }
 
         console.log("Updating slot booking");
@@ -2674,6 +2878,27 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     return (
       <div>
         <Card size="small" title="Dịch vụ" style={{ marginBottom: 16 }}>
+          {isLoadingInventory && selectedBranch && (
+            <Alert
+              message="Đang kiểm tra tồn kho..."
+              description="Vui lòng đợi trong giây lát"
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+          {!isLoadingInventory &&
+            selectedBranch &&
+            availableServices.length === 0 &&
+            allPriceBookServices.length > 0 && (
+              <Alert
+                message="Không có dịch vụ nào khả dụng"
+                description="Tất cả dịch vụ trong chi nhánh này đều không đủ tồn kho. Vui lòng chọn chi nhánh khác hoặc liên hệ nhân viên."
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+            )}
           {/* Show editable service selection for both walk-in and slot bookings */}
           <div>
             <Form.Item name="services" label="Dịch vụ chăm sóc xe" rules={[]}>
@@ -2682,9 +2907,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                 placeholder="Chọn dịch vụ chăm sóc xe"
                 onChange={handleServiceChange}
                 optionLabelProp="label"
-                loading={isLoadingPriceBooks}
+                loading={isLoadingPriceBooks || isLoadingInventory}
                 notFoundContent={
-                  isLoadingPriceBooks
+                  isLoadingPriceBooks || isLoadingInventory
                     ? "Đang tải dịch vụ..."
                     : priceBooksError
                     ? `Lỗi tải dịch vụ: ${
@@ -2692,7 +2917,9 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                           ?.response?.data || "Không thể tải danh sách dịch vụ"
                       }`
                     : availableServices.length === 0
-                    ? "Không có dịch vụ nào khả dụng"
+                    ? selectedBranch
+                      ? "Không có dịch vụ nào khả dụng trong chi nhánh này"
+                      : "Vui lòng chọn chi nhánh trước"
                     : "Không tìm thấy dịch vụ phù hợp"
                 }
                 filterOption={(input, option) => {
@@ -3158,6 +3385,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                           // Restore original queue from recommendation
                           setIsLoadingQueue(true);
                           try {
+                            let queueToSet: any[] = [];
+                            
                             if (
                               bayRecommendation?.queue &&
                               Array.isArray(bayRecommendation.queue)
@@ -3165,9 +3394,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                               console.log(
                                 "🔄 Restoring original queue from recommendation"
                               );
-                              setQueueItems(
-                                bayRecommendation.queue as unknown as typeof queueItems
-                              );
+                              queueToSet = bayRecommendation.queue;
                             } else if (
                               bayRecommendation?.recommended_bay?.bay_id
                             ) {
@@ -3175,18 +3402,43 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                                 "🔄 Loading queue for recommended bay:",
                                 bayRecommendation.recommended_bay.bay_id
                               );
+                              // Include current booking ID if recommended bay is the original bay
+                              const recommendedBayId = bayRecommendation.recommended_bay.bay_id;
+                              const isOriginalBay = recommendedBayId === initialData?.bay_id;
+                              const includeBookingId = isOriginalBay ? initialData?.booking_id : undefined;
                               const queue = await getBayQueue(
-                                bayRecommendation.recommended_bay.bay_id,
-                                bookingDate
+                                recommendedBayId,
+                                bookingDate,
+                                includeBookingId
                               );
                               console.log(
                                 "✅ Queue loaded for recommended bay:",
                                 queue
                               );
-                              setQueueItems(
-                                queue as unknown as typeof queueItems
-                              );
+                              queueToSet = queue as any[];
                             }
+                            
+                            // Only filter out current booking if recommended bay is different from original bay
+                            // If recommended bay is the original bay, show current booking in queue
+                            const recommendedBayId = bayRecommendation?.recommended_bay?.bay_id;
+                            const isOriginalBay = recommendedBayId === initialData?.bay_id;
+                            const filteredQueue = initialData?.booking_id && !isOriginalBay
+                              ? queueToSet.filter(
+                                  (item: any) => item.booking_id !== initialData.booking_id
+                                )
+                              : queueToSet;
+                            
+                            console.log("🔍 Queue filtering (restore recommendation):", {
+                              originalQueueLength: queueToSet?.length || 0,
+                              filteredQueueLength: filteredQueue?.length || 0,
+                              currentBookingId: initialData?.booking_id,
+                              recommendedBayId: recommendedBayId,
+                              originalBayId: initialData?.bay_id,
+                              isOriginalBay: isOriginalBay,
+                              filtered: !isOriginalBay && initialData?.booking_id,
+                            });
+                            
+                            setQueueItems(filteredQueue as unknown as typeof queueItems);
                           } catch (error) {
                             console.log(
                               "❌ Error loading queue for recommended bay:",
@@ -3252,13 +3504,36 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                               "using selected date:",
                               bookingDate
                             );
+                            // Include current booking ID if selecting the original bay
+                            const isOriginalBay = bay.bay_id === initialData?.bay_id;
+                            const includeBookingId = isOriginalBay ? initialData?.booking_id : undefined;
                             const queue = await getBayQueue(
                               bay.bay_id,
-                              bookingDate
+                              bookingDate,
+                              includeBookingId
                             );
                             console.log("✅ Queue loaded for bay:", queue);
+                            
+                            // Only filter out current booking if selecting a different bay
+                            // If selecting the original bay, show current booking in queue
+                            const filteredQueue = initialData?.booking_id && !isOriginalBay
+                              ? (queue as any[]).filter(
+                                  (item: any) => item.booking_id !== initialData.booking_id
+                                )
+                              : queue;
+                            
+                            console.log("🔍 Queue filtering:", {
+                              originalQueueLength: queue?.length || 0,
+                              filteredQueueLength: filteredQueue?.length || 0,
+                              currentBookingId: initialData?.booking_id,
+                              selectedBayId: bay.bay_id,
+                              originalBayId: initialData?.bay_id,
+                              isOriginalBay: isOriginalBay,
+                              filtered: !isOriginalBay && initialData?.booking_id,
+                            });
+                            
                             setQueueItems(
-                              queue as unknown as typeof queueItems
+                              filteredQueue as unknown as typeof queueItems
                             );
                           } catch (error) {
                             console.log(
@@ -3311,23 +3586,23 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
               </div>
             </Card>
           ) : (
-            (() => {
-              const safeQueueItems = getSafeQueueItems();
-              console.log("🔍 Queue items debug:", {
-                queueItems,
-                safeQueueItems,
-                isArray: Array.isArray(queueItems),
-                length: queueItems?.length,
-                source: "Bay Recommendation Queue Data",
-              });
-              return safeQueueItems.length > 0;
-            })() && (
-              <Card
-                title={`Hàng chờ hiện tại (${
-                  getSafeQueueItems().length
-                } khách hàng)`}
-                style={{ marginBottom: 16 }}
-              >
+            <Card
+              title={`Hàng chờ hiện tại (${
+                getSafeQueueItems().length
+              } khách hàng)`}
+              style={{ marginBottom: 16 }}
+            >
+              {(() => {
+                const safeQueueItems = getSafeQueueItems();
+                console.log("🔍 Queue items debug:", {
+                  queueItems,
+                  safeQueueItems,
+                  isArray: Array.isArray(queueItems),
+                  length: queueItems?.length,
+                  source: "Bay Recommendation Queue Data",
+                });
+                return null; // Just for logging, table will render below
+              })()}
                 <style>
                   {`
                   .queue-first-row {
@@ -3589,7 +3864,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                   }}
                 />
               </Card>
-            )
           )}
         </div>
       ) : (

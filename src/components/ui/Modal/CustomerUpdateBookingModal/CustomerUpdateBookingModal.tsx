@@ -46,6 +46,7 @@ import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
 import { useBranches } from "@/lib/api/hooks/useBranches";
 import { useAllPriceBooks } from "@/lib/api/hooks/usePricing";
 import { useActiveServiceBays } from "@/lib/api/hooks/useServiceBays";
+import { useServicesWithInventory } from "@/lib/api/hooks/useServicesWithInventory";
 import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
 import { BranchDisplay } from "@/lib/api/types/branch.types";
 import { PriceBookItem } from "@/lib/api/types/price-book.types";
@@ -307,7 +308,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   }, [serviceBays, allServiceBays, initialData?.bay_id, open, selectedBay]);
 
   // Get all services from price books (filter for services only)
-  const availableServices = useMemo(() => {
+  const allPriceBookServices = useMemo(() => {
     if (priceBooksError) {
       console.log("Error loading price books:", priceBooksError);
       return [];
@@ -334,6 +335,73 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     });
     return allItems;
   }, [priceBooksData, priceBooksError]);
+
+  // Extract services from PriceBookItems for inventory check
+  const servicesForInventoryCheck = useMemo(() => {
+    return allPriceBookServices
+      .map((item) => item.service)
+      .filter(
+        (service): service is NonNullable<typeof service> =>
+          service !== undefined
+      );
+  }, [allPriceBookServices]);
+
+  // Check inventory for services when branch is selected
+  const {
+    data: servicesWithInventory,
+    isLoading: isLoadingInventory,
+  } = useServicesWithInventory({
+    services: servicesForInventoryCheck,
+    branchId: selectedBranch?.branch_id || null,
+    enabled: !!selectedBranch && servicesForInventoryCheck.length > 0,
+  });
+
+  // Filter PriceBookItems to only show services with enough inventory
+  const availableServices = useMemo(() => {
+    // If no branch selected, show all services (no inventory check)
+    if (!selectedBranch) {
+      return allPriceBookServices;
+    }
+
+    // If inventory check is still loading, show all services temporarily
+    // (to avoid flickering and allow user to see services while loading)
+    if (isLoadingInventory) {
+      return allPriceBookServices;
+    }
+
+    // If no services with inventory data, return empty array
+    // This means all services are out of stock
+    if (!servicesWithInventory || servicesWithInventory.length === 0) {
+      // Only return empty if we actually have services to check
+      // (if servicesForInventoryCheck is empty, it means no services have products, so show all)
+      if (servicesForInventoryCheck.length === 0) {
+        return allPriceBookServices;
+      }
+      return [];
+    }
+
+    // Create a Set of service IDs that have enough inventory
+    const availableServiceIds = new Set(
+      servicesWithInventory.map((s) => s.service_id)
+    );
+
+    // Filter PriceBookItems to only include services with enough inventory
+    return allPriceBookServices.filter((item) => {
+      const serviceId = item.service?.service_id;
+      // If service doesn't have service_id, show it (assume it doesn't need inventory)
+      if (!serviceId) {
+        return true;
+      }
+      // Only show if service passed inventory check
+      return availableServiceIds.has(serviceId);
+    });
+  }, [
+    allPriceBookServices,
+    selectedBranch,
+    servicesWithInventory,
+    isLoadingInventory,
+    servicesForInventoryCheck.length,
+  ]);
 
   // Load available time ranges from API and convert to slots
   const loadAvailableSlots = useCallback(
@@ -777,6 +845,45 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     isFormInitialized,
     // Other dependencies are intentionally excluded to prevent resetting user changes
   ]);
+
+  // Filter selectedItems to remove services that are no longer available when branch/inventory changes
+  useEffect(() => {
+    if (!selectedBranch || isLoadingInventory || !servicesWithInventory) {
+      return;
+    }
+
+    // Create a Set of available service IDs
+    const availableServiceIds = new Set(
+      servicesWithInventory.map((s) => s.service_id)
+    );
+
+    // Filter selectedItems to only keep services that are still available
+    const filteredSelectedItems = selectedItems.filter((item) => {
+      if (!item.service) return false;
+
+      // Check if service is still available in the new branch
+      const isStillAvailable = availableServiceIds.has(item.service.service_id);
+
+      if (!isStillAvailable) {
+        console.log(
+          `[CustomerUpdateBookingModal] Removing service ${item.service.service_name} from selectedItems - no longer available in branch ${selectedBranch.branch_name}`
+        );
+      }
+
+      return isStillAvailable;
+    });
+
+    // If any items were removed, update selectedItems and form
+    if (filteredSelectedItems.length !== selectedItems.length) {
+      setSelectedItems(filteredSelectedItems);
+      form.setFieldsValue({
+        services: filteredSelectedItems.map((item) => item.item_id),
+      });
+      // Recalculate totals with filtered items
+      calculateTotals(filteredSelectedItems);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranch, servicesWithInventory, isLoadingInventory, selectedItems, form]);
 
   // Initialize services when availableServices are loaded (separate useEffect to handle async loading)
   useEffect(() => {
@@ -1375,6 +1482,41 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         return;
       }
 
+      // Validate: Check inventory for newly added services
+      if (selectedBranch && servicesWithInventory && selectedItems.length > 0) {
+        const availableServiceIds = new Set(
+          servicesWithInventory.map((s) => s.service_id)
+        );
+
+        // Check if any selected service doesn't have enough inventory
+        const servicesWithoutInventory = selectedItems.filter((item) => {
+          const serviceId = item.service?.service_id;
+          if (!serviceId) return false; // Skip items without service_id
+          
+          // Check if this is a new service (not in originalItems)
+          const isNewService = !originalItems.some(
+            (orig) => orig.service?.service_id === serviceId
+          );
+          
+          // Only validate new services
+          if (isNewService && !availableServiceIds.has(serviceId)) {
+            return true;
+          }
+          return false;
+        });
+
+        if (servicesWithoutInventory.length > 0) {
+          const serviceNames = servicesWithoutInventory
+            .map((item) => item.item_name)
+            .join(", ");
+          message.error({
+            content: `Các dịch vụ sau không đủ tồn kho trong chi nhánh ${selectedBranch.branch_name}: ${serviceNames}. Vui lòng chọn dịch vụ khác.`,
+            duration: 5,
+          });
+          return;
+        }
+      }
+
       // Build booking_items array for API
       const bookingItems = buildBookingItemsArray();
 
@@ -1522,18 +1664,41 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   // Render service selection
   const renderServiceSelection = () => (
     <Card size="small" title="Dịch vụ" style={{ marginBottom: 16 }}>
+      {isLoadingInventory && selectedBranch && (
+        <Alert
+          message="Đang kiểm tra tồn kho..."
+          description="Vui lòng đợi trong giây lát"
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      {!isLoadingInventory &&
+        selectedBranch &&
+        availableServices.length === 0 &&
+        allPriceBookServices.length > 0 && (
+          <Alert
+            message="Không có dịch vụ nào khả dụng"
+            description="Tất cả dịch vụ trong chi nhánh này đều không đủ tồn kho. Vui lòng chọn chi nhánh khác hoặc liên hệ nhân viên."
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
       <Form.Item name="services" label="Dịch vụ chăm sóc xe" rules={[]}>
         <Select
           mode="multiple"
           placeholder="Chọn dịch vụ chăm sóc xe"
           onChange={handleServiceChange}
           optionLabelProp="label"
-          loading={isLoadingPriceBooks}
+          loading={isLoadingPriceBooks || isLoadingInventory}
           notFoundContent={
-            isLoadingPriceBooks
+            isLoadingPriceBooks || isLoadingInventory
               ? "Đang tải dịch vụ..."
               : availableServices.length === 0
-              ? "Không có dịch vụ nào khả dụng"
+              ? selectedBranch
+                ? "Không có dịch vụ nào khả dụng trong chi nhánh này"
+                : "Vui lòng chọn chi nhánh trước"
               : "Không tìm thấy dịch vụ phù hợp"
           }
           filterOption={(input, option) => {

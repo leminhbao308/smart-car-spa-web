@@ -172,11 +172,18 @@ export class WalkInBookingService {
    * Endpoint: /walk-in/bay-queue/{bayId}
    * Trả về các WALK_IN bookings, không còn BayQueue entity riêng
    * Returns direct array, not wrapped in ApiResponse
+   * @param includeBookingId ID của booking cần include vào queue (optional, dùng khi update booking để luôn hiển thị booking hiện tại)
    */
-  async getBayQueue(bayId: string, queueDate?: string): Promise<BookingQueueItem[]> {
+  async getBayQueue(bayId: string, queueDate?: string, includeBookingId?: string): Promise<BookingQueueItem[]> {
     try {
-      const params = queueDate ? { queueDate: queueDate } : {};
-      console.log('🔍 DEBUG: getBayQueue called with:', { bayId, queueDate, params });
+      const params: Record<string, string> = {};
+      if (queueDate) {
+        params.queueDate = queueDate;
+      }
+      if (includeBookingId) {
+        params.includeBookingId = includeBookingId;
+      }
+      console.log('🔍 DEBUG: getBayQueue called with:', { bayId, queueDate, includeBookingId, params });
       
       const response = await apiClient.get(
         `/walk-in/bay-queue/${bayId}`,

@@ -208,13 +208,14 @@ export const useWalkInBooking = () => {
 
   /**
    * Lấy hàng chờ của bay
+   * @param includeBookingId ID của booking cần include vào queue (optional, dùng khi update booking để luôn hiển thị booking hiện tại)
    */
-  const getBayQueue = useCallback(async (bayId: string, queueDate?: string) => {
+  const getBayQueue = useCallback(async (bayId: string, queueDate?: string, includeBookingId?: string) => {
     try {
       setLoading(true);
       setError(undefined);
 
-      const response = await walkInBookingService.getBayQueue(bayId, queueDate);
+      const response = await walkInBookingService.getBayQueue(bayId, queueDate, includeBookingId);
       updateQueueItems(response);
       
       return response;
