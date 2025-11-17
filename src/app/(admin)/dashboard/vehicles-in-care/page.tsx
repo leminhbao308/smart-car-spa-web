@@ -28,7 +28,7 @@ import { useVehicleTracking } from "@/lib/api/hooks/useVehicleTracking";
 import { formatDate } from "@/components/utils/helper/date.format.helper";
 import { formatTime } from "@/components/utils/helper/duration.format.helper";
 import {
-  useBookingsByStatus,
+  useBookingsForManagement,
   useStartService,
   useCancelBooking,
 } from "@/lib/api/hooks/useBooking";
@@ -42,6 +42,7 @@ import {
 } from "@/lib/api/types/service-process-tracking.types";
 import { ServiceProcessService } from "@/lib/api/services/service-process.service";
 import { ServiceProcessTrackingService } from "@/lib/api/services/service-process-tracking.service";
+import dayjs from "dayjs";
 
 const { Text } = Typography;
 
@@ -116,27 +117,13 @@ const VehiclesInCarePage = () => {
     useState(false);
   const { notification } = App.useApp();
 
-  // API hooks - Load bookings with multiple statuses
+  // API hook - Load bookings for management (optimized: single API call)
+  // Returns bookings with statuses: CHECKED_IN, IN_PROGRESS, CANCELLED, COMPLETED
   const {
-    data: checkedInBookings,
-    isLoading: isLoadingCheckedIn,
-    error: checkedInError,
-  } = useBookingsByStatus(BookingStatus.CHECKED_IN);
-  const {
-    data: inProgressBookings,
-    isLoading: isLoadingInProgress,
-    error: inProgressError,
-  } = useBookingsByStatus(BookingStatus.IN_PROGRESS);
-  const {
-    data: cancelledBookings,
-    isLoading: isLoadingCancelled,
-    error: cancelledError,
-  } = useBookingsByStatus(BookingStatus.CANCELLED);
-  const {
-    data: completedBookings,
-    isLoading: isLoadingCompleted,
-    error: completedError,
-  } = useBookingsByStatus(BookingStatus.COMPLETED);
+    data: allBookings,
+    isLoading: isLoadingBookings,
+    error: bookingsError,
+  } = useBookingsForManagement();
 
   // Load tracking data for selected vehicle
   const { data: trackingData } = useVehicleTracking(
@@ -152,34 +139,28 @@ const VehiclesInCarePage = () => {
   const { startServiceWithInventory, cancelBookingWithInventory } =
     useBookingWithInventory();
 
-  // Combine bookings with their trackings
-  const checkedInData = checkedInBookings?.data || [];
-  const inProgressData = inProgressBookings?.data || [];
-  const cancelledData = cancelledBookings?.data || [];
-  const completedData = completedBookings?.data || [];
-  const data = [
-    ...checkedInData,
-    ...inProgressData,
-    ...cancelledData,
-    ...completedData,
-  ];
+  // Filter bookings by status
+  // Only show active bookings (not cancelled) for vehicles in care
+  // CANCELLED bookings should not appear in "vehicles in care" page
+  const bookingsArray = Array.isArray(allBookings) ? allBookings : [];
+  const data = bookingsArray.filter(
+    (booking) =>
+      booking.status === BookingStatus.CHECKED_IN ||
+      booking.status === BookingStatus.IN_PROGRESS ||
+      booking.status === BookingStatus.COMPLETED
+    // Note: CANCELLED bookings are filtered out as they shouldn't appear in "vehicles in care" page
+  );
 
   // Error handling
   useEffect(() => {
-    if (checkedInError || inProgressError || cancelledError || completedError) {
+    if (bookingsError) {
       notification.error({
         message: "Lỗi tải dữ liệu",
         description: "Có lỗi xảy ra khi tải dữ liệu xe đang chăm sóc",
         placement: "topRight",
       });
     }
-  }, [
-    checkedInError,
-    inProgressError,
-    cancelledError,
-    completedError,
-    notification,
-  ]);
+  }, [bookingsError, notification]);
 
   const getStatusIcon = (status: BookingStatus) => {
     switch (status) {
@@ -261,19 +242,13 @@ const VehiclesInCarePage = () => {
         <div>
           <div style={{ marginBottom: 4 }}>
             <Text style={{ fontSize: 12 }}>
-              Bắt đầu:{" "}
-              {formatDate(
-                record.actual_start_at ||
-                  record.scheduled_start_at ||
-                  record.preferred_start_at ||
-                  new Date().toISOString()
-              )}
+              {dayjs(record.scheduled_start_at).format("DD/MM/YYYY")}
             </Text>
           </div>
           <div style={{ marginBottom: 4 }}>
             <Text style={{ fontSize: 12 }}>
-              Dự kiến:{" "}
-              {formatDate(record.scheduled_end_at || new Date().toISOString())}
+              Bắt đầu: {dayjs(record.scheduled_start_at).format("HH:mm")}- Kết
+              thúc: {dayjs(record.scheduled_end_at).format("HH:mm")}
             </Text>
           </div>
           {record.actual_end_at && (
@@ -398,21 +373,31 @@ const VehiclesInCarePage = () => {
               await ServiceProcessService.getServiceProcessByServiceId(
                 item.service_id
               );
-            if (serviceProcess?.process_steps || serviceProcess?.processSteps) {
-              const steps =
-                serviceProcess.process_steps ||
-                serviceProcess.processSteps ||
-                [];
 
-              serviceStepsByService.push({
-                service_id: item.service_id,
-                service_name: item.service_name,
-                steps: steps.map((step) => ({
-                  ...step,
-                  service_id: item.service_id!,
-                  service_name: item.service_name,
-                })),
-              });
+            // Get steps from either process_steps (snake_case) or processSteps (camelCase)
+            const steps =
+              serviceProcess?.process_steps ||
+              serviceProcess?.processSteps ||
+              [];
+
+            // Only process if we have valid steps with IDs
+            if (Array.isArray(steps) && steps.length > 0) {
+              // Filter out steps without valid IDs
+              const validSteps = steps.filter(
+                (step) => step && step.id && typeof step.id === "string"
+              );
+
+              if (validSteps.length > 0) {
+                serviceStepsByService.push({
+                  service_id: item.service_id,
+                  service_name: item.service_name || "Dịch vụ",
+                  steps: validSteps.map((step) => ({
+                    ...step,
+                    service_id: item.service_id!,
+                    service_name: item.service_name || "Dịch vụ",
+                  })),
+                });
+              }
             }
           } catch (error) {
             console.warn(
@@ -442,7 +427,7 @@ const VehiclesInCarePage = () => {
             createdTrackings.push(createdTracking);
           } catch (error) {
             console.log(
-              `❌ Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`,
+              `Failed to create tracking for step ${step.name} in service ${serviceData.service_name}:`,
               error
             );
           }
@@ -457,7 +442,7 @@ const VehiclesInCarePage = () => {
         });
       }
     } catch (error) {
-      console.log("❌ Error in auto-create tracking:", error);
+      console.log("Error in auto-create tracking:", error);
       notification.error({
         message: "Lỗi",
         description: "Có lỗi xảy ra khi tự động tạo tracking",
@@ -499,8 +484,10 @@ const VehiclesInCarePage = () => {
         });
       }
 
-      // Refresh data
-      await queryClient.invalidateQueries({ queryKey: ["bookings"] });
+      // Refresh data - invalidate management query to refetch from new API
+      await queryClient.invalidateQueries({
+        queryKey: ["bookings", "management"],
+      });
 
       setConfirmModalOpen(false);
       setConfirmAction({ type: "start", record: null });
@@ -551,233 +538,160 @@ const VehiclesInCarePage = () => {
     },
   ];
 
-  // Thống kê tổng quan
-  const totalVehicles = data.length;
-  const checkedInVehicles = data.filter(
-    (item: BookingInfoDto) => item.status === BookingStatus.CHECKED_IN
-  ).length;
-  const inProgressVehicles = data.filter(
-    (item: BookingInfoDto) => item.status === BookingStatus.IN_PROGRESS
-  ).length;
-  const completedVehicles = data.filter(
-    (item: BookingInfoDto) => item.status === BookingStatus.COMPLETED
-  ).length;
-  const cancelledVehicles = data.filter(
-    (item: BookingInfoDto) => item.status === BookingStatus.CANCELLED
-  ).length;
-
   return (
     <App>
-      <div>
-        {/* Thống kê tổng quan */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Tổng xe"
-                value={totalVehicles}
-                valueStyle={{ color: "#1890ff" }}
-                prefix={<CarOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Đã check-in"
-                value={checkedInVehicles}
-                valueStyle={{ color: "#13c2c2" }}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Đang thực hiện"
-                value={inProgressVehicles}
-                valueStyle={{ color: "#52c41a" }}
-                prefix={<PlayCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Hoàn thành"
-                value={completedVehicles}
-                valueStyle={{ color: "#13c2c2" }}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Đã hủy"
-                value={cancelledVehicles}
-                valueStyle={{ color: "#f5222d" }}
-                prefix={<ExclamationCircleOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
+      <AdminTable
+        title="Quản lý chăm sóc xe"
+        dataSource={data}
+        columns={columns}
+        actions={actions}
+        rowKey="booking_id"
+        loading={
+          isLoadingBookings ||
+          startServiceMutation.isPending ||
+          cancelBookingMutation.isPending
+        }
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total: number, range: [number, number]) =>
+            `${range[0]}-${range[1]} của ${total} xe`,
+        }}
+      />
 
-        <AdminTable
-          title="Quản lý chăm sóc xe"
-          dataSource={data}
-          columns={columns}
-          actions={actions}
-          rowKey="booking_id"
-          loading={
-            isLoadingCheckedIn ||
-            isLoadingInProgress ||
-            isLoadingCancelled ||
-            isLoadingCompleted ||
-            startServiceMutation.isPending ||
-            cancelBookingMutation.isPending
-          }
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total: number, range: [number, number]) =>
-              `${range[0]}-${range[1]} của ${total} xe`,
+      {/* Modal theo dõi quá trình chăm sóc xe */}
+      {selectedVehicle && (
+        <VehicleTrackingModal
+          open={detailModalOpen}
+          onCancel={() => {
+            setDetailModalOpen(false);
+            setSelectedVehicle(null);
+          }}
+          booking={selectedVehicle}
+          trackings={trackingData || []}
+          onTrackingCreated={() => {
+            // Refresh tracking data when new tracking is created
+            if (selectedVehicle) {
+              handleUpdateTracking(selectedVehicle);
+            }
           }}
         />
+      )}
 
-        {/* Modal theo dõi quá trình chăm sóc xe */}
-        {selectedVehicle && (
-          <VehicleTrackingModal
-            open={detailModalOpen}
-            onCancel={() => {
-              setDetailModalOpen(false);
-              setSelectedVehicle(null);
-            }}
-            booking={selectedVehicle}
-            trackings={trackingData || []}
-            onTrackingCreated={() => {
-              // Refresh tracking data when new tracking is created
-              if (selectedVehicle) {
-                handleUpdateTracking(selectedVehicle);
-              }
-            }}
-          />
-        )}
-
-        {/* Update Tracking Modal */}
-        {selectedTracking && (
-          <UpdateTrackingModal
-            open={updateTrackingModalOpen}
-            onCancel={() => {
-              setUpdateTrackingModalOpen(false);
-              setSelectedTracking(null);
-              setSelectedStepName("");
-            }}
-            onSuccess={() => {
-              setUpdateTrackingModalOpen(false);
-              setSelectedTracking(null);
-              setSelectedStepName("");
-              // Refresh all booking data
-              queryClient.invalidateQueries({ queryKey: ["bookings"] });
-            }}
-            tracking={selectedTracking}
-            stepName={selectedStepName}
-          />
-        )}
-
-        {/* Booking Tracking Management Modal */}
-        {selectedVehicle && (
-          <BookingTrackingManagementModal
-            open={bookingTrackingModalOpen}
-            onCancel={() => {
-              setBookingTrackingModalOpen(false);
-              setSelectedVehicle(null);
-            }}
-            booking={selectedVehicle}
-          />
-        )}
-
-        {/* Modal xác nhận */}
-        <Modal
-          title={
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {confirmAction.type === "start" ? (
-                <PlayCircleOutlined style={{ color: "#1890ff" }} />
-              ) : (
-                <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
-              )}
-              <span>
-                {confirmAction.type === "start"
-                  ? "Bắt đầu chăm sóc"
-                  : "Hủy lịch đặt"}
-              </span>
-            </div>
-          }
-          open={confirmModalOpen}
+      {/* Update Tracking Modal */}
+      {selectedTracking && (
+        <UpdateTrackingModal
+          open={updateTrackingModalOpen}
           onCancel={() => {
-            setConfirmModalOpen(false);
-            setConfirmAction({ type: "start", record: null });
+            setUpdateTrackingModalOpen(false);
+            setSelectedTracking(null);
+            setSelectedStepName("");
           }}
-          footer={[
-            <Button
-              key="cancel"
-              onClick={() => {
-                setConfirmModalOpen(false);
-                setConfirmAction({ type: "start", record: null });
-              }}
-            >
-              Hủy
-            </Button>,
-            <Button
-              key="confirm"
-              type="primary"
-              danger={confirmAction.type === "cancel"}
-              loading={
-                startServiceMutation.isPending ||
-                cancelBookingMutation.isPending
-              }
-              onClick={handleConfirmAction}
-            >
+          onSuccess={() => {
+            setUpdateTrackingModalOpen(false);
+            setSelectedTracking(null);
+            setSelectedStepName("");
+            // Refresh all booking data - invalidate management query
+            queryClient.invalidateQueries({
+              queryKey: ["bookings", "management"],
+            });
+          }}
+          tracking={selectedTracking}
+          stepName={selectedStepName}
+        />
+      )}
+
+      {/* Booking Tracking Management Modal */}
+      {selectedVehicle && (
+        <BookingTrackingManagementModal
+          open={bookingTrackingModalOpen}
+          onCancel={() => {
+            setBookingTrackingModalOpen(false);
+            setSelectedVehicle(null);
+          }}
+          booking={selectedVehicle}
+        />
+      )}
+
+      {/* Modal xác nhận */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {confirmAction.type === "start" ? (
+              <PlayCircleOutlined style={{ color: "#1890ff" }} />
+            ) : (
+              <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
+            )}
+            <span>
               {confirmAction.type === "start"
                 ? "Bắt đầu chăm sóc"
                 : "Hủy lịch đặt"}
-            </Button>,
-          ]}
-          width={500}
-        >
-          <div style={{ padding: "16px 0" }}>
-            <p style={{ fontSize: 16, marginBottom: 16 }}>
-              {confirmAction.type === "start"
-                ? `Bạn có chắc chắn muốn bắt đầu chăm sóc cho xe ${confirmAction.record?.vehicle_license_plate}?`
-                : `Bạn có chắc chắn muốn hủy lịch đặt cho xe ${confirmAction.record?.vehicle_license_plate}?`}
-            </p>
-            {confirmAction.record && (
-              <div
-                style={{
-                  backgroundColor: "#f5f5f5",
-                  padding: 12,
-                  borderRadius: 6,
-                  fontSize: 14,
-                }}
-              >
-                <div>
-                  <strong>Khách hàng:</strong>{" "}
-                  {confirmAction.record.customer_name}
-                </div>
-                <div>
-                  <strong>Biển số:</strong>{" "}
-                  {confirmAction.record.vehicle_license_plate}
-                </div>
-                <div>
-                  <strong>Dịch vụ:</strong>{" "}
-                  {confirmAction.record.booking_items?.length || 0} dịch vụ
-                </div>
-              </div>
-            )}
+            </span>
           </div>
-        </Modal>
-      </div>
+        }
+        open={confirmModalOpen}
+        onCancel={() => {
+          setConfirmModalOpen(false);
+          setConfirmAction({ type: "start", record: null });
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setConfirmModalOpen(false);
+              setConfirmAction({ type: "start", record: null });
+            }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            danger={confirmAction.type === "cancel"}
+            loading={
+              startServiceMutation.isPending || cancelBookingMutation.isPending
+            }
+            onClick={handleConfirmAction}
+          >
+            {confirmAction.type === "start"
+              ? "Bắt đầu chăm sóc"
+              : "Hủy lịch đặt"}
+          </Button>,
+        ]}
+        width={500}
+      >
+        <div style={{ padding: "16px 0" }}>
+          <p style={{ fontSize: 16, marginBottom: 16 }}>
+            {confirmAction.type === "start"
+              ? `Bạn có chắc chắn muốn bắt đầu chăm sóc cho xe ${confirmAction.record?.vehicle_license_plate}?`
+              : `Bạn có chắc chắn muốn hủy lịch đặt cho xe ${confirmAction.record?.vehicle_license_plate}?`}
+          </p>
+          {confirmAction.record && (
+            <div
+              style={{
+                backgroundColor: "#f5f5f5",
+                padding: 12,
+                borderRadius: 6,
+                fontSize: 14,
+              }}
+            >
+              <div>
+                <strong>Khách hàng:</strong>{" "}
+                {confirmAction.record.customer_name}
+              </div>
+              <div>
+                <strong>Biển số:</strong>{" "}
+                {confirmAction.record.vehicle_license_plate}
+              </div>
+              <div>
+                <strong>Dịch vụ:</strong>{" "}
+                {confirmAction.record.booking_items?.length || 0} dịch vụ
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
     </App>
   );
 };

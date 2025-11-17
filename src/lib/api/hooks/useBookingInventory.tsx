@@ -3,7 +3,6 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { message } from "antd";
 import { BookingInventoryService } from "../services/booking-inventory.service";
 import { BookingInfoDto } from "../types/booking.types";
 
@@ -23,7 +22,7 @@ export const useBookingInventory = () => {
     },
     onSuccess: (_, { booking }) => {
       console.log(`✅ Successfully reserved inventory for booking: ${booking.booking_id}`);
-      message.success("Đã đặt chỗ sản phẩm trong kho cho booking");
+      // Note: Notification should be handled by the component using App.useApp()
       
       // Refresh inventory and booking data
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
@@ -31,8 +30,7 @@ export const useBookingInventory = () => {
     },
     onError: (error: any, { booking }) => {
       console.log(`❌ Failed to reserve inventory for booking ${booking.booking_id}:`, error);
-      const errorMessage = error?.response?.data?.message || error?.message || "Lỗi khi đặt chỗ sản phẩm";
-      message.error(`Không thể đặt chỗ sản phẩm: ${errorMessage}`);
+      // Note: Error notification should be handled by the component using App.useApp()
     },
   });
 
@@ -49,7 +47,7 @@ export const useBookingInventory = () => {
     },
     onSuccess: (_, { booking }) => {
       console.log(`✅ Successfully fulfilled inventory for booking: ${booking.booking_id}`);
-      message.success("Đã xuất sản phẩm từ kho cho booking");
+      // Note: Notification should be handled by the component using App.useApp()
       
       // Refresh inventory and booking data
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
@@ -57,8 +55,7 @@ export const useBookingInventory = () => {
     },
     onError: (error: any, { booking }) => {
       console.log(`❌ Failed to fulfill inventory for booking ${booking.booking_id}:`, error);
-      const errorMessage = error?.response?.data?.message || error?.message || "Lỗi khi xuất sản phẩm";
-      message.error(`Không thể xuất sản phẩm: ${errorMessage}`);
+      // Note: Error notification should be handled by the component using App.useApp()
     },
   });
 
@@ -75,7 +72,7 @@ export const useBookingInventory = () => {
     },
     onSuccess: (_, { booking }) => {
       console.log(`✅ Successfully released inventory for booking: ${booking.booking_id}`);
-      message.success("Đã hoàn trả sản phẩm về kho cho booking");
+      // Note: Notification should be handled by the component using App.useApp()
       
       // Refresh inventory and booking data
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
@@ -83,8 +80,7 @@ export const useBookingInventory = () => {
     },
     onError: (error: any, { booking }) => {
       console.log(`❌ Failed to release inventory for booking ${booking.booking_id}:`, error);
-      const errorMessage = error?.response?.data?.message || error?.message || "Lỗi khi hoàn trả sản phẩm";
-      message.error(`Không thể hoàn trả sản phẩm: ${errorMessage}`);
+      // Note: Error notification should be handled by the component using App.useApp()
     },
   });
 

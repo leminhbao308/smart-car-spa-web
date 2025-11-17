@@ -3,7 +3,6 @@
  */
 
 import { useCallback } from "react";
-import { message } from "antd";
 import { useConfirmBooking, useCancelBooking, useStartService } from "./useBooking";
 import { useBookingInventory } from "./useBookingInventory";
 import { BookingInfoDto } from "../types/booking.types";
@@ -83,7 +82,7 @@ export const useBookingWithInventory = () => {
       } catch (inventoryError) {
         console.warn(`⚠️ Inventory fulfillment failed for booking ${booking.booking_id}, but service started:`, inventoryError);
         // Don't fail the entire operation if inventory fulfillment fails
-        message.warning("Dịch vụ đã bắt đầu nhưng có lỗi với kho hàng. Vui lòng kiểm tra lại.");
+        // Note: Warning notification should be handled by the component using App.useApp()
       }
       
       console.log(`✅ Successfully started service for booking ${booking.booking_id}`);

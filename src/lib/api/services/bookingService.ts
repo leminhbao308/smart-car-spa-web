@@ -142,6 +142,25 @@ export class BookingService {
   }
 
   /**
+   * Get bookings for management (CHECKED_IN, IN_PROGRESS, CANCELLED, COMPLETED)
+   * Optimized API to get all bookings needed for vehicle care management in one call
+   */
+  static async getBookingsForManagement(): Promise<BookingInfoDto[]> {
+    try {
+      const response = await apiClient.get(`${this.BASE_URL}/management`);
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      } else {
+        return response.data || [];
+      }
+    } catch (error) {
+      console.log("Get bookings for management error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Get booking statistics
    */
   static async getBookingStatistics(branchId: string, date: string): Promise<BookingStatisticsDto> {

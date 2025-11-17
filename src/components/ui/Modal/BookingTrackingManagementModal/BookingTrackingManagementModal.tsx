@@ -585,9 +585,11 @@ const BookingTrackingManagementModal: React.FC<
                     border: "2px solid #e6f7ff",
                     borderRadius: "8px",
                   }}
-                  headStyle={{
-                    backgroundColor: "#f0f8ff",
-                    borderBottom: "1px solid #d6e4ff",
+                  styles={{
+                    header: {
+                      backgroundColor: "#f0f8ff",
+                      borderBottom: "1px solid #d6e4ff",
+                    },
                   }}
                 >
                   <div>
