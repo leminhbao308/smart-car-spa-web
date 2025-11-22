@@ -5,6 +5,7 @@
 
 import apiClient from "../axios";
 import { TokenManager } from "../utils/token.manager";
+import { getDeviceId, getDeviceName } from "../utils/device.manager";
 import {
   LoginRequest,
   LoginResponse,
@@ -16,6 +17,7 @@ import {
   UserInfo,
   LogoutRequest,
 } from "../types";
+import { SessionInfo } from "../types/session.types";
 
 export class AuthService {
   /**
@@ -23,7 +25,21 @@ export class AuthService {
    */
   static async login(credentials: LoginRequest): Promise<LoginResponse> {
     try {
-      const response = await apiClient.post("/auth/login", credentials);
+      // Always ensure device info is included (for multi-device support)
+      const deviceId = credentials.device_id || getDeviceId();
+      const deviceName = credentials.device_name || getDeviceName();
+      
+      // Add device info if not provided (for multi-device support)
+      const loginPayload: LoginRequest = {
+        ...credentials,
+        device_id: deviceId,
+        device_name: deviceName,
+      };
+
+      // Log for debugging
+      console.log('Login with device:', { deviceId, deviceName });
+
+      const response = await apiClient.post("/auth/login", loginPayload);
 
       if (response.data.success && response.data.data) {
         const { access_token, refresh_token, user_info } = response.data.data;
@@ -230,5 +246,55 @@ export class AuthService {
    */
   static clearAuth(): void {
     TokenManager.clearAll();
+  }
+
+  /**
+   * Get all active sessions for current user
+   */
+  static async getActiveSessions(): Promise<SessionInfo[]> {
+    try {
+      const response = await apiClient.get("/auth/sessions");
+      
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+      
+      throw new Error(response.data.message || "Failed to get active sessions");
+    } catch (error) {
+      console.log("Get active sessions error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Logout specific device by device ID
+   */
+  static async logoutDevice(deviceId: string): Promise<void> {
+    try {
+      const response = await apiClient.post(`/auth/sessions/${deviceId}/logout`);
+      
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to logout device");
+      }
+    } catch (error) {
+      console.log("Logout device error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Logout all other devices except current device
+   */
+  static async logoutAllOtherDevices(): Promise<void> {
+    try {
+      const response = await apiClient.post("/auth/sessions/logout-others");
+      
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to logout other devices");
+      }
+    } catch (error) {
+      console.log("Logout all other devices error:", error);
+      throw error;
+    }
   }
 }
