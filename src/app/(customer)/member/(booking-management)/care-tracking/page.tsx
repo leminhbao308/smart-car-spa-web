@@ -15,7 +15,13 @@ import {
   Timeline,
   Progress,
   Divider,
+  Row,
+  Col,
+  Statistic,
+  DatePicker,
+  Select,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   ReloadOutlined,
   EyeOutlined,
@@ -23,9 +29,12 @@ import {
   CheckCircleOutlined,
   CarOutlined,
   EnvironmentOutlined,
+  CalendarOutlined,
+  FilterOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/lib/api/hooks/useAuth";
 import { useCustomerBookings } from "@/lib/api/hooks/useUsers";
+import { useBranches } from "@/lib/api/hooks/useBranches";
 import { BookingInfoDto, BookingStatus } from "@/lib/api/types/booking.types";
 import { BookingService } from "@/lib/api/services/bookingService";
 import { ServiceProcessTrackingService } from "@/lib/api/services/service-process-tracking.service";
@@ -35,9 +44,10 @@ import {
 } from "@/lib/api/types/service-process-tracking.types";
 import { useBookingEvents, useTrackingEvents } from "@/hooks/useWebSocket";
 import { useQueryClient } from "@tanstack/react-query";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 
 const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
 interface ServiceWithTrackings {
   serviceId: string;
@@ -55,6 +65,24 @@ const CareTrackingPage = () => {
   const [selectedBooking, setSelectedBooking] = useState<BookingInfoDto | null>(null);
   const [servicesWithTrackings, setServicesWithTrackings] = useState<ServiceWithTrackings[]>([]);
   const [loadingTracking, setLoadingTracking] = useState(false);
+
+  // Filter states
+  const [dateRange, setDateRange] = useState<
+    [Dayjs | null, Dayjs | null] | null
+  >(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | undefined>(
+    undefined
+  );
+  const [selectedStatus, setSelectedStatus] = useState<string | undefined>(
+    undefined
+  );
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+  });
+
+  // Get branches for filter
+  const { branches, loading: isLoadingBranches } = useBranches();
 
   // Get customer bookings
   const { bookings, loading, error, refetch } = useCustomerBookings(
@@ -244,6 +272,98 @@ const CareTrackingPage = () => {
     );
   }, [bookings]);
 
+  // Client-side filtering with useMemo
+  const filteredBookings = useMemo(() => {
+    let result = careBookings || [];
+
+    // Filter by date range
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      const startDate = dateRange[0].startOf("day");
+      const endDate = dateRange[1].endOf("day");
+      result = result.filter((booking: BookingInfoDto) => {
+        const bookingDate =
+          booking.scheduled_start_at ||
+          booking.preferred_start_at ||
+          booking.created_at;
+        if (!bookingDate) return false;
+        const date = dayjs(bookingDate).startOf("day");
+        const startUnix = startDate.unix();
+        const endUnix = endDate.unix();
+        const dateUnix = date.unix();
+        return dateUnix >= startUnix && dateUnix <= endUnix;
+      });
+    }
+
+    // Filter by branch
+    if (selectedBranchId) {
+      result = result.filter(
+        (booking: BookingInfoDto) => booking.branch_id === selectedBranchId
+      );
+    }
+
+    // Filter by status
+    if (selectedStatus) {
+      result = result.filter(
+        (booking: BookingInfoDto) => booking.status === selectedStatus
+      );
+    }
+
+    return result;
+  }, [careBookings, dateRange, selectedBranchId, selectedStatus]);
+
+  // Client-side pagination
+  const paginatedBookings = useMemo(() => {
+    const start = (pagination.current - 1) * pagination.pageSize;
+    const end = start + pagination.pageSize;
+    return filteredBookings.slice(start, end);
+  }, [filteredBookings, pagination.current, pagination.pageSize]);
+
+  // Calculate statistics from filtered bookings
+  const totalBookings = filteredBookings.length;
+  const checkedInBookings = filteredBookings.filter(
+    (booking) => booking.status === BookingStatus.CHECKED_IN
+  ).length;
+  const inProgressBookings = filteredBookings.filter(
+    (booking) => booking.status === BookingStatus.IN_PROGRESS
+  ).length;
+  const completedBookings = filteredBookings.filter(
+    (booking) => booking.status === BookingStatus.COMPLETED
+  ).length;
+
+  // Handle date range change
+  const handleDateRangeChange = (
+    dates: [Dayjs | null, Dayjs | null] | null
+  ) => {
+    setDateRange(dates);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  // Handle branch filter change
+  const handleBranchFilterChange = (branchId: string | undefined) => {
+    setSelectedBranchId(branchId);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  // Handle status filter change
+  const handleStatusFilterChange = (status: string | undefined) => {
+    setSelectedStatus(status);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setDateRange(null);
+    setSelectedBranchId(undefined);
+    setSelectedStatus(undefined);
+    setPagination((prev) => ({ ...prev, current: 1 }));
+  };
+
+  // Prepare branch options
+  const branchOptions = branches.map((branch) => ({
+    label: branch.branch_name || branch.branch_code || "N/A",
+    value: branch.branch_id,
+  }));
+
   const statusToColor = (status?: string) => {
     switch ((status || "").toUpperCase()) {
       case BookingStatus.CHECKED_IN:
@@ -362,26 +482,128 @@ const CareTrackingPage = () => {
     }
   };
 
-  const columns = [
+  // Add CSS styles for better table appearance and responsive design
+  React.useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      .care-tracking-table .ant-table-thead > tr > th {
+        background: #fafafa;
+        color: #262626;
+        font-weight: bold;
+        text-align: center;
+        border: 1px solid #f0f0f0;
+        padding: 12px 8px;
+        white-space: nowrap;
+      }
+      
+      .care-tracking-table .ant-table-tbody > tr > td {
+        padding: 12px 8px;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: middle;
+        word-wrap: break-word;
+        word-break: break-word;
+      }
+      
+      .care-tracking-table .ant-table-tbody > tr:hover > td {
+        background-color: #f5f5f5;
+      }
+      
+      .care-tracking-table .ant-table-tbody > tr:nth-child(even) > td {
+        background-color: #fafafa;
+      }
+      
+      .care-tracking-table .ant-table-tbody > tr:nth-child(even):hover > td {
+        background-color: #f0f0f0;
+      }
+      
+      .care-tracking-table .ant-table-pagination {
+        margin-top: 24px;
+        text-align: right;
+      }
+
+      /* Responsive styles for mobile */
+      @media (max-width: 768px) {
+        .care-tracking-table .ant-table-thead > tr > th {
+          padding: 10px 4px;
+          font-size: 12px;
+        }
+        
+        .care-tracking-table .ant-table-tbody > tr > td {
+          padding: 10px 4px;
+          font-size: 12px;
+        }
+      }
+
+      /* Responsive filter section */
+      @media (max-width: 768px) {
+        .filter-card .ant-space {
+          width: 100%;
+        }
+
+        .filter-card .ant-space-item {
+          width: 100%;
+        }
+
+        .filter-card .ant-picker,
+        .filter-card .ant-select {
+          width: 100% !important;
+        }
+      }
+
+      @media (max-width: 576px) {
+        .filter-card .ant-space {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  const columns: ColumnsType<BookingInfoDto> = [
     {
       title: "Mã booking",
       dataIndex: "booking_code",
       key: "booking_code",
-      render: (text: string) => <Text strong>{text}</Text>,
+      width: 140,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text: string) => (
+        <Text
+          code
+          style={{ fontSize: "13px", fontWeight: "bold" }}
+          ellipsis={{ tooltip: text }}
+        >
+          {text}
+        </Text>
+      ),
     },
     {
       title: "Thời gian",
       key: "scheduled_start_at",
+      width: 180,
       render: (record: BookingInfoDto) => (
-        <Space direction="vertical" size={0}>
-          <Text>
-            <ClockCircleOutlined />{" "}
-            {dayjs(record.scheduled_start_at).format("DD/MM/YYYY HH:mm")}
-          </Text>
+        <Space direction="vertical" size="small" style={{ fontSize: "13px" }}>
+          <Space>
+            <ClockCircleOutlined style={{ color: "#1890ff" }} />
+            <Text strong>{dayjs(record.scheduled_start_at).format("DD/MM/YYYY")}</Text>
+          </Space>
+          <Space>
+            <ClockCircleOutlined style={{ color: "#52c41a" }} />
+            <Text>{dayjs(record.scheduled_start_at).format("HH:mm")}</Text>
+          </Space>
           {record.branch_name && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              <EnvironmentOutlined /> {record.branch_name}
-            </Text>
+            <Space>
+              <EnvironmentOutlined style={{ color: "#1890ff" }} />
+              <Text type="secondary" style={{ fontSize: "12px" }} ellipsis={{ tooltip: record.branch_name }}>
+                {record.branch_name}
+              </Text>
+            </Space>
           )}
         </Space>
       ),
@@ -389,16 +611,24 @@ const CareTrackingPage = () => {
     {
       title: "Xe",
       key: "vehicle",
+      width: 160,
       render: (record: BookingInfoDto) => (
-        <Space direction="vertical" size={0}>
-          <Text>
-            <CarOutlined /> {record.vehicle_license_plate}
-          </Text>
+        <Space direction="vertical" size="small" style={{ fontSize: "13px" }}>
+          <Space>
+            <CarOutlined style={{ color: "#1890ff" }} />
+            <Text strong ellipsis={{ tooltip: record.vehicle_license_plate }}>
+              {record.vehicle_license_plate}
+            </Text>
+          </Space>
           {(record.vehicle_brand_name || record.vehicle_model_name) && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              {[record.vehicle_brand_name, record.vehicle_model_name]
-                .filter(Boolean)
-                .join(" • ")}
+            <Text
+              type="secondary"
+              style={{ fontSize: "11px" }}
+              ellipsis={{
+                tooltip: `${record.vehicle_brand_name} ${record.vehicle_model_name}`,
+              }}
+            >
+              {record.vehicle_brand_name} {record.vehicle_model_name}
             </Text>
           )}
         </Space>
@@ -408,14 +638,21 @@ const CareTrackingPage = () => {
       title: "Khu vực",
       dataIndex: "bay_name",
       key: "bay_name",
-      render: (text: string) => text || "N/A",
+      width: 120,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text: string) => (
+        <Text ellipsis={{ tooltip: text || "N/A" }}>{text || "N/A"}</Text>
+      ),
     },
     {
       title: "Tổng tiền",
       key: "total_price",
+      width: 150,
       render: (record: BookingInfoDto) => (
-        <Text strong>
-          {record.total_price?.toLocaleString()} {record.currency || "VND"}
+        <Text strong style={{ color: "#52c41a", fontSize: "14px" }}>
+          {record.total_price?.toLocaleString("vi-VN")} {record.currency || "VND"}
         </Text>
       ),
     },
@@ -423,20 +660,42 @@ const CareTrackingPage = () => {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status: string) => (
-        <Tag color={statusToColor(status)}>{statusToLabel(status)}</Tag>
-      ),
+      width: 140,
+      render: (status: string) => {
+        const config = {
+          color: statusToColor(status),
+          label: statusToLabel(status),
+        };
+        return (
+          <Tag
+            color={config.color}
+            style={{ fontSize: "12px", fontWeight: "bold" }}
+          >
+            {config.label}
+          </Tag>
+        );
+      },
+      filters: [
+        { text: "Đã check-in", value: BookingStatus.CHECKED_IN },
+        { text: "Đang chăm sóc", value: BookingStatus.IN_PROGRESS },
+        { text: "Hoàn thành", value: BookingStatus.COMPLETED },
+      ],
+      onFilter: (value: any, record: BookingInfoDto) => record.status === value,
     },
     {
       title: "Thao tác",
       key: "action",
+      width: 120,
+      align: "center" as const,
       render: (_: any, record: BookingInfoDto) => (
         <Button
           type="primary"
+          size="small"
           icon={<EyeOutlined />}
           onClick={() => handleViewDetails(record)}
+          style={{ fontSize: "12px" }}
         >
-          Xem chi tiết
+          Chi tiết
         </Button>
       ),
     },
@@ -459,37 +718,180 @@ const CareTrackingPage = () => {
 
   return (
     <App>
-      <div style={{ padding: "24px" }}>
-        <Card>
-          <Space style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
-            <Title level={2} style={{ margin: 0 }}>
-              Theo dõi quy trình chăm sóc
-            </Title>
+      <div
+        style={{
+          padding: "24px",
+          maxWidth: "1400px",
+          margin: "0 auto",
+          width: "100%",
+        }}
+      >
+        {/* Header */}
+        <div style={{ marginBottom: "32px", textAlign: "center" }}>
+          <Title
+            level={2}
+            style={{ fontSize: "28px", marginBottom: "12px", color: "#1890ff" }}
+          >
+            Theo dõi quy trình chăm sóc
+          </Title>
+          <Text type="secondary" style={{ fontSize: "16px" }}>
+            Theo dõi tiến độ dịch vụ đang được thực hiện cho xe của bạn
+          </Text>
+        </div>
+
+        {/* Statistics */}
+        <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic
+                title="Tổng số"
+                value={totalBookings}
+                prefix={<CalendarOutlined />}
+                valueStyle={{ fontSize: "20px" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic
+                title="Đã check-in"
+                value={checkedInBookings}
+                prefix={<ClockCircleOutlined />}
+                valueStyle={{ color: "#722ed1", fontSize: "20px" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic
+                title="Đang chăm sóc"
+                value={inProgressBookings}
+                prefix={<CarOutlined />}
+                valueStyle={{ color: "#1890ff", fontSize: "20px" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={12} sm={6}>
+            <Card size="small">
+              <Statistic
+                title="Hoàn thành"
+                value={completedBookings}
+                prefix={<CheckCircleOutlined />}
+                valueStyle={{ color: "#52c41a", fontSize: "20px" }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Filter Section */}
+        <Card
+          className="filter-card"
+          style={{
+            marginBottom: 16,
+            backgroundColor: "#fafafa",
+          }}
+          styles={{ body: { padding: 16 } }}
+        >
+          <Space size="middle" wrap>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <FilterOutlined style={{ color: "#1890ff" }} />
+              <span style={{ fontWeight: 500, fontSize: 14 }}>Bộ lọc:</span>
+            </div>
+            <RangePicker
+              value={dateRange}
+              onChange={handleDateRangeChange}
+              placeholder={["Từ ngày", "Đến ngày"]}
+              format="DD/MM/YYYY"
+              style={{ width: 280 }}
+              allowClear
+            />
+            <Select
+              placeholder="Chọn chi nhánh"
+              style={{ width: 250 }}
+              allowClear
+              value={selectedBranchId}
+              onChange={handleBranchFilterChange}
+              loading={isLoadingBranches}
+              options={branchOptions}
+              showSearch
+              optionFilterProp="label"
+            />
+            <Select
+              placeholder="Trạng thái"
+              style={{ width: 200 }}
+              allowClear
+              value={selectedStatus}
+              onChange={handleStatusFilterChange}
+              options={[
+                { label: "Đã check-in", value: BookingStatus.CHECKED_IN },
+                { label: "Đang chăm sóc", value: BookingStatus.IN_PROGRESS },
+                { label: "Hoàn thành", value: BookingStatus.COMPLETED },
+              ]}
+            />
+            {(dateRange || selectedBranchId || selectedStatus) && (
+              <Button onClick={handleClearFilters} size="small">
+                Xóa bộ lọc
+              </Button>
+            )}
+          </Space>
+        </Card>
+
+        {/* Bookings Table */}
+        <Card
+          title={
+            <div
+              style={{ fontSize: "18px", fontWeight: "bold", color: "#1890ff" }}
+            >
+              Danh sách đang chăm sóc
+            </div>
+          }
+          extra={
             <Button
               icon={<ReloadOutlined />}
               onClick={() => refetch()}
+              type="primary"
+              size="middle"
               loading={loading}
             >
               Làm mới
             </Button>
-          </Space>
-
+          }
+          style={{
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+            borderRadius: "12px",
+          }}
+        >
           {error ? (
             <Empty description="Không thể tải dữ liệu. Vui lòng thử lại." />
-          ) : careBookings.length === 0 ? (
+          ) : filteredBookings.length === 0 ? (
             <Empty description="Bạn chưa có lịch chăm sóc nào" />
           ) : (
             <Table
-              dataSource={careBookings}
+              dataSource={paginatedBookings}
               columns={columns}
               rowKey="booking_id"
               pagination={{
-                pageSize: 10,
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: filteredBookings.length,
                 showSizeChanger: true,
                 showQuickJumper: true,
-                showTotal: (total: number, range: [number, number]) =>
+                showTotal: (total, range) =>
                   `${range[0]}-${range[1]} của ${total} booking`,
+                responsive: true,
+                position: ["bottomRight"],
+                pageSizeOptions: ["5", "10", "20", "50"],
+                onChange: (page, pageSize) => {
+                  setPagination({
+                    current: page,
+                    pageSize: pageSize || 10,
+                  });
+                },
               }}
+              scroll={{ x: "max-content" }}
+              size="middle"
+              bordered
+              className="care-tracking-table"
             />
           )}
         </Card>
