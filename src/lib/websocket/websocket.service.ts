@@ -21,7 +21,7 @@
 import { Client, IMessage, StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { getWebSocketUrl, WS_CONFIG } from './websocket.config';
-import { Topic, MessageSignal, MessageCallback, WebSocketStatus } from './websocket.types';
+import { Topic, MessageSignal, MessageCallback, WebSocketStatus, BookingEventDto, EnhancedMessageCallback } from './websocket.types';
 import { TokenManager } from '../api/utils/token.manager';
 
 class WebSocketService {
@@ -35,7 +35,8 @@ class WebSocketService {
   private subscriptions: Map<Topic, StompSubscription> = new Map();
   
   // Map topic -> Set of callbacks (multiple callbacks per topic)
-  private callbacks: Map<Topic, Set<MessageCallback>> = new Map();
+  // Support both old MessageCallback (string signal) and new EnhancedMessageCallback (structured event)
+  private callbacks: Map<Topic, Set<MessageCallback | EnhancedMessageCallback>> = new Map();
   
   // Reconnection state
   private reconnectAttempts = 0;
@@ -292,10 +293,10 @@ class WebSocketService {
    * - Khi nhận message, gọi tất cả callbacks
    * 
    * @param topic - STOMP topic to subscribe
-   * @param callback - Callback function khi nhận message
+   * @param callback - Callback function khi nhận message (có thể nhận string signal hoặc structured event)
    * @returns Unsubscribe function
    */
-  public subscribe(topic: Topic, callback: MessageCallback): () => void {
+  public subscribe(topic: Topic, callback: MessageCallback | EnhancedMessageCallback): () => void {
     // Add callback to map
     if (!this.callbacks.has(topic)) {
       this.callbacks.set(topic, new Set());
@@ -380,11 +381,25 @@ class WebSocketService {
     // Create STOMP subscription
     const subscription = this.client.subscribe(topic, (message: IMessage) => {
       try {
-        // Parse message body (backend gửi string signal)
-        const signal = message.body as MessageSignal;
+        // Parse message body - có thể là string signal hoặc structured JSON event
+        const body = message.body;
         
         if (WS_CONFIG.debug) {
-          console.log(`[WebSocket] Received message from ${topic}:`, signal);
+          console.log(`[WebSocket] Received message from ${topic}:`, body);
+        }
+
+        // Try to parse as JSON (structured event)
+        let parsedMessage: MessageSignal | BookingEventDto | null = null;
+        try {
+          parsedMessage = JSON.parse(body) as BookingEventDto;
+          // Check if it's a structured event (has event_type field)
+          if (!parsedMessage.event_type) {
+            // Not a structured event, treat as string signal
+            parsedMessage = body as MessageSignal;
+          }
+        } catch {
+          // Not JSON, treat as string signal (backward compatible)
+          parsedMessage = body as MessageSignal;
         }
 
         // Call all callbacks for this topic
@@ -392,7 +407,8 @@ class WebSocketService {
         if (callbacks) {
           callbacks.forEach(callback => {
             try {
-              callback(signal);
+              // Callback có thể là MessageCallback (string) hoặc EnhancedMessageCallback (string | event)
+              callback(parsedMessage as any);
             } catch (error) {
               // Error trong callback không ảnh hưởng đến callbacks khác
               console.error(`[WebSocket] Error in callback for ${topic}:`, error);

@@ -90,3 +90,130 @@ export interface WebSocketMessage {
   data?: unknown; // Optional data payload
 }
 
+/**
+ * Booking Event Type
+ * 
+ * Enum cho các loại booking events từ backend
+ */
+export type BookingEventType = 
+  | 'CREATED'
+  | 'CONFIRMED'
+  | 'CANCELLED'
+  | 'CHECKED_IN'
+  | 'STARTED'
+  | 'COMPLETED'
+  | 'UPDATED';
+
+/**
+ * Booking Event DTO
+ * 
+ * Structured event message từ backend cho booking changes
+ * Chứa thông tin chi tiết để frontend có thể update smart
+ */
+export interface BookingEventDto {
+  event_type: BookingEventType;
+  booking_id: string;
+  booking_code: string;
+  booking_data?: BookingInfoDto | null; // Optional - null nếu booking đã bị xóa
+  timestamp: string; // ISO 8601 format
+  message: string; // User-friendly message
+}
+
+/**
+ * Booking Info DTO (simplified for WebSocket)
+ * 
+ * Chỉ include các fields cần thiết cho real-time update
+ * Full structure có thể fetch từ API nếu cần
+ */
+export interface BookingInfoDto {
+  booking_id: string;
+  booking_code: string;
+  customer_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  vehicle_id?: string;
+  vehicle_license_plate?: string;
+  branch_id?: string;
+  branch_name?: string;
+  bay_id?: string;
+  bay_name?: string;
+  scheduled_start_at?: string;
+  scheduled_end_at?: string;
+  actual_check_in_at?: string;
+  actual_start_at?: string;
+  actual_end_at?: string;
+  status: string;
+  payment_status?: string;
+  total_price?: number;
+  estimated_duration_minutes?: number;
+  notes?: string;
+  cancellation_reason?: string;
+  cancelled_at?: string;
+  cancelled_by?: string;
+  created_at?: string;
+  updated_at?: string;
+  // ... other fields as needed
+}
+
+/**
+ * Enhanced Message Callback
+ * 
+ * Callback có thể nhận cả string signal (backward compatible) 
+ * và structured BookingEventDto
+ */
+export type EnhancedMessageCallback = (
+  signalOrEvent: MessageSignal | BookingEventDto
+) => void;
+
+/**
+ * Tracking Event Type
+ * 
+ * Enum cho các loại tracking events từ backend
+ */
+export type TrackingEventType = 
+  | 'CREATED'
+  | 'STARTED'
+  | 'UPDATED'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+/**
+ * Tracking Event DTO
+ * 
+ * Structured event message từ backend cho tracking changes
+ */
+export interface TrackingEventDto {
+  event_type: TrackingEventType;
+  tracking_id: string;
+  booking_id: string;
+  booking_code: string;
+  tracking_data?: ServiceProcessTrackingInfoDto | null;
+  timestamp: string;
+  message: string;
+}
+
+/**
+ * Service Process Tracking Info DTO (simplified for WebSocket)
+ */
+export interface ServiceProcessTrackingInfoDto {
+  trackingId: string;
+  bookingId: string;
+  bookingCode: string;
+  serviceStepId: string;
+  serviceStepName: string;
+  serviceStepDescription?: string;
+  serviceStepOrder?: number;
+  bayId: string;
+  bayName: string;
+  carServiceId?: string;
+  carServiceName?: string;
+  startTime?: string;
+  endTime?: string;
+  status: string;
+  notes?: string;
+  evidenceMediaUrls?: string;
+  lastUpdatedAt?: string;
+  createdAt?: string;
+  // ... other fields as needed
+}
+

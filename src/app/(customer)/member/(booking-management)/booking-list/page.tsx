@@ -41,6 +41,8 @@ import CustomerBookingDetailModal from "@/components/ui/Modal/CustomerBookingDet
 import CustomerUpdateBookingModal from "@/components/ui/Modal/CustomerUpdateBookingModal";
 import { BookingInfoDto, BookingType } from "@/lib/api/types/booking.types";
 import { getErrorMessage } from "@/components/utils/helper/error.helper";
+import { useBookingEvents } from "@/hooks/useWebSocket";
+import { useQueryClient } from "@tanstack/react-query";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -48,7 +50,8 @@ const { RangePicker } = DatePicker;
 const CustomerBookingListPage = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const { message } = App.useApp();
+  const { message, notification } = App.useApp();
+  const queryClient = useQueryClient();
 
   // State for detail modal
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -272,6 +275,86 @@ const CustomerBookingListPage = () => {
   const { bookings, loading, error, refetch } = useCustomerBookings(
     user?.user_id || null
   );
+
+  // WebSocket: Subscribe to booking events for realtime updates
+  useBookingEvents({
+    onBookingUpdated: (event) => {
+      if (event.booking_data) {
+        // Update booking in list
+        queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => 
+          old?.map(b => b.booking_id === event.booking_id ? event.booking_data! : b) || []
+        );
+        
+        notification.info({
+          message: 'Booking đã cập nhật',
+          description: event.message,
+        });
+      }
+    },
+    onBookingConfirmed: (event) => {
+      if (event.booking_data) {
+        // Update booking status to CONFIRMED
+        queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => 
+          old?.map(b => b.booking_id === event.booking_id ? event.booking_data! : b) || []
+        );
+        
+        notification.success({
+          message: 'Booking đã được xác nhận',
+          description: event.message,
+        });
+      }
+    },
+    onBookingCheckedIn: (event) => {
+      if (event.booking_data) {
+        // Update booking status to CHECKED_IN
+        queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => 
+          old?.map(b => b.booking_id === event.booking_id ? event.booking_data! : b) || []
+        );
+        
+        notification.success({
+          message: 'Booking đã check-in',
+          description: event.message,
+        });
+      }
+    },
+    onBookingStarted: (event) => {
+      if (event.booking_data) {
+        // Update booking status to IN_PROGRESS
+        queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => 
+          old?.map(b => b.booking_id === event.booking_id ? event.booking_data! : b) || []
+        );
+        
+        notification.success({
+          message: 'Dịch vụ đã bắt đầu',
+          description: event.message,
+        });
+      }
+    },
+    onBookingCompleted: (event) => {
+      if (event.booking_data) {
+        // Update booking status to COMPLETED
+        queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => 
+          old?.map(b => b.booking_id === event.booking_id ? event.booking_data! : b) || []
+        );
+        
+        notification.success({
+          message: 'Dịch vụ đã hoàn thành',
+          description: event.message,
+        });
+      }
+    },
+    onBookingCancelled: (event) => {
+      // Update booking status to CANCELLED
+      queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => 
+        old?.map(b => b.booking_id === event.booking_id ? { ...b, status: 'CANCELLED' } : b) || []
+      );
+      
+      notification.warning({
+        message: 'Booking đã hủy',
+        description: event.message,
+      });
+    },
+  });
 
   // Client-side filtering with useMemo
   const filteredBookings = React.useMemo(() => {

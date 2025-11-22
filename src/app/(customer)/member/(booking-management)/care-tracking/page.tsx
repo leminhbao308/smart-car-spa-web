@@ -33,6 +33,8 @@ import {
   ServiceProcessTrackingInfoDto,
   TrackingStatus,
 } from "@/lib/api/types/service-process-tracking.types";
+import { useBookingEvents, useTrackingEvents } from "@/hooks/useWebSocket";
+import { useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
@@ -45,7 +47,8 @@ interface ServiceWithTrackings {
 
 const CareTrackingPage = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { message } = App.useApp();
+  const { message, notification } = App.useApp();
+  const queryClient = useQueryClient();
 
   // State for detail modal
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -57,6 +60,178 @@ const CareTrackingPage = () => {
   const { bookings, loading, error, refetch } = useCustomerBookings(
     user?.user_id || null
   );
+
+  // WebSocket: Subscribe to booking events for realtime updates
+  useBookingEvents({
+    onBookingUpdated: (event) => {
+      if (event.booking_data) {
+        // Update booking in list
+        queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => 
+          old?.map(b => b.booking_id === event.booking_id ? event.booking_data! : b) || []
+        );
+        
+        // If this booking is currently selected in modal, reload tracking data
+        if (selectedBooking?.booking_id === event.booking_id) {
+          loadTrackingData(event.booking_id);
+        }
+        
+        notification.info({
+          message: 'Booking đã cập nhật',
+          description: event.message,
+        });
+      }
+    },
+    onBookingCheckedIn: (event) => {
+      if (event.booking_data) {
+        // Add booking to list if not exists, or update if exists
+        queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => {
+          const exists = old?.some(b => b.booking_id === event.booking_id);
+          if (!exists && event.booking_data) {
+            return [...(old || []), event.booking_data];
+          }
+          return old?.map(b => b.booking_id === event.booking_id ? event.booking_data! : b) || [];
+        });
+        
+        notification.success({
+          message: 'Booking đã check-in',
+          description: event.message,
+        });
+      }
+    },
+    onBookingStarted: (event) => {
+      if (event.booking_data) {
+        // Update booking status to IN_PROGRESS
+        queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => {
+          const exists = old?.some(b => b.booking_id === event.booking_id);
+          if (!exists && event.booking_data) {
+            return [...(old || []), event.booking_data];
+          }
+          return old?.map(b => b.booking_id === event.booking_id ? event.booking_data! : b) || [];
+        });
+        
+        // If this booking is currently selected in modal, reload tracking data
+        if (selectedBooking?.booking_id === event.booking_id) {
+          loadTrackingData(event.booking_id);
+        }
+        
+        notification.success({
+          message: 'Dịch vụ đã bắt đầu',
+          description: event.message,
+        });
+      }
+    },
+    onBookingCompleted: (event) => {
+      if (event.booking_data) {
+        // Update booking status to COMPLETED
+        queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => 
+          old?.map(b => b.booking_id === event.booking_id ? event.booking_data! : b) || []
+        );
+        
+        // If this booking is currently selected in modal, reload tracking data
+        if (selectedBooking?.booking_id === event.booking_id) {
+          loadTrackingData(event.booking_id);
+        }
+        
+        notification.success({
+          message: 'Dịch vụ đã hoàn thành',
+          description: event.message,
+        });
+      }
+    },
+    onBookingCancelled: (event) => {
+      // Remove booking from list if cancelled
+      queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => 
+        old?.filter(b => b.booking_id !== event.booking_id) || []
+      );
+      
+      notification.warning({
+        message: 'Booking đã hủy',
+        description: event.message,
+      });
+    },
+  });
+
+  // WebSocket: Subscribe to tracking events for realtime updates
+  useTrackingEvents({
+    onTrackingCreated: (event) => {
+      // If this tracking belongs to the currently selected booking, reload tracking data
+      if (selectedBooking?.booking_id === event.booking_id) {
+        loadTrackingData(event.booking_id);
+        notification.info({
+          message: 'Tracking mới',
+          description: event.message,
+        });
+      }
+    },
+    onTrackingStarted: (event) => {
+      // Update tracking in modal if this booking is selected
+      if (selectedBooking?.booking_id === event.booking_id && event.tracking_data) {
+        setServicesWithTrackings((prev:any) => {
+          return prev.map((service:any) => ({
+            ...service,
+            trackings: service.trackings.map((t:any) =>
+              t.trackingId === event.tracking_id ? event.tracking_data! : t
+            ),
+          }));
+        });
+        notification.success({
+          message: 'Bước đã bắt đầu',
+          description: event.message,
+        });
+      }
+    },
+    onTrackingUpdated: (event) => {
+      // Update tracking in modal if this booking is selected
+      if (selectedBooking?.booking_id === event.booking_id && event.tracking_data) {
+        setServicesWithTrackings((prev:any) => {
+          return prev.map((service:any) => ({
+            ...service,
+            trackings: service.trackings.map((t:any) =>
+              t.trackingId === event.tracking_id ? event.tracking_data! : t
+            ),
+          }));
+        });
+        notification.info({
+          message: 'Tracking đã cập nhật',
+          description: event.message,
+        });
+      }
+    },
+    onTrackingCompleted: (event) => {
+      // Update tracking in modal if this booking is selected
+      if (selectedBooking?.booking_id === event.booking_id && event.tracking_data) {
+        setServicesWithTrackings((prev:any) => {
+          return prev.map((service:any) => ({
+            ...service,
+            trackings: service.trackings.map((t:any) =>
+              t.trackingId === event.tracking_id ? event.tracking_data! : t
+            ),
+          }));
+        });
+        notification.success({
+          message: 'Bước đã hoàn thành',
+          description: event.message,
+        });
+      }
+    },
+    onTrackingCancelled: (event) => {
+      // Update tracking in modal if this booking is selected
+      if (selectedBooking?.booking_id === event.booking_id && event.tracking_data) {
+        setServicesWithTrackings((prev:any) => {
+          return prev.map((service:any) => ({
+            ...service,
+            trackings: service.trackings.map((t:any) =>
+              t.trackingId === event.tracking_id ? event.tracking_data! : t
+            ),
+          }));
+        });
+        notification.warning({
+          message: 'Bước đã hủy',
+          description: event.message,
+        });
+      }
+    },
+  });
 
   // Filter bookings with status CHECKED_IN, IN_PROGRESS, COMPLETED
   const careBookings = useMemo(() => {
