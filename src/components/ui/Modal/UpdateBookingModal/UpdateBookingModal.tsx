@@ -66,6 +66,7 @@ import { ServiceBay } from "@/lib/api/types/service-bay.types";
 import { BookingScheduleService } from "@/lib/api/services/booking-schedule.service";
 import { AvailableTimeRangesResponse } from "@/lib/api/types/booking.types";
 import { MemoizedTextArea } from "@/components/ui/MemoizedComponents";
+import { getErrorMessage } from "@/components/utils/helper/error.helper";
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -2313,11 +2314,10 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         } catch (bookingError: any) {
           console.log("Error updating slot booking:", bookingError);
           
-          // Kiểm tra xem có phải lỗi cần đề xuất slot mới không
-          const errorCode = bookingError?.error_code || bookingError?.response?.data?.error_code;
-          const errorMessage = bookingError?.message || bookingError?.response?.data?.message || "Có lỗi xảy ra khi cập nhật booking";
+          // Extract and display error message with translation
+          const errorMessage = getErrorMessage(bookingError);
           
-          // Hiển thị error message đơn giản - user tự chọn slot khác
+          // Hiển thị error message đã được dịch
           message.error({
             content: errorMessage,
             duration: 5,

@@ -40,6 +40,7 @@ import dayjs, { Dayjs } from "dayjs";
 import CustomerBookingDetailModal from "@/components/ui/Modal/CustomerBookingDetailModal/CustomerBookingDetailModal";
 import CustomerUpdateBookingModal from "@/components/ui/Modal/CustomerUpdateBookingModal";
 import { BookingInfoDto, BookingType } from "@/lib/api/types/booking.types";
+import { getErrorMessage } from "@/components/utils/helper/error.helper";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -368,7 +369,8 @@ const CustomerBookingListPage = () => {
       refetch();
     } catch (error) {
       console.log("Cancel booking error:", error);
-      message.error("Hủy đặt lịch thất bại!");
+      const errorMessage = getErrorMessage(error);
+      message.error(errorMessage);
     }
   };
 

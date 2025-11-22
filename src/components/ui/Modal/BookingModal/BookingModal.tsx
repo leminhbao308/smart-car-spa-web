@@ -50,6 +50,7 @@ import { PriceBookItem } from "@/lib/api/types/price-book.types";
 import { ServiceBay } from "@/lib/api/types/service-bay.types";
 import { BookingType } from "@/lib/api/types/booking.types";
 import { useServicesWithInventory } from "@/lib/api/hooks/useServicesWithInventory";
+import { getErrorMessage } from "@/components/utils/helper/error.helper";
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -849,18 +850,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
             onRefresh();
           }
           return;
-        } catch (walkInError) {
-          console.log("Error creating walk-in booking:", walkInError);
-          onOk({
-            customerType: "new",
-            customer: newCustomer,
-            vehicle: newVehicle,
-            branch: selectedBranch,
-            services: selectedItems,
-            totalPrice,
-            totalDuration,
-            notes: values.notes || "",
+        } catch (walkInError: any) {
+          console.error("Error creating walk-in booking:", walkInError);
+          
+          // Extract and display error message
+          const errorMessage = getErrorMessage(walkInError);
+          notification.error({
+            message: "Lỗi đặt lịch",
+            description: errorMessage,
+            placement: "topRight",
+            duration: 5,
           });
+          
+          // Don't call onOk when there's an error - let user retry
           return;
         }
       }
@@ -966,21 +968,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
             onRefresh();
           }
           return;
-        } catch (walkInError) {
-          console.log(
+        } catch (walkInError: any) {
+          console.error(
             "Error creating walk-in booking for existing customer:",
             walkInError
           );
-          onOk({
-            customerType: "existing",
-            customer: selectedCustomer,
-            vehicle: selectedVehicle,
-            branch: selectedBranch,
-            services: selectedItems,
-            totalPrice,
-            totalDuration,
-            notes: values.notes || "",
+          
+          // Extract and display error message
+          const errorMessage = getErrorMessage(walkInError);
+          notification.error({
+            message: "Lỗi đặt lịch",
+            description: errorMessage,
+            placement: "topRight",
+            duration: 5,
           });
+          
+          // Don't call onOk when there's an error - let user retry
           return;
         }
       }
@@ -1077,19 +1080,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
             onRefresh();
           }
           return;
-        } catch (bookingError) {
-          console.log("Error creating slot booking:", bookingError);
-          onOk({
-            customerType: "existing",
-            customer: selectedCustomer,
-            vehicle: selectedVehicle,
-            branch: selectedBranch,
-            slot: selectedSlot,
-            services: selectedItems,
-            totalPrice,
-            totalDuration,
-            notes: values.notes || "",
+        } catch (bookingError: any) {
+          console.error("Error creating slot booking:", bookingError);
+          
+          // Extract and display error message
+          const errorMessage = getErrorMessage(bookingError);
+          notification.error({
+            message: "Lỗi đặt lịch",
+            description: errorMessage,
+            placement: "topRight",
+            duration: 5,
           });
+          
+          // Don't call onOk when there's an error - let user retry
           return;
         }
       }
@@ -1104,8 +1107,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         selectedWalkInBay: !!selectedWalkInBay,
         selectedBranch: !!selectedBranch,
       });
-    } catch (error) {
-      console.log("Booking submission failed:", error);
+    } catch (error: any) {
+      console.error("Booking submission failed:", error);
 
       // Debug form validation errors
       if (error && typeof error === "object" && "errorFields" in error) {
@@ -1125,6 +1128,26 @@ const BookingModal: React.FC<BookingModalProps> = ({
             errors: field.errors,
             warnings: field.warnings,
           });
+        });
+        
+        // Show validation error notification
+        const firstError = errorFields[0]?.errors?.[0];
+        if (firstError) {
+          notification.error({
+            message: "Lỗi xác thực",
+            description: firstError,
+            placement: "topRight",
+            duration: 5,
+          });
+        }
+      } else {
+        // Show API error notification
+        const errorMessage = getErrorMessage(error);
+        notification.error({
+          message: "Lỗi đặt lịch",
+          description: errorMessage,
+          placement: "topRight",
+          duration: 5,
         });
       }
     }

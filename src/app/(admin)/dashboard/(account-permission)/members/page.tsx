@@ -8,13 +8,14 @@ import {
   CustomerVehiclesModal,
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import {Tag, Avatar, message, Space, Button} from "antd";
+import {Tag, Avatar, App, Space, Button} from "antd";
 import {CarOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PhoneOutlined} from "@ant-design/icons";
 import {Promotion, UserManagementInfo} from "@/lib/api/types";
 import { useUserManagement } from "@/lib/api/hooks/useUserManagement";
 import { calculateAge } from "@/components/utils/helper/member.helper";
 
 const MembersPage = () => {
+  const { message } = App.useApp();
   const { showModal } = useConfirmationModalContext();
 
   // User Management Hook

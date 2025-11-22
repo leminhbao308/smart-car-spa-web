@@ -52,6 +52,7 @@ import { BranchDisplay } from "@/lib/api/types/branch.types";
 import { PriceBookItem } from "@/lib/api/types/price-book.types";
 import { ServiceBay } from "@/lib/api/types/service-bay.types";
 import CreateVehicleProfileModal from "@/components/ui/Modal/CarProfileModal/CreateVehicleProfileModal";
+import { getErrorMessage } from "@/components/utils/helper/error.helper";
 
 const { Option } = Select;
 const { Text, Title } = Typography;
@@ -584,7 +585,21 @@ const CustomerBookingPage = () => {
       }, 2000);
     } catch (error) {
       console.log("Booking submission failed:", error);
-      message.error("Đặt lịch thất bại!");
+      const errorMessage = getErrorMessage(error);
+      const errorDuration = 3; // Duration in seconds
+      
+      message.error({
+        content: errorMessage,
+        duration: errorDuration,
+      });
+      
+      // Reload available slots after error message disappears
+      setTimeout(() => {
+        if (selectedBranch && selectedBay && bookingDate && totalDuration > 0) {
+          console.log("Reloading available slots after error...");
+          loadAvailableSlots();
+        }
+      }, errorDuration * 1000);
     } finally {
       setIsSubmitting(false);
     }
