@@ -66,7 +66,7 @@ export default function CheckoutPage() {
       // Reset selected branch when dependencies change
       if (selectedBranch) return; // Already selected, don't recheck
 
-      console.log("🔍 Checking inventory across branches...");
+      console.log(" Checking inventory across branches...");
 
       try {
         // Check each branch's catalog to find one with sufficient stock
@@ -79,7 +79,7 @@ export default function CheckoutPage() {
 
             if (!catalog?.items) {
               console.log(
-                `  ⚠️ No catalog items for branch ${branch.branch_name}`
+                `   No catalog items for branch ${branch.branch_name}`
               );
               continue;
             }
@@ -140,7 +140,7 @@ export default function CheckoutPage() {
         }
 
         // No branch has all items in stock - select first branch as fallback
-        console.log("⚠️ No branch has all items, using fallback");
+        console.log(" No branch has all items, using fallback");
         if (branches.length > 0) {
           setSelectedBranch(branches[0]);
           message.warning(
@@ -424,7 +424,7 @@ export default function CheckoutPage() {
         cancel_url: `${baseUrl}/payment/cancel`,
       };
       const result = await createAndPay(orderPayload);
-      console.log("✅ Create-and-pay result:", result);
+      console.log(" Create-and-pay result:", result);
       console.log("📦 Order ID:", result?.order?.id);
       console.log("💳 Payment URL:", result?.payment?.payment_url);
 
@@ -438,7 +438,7 @@ export default function CheckoutPage() {
         // Use globalThis.location.href for external redirect to PayOS
         globalThis.location.href = result.payment.payment_url;
       } else {
-        console.log("⚠️ No payment URL, redirecting to success page");
+        console.log(" No payment URL, redirecting to success page");
         router.push(`/checkout/success?orderId=${result.order.id}`);
       }
     } catch (error) {

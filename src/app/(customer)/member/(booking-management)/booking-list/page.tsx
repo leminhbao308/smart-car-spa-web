@@ -387,7 +387,7 @@ const CustomerBookingListPage = () => {
     // Only allow cancellation for PENDING or CONFIRMED status
     const allowedStatuses = ["PENDING", "CONFIRMED"];
     if (!allowedStatuses.includes(booking.status)) {
-      console.log("🔍 Booking cannot be cancelled - status:", booking.status);
+      console.log(" Booking cannot be cancelled - status:", booking.status);
       return false;
     }
 
@@ -397,7 +397,7 @@ const CustomerBookingListPage = () => {
     const isFutureBooking = bookingDate.isAfter(now);
 
     // Debug logging
-    console.log("🔍 Cancel booking check:", {
+    console.log(" Cancel booking check:", {
       bookingType: booking.booking_type,
       bookingCode: booking.booking_code,
       status: booking.status,
@@ -409,7 +409,7 @@ const CustomerBookingListPage = () => {
     });
 
     if (!isFutureBooking) {
-      console.log("🔍 Booking cannot be cancelled - booking time has passed");
+      console.log(" Booking cannot be cancelled - booking time has passed");
       return false;
     }
 
@@ -763,7 +763,7 @@ const CustomerBookingListPage = () => {
         const canEdit = isScheduledBooking && allowedStatuses.includes(record.status);
 
         // Debug logging
-        console.log("🔍 Edit button check:", {
+        console.log(" Edit button check:", {
           bookingCode: record.booking_code,
           bookingType: record.booking_type,
           bookingTypeEnum: BookingType.SCHEDULED,

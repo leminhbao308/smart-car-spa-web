@@ -60,7 +60,7 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   // Debug: Log booking info
   React.useEffect(() => {
     if (isBookingInvoice && visible) {
-      console.log("📋 Booking Invoice Detected");
+      console.log(" Booking Invoice Detected");
       console.log("Booking Info:", bookingInfo);
       console.log("Booking Code:", bookingCode);
       console.log("Full Order:", order);

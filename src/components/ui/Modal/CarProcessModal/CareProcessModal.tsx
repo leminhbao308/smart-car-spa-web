@@ -1239,7 +1239,7 @@ const StepModal: React.FC<StepModalProps> = ({
                             color: "#d46b08",
                           }}
                         >
-                          ⚠️ Vui lòng chọn sản phẩm
+                           Vui lòng chọn sản phẩm
                         </div>
                       )}
                     </div>

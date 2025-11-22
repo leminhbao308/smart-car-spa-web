@@ -691,7 +691,7 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
                 từ danh sách hãng xe có sẵn trong hệ thống
               </div>
               <div style={{ marginBottom: 12 }}>
-                <strong style={{ color: "#b45309" }}>🚗 Loại xe:</strong> Chọn
+                <strong style={{ color: "#b45309" }}> Loại xe:</strong> Chọn
                 loại xe phù hợp (Sedan, SUV, Hatchback...)
               </div>
               <div>

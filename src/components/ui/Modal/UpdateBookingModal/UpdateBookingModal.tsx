@@ -350,7 +350,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   // Helper function to ensure queueItems is always an array
   const getSafeQueueItems = useCallback(() => {
     if (!Array.isArray(queueItems)) {
-      console.warn("⚠️ queueItems is not an array:", queueItems);
+      console.warn(" queueItems is not an array:", queueItems);
       return [];
     }
     return queueItems;
@@ -361,7 +361,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     async (bayId: string) => {
       if (!selectedBranch || !totalDuration) return;
 
-      console.log("🔄 Loading bay recommendation for existing booking:", bayId);
+      console.log(" Loading bay recommendation for existing booking:", bayId);
       setIsLoadingRecommendation(true);
       try {
         const recommendation = await recommendBay(
@@ -385,7 +385,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         // Don't filter out current booking when loading queue for the original bay
         // The current booking should be visible in the queue for its original bay
         // Only filter when selecting a different bay
-        console.log("🔍 Queue loaded for original bay (including current booking):", {
+        console.log(" Queue loaded for original bay (including current booking):", {
           queueLength: queue?.length || 0,
           currentBookingId: initialData?.booking_id,
           bayId: bayId,
@@ -402,7 +402,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         
         setQueueItems(filteredQueue as unknown as typeof queueItems);
       } catch (error) {
-        console.log("❌ Error loading bay recommendation:", error);
+        console.log(" Error loading bay recommendation:", error);
       } finally {
         setIsLoadingRecommendation(false);
       }
@@ -564,7 +564,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
 
     setLoadingSlots(true);
     try {
-      console.log("🔄 Loading available slots:", {
+      console.log(" Loading available slots:", {
         bay_id: selectedBay.bay_id,
         date: bookingDate,
         duration_minutes: totalDuration,
@@ -613,14 +613,14 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           totalDuration,
           30 // 30 minutes interval
         );
-        console.log("✅ Loaded slots:", slots.length);
+        console.log(" Loaded slots:", slots.length);
 
         // Debug: Check specific slots
         const slot8_00 = slots.find((s) => s.time === "08:00");
         const slot8_30 = slots.find((s) => s.time === "08:30");
         const slot9_00 = slots.find((s) => s.time === "09:00");
         const slot17_30 = slots.find((s) => s.time === "17:30");
-        console.log("🔍 Slot availability check:", {
+        console.log(" Slot availability check:", {
           slot8_00: slot8_00
             ? { time: slot8_00.time, isAvailable: slot8_00.isAvailable }
             : null,
@@ -638,7 +638,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
 
         setAvailableSlots(slots);
       } else {
-        console.log("⚠️ No working hours or time ranges in response");
+        console.log(" No working hours or time ranges in response");
         setAvailableSlots([]);
       }
     } catch (error) {
@@ -658,7 +658,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   // Reset slot when booking date changes and slot date doesn't match
   useEffect(() => {
     if (selectedSlot && bookingDate && selectedSlot.date !== bookingDate) {
-      console.log("🔄 Booking date changed, resetting slot:", {
+      console.log(" Booking date changed, resetting slot:", {
         slotDate: selectedSlot.date,
         newBookingDate: bookingDate,
       });
@@ -730,7 +730,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         isResettingSlotRef.current = true;
         lastResetDurationRef.current = totalDuration;
 
-        console.log("🔄 Service duration increased, resetting slot:", {
+        console.log(" Service duration increased, resetting slot:", {
           currentSlotDuration: slotDuration,
           newTotalDuration: totalDuration,
           isOriginalSlot,
@@ -760,7 +760,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       // If duration changed but slot is still valid (and it's a new slot, not original)
       // Only update slot duration for new slots, not original slots
       else if (!isOriginalSlot && totalDuration !== slotDuration) {
-        console.log("🔄 Service duration changed, updating slot duration:", {
+        console.log(" Service duration changed, updating slot duration:", {
           currentSlotDuration: slotDuration,
           newTotalDuration: totalDuration,
           isOriginalSlot,
@@ -797,7 +797,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           (!selectedVehicle || selectedVehicle.vehicle_id !== formVehicleId)
         ) {
           console.log(
-            "🔄 Syncing selectedVehicle from form value:",
+            " Syncing selectedVehicle from form value:",
             vehicle.vehicle_id
           );
           setSelectedVehicle(vehicle);
@@ -810,7 +810,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   // Auto recommend bay for walk-in booking
   useEffect(() => {
     const getBayRecommendation = async () => {
-      console.log("🔍 Checking bay recommendation conditions:", {
+      console.log(" Checking bay recommendation conditions:", {
         selectedBranch: !!selectedBranch,
         selectedItems: selectedItems.length,
         totalDuration,
@@ -818,13 +818,13 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       });
 
       if (!selectedBranch || selectedItems.length === 0 || totalDuration <= 0) {
-        console.log("❌ Missing required data for bay recommendation");
+        console.log(" Missing required data for bay recommendation");
         setBayRecommendation(null);
         setQueueItems([]);
         return;
       }
 
-      console.log("🚀 Starting bay recommendation...");
+      console.log(" Starting bay recommendation...");
       setIsLoadingRecommendation(true);
       try {
         const recommendation = await recommendBay(
@@ -835,8 +835,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           bookingDate
         );
 
-        console.log("✅ Bay recommendation received:", recommendation);
-        console.log("🔍 Recommendation structure:", {
+        console.log(" Bay recommendation received:", recommendation);
+        console.log(" Recommendation structure:", {
           hasRecommendedBay: !!recommendation?.recommended_bay,
           hasQueue: !!recommendation?.queue,
           queueType: typeof recommendation?.queue,
@@ -859,15 +859,15 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           setQueueItems(recommendation.queue as unknown as typeof queueItems);
         } else if (recommendation?.recommended_bay?.bay_id) {
           console.log(
-            "🔄 Loading queue for bay:",
+            " Loading queue for bay:",
             recommendation.recommended_bay.bay_id
           );
           const queue = await getBayQueue(
             recommendation.recommended_bay.bay_id,
             bookingDate
           );
-          console.log("✅ Queue loaded:", queue);
-          console.log("🔍 Queue structure:", {
+          console.log(" Queue loaded:", queue);
+          console.log(" Queue structure:", {
             queueType: typeof queue,
             queueIsArray: Array.isArray(queue),
             queueLength: queue?.length,
@@ -875,11 +875,11 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           });
           setQueueItems(queue as unknown as typeof queueItems);
         } else {
-          console.log("⚠️ No queue data available");
+          console.log(" No queue data available");
           setQueueItems([]);
         }
       } catch (error) {
-        console.log("❌ Error getting bay recommendation:", error);
+        console.log(" Error getting bay recommendation:", error);
         setBayRecommendation(null);
         setQueueItems([]);
       } finally {
@@ -1007,7 +1007,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       // Set booking date
       const { isWalkIn: isWalkInBookingForLog } =
         detectBookingType(initialData);
-      console.log("🔍 Setting booking date:", {
+      console.log(" Setting booking date:", {
         scheduled_start_at: initialData.scheduled_start_at,
         booking_type: initialData.booking_type,
         booking_code: initialData.booking_code,
@@ -1030,7 +1030,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         setBookingDate(date);
       } else {
         console.log(
-          "⚠️ No booking date set - no scheduled_start_at for slot booking"
+          " No booking date set - no scheduled_start_at for slot booking"
         );
       }
 
@@ -1074,7 +1074,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       }
 
       // Set selected services from booking items
-      console.log("🔍 Initializing services from booking items:", {
+      console.log(" Initializing services from booking items:", {
         booking_items: initialData.booking_items,
         availableServicesCount: availableServices.length,
       });
@@ -1084,7 +1084,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         const seenServiceIds = new Set<string>(); // Track already added services
 
         initialData.booking_items.forEach((item) => {
-          console.log("🔍 Processing booking item:", {
+          console.log(" Processing booking item:", {
             service_id: item.service_id,
             service_name: item.service_name,
             booking_item_id: item.booking_item_id,
@@ -1096,7 +1096,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
               (service) => service.service?.service_id === item.service_id
             );
             if (priceBookItem && !seenServiceIds.has(priceBookItem.item_id)) {
-              console.log("✅ Found matching service by service_id:", {
+              console.log(" Found matching service by service_id:", {
                 item_id: priceBookItem.item_id,
                 item_name: priceBookItem.item_name,
                 service: priceBookItem.service
@@ -1118,7 +1118,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             // FALLBACK: Backend trả về service_id null (BUG BACKEND)
             // Tạm thời match bằng service_name để frontend không crash
             console.warn(
-              "⚠️ BACKEND BUG: Booking item has null service_id! Attempting fallback match by service_name:",
+              " BACKEND BUG: Booking item has null service_id! Attempting fallback match by service_name:",
               item.service_name
             );
             const priceBookItem = availableServices.find(
@@ -1128,7 +1128,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                 !seenServiceIds.has(service.item_id)
             );
             if (priceBookItem) {
-              console.log("✅ Fallback match successful by service_name:", {
+              console.log(" Fallback match successful by service_name:", {
                 item_id: priceBookItem.item_id,
                 item_name: priceBookItem.item_name,
                 service: priceBookItem.service
@@ -1151,7 +1151,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             }
           } else {
             console.warn(
-              "⚠️ Skipping booking item - missing both service_id and service_name:",
+              " Skipping booking item - missing both service_id and service_name:",
               item
             );
           }
@@ -1163,7 +1163,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             index === self.findIndex((s) => s.item_id === service.item_id)
         );
 
-        console.log("📋 Final services array:", {
+        console.log(" Final services array:", {
           originalCount: services.length,
           uniqueCount: uniqueServices.length,
           services: uniqueServices.map((s) => ({
@@ -1193,7 +1193,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           .filter((id): id is string => !!id);
         form.setFieldValue("services", serviceItemIds);
       } else {
-        console.log("⚠️ No booking items found in initialData");
+        console.log(" No booking items found in initialData");
         setOriginalItems([]);
         setOriginalTotalDuration(0);
       }
@@ -1321,7 +1321,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         console.log("🔧 Setting selectedBay from initialData:", bay);
         setSelectedBay(bay);
       } else if (initialData.bay_id && !bay) {
-        console.warn("⚠️ Bay not found:", {
+        console.warn(" Bay not found:", {
           bayId: initialData.bay_id,
           bayName: initialData.bay_name,
           serviceBaysLength: serviceBays.length,
@@ -1515,7 +1515,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   // Handle service selection change
   const handleServiceChange = useCallback(
     (selectedServiceIds: string[]) => {
-      console.log("🔄 Service selection changed (from Select component):", {
+      console.log(" Service selection changed (from Select component):", {
         selectedServiceIds,
         selectedServiceIdsCount: selectedServiceIds.length,
         currentSelectedItemsCount: selectedItems.length,
@@ -1552,7 +1552,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         (id) => !newServiceIds.has(id)
       );
 
-      console.log("✅ Selected services:", {
+      console.log(" Selected services:", {
         uniqueIdsCount: uniqueServiceIds.length,
         selectedServicesCount: uniqueSelectedServices.length,
         previousCount: selectedItems.length,
@@ -1626,13 +1626,13 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           );
           if (vehicle) {
             console.log(
-              "🔄 Restoring vehicle from form value:",
+              " Restoring vehicle from form value:",
               vehicle.vehicle_id
             );
             setSelectedVehicle(vehicle);
           } else {
             console.log(
-              "⚠️ Vehicle not found in allVehicles:",
+              " Vehicle not found in allVehicles:",
               currentVehicleId
             );
           }
@@ -1696,7 +1696,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           selectedBranch &&
           bay.branch_id === selectedBranch.branch_id
         ) {
-          console.log("🔄 Restoring slot for bay:", {
+          console.log(" Restoring slot for bay:", {
             bayId: bay.bay_id,
             slot: bayState.slot,
             bookingDate,
@@ -1707,7 +1707,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
           setSelectedSlot(bayState.slot);
           setIsSlotChanged(bayState.isChanged);
         } else {
-          console.log("❌ Not restoring slot - mismatch:", {
+          console.log(" Not restoring slot - mismatch:", {
             hasSlot: !!bayState.slot,
             slotBayId: bayState.slot?.bayId,
             currentBayId: bay.bay_id,
@@ -1855,7 +1855,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         .filter((id): id is string => !!id)
     );
 
-    console.log("🔍 Building booking_items array:", {
+    console.log(" Building booking_items array:", {
       originalServiceIds: Array.from(originalServiceIds),
       selectedServiceIds: Array.from(selectedServiceIds),
       originalItemsCount: originalItems.length,
@@ -1903,7 +1903,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
     selectedItems.forEach((item) => {
       const serviceId = item.service?.service_id;
       if (!serviceId) {
-        console.warn("⚠️ Skipping item without service_id:", item);
+        console.warn(" Skipping item without service_id:", item);
         return;
       }
 
@@ -1947,7 +1947,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   // Handle submit
   const handleSubmit = async () => {
     try {
-      console.log("🚀 Starting handleSubmit...");
+      console.log(" Starting handleSubmit...");
       console.log("Current state:", {
         customerType,
         selectedCustomer: !!selectedCustomer,
@@ -1984,7 +1984,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       });
 
       if (!isNewCustomer && !isExistingCustomer) {
-        console.log("❌ Missing required information for booking");
+        console.log(" Missing required information for booking");
         console.log(
           "isNewCustomer:",
           isNewCustomer,
@@ -2106,16 +2106,15 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             booking_items: bookingItems.length > 0 ? bookingItems : undefined,
           };
 
-          console.log(
-            "🚀 Updating walk-in booking with request:",
+          console.log(" Updating walk-in booking with request:",
             updateRequest
           );
           const updateResponse = await updateBookingMutation.mutateAsync({
             bookingId: initialData.booking_id,
             request: updateRequest,
           });
-          console.log("📋 Walk-in booking update response:", updateResponse);
-          console.log("🔍 Response branch info:", {
+          console.log(" Walk-in booking update response:", updateResponse);
+          console.log(" Response branch info:", {
             branch_id: updateResponse?.branch_id,
             branch_name: updateResponse?.branch_name,
             branch_code: updateResponse?.branch_code,
@@ -2203,11 +2202,11 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         try {
           // Additional safety checks
           if (isNewCustomer && (!newCustomer || !newVehicle)) {
-            console.log("❌ New customer data is incomplete");
+            console.log(" New customer data is incomplete");
             return;
           }
           if (!isNewCustomer && (!selectedCustomer || !selectedVehicle)) {
-            console.log("❌ Existing customer data is incomplete");
+            console.log(" Existing customer data is incomplete");
             return;
           }
 
@@ -2268,8 +2267,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             booking_items: bookingItems.length > 0 ? bookingItems : undefined,
           };
 
-          console.log("🚀 Updating slot booking with request:", updateRequest);
-          console.log("🔍 Schedule booking data:", {
+          console.log(" Updating slot booking with request:", updateRequest);
+          console.log(" Schedule booking data:", {
             selectedSlot: selectedSlot,
             service_bay_id: selectedSlot?.bayId,
             schedule_date: selectedSlot?.date,
@@ -2287,8 +2286,8 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             bookingId: initialData.booking_id,
             request: updateRequest,
           });
-          console.log("📋 Booking update response:", updateResponse);
-          console.log("🔍 Response branch info:", {
+          console.log(" Booking update response:", updateResponse);
+          console.log(" Response branch info:", {
             branch_id: updateResponse?.branch_id,
             branch_name: updateResponse?.branch_name,
             branch_code: updateResponse?.branch_code,
@@ -2362,7 +2361,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         <Tabs
           defaultActiveKey={customerType}
           onChange={(key) => {
-            console.log("🔄 Switching customer type tab:", key);
+            console.log(" Switching customer type tab:", key);
             setCustomerType(key as "existing" | "new");
             // Reset all customer and vehicle data when switching tabs
             setSelectedCustomer(null);
@@ -2599,7 +2598,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
 
   // Render new customer form (Tab 2)
   const renderNewCustomerForm = () => {
-    console.log("🔍 Rendering new customer form:", {
+    console.log(" Rendering new customer form:", {
       customerType,
       newCustomer,
       newVehicle,
@@ -2714,8 +2713,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                 <Input
                   placeholder="Nhập biển số xe"
                   onChange={(e) => {
-                    console.log(
-                      "🚗 New vehicle license plate changed:",
+                    console.log(" New vehicle license plate changed:",
                       e.target.value
                     );
                     setNewVehicle((prev) => ({
@@ -3023,7 +3021,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                           <strong>{totalOriginalSlotTime} phút</strong>
                         </div>
                         <div style={{ marginTop: 8, color: "#faad14" }}>
-                          ⚠️ Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. 
+                          Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. 
                           Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.
                         </div>
                       </div>
@@ -3215,7 +3213,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
   const renderBayRecommendation = () => (
     <div>
       <Alert
-        message="🎯 Đề xuất bay thông minh"
+        message=" Đề xuất bay thông minh"
         description="Hệ thống đã tự động đề xuất bay tốt nhất dựa trên tình trạng hiện tại"
         type="info"
         style={{ marginBottom: 16 }}
@@ -3336,15 +3334,13 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                               bayRecommendation?.queue &&
                               Array.isArray(bayRecommendation.queue)
                             ) {
-                              console.log(
-                                "🔄 Restoring original queue from recommendation"
+                              console.log(" Restoring original queue from recommendation"
                               );
                               queueToSet = bayRecommendation.queue;
                             } else if (
                               bayRecommendation?.recommended_bay?.bay_id
                             ) {
-                              console.log(
-                                "🔄 Loading queue for recommended bay:",
+                              console.log(" Loading queue for recommended bay:",
                                 bayRecommendation.recommended_bay.bay_id
                               );
                               // Include current booking ID if recommended bay is the original bay
@@ -3356,8 +3352,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                                 bookingDate,
                                 includeBookingId
                               );
-                              console.log(
-                                "✅ Queue loaded for recommended bay:",
+                              console.log(" Queue loaded for recommended bay:",
                                 queue
                               );
                               queueToSet = queue as any[];
@@ -3373,7 +3368,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                                 )
                               : queueToSet;
                             
-                            console.log("🔍 Queue filtering (restore recommendation):", {
+                            console.log(" Queue filtering (restore recommendation):", {
                               originalQueueLength: queueToSet?.length || 0,
                               filteredQueueLength: filteredQueue?.length || 0,
                               currentBookingId: initialData?.booking_id,
@@ -3385,8 +3380,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                             
                             setQueueItems(filteredQueue as unknown as typeof queueItems);
                           } catch (error) {
-                            console.log(
-                              "❌ Error loading queue for recommended bay:",
+                            console.log(" Error loading queue for recommended bay:",
                               error
                             );
                             setQueueItems([]);
@@ -3444,7 +3438,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                           try {
                             // Use the date selected by user
                             console.log(
-                              "🔄 Loading queue for selected bay:",
+                              " Loading queue for selected bay:",
                               bay.bay_id,
                               "using selected date:",
                               bookingDate
@@ -3457,7 +3451,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                               bookingDate,
                               includeBookingId
                             );
-                            console.log("✅ Queue loaded for bay:", queue);
+                            console.log(" Queue loaded for bay:", queue);
                             
                             // Only filter out current booking if selecting a different bay
                             // If selecting the original bay, show current booking in queue
@@ -3467,7 +3461,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                                 )
                               : queue;
                             
-                            console.log("🔍 Queue filtering:", {
+                            console.log(" Queue filtering:", {
                               originalQueueLength: queue?.length || 0,
                               filteredQueueLength: filteredQueue?.length || 0,
                               currentBookingId: initialData?.booking_id,
@@ -3481,8 +3475,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                               filteredQueue as unknown as typeof queueItems
                             );
                           } catch (error) {
-                            console.log(
-                              "❌ Error loading queue for bay:",
+                            console.log(" Error loading queue for bay:",
                               error
                             );
                             setQueueItems([]);
@@ -3539,7 +3532,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
             >
               {(() => {
                 const safeQueueItems = getSafeQueueItems();
-                console.log("🔍 Queue items debug:", {
+                console.log(" Queue items debug:", {
                   queueItems,
                   safeQueueItems,
                   isArray: Array.isArray(queueItems),
@@ -3570,7 +3563,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                       key: "queue_position",
                       width: 60,
                       align: "center",
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       render: (value: number, record: any, index: number) => (
                         <span
                           style={{
@@ -3585,7 +3577,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                     {
                       title: "Khách hàng",
                       key: "customer",
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       render: (record: any) => (
                         <div>
                           <div style={{ fontWeight: "500", color: "#262626" }}>
@@ -3616,7 +3607,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                     {
                       title: "Biển số",
                       key: "license_plate",
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       render: (record: any) => (
                         <span
                           style={{
@@ -3637,7 +3627,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                     {
                       title: "Dịch vụ",
                       key: "services",
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       render: (record: any) => (
                         <div>
                           {record.booking_service_names &&
@@ -3668,7 +3657,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                       key: "price",
                       align: "right",
                       width: 100,
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       render: (record: any) => (
                         <span
                           style={{
@@ -3687,7 +3675,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                       key: "time",
                       align: "center",
                       width: 120,
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       render: (record: any) => (
                         <div style={{ fontSize: "10px" }}>
                           {record.estimated_start_time ||
@@ -4006,7 +3993,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                 gap: 8,
               }}
             >
-              <span>🚗</span>
               Thông tin xe
             </div>
             <div
@@ -4202,7 +4188,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                 gap: 8,
               }}
             >
-              <span>⏰</span>
+              
               Thời gian
             </div>
             <div
@@ -4280,7 +4266,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
       bookingType,
     } = detectBookingType(initialData);
 
-    console.log("🔍 Booking type detection:", {
+    console.log(" Booking type detection:", {
       booking_code: initialData.booking_code,
       booking_type: initialData.booking_type,
       detectedType: bookingType,

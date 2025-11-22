@@ -12,7 +12,7 @@ export const serviceTypes = [
 export const bookingStatuses = [
   { value: "pending", label: "Chờ xác nhận", color: "orange", icon: "⏳" },
   { value: "confirmed", label: "Đã xác nhận", color: "blue", icon: "✅" },
-  { value: "in_progress", label: "Đang thực hiện", color: "green", icon: "🔄" },
+  { value: "in_progress", label: "Đang thực hiện", color: "green", icon: "" },
   { value: "completed", label: "Hoàn thành", color: "green", icon: "✔️" },
   { value: "cancelled", label: "Đã hủy", color: "red", icon: "❌" },
   { value: "no_show", label: "Không đến", color: "gray", icon: "🚫" },

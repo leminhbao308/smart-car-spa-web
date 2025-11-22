@@ -1125,7 +1125,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         </p>
         {productToDelete?.product?.id && (
           <p style={{ color: "#ff4d4f", fontSize: 12 }}>
-            ⚠️ Sản phẩm này đã tồn tại trong hệ thống và sẽ bị xóa vĩnh viễn.
+             Sản phẩm này đã tồn tại trong hệ thống và sẽ bị xóa vĩnh viễn.
           </p>
         )}
       </Modal>
@@ -1153,7 +1153,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
         </p>
         {stepToDelete?.step?.id && (
           <p style={{ color: "#ff4d4f", fontSize: 12 }}>
-            ⚠️ Bước này đã tồn tại trong hệ thống và sẽ bị xóa vĩnh viễn.
+             Bước này đã tồn tại trong hệ thống và sẽ bị xóa vĩnh viễn.
           </p>
         )}
       </Modal>

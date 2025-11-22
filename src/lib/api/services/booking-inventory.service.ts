@@ -37,7 +37,7 @@ export class BookingInventoryService {
       // Process each booking item (service)
       for (const bookingItem of booking.booking_items) {
         if (!bookingItem.service_id) {
-          console.warn("⚠️ Booking item missing service_id:", bookingItem);
+          console.warn(" Booking item missing service_id:", bookingItem);
           continue;
         }
 
@@ -92,7 +92,7 @@ export class BookingInventoryService {
       );
       return inventoryItems;
     } catch (error) {
-      console.log("❌ Error getting booking required products:", error);
+      console.log(" Error getting booking required products:", error);
       throw error;
     }
   }

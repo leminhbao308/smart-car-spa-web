@@ -62,7 +62,7 @@ export const useVerifyPayment = (
     // Polling configuration
     refetchInterval: (query) => {
       const data = query.state.data;
-      console.log(`⏰ useVerifyPayment: Refetch interval check - Status: ${data?.status}, TransactionId: ${data?.transaction_id}`);
+      console.log(` useVerifyPayment: Refetch interval check - Status: ${data?.status}, TransactionId: ${data?.transaction_id}`);
       
       // Stop polling if payment is completed, cancelled, or has transaction_id (indicates successful payment)
       const isPaymentCompleted = data?.status === "COMPLETED" || 
@@ -76,7 +76,7 @@ export const useVerifyPayment = (
       
       // Continue polling
       const interval = options?.refetchInterval || 3000;
-      console.log(`🔄 useVerifyPayment: Continuing polling - next check in ${interval}ms`);
+      console.log(` useVerifyPayment: Continuing polling - next check in ${interval}ms`);
       return interval;
     },
     refetchIntervalInBackground: true,

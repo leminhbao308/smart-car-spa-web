@@ -739,7 +739,7 @@ const POSPage = () => {
         // Refresh bookings list to remove paid bookings
         refetchBookings();
       } catch (error: unknown) {
-        console.log("❌ Error marking bookings as paid:", error);
+        console.log(" Error marking bookings as paid:", error);
         message.error(
           "Thanh toán thành công nhưng lỗi khi cập nhật trạng thái booking: " +
             (error instanceof Error ? error.message : "")
@@ -754,14 +754,14 @@ const POSPage = () => {
         hide();
         message.success("Thanh toán thành công và đã hoàn thành đơn hàng!");
       } catch (error: unknown) {
-        console.log("❌ Error fulfilling order:", error);
+        console.log(" Error fulfilling order:", error);
         message.error(
           "Thanh toán thành công nhưng lỗi khi hoàn thành đơn hàng: " +
             (error instanceof Error ? error.message : "")
         );
       }
     } else {
-      console.log("⚠️ No currentOrderId to fulfill");
+      console.log(" No currentOrderId to fulfill");
     }
 
     // Reset all states
@@ -996,7 +996,7 @@ const POSPage = () => {
       if (response.order?.id) {
         setCurrentOrderId(response.order.id);
       } else {
-        console.log("⚠️ No order ID in response:", response);
+        console.log(" No order ID in response:", response);
       }
 
       // Handle CASH payment
@@ -1042,7 +1042,7 @@ const POSPage = () => {
             // Refresh bookings list to remove paid bookings
             refetchBookings();
           } catch (error: unknown) {
-            console.log("❌ CASH Error marking bookings as paid:", error);
+            console.log(" CASH Error marking bookings as paid:", error);
             message.error(
               "Thanh toán thành công nhưng lỗi khi cập nhật trạng thái booking: " +
                 (error instanceof Error ? error.message : "")

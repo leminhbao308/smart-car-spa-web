@@ -32,7 +32,7 @@ const PromotionSection: React.FC<PromotionSectionProps> = ({
 }) => {
   // Check applicability for each promotion
   const promotionsWithStatus = useMemo(() => {
-    console.log("🔍 Processing promotions:", {
+    console.log(" Processing promotions:", {
       totalPromotions: promotions.length,
       cartItems: cart.length,
       promotions: promotions,

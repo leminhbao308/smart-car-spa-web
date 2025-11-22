@@ -19,7 +19,7 @@ export const useBookingWithInventory = () => {
     branchId: string
   ) => {
     try {
-      console.log(`🔄 Confirming booking ${booking.booking_id} with inventory fulfillment`);
+      console.log(` Confirming booking ${booking.booking_id} with inventory fulfillment`);
       
       // 1. Confirm booking first
       await confirmBookingMutation.mutateAsync(booking.booking_id);
@@ -43,7 +43,7 @@ export const useBookingWithInventory = () => {
     cancelledBy: string
   ) => {
     try {
-      console.log(`🔄 Cancelling booking ${booking.booking_id} with inventory release`);
+      console.log(` Cancelling booking ${booking.booking_id} with inventory release`);
       
       // 1. Cancel booking first
       await cancelBookingMutation.mutateAsync({
@@ -69,7 +69,7 @@ export const useBookingWithInventory = () => {
     branchId: string
   ) => {
     try {
-      console.log(`🔄 Starting service for booking ${booking.booking_id} with inventory check`);
+      console.log(` Starting service for booking ${booking.booking_id} with inventory check`);
       
       // 1. Start service
       await startServiceMutation.mutateAsync(booking.booking_id);
@@ -80,7 +80,7 @@ export const useBookingWithInventory = () => {
         await fulfillInventory({ booking, branchId });
         console.log(`✅ Inventory already fulfilled or successfully fulfilled for booking ${booking.booking_id}`);
       } catch (inventoryError) {
-        console.warn(`⚠️ Inventory fulfillment failed for booking ${booking.booking_id}, but service started:`, inventoryError);
+        console.warn(` Inventory fulfillment failed for booking ${booking.booking_id}, but service started:`, inventoryError);
         // Don't fail the entire operation if inventory fulfillment fails
         // Note: Warning notification should be handled by the component using App.useApp()
       }

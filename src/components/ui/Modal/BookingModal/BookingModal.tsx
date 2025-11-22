@@ -150,7 +150,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   // Debug selectedSlot state changes
   useEffect(() => {
-    console.log("🔄 selectedSlot state changed:", {
+    console.log(" selectedSlot state changed:", {
       selectedSlot,
       hasSelectedSlot: !!selectedSlot,
       details: selectedSlot,
@@ -541,7 +541,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   // With time-range-based system, availability is already calculated in convertTimeRangesToSlots
   const isSlotSuitable = useCallback(
     (slot: SlotInfo) => {
-      console.log("🔍 isSlotSuitable check:", {
+      console.log(" isSlotSuitable check:", {
         slot: {
           time: slot.time,
           isAvailable: slot.isAvailable,
@@ -562,7 +562,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
     (slot: SlotInfo) => {
       const isSuitable = isSlotSuitable(slot);
 
-      console.log("🔍 canSelectSlot check:", {
+      console.log(" canSelectSlot check:", {
         slot: {
           time: slot.time,
           isAvailable: slot.isAvailable,
@@ -682,7 +682,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSlotSelect = useCallback(
     (slot: SlotInfo) => {
-      console.log("🎯 handleSlotSelect called:", {
+      console.log(" handleSlotSelect called:", {
         slot: {
           time: slot.time,
           isAvailable: slot.isAvailable,
@@ -701,18 +701,17 @@ const BookingModal: React.FC<BookingModalProps> = ({
           startTime: slot.time,
           serviceDurationMinutes: totalDuration,
         };
-        console.log("✅ Setting selectedSlot:", newSlot);
+        console.log(" Setting selectedSlot:", newSlot);
         setSelectedSlot(newSlot);
 
         // Reset walk-in bay selection when selecting a slot
         setSelectedWalkInBay(null);
         setManualBaySelection(false);
-        console.log("🔄 Reset walk-in bay selection for slot booking");
+        console.log(" Reset walk-in bay selection for slot booking");
 
-        console.log("🔄 selectedSlot state updated, will trigger re-render");
+        console.log(" selectedSlot state updated, will trigger re-render");
       } else {
-        console.log(
-          "❌ Cannot select slot - canSelectSlot returned false or no bay selected"
+        console.log(" Cannot select slot - canSelectSlot returned false or no bay selected"
         );
       }
     },
@@ -721,7 +720,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   const handleSubmit = async () => {
     try {
-      console.log("🚀 Starting handleSubmit...");
+      console.log(" Starting handleSubmit...");
       console.log("Current state:", {
         customerType,
         selectedCustomer: !!selectedCustomer,
@@ -744,7 +743,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       console.log("Customer checks:", { isNewCustomer, isExistingCustomer });
 
       if (!isNewCustomer && !isExistingCustomer) {
-        console.log("❌ Missing required information for booking");
+        console.log(" Missing required information for booking");
         console.log(
           "isNewCustomer:",
           isNewCustomer,
@@ -754,10 +753,9 @@ const BookingModal: React.FC<BookingModalProps> = ({
         return;
       }
 
-      console.log(
-        "✅ Customer validation passed, proceeding with booking creation..."
+      console.log(" Customer validation passed, proceeding with booking creation..."
       );
-      console.log("🔍 Booking type conditions:", {
+      console.log(" Booking type conditions:", {
         isNewCustomer,
         isExistingCustomer,
         customerType,
@@ -767,7 +765,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         selectedWalkInBayDetails: selectedWalkInBay,
       });
 
-      console.log("🔍 Debug booking conditions:", {
+      console.log(" Debug booking conditions:", {
         isNewCustomer: isNewCustomer,
         isExistingCustomer: isExistingCustomer,
         customerType: customerType,
@@ -825,8 +823,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
             booking_date: bookingDate, // Send the selected date
           };
 
-          console.log("🔍 DEBUG: Final walkInData payload:", walkInData);
-          console.log("🔍 DEBUG: bookingDate being sent:", bookingDate);
+          console.log(" DEBUG: Final walkInData payload:", walkInData);
+          console.log(" DEBUG: bookingDate being sent:", bookingDate);
 
           const walkInResponse = await createWalkInBooking(
             walkInData,
@@ -868,7 +866,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }
 
       // Handle existing customer for walk-in booking (onsite processing)
-      console.log("🔍 Checking existing customer walk-in condition:", {
+      console.log(" Checking existing customer walk-in condition:", {
         isExistingCustomer,
         customerType,
         selectedWalkInBay: !!selectedWalkInBay,
@@ -894,7 +892,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         }
 
         console.log("Creating walk-in booking for existing customer");
-        console.log("🔍 DEBUG: Selected vehicle data:", {
+        console.log(" DEBUG: Selected vehicle data:", {
           vehicle_id: selectedVehicle!.vehicle_id,
           license_plate: selectedVehicle!.license_plate,
           brand_name: selectedVehicle!.brand_name,
@@ -940,7 +938,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             "🔍 DEBUG: Final walkInData payload for existing customer:",
             walkInData
           );
-          console.log("🔍 DEBUG: bookingDate being sent:", bookingDate);
+          console.log(" DEBUG: bookingDate being sent:", bookingDate);
 
           const walkInResponse = await createWalkInBooking(
             walkInData,
@@ -988,7 +986,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }
 
       // Handle existing customer (slot booking)
-      console.log("🔍 Checking existing customer slot booking condition:", {
+      console.log(" Checking existing customer slot booking condition:", {
         isExistingCustomer,
         selectedSlot: !!selectedSlot,
         selectedWalkInBay: !!selectedWalkInBay,
@@ -996,7 +994,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       });
 
       if (isExistingCustomer && selectedSlot && !selectedWalkInBay) {
-        console.log("🎯 Processing existing customer slot booking...");
+        console.log(" Processing existing customer slot booking...");
         if (!selectedBranch) {
           console.log(
             "Missing branch information for existing customer slot booking"
@@ -1054,13 +1052,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
             notes: values.notes || "",
           };
 
-          console.log(
-            "🚀 Creating regular booking with request:",
+          console.log(" Creating regular booking with request:",
             createRequest
           );
           const createResponse =
             await createBookingWithSlotMutation.mutateAsync(createRequest);
-          console.log("📋 Booking creation response:", createResponse);
+          console.log(" Booking creation response:", createResponse);
           
           // Show success notification
           const bookingCode = createResponse?.booking_code || "N/A";
@@ -1098,8 +1095,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
       }
 
       // If no condition was met, log the issue
-      console.log("❌ No booking condition was met. This should not happen.");
-      console.log("🔍 Final state check:", {
+      console.log(" No booking condition was met. This should not happen.");
+      console.log(" Final state check:", {
         isNewCustomer,
         isExistingCustomer,
         customerType,
@@ -1152,7 +1149,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
   // Render new customer form (Tab 2)
   const renderNewCustomerForm = () => {
-    console.log("🔍 Rendering new customer form:", {
+    console.log(" Rendering new customer form:", {
       customerType,
       newCustomer,
       newVehicle,
@@ -1264,8 +1261,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 <Input
                   placeholder="Nhập biển số xe"
                   onChange={(e) => {
-                    console.log(
-                      "🚗 New vehicle license plate changed:",
+                    console.log(" New vehicle license plate changed:",
                       e.target.value
                     );
                     setNewVehicle((prev) => ({
@@ -1420,7 +1416,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         <Tabs
           defaultActiveKey="existing"
           onChange={(key) => {
-            console.log("🔄 Switching customer type tab:", key);
+            console.log(" Switching customer type tab:", key);
             setCustomerType(key as "existing" | "new");
             // Reset all customer and vehicle data when switching tabs
             setSelectedCustomer(null);
@@ -1775,22 +1771,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 style={{ width: "100%" }}
                 placeholder="Chọn ngày"
                 disabledDate={(current) => {
-                  // TEMPORARILY DISABLED FOR TESTING - Remove this comment and uncomment below logic when done testing
                   return false; // Allow all dates for testing
-                  
-                  // Original logic (commented out for testing):
-                  // const today = dayjs();
-                  // const currentHour = today.hour();
-                  //
-                  // // Nếu hiện tại >= 17h, disable ngày hôm nay
-                  // if (currentHour >= 17) {
-                  //   return (
-                  //     current && current < today.add(1, "day").startOf("day")
-                  //   );
-                  // }
-                  //
-                  // // Nếu hiện tại < 17h, chỉ disable các ngày trong quá khứ
-                  // return current && current < today.startOf("day");
                 }}
                 onChange={(date) => {
                   const newDate = date ? date.format("YYYY-MM-DD") : "";
@@ -1862,7 +1843,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const renderBayRecommendation = () => (
     <div>
       <Alert
-        message="🎯 Đề xuất bay thông minh"
+        message=" Đề xuất bay thông minh"
         description="Hệ thống đã tự động đề xuất bay tốt nhất dựa trên tình trạng hiện tại"
         type="info"
         style={{ marginBottom: 16 }}
@@ -1981,8 +1962,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               bayRecommendation?.queue &&
                               Array.isArray(bayRecommendation.queue)
                             ) {
-                              console.log(
-                                "🔄 Restoring original queue from recommendation"
+                              console.log(" Restoring original queue from recommendation"
                               );
                               setQueueItems(
                                 bayRecommendation.queue as unknown as typeof queueItems
@@ -1990,16 +1970,14 @@ const BookingModal: React.FC<BookingModalProps> = ({
                             } else if (
                               bayRecommendation?.recommended_bay?.bay_id
                             ) {
-                              console.log(
-                                "🔄 Loading queue for recommended bay:",
+                              console.log(" Loading queue for recommended bay:",
                                 bayRecommendation.recommended_bay.bay_id
                               );
                               const queue = await getBayQueue(
                                 bayRecommendation.recommended_bay.bay_id,
                                 bookingDate
                               );
-                              console.log(
-                                "✅ Queue loaded for recommended bay:",
+                              console.log(" Queue loaded for recommended bay:",
                                 queue
                               );
                               setQueueItems(
@@ -2007,8 +1985,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               );
                             }
                           } catch (error) {
-                            console.log(
-                              "❌ Error loading queue for recommended bay:",
+                            console.log(" Error loading queue for recommended bay:",
                               error
                             );
                             setQueueItems([]);
@@ -2066,7 +2043,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                           try {
                             // Use the date selected by user
                             console.log(
-                              "🔄 Loading queue for selected bay:",
+                              " Loading queue for selected bay:",
                               bay.bay_id,
                               "using selected date:",
                               bookingDate
@@ -2075,13 +2052,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               bay.bay_id,
                               bookingDate
                             );
-                            console.log("✅ Queue loaded for bay:", queue);
+                            console.log(" Queue loaded for bay:", queue);
                             setQueueItems(
                               queue as unknown as typeof queueItems
                             );
                           } catch (error) {
-                            console.log(
-                              "❌ Error loading queue for bay:",
+                            console.log(" Error loading queue for bay:",
                               error
                             );
                             setQueueItems([]);
@@ -2132,7 +2108,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           ) : (
             (() => {
               const safeQueueItems = getSafeQueueItems();
-              console.log("🔍 Queue items debug:", {
+              console.log(" Queue items debug:", {
                 queueItems,
                 safeQueueItems,
                 isArray: Array.isArray(queueItems),
@@ -2422,20 +2398,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
                           setIsLoadingQueue(true);
                           try {
                             console.log(
-                              "🔄 Loading queue for selected bay:",
+                              " Loading queue for selected bay:",
                               bay.bay_id
                             );
                             const queue = await getBayQueue(
                               bay.bay_id,
                               bookingDate
                             );
-                            console.log("✅ Queue loaded for bay:", queue);
+                            console.log(" Queue loaded for bay:", queue);
                             setQueueItems(
                               queue as unknown as typeof queueItems
                             );
                           } catch (error) {
-                            console.log(
-                              "❌ Error loading queue for bay:",
+                            console.log(" Error loading queue for bay:",
                               error
                             );
                             setQueueItems([]);
@@ -2489,7 +2464,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   );
 
   const renderSlotSelectionStep = () => {
-    console.log("🔍 renderSlotSelectionStep:", {
+    console.log(" renderSlotSelectionStep:", {
       selectedBranch: !!selectedBranch,
       bookingDate: !!bookingDate,
       bookingDateValue: bookingDate,
@@ -2782,7 +2757,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
               "🔍 Button disabled check called at:",
               new Date().toISOString()
             );
-            console.log("🔍 Current selectedSlot state:", selectedSlot);
+            console.log(" Current selectedSlot state:", selectedSlot);
 
             // Check if new customer has all required fields
             const newCustomerValid =
@@ -2810,7 +2785,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 !selectedWalkInBay &&
                 !selectedSlot);
 
-            console.log("🔍 Button disabled check:", {
+            console.log(" Button disabled check:", {
               selectedBranch: !!selectedBranch,
               selectedItems: selectedItems.length,
               customerType,

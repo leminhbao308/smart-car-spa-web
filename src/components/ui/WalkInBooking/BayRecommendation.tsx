@@ -106,7 +106,7 @@ const BayRecommendation: React.FC<BayRecommendationProps> = ({
         style={{ marginBottom: 16 }}
         extra={
           <Button size="small" onClick={handleRefresh}>
-            🔄 Làm mới
+             Làm mới
           </Button>
         }
       >
@@ -130,7 +130,7 @@ const BayRecommendation: React.FC<BayRecommendationProps> = ({
 
       {/* Alternative Bays */}
       {recommendation.alternative_bays.length > 0 && (
-        <Card title="🔄 Bay thay thế" style={{ marginBottom: 16 }}>
+        <Card title=" Bay thay thế" style={{ marginBottom: 16 }}>
           <Row gutter={[16, 16]}>
             {recommendation.alternative_bays.map((bay) => (
               <Col span={8} key={bay.bay_id}>

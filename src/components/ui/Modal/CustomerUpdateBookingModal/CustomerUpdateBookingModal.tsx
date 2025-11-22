@@ -289,7 +289,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           (b) => b.bay_id === initialData.bay_id
         );
         if (originalBay) {
-          console.log("🔍 Adding original bay to displayBays:", originalBay);
+          console.log(" Adding original bay to displayBays:", originalBay);
           bays.push(originalBay); // Add the original bay even if it doesn't pass filter
         }
       }
@@ -299,7 +299,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           (b) => b.bay_id === selectedBay.bay_id
         );
         if (!selectedBayInList) {
-          console.log("🔍 Adding selectedBay to displayBays:", selectedBay);
+          console.log(" Adding selectedBay to displayBays:", selectedBay);
           bays.push(selectedBay);
         }
       }
@@ -418,7 +418,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
       setLoadingSlots(true);
       try {
-        console.log("🔄 Loading available slots:", {
+        console.log(" Loading available slots:", {
           bay_id: selectedBay.bay_id,
           date: bookingDate,
           duration_minutes: duration,
@@ -504,7 +504,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           const slot9_00StartMin = parseTimeToMinutes("09:00");
           const slot9_00EndMin = parseTimeToMinutes("09:30");
 
-          console.log("🔍 Detailed range analysis:", {
+          console.log(" Detailed range analysis:", {
             range1: range1
               ? {
                   start: range1.start_time,
@@ -596,11 +596,11 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             duration,
             30 // 30 minutes interval
           );
-          console.log("✅ Loaded slots:", slots.length);
+          console.log(" Loaded slots:", slots.length);
           const slot8_00 = slots.find((s) => s.time === "08:00");
           const slot8_30 = slots.find((s) => s.time === "08:30");
           const slot9_00 = slots.find((s) => s.time === "09:00");
-          console.log("📋 Slots availability:", {
+          console.log(" Slots availability:", {
             slots8_00: slot8_00,
             slots8_30: slot8_30,
             slots9_00: slot9_00,
@@ -615,7 +615,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
           // Debug: Why slot 8:00 or 8:30 is not available?
           if (slot8_00 && !slot8_00.isAvailable) {
-            console.warn("⚠️ Slot 8:00 is NOT available! Checking why...", {
+            console.warn(" Slot 8:00 is NOT available! Checking why...", {
               slot8_00,
               timeRanges: timeRangesResponse.available_time_ranges,
               serviceDuration: duration,
@@ -624,7 +624,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             });
           }
           if (slot8_30 && !slot8_30.isAvailable) {
-            console.warn("⚠️ Slot 8:30 is NOT available! Checking why...", {
+            console.warn(" Slot 8:30 is NOT available! Checking why...", {
               slot8_30,
               timeRanges: timeRangesResponse.available_time_ranges,
               serviceDuration: duration,
@@ -634,7 +634,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           }
           setAvailableSlots(slots);
         } else {
-          console.log("⚠️ No working hours or time ranges in response");
+          console.log(" No working hours or time ranges in response");
           setAvailableSlots([]);
         }
       } catch (error) {
@@ -668,7 +668,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   // Reset slot when booking date changes and slot date doesn't match
   useEffect(() => {
     if (selectedSlot && bookingDate && selectedSlot.date !== bookingDate) {
-      console.log("🔄 Booking date changed, resetting slot:", {
+      console.log(" Booking date changed, resetting slot:", {
         slotDate: selectedSlot.date,
         newBookingDate: bookingDate,
       });
@@ -745,7 +745,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       }
 
       // Set booking date
-      console.log("🔍 Setting booking date:", {
+      console.log(" Setting booking date:", {
         scheduled_start_at: initialData.scheduled_start_at,
         booking_code: initialData.booking_code,
       });
@@ -766,7 +766,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         setBookingDate(date);
       } else {
         console.log(
-          "⚠️ No booking date set - no scheduled_start_at for slot booking"
+          " No booking date set - no scheduled_start_at for slot booking"
         );
       }
 
@@ -786,7 +786,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             );
             setSelectedVehicle(vehicle);
           } else {
-            console.warn("⚠️ Vehicle not found in userVehicles:", {
+            console.warn(" Vehicle not found in userVehicles:", {
               vehicleId: initialData.vehicle_id,
               userVehiclesLength: userVehicles.length,
             });
@@ -919,7 +919,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         const seenServiceIds = new Set<string>(); // Track already added services
 
         initialData.booking_items.forEach((item) => {
-          console.log("🔍 Processing booking item:", {
+          console.log(" Processing booking item:", {
             service_id: item.service_id,
             service_name: item.service_name,
           });
@@ -930,7 +930,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
               (service) => service.service?.service_id === item.service_id
             );
             if (priceBookItem && !seenServiceIds.has(priceBookItem.item_id)) {
-              console.log("✅ Found matching service:", {
+              console.log(" Found matching service:", {
                 item_id: priceBookItem.item_id,
                 item_name: priceBookItem.item_name,
                 service: priceBookItem.service
@@ -956,7 +956,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             index === self.findIndex((s) => s.item_id === service.item_id)
         );
 
-        console.log("📋 Final services array:", {
+        console.log(" Final services array:", {
           originalCount: services.length,
           uniqueCount: uniqueServices.length,
           services: uniqueServices.map((s) => ({
@@ -980,7 +980,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           }, 0);
           setOriginalTotalDuration(originalDuration);
         } else {
-          console.log("⚠️ No matching services found in availableServices");
+          console.log(" No matching services found in availableServices");
           setOriginalItems([]);
           setOriginalTotalDuration(0);
         }
@@ -993,7 +993,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       selectedItems.length === 0 &&
       originalItems.length === 0
     ) {
-      console.log("⚠️ No booking items found in initialData");
+      console.log(" No booking items found in initialData");
       setOriginalItems([]);
       const originalDuration = initialData.estimated_duration_minutes || 0;
       setOriginalTotalDuration(originalDuration);
@@ -1028,7 +1028,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         );
         setSelectedVehicle(vehicle);
       } else {
-        console.warn("⚠️ Vehicle not found in userVehicles:", {
+        console.warn(" Vehicle not found in userVehicles:", {
           vehicleId: initialData.vehicle_id,
           userVehiclesLength: userVehicles.length,
           vehicleIds: userVehicles.map((v) => v.vehicle_id),
@@ -1086,7 +1086,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         console.log("🔧 Setting selectedBay from initialData:", bay);
         setSelectedBay(bay);
       } else if (initialData.bay_id && !bay) {
-        console.warn("⚠️ Bay not found:", {
+        console.warn(" Bay not found:", {
           bayId: initialData.bay_id,
           bayName: initialData.bay_name,
           serviceBaysLength: serviceBays.length,
@@ -1169,7 +1169,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         .filter((id): id is string => !!id)
     );
 
-    console.log("🔍 Building booking_items array:", {
+    console.log(" Building booking_items array:", {
       originalServiceIds: Array.from(originalServiceIds),
       selectedServiceIds: Array.from(selectedServiceIds),
       originalItemsCount: originalItems.length,
@@ -1217,7 +1217,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     selectedItems.forEach((item) => {
       const serviceId = item.service?.service_id;
       if (!serviceId) {
-        console.warn("⚠️ Skipping item without service_id:", item);
+        console.warn(" Skipping item without service_id:", item);
         return;
       }
 
@@ -1265,7 +1265,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   // Handle service selection change (same logic as UpdateBookingModal)
   const handleServiceChange = useCallback(
     (selectedServiceIds: string[]) => {
-      console.log("🔄 Service selection changed (from Select component):", {
+      console.log(" Service selection changed (from Select component):", {
         selectedServiceIds,
         selectedServiceIdsCount: selectedServiceIds.length,
         currentSelectedItemsCount: selectedItems.length,
@@ -1302,7 +1302,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         (id) => !newServiceIds.has(id)
       );
 
-      console.log("✅ Selected services:", {
+      console.log(" Selected services:", {
         uniqueIdsCount: uniqueServiceIds.length,
         selectedServicesCount: uniqueSelectedServices.length,
         previousCount: selectedItems.length,
@@ -1453,11 +1453,11 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           serviceDurationMinutes: totalDuration,
         };
 
-        console.log("✅ Setting new slot:", newSlot);
+        console.log(" Setting new slot:", newSlot);
         setSelectedSlot(newSlot);
         setIsSlotChanged(true);
       } else {
-        console.log("❌ Cannot select slot:", {
+        console.log(" Cannot select slot:", {
           canSelect: canSelectSlot(slot),
           hasSelectedBay: !!selectedBay,
         });
@@ -1831,7 +1831,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                     phút/slot)
                   </div>
                   <div style={{ marginTop: 8, color: "#faad14" }}>
-                    ⚠️ Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. 
+                     Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. 
                     Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.
                   </div>
                 </div>
@@ -2346,7 +2346,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
               isDurationExceedsOriginal;
 
             // Debug logging
-            console.log("🔍 Button disabled check:", {
+            console.log(" Button disabled check:", {
               selectedBranch: !!selectedBranch,
               selectedItemsLength: selectedItems.length,
               selectedVehicle: !!selectedVehicle,

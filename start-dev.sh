@@ -34,7 +34,7 @@ pm2 save
 
 # Cấu hình PM2 để tự động start sau reboot (chỉ cần chạy 1 lần)
 echo ""
-echo "⚠️  Lưu ý: Để tự động start sau khi EC2 reboot, chạy lệnh sau và làm theo hướng dẫn:"
+echo "  Lưu ý: Để tự động start sau khi EC2 reboot, chạy lệnh sau và làm theo hướng dẫn:"
 echo "   pm2 startup"
 echo ""
 

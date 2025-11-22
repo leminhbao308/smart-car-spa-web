@@ -62,7 +62,7 @@ const VehicleModelDetailModal: React.FC<VehicleModelDetailModalProps> = ({
               borderRadius: "8px",
             }}
           >
-            🚗
+            
           </div>
           <div>
             <Title level={4} style={{ margin: 0 }}>

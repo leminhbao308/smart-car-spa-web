@@ -313,7 +313,7 @@ export const useCustomerOrders = (
     queryFn: async () => {
       if (!customerId) return null;
 
-      console.log("🔍 Fetching orders for userId:", customerId);
+      console.log(" Fetching orders for userId:", customerId);
 
       // Get paged orders with userId filter
       const result = await SalesOrderService.getPagedSaleOrders(

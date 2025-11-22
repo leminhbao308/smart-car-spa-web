@@ -240,7 +240,7 @@ export const fuelTypes = [
 export const transmissionTypes = [
   { value: "manual", label: "Số sàn", icon: "🔧" },
   { value: "automatic", label: "Số tự động", icon: "⚙️" },
-  { value: "cvt", label: "CVT", icon: "🔄" },
+  { value: "cvt", label: "CVT", icon: "" },
   { value: "dct", label: "DCT", icon: "⚡" },
   { value: "semi_automatic", label: "Bán tự động", icon: "🎛️" },
 ];
@@ -249,7 +249,7 @@ export const transmissionTypes = [
 export const drivetrainTypes = [
   { value: "fwd", label: "Cầu trước (FWD)", icon: "⬆️" },
   { value: "rwd", label: "Cầu sau (RWD)", icon: "⬇️" },
-  { value: "awd", label: "4 bánh toàn thời gian (AWD)", icon: "🔄" },
+  { value: "awd", label: "4 bánh toàn thời gian (AWD)", icon: "" },
   { value: "4wd", label: "4 bánh (4WD)", icon: "🔀" },
 ];
 

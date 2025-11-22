@@ -1,6 +1,7 @@
 import CustomerCarousel from "@/components/layout/Carousel/customer.carousel";
 import CustomerFooter from "@/components/layout/Footer/customer.footer";
 import CustomerHeader from "@/components/layout/Header/customer.header";
+import { AIChatbotWidget } from "@/components/ui/AIChatbot";
 import { carouselData } from "@/components/utils/data/carousel.data";
 import { CartProvider } from "@/contexts/CartContext";
 import { Layout } from "antd";
@@ -17,6 +18,8 @@ const CustomerLayout = ({ children }: { children: React.ReactNode }) => {
         <Content>{children}</Content>
         {/* Footer */}
         <CustomerFooter />
+        {/* AI Chatbot Widget */}
+        <AIChatbotWidget position="bottom-right" />
       </Layout>
     </CartProvider>
   );

@@ -33,6 +33,7 @@ import {
   useCompleteService,
   useStartService,
 } from "@/lib/api/hooks/useBooking";
+import { useBookingReload } from "@/hooks/useWebSocket";
 import { useCustomersDropdown } from "@/lib/api/hooks/useUsers";
 import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
 import { useBranches } from "@/lib/api/hooks/useBranches";
@@ -144,6 +145,15 @@ const BookingsPage = () => {
   } = useBookings({ page: 0, size: 1000 }); // Load large dataset for client-side filtering
   const completeServiceMutation = useCompleteService();
   const startServiceMutation = useStartService();
+
+  // WebSocket: Subscribe to booking reload notifications
+  // MỤC ĐÍCH: Tự động reload booking list khi có thay đổi từ backend
+  // LÝ DO: Khi admin khác tạo/cập nhật/xóa booking, page này sẽ tự động reload
+  // FLOW: Backend gửi signal "RELOAD_BOOKING" → hook nhận signal → gọi refetchBookings()
+  useBookingReload(() => {
+    console.log('[BookingsPage] WebSocket: Reloading bookings due to notification...');
+    refetchBookings();
+  });
 
   // Fetch additional data for enrichment
   const { customers, loading: isLoadingCustomers } = useCustomersDropdown();
@@ -578,8 +588,8 @@ const BookingsPage = () => {
       typeof updatedBooking === "object" &&
       "booking_id" in updatedBooking
     ) {
-      console.log("🔄 Updating selectedBooking with new data:", updatedBooking);
-      console.log("🔍 Updated booking branch/bay info:", {
+      console.log(" Updating selectedBooking with new data:", updatedBooking);
+      console.log(" Updated booking branch/bay info:", {
         branch_id: (updatedBooking as BookingInfoDto).branch_id,
         branch_name: (updatedBooking as BookingInfoDto).branch_name,
         bay_id: (updatedBooking as BookingInfoDto).bay_id,
@@ -589,7 +599,7 @@ const BookingsPage = () => {
       const enrichedBooking = enrichBookingData(
         updatedBooking as BookingInfoDto
       );
-      console.log("🔍 Enriched booking branch/bay info:", {
+      console.log(" Enriched booking branch/bay info:", {
         branch_id: enrichedBooking.branch_id,
         branch_name: enrichedBooking.branch_name,
         bay_id: enrichedBooking.bay_id,
@@ -617,7 +627,7 @@ const BookingsPage = () => {
       );
       if (updatedBooking) {
         console.log(
-          "🔄 Updating selectedBooking after refresh:",
+          " Updating selectedBooking after refresh:",
           updatedBooking
         );
         const enrichedBooking = enrichBookingData(updatedBooking);
@@ -972,7 +982,7 @@ const BookingsPage = () => {
                       gap: 8,
                     }}
                   >
-                    <span>🚗</span>
+                    
                     Thông tin xe
                   </div>
                   <div
@@ -1159,7 +1169,7 @@ const BookingsPage = () => {
                       gap: 8,
                     }}
                   >
-                    <span>⏰</span>
+                    
                     Thời gian
                   </div>
                   <div

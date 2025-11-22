@@ -46,7 +46,7 @@ export const calculateFreeItems = (
     // Only skip if explicitly set to false (null or undefined means active)
     if (line.is_active === false) {
       console.log(
-        `    ⚠️ Line ${line.promotion_line_id} is not active, skipping`
+        `     Line ${line.promotion_line_id} is not active, skipping`
       );
       continue;
     }
@@ -120,7 +120,7 @@ export const calculateFreeItems = (
 
     // Handle BUY_X_GET_Y type
     if (line.discount_type === DiscountType.BUY_X_GET_Y) {
-      console.log(`    🔄 BUY_X_GET_Y line detected`, {
+      console.log(`     BUY_X_GET_Y line detected`, {
         buyQty: line.buy_qty,
         getQty: line.get_qty,
       });

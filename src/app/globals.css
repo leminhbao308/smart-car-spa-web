@@ -237,3 +237,39 @@ html {
   height: auto !important;
   max-height: none !important;
 }
+
+/* ========================================
+   AI CHATBOT ANIMATIONS
+   ======================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-chatbot-message {
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Custom scrollbar for AI chatbot chat window */
+.ai-chatbot-messages-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ai-chatbot-messages-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.ai-chatbot-messages-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.ai-chatbot-messages-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

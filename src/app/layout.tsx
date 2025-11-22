@@ -5,6 +5,7 @@ import "@/lib/early-warning-suppression"; // Import early warning suppression FI
 import "@ant-design/v5-patch-for-react-19";
 import { AuthProvider } from "@/lib/api";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
+import { WebSocketProviderWrapper } from "@/providers/WebSocketProvider";
 import { App } from "antd";
 import { AntdConfigProvider } from "@/lib/antd-config";
 import "@/lib/suppress-warnings"; // Import warning suppression
@@ -26,11 +27,13 @@ export default function RootLayout({
       <body suppressHydrationWarning={true}>
         <QueryProvider>
           <AuthProvider>
-            <AntdRegistry>
-              <AntdConfigProvider>
-                <App>{children}</App>
-              </AntdConfigProvider>
-            </AntdRegistry>
+            <WebSocketProviderWrapper>
+              <AntdRegistry>
+                <AntdConfigProvider>
+                  <App>{children}</App>
+                </AntdConfigProvider>
+              </AntdRegistry>
+            </WebSocketProviderWrapper>
           </AuthProvider>
         </QueryProvider>
       </body>

@@ -271,7 +271,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
 
       try {
         setIsCreatingTracking(true);
-        console.log("🚀 Auto-creating tracking for booking:", booking.booking_id);
+        console.log(" Auto-creating tracking for booking:", booking.booking_id);
 
         // Get service steps for each service in booking - create tracking for each service separately
         const serviceStepsByService = [];
@@ -360,7 +360,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
           });
         }
     } catch (error) {
-        console.log("❌ Auto-create tracking error:", error);
+        console.log(" Auto-create tracking error:", error);
       notification.error({
         message: "Lỗi",
           description: "Có lỗi xảy ra khi tạo tracking tự động",
@@ -375,7 +375,7 @@ const VehicleTrackingModal: React.FC<VehicleTrackingModalProps> = ({
   }, [shouldCreateTracking, open, booking.booking_id, booking.booking_items, booking.bay_id, technicians, onTrackingCreated, notification, isCreatingTracking]);
 
   const handleViewDetail = (tracking: ServiceProcessTrackingInfoDto) => {
-    console.log("🔍 Opening tracking detail modal for:", tracking.trackingId);
+    console.log(" Opening tracking detail modal for:", tracking.trackingId);
     setSelectedTracking(tracking);
     setDetailModalOpen(true);
   };

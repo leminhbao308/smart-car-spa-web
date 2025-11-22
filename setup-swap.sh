@@ -7,7 +7,7 @@ echo "🔧 Setting up swap space for EC2..."
 
 # Kiểm tra xem đã có swap chưa
 if [ -f /swapfile ]; then
-    echo "⚠️  Swap file đã tồn tại!"
+    echo "  Swap file đã tồn tại!"
     echo "Để xóa và tạo lại, chạy: sudo swapoff /swapfile && sudo rm /swapfile"
     exit 1
 fi

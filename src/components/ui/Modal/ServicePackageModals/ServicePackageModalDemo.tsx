@@ -115,14 +115,14 @@ const ServicePackageModalDemo: React.FC = () => {
   };
 
   const handleSuccess = () => {
-    console.log("✅ Modal operation completed successfully!");
+    console.log(" Modal operation completed successfully!");
     // Ở đây bạn có thể thêm logic refresh data
   };
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
       <Card>
-        <Title level={2}>🚗 Service Package Modal Demo</Title>
+        <Title level={2}> Service Package Modal Demo</Title>
         <Paragraph>
           Đây là demo component để test ServicePackageModal với 2 loại gói dịch vụ:
         </Paragraph>

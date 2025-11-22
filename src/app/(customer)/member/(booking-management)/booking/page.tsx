@@ -331,7 +331,7 @@ const CustomerBookingPage = () => {
   // Reset slot when booking date changes and slot date doesn't match
   useEffect(() => {
     if (selectedSlot && bookingDate && selectedSlot.date !== bookingDate) {
-      console.log("🔄 Booking date changed, resetting slot:", {
+      console.log(" Booking date changed, resetting slot:", {
         slotDate: selectedSlot.date,
         newBookingDate: bookingDate,
       });
@@ -351,7 +351,7 @@ const CustomerBookingPage = () => {
       // Check if current slot is still suitable for new duration
       // If duration increased, reset slot
       if (totalDuration > selectedSlot.serviceDurationMinutes) {
-        console.log("🔄 Service duration increased, resetting slot:", {
+        console.log(" Service duration increased, resetting slot:", {
           currentSlotDuration: selectedSlot.serviceDurationMinutes,
           newTotalDuration: totalDuration,
         });
