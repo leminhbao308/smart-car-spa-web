@@ -77,3 +77,5 @@ export * from "./product-attribute.types";
 export * from "./payment.types";
 // Customer Order types
 export * from "./customer-order.types";
+// AI Assistant types
+export * from "./ai-assistant.types";

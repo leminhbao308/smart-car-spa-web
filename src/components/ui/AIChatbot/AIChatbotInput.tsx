@@ -65,7 +65,7 @@ const AIChatbotInput: React.FC<AIChatbotInputProps> = ({
             placeholder={placeholder}
             disabled={disabled}
             autoSize={{ minRows: 1, maxRows: 4 }}
-            bordered={false}
+            variant="borderless"
             style={{
               resize: "none",
               backgroundColor: "transparent",

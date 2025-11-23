@@ -10,6 +10,9 @@ const TOKEN_KEYS = {
   USER_INFO: "user_info",
 } as const;
 
+// AI Chatbot conversation history storage key
+const AI_CHATBOT_STORAGE_KEY = "ai_chatbot_conversation_history";
+
 export class TokenManager {
   /**
    * Check if we're in browser environment
@@ -157,6 +160,7 @@ export class TokenManager {
 
   /**
    * Clear all tokens and user info
+   * Also clears AI chatbot conversation history
    */
   static clearAll(): void {
     this.removeAccessToken();
@@ -165,6 +169,22 @@ export class TokenManager {
 
     // Xóa cookies
     this.clearCookies();
+
+    // Clear AI chatbot conversation history
+    this.clearAIChatbotHistory();
+  }
+
+  /**
+   * Clear AI chatbot conversation history from localStorage
+   */
+  private static clearAIChatbotHistory(): void {
+    if (!this.isBrowser()) return;
+
+    try {
+      localStorage.removeItem(AI_CHATBOT_STORAGE_KEY);
+    } catch (error) {
+      console.log("Error clearing AI chatbot conversation history:", error);
+    }
   }
 
   /**

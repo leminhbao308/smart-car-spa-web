@@ -40,3 +40,5 @@ export * from "./service-process-tracking.service";
 export * from "./media.service";
 export * from "./product-attribute.service";
 export * from "./payment.service";
+export * from "./ai-assistant.service";
+export { AiAssistantService } from "./ai-assistant.service";
