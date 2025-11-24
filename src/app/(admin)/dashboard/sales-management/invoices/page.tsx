@@ -17,6 +17,7 @@ import {
   Empty,
   App,
   Form,
+  Modal,
 } from "antd";
 import {
   SearchOutlined,
@@ -29,8 +30,10 @@ import {
   CreditCardOutlined,
   GiftOutlined,
   CloseCircleOutlined,
+  FileExcelOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import {
   useConfirmSalesOrder,
   useCreateReturn,
@@ -40,7 +43,9 @@ import {
   useCancelOrder,
 } from "@/lib/api/hooks";
 import { SaleOrderResponse, SaleReturnResponse } from "@/lib/api";
+import { SalesOrderService } from "@/lib/api";
 import { useGetPaymentLink } from "@/lib/api/hooks/usePayment";
+import { useBranches } from "@/lib/api/hooks";
 import ReturnOrderResultModal from "@/components/ui/ReturnOrderResult/ReturnOrderResultModal";
 import InvoiceDetailModal from "@/components/ui/Invoice/InvoiceDetailModal";
 import ReturnOrderModal from "@/components/ui/Invoice/ReturnOrderModal";
@@ -55,12 +60,12 @@ const InvoicesPage = () => {
   const { message } = App.useApp();
 
   // Pagination state
-  const [currentPage, setCurrentPage] = useState(0); // Backend uses 0-based index
+  const [currentPage, setCurrentPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
   const [sortBy, setSortBy] = useState("createdDate");
   const [sortDirection, setSortDirection] = useState<"ASC" | "DESC">("DESC");
 
-  // Data fetching hooks with pagination
+  // Data fetching hooks
   const { orders, loading, refetch, totalElements, totalPages } =
     usePagedSalesOrders(currentPage, pageSize, sortBy, sortDirection);
   const confirmMutation = useConfirmSalesOrder();
@@ -68,17 +73,29 @@ const InvoicesPage = () => {
   const returnMutation = useCreateReturn();
   const cancelMutation = useCancelOrder();
   const { returnedOrders, refetch: returnedRefetch } = useReturnedOrders();
+  const { branches, loading: branchesLoading } = useBranches({});
 
+  // Modal states
   const [selectedOrder, setSelectedOrder] = useState<SaleOrderResponse | null>(
     null
   );
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isReturnModalVisible, setIsReturnModalVisible] = useState(false);
   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
   const [paymentOrderId, setPaymentOrderId] = useState<string | null>(null);
+
+  // Filter states
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateRange, setDateRange] = useState<any>(null);
+
+  // Export states
+  const [exportDateRange, setExportDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [exportBranch, setExportBranch] = useState<string | undefined>(undefined);
+  const [exportLoading, setExportLoading] = useState(false);
+
+  // Forms
   const [returnForm] = Form.useForm();
   const [cancelForm] = Form.useForm();
   const [returnResult, setReturnResult] = useState<SaleReturnResponse | null>(
@@ -94,7 +111,7 @@ const InvoicesPage = () => {
   React.useEffect(() => {
     if (paymentLink && paymentOrderId) {
       window.open(paymentLink, "_blank");
-      setPaymentOrderId(null); // Reset after opening
+      setPaymentOrderId(null);
       message.success("Đã mở link thanh toán trong tab mới");
     }
   }, [paymentLink, paymentOrderId]);
@@ -134,7 +151,7 @@ const InvoicesPage = () => {
     }
   };
 
-  // Filter orders (now done client-side on current page only)
+  // Filter orders
   const filteredOrders = useMemo(() => {
     return orders.filter((order: SaleOrderResponse) => {
       const matchesSearch =
@@ -159,10 +176,9 @@ const InvoicesPage = () => {
     });
   }, [orders, searchText, statusFilter, dateRange]);
 
-  // Calculate total amount (exclude free items)
+  // Calculate functions
   const calculateTotal = (order: SaleOrderResponse) => {
     return order.lines.reduce((sum, line) => {
-      // Only count non-free items
       if (line.is_free_item) {
         return sum;
       }
@@ -170,7 +186,6 @@ const InvoicesPage = () => {
     }, 0);
   };
 
-  // Calculate discount ratio for return (same logic as backend)
   const calculateDiscountRatio = (order: SaleOrderResponse): number => {
     if (
       order.original_amount &&
@@ -179,23 +194,20 @@ const InvoicesPage = () => {
     ) {
       return order.final_amount / order.original_amount;
     }
-    return 1; // No discount
+    return 1;
   };
 
-  // Calculate return amount with discount applied (what customer actually paid)
   const calculateReturnAmount = (order: SaleOrderResponse) => {
     const discountRatio = calculateDiscountRatio(order);
     return order.lines.reduce((sum, line) => {
       if (line.is_free_item) {
         return sum;
       }
-      // Apply discount ratio to reflect actual price paid
       const actualPricePaid = line.quantity * line.unit_price * discountRatio;
       return sum + actualPricePaid;
     }, 0);
   };
 
-  // Calculate discounted unit price for display
   const getDiscountedUnitPrice = (
     order: SaleOrderResponse,
     unitPrice: number
@@ -278,10 +290,8 @@ const InvoicesPage = () => {
       setSelectedOrder(null);
       returnForm.resetFields();
 
-      // Refetch to get updated data
       await returnedRefetch();
 
-      // Show result modal with returned data immediately
       setReturnResult(returnData);
       setIsResultModalVisible(true);
 
@@ -305,12 +315,10 @@ const InvoicesPage = () => {
 
   const handlePrint = (order: SaleOrderResponse) => {
     message.success(`In hóa đơn ${order.id.substring(0, 8)}...`);
-    // Implement print logic
   };
 
   const handleExport = (order: SaleOrderResponse) => {
     message.success(`Xuất hóa đơn ${order.id.substring(0, 8)}...`);
-    // Implement export logic
   };
 
   const handleRefresh = () => {
@@ -322,6 +330,47 @@ const InvoicesPage = () => {
     setSearchText("");
     setStatusFilter("all");
     setDateRange(null);
+  };
+
+  // Export handlers
+  const handleOpenExportModal = () => {
+    const startOfMonth = dayjs().startOf("month");
+    const endOfMonth = dayjs().endOf("month");
+    setExportDateRange([startOfMonth, endOfMonth]);
+    setExportBranch(undefined);
+    setExportModalVisible(true);
+  };
+
+  const handleExportReport = async () => {
+    if (!exportDateRange || !exportDateRange[0] || !exportDateRange[1]) {
+      message.error("Vui lòng chọn khoảng thời gian");
+      return;
+    }
+
+    setExportLoading(true);
+    try {
+      const fromDate = exportDateRange[0].format("YYYY-MM-DD");
+      const toDate = exportDateRange[1].format("YYYY-MM-DD");
+
+      await SalesOrderService.exportSalesReport(
+        fromDate,
+        toDate,
+        exportBranch
+      );
+
+      message.success("Xuất báo cáo thành công");
+      setExportModalVisible(false);
+    } catch (error: any) {
+      message.error(error?.message || "Có lỗi xảy ra khi xuất báo cáo");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleCloseExportModal = () => {
+    setExportModalVisible(false);
+    setExportDateRange(null);
+    setExportBranch(undefined);
   };
 
   // Table columns
@@ -385,7 +434,6 @@ const InvoicesPage = () => {
               size={2}
             >
               {promos.slice(0, 2).map((p: any, idx: number) => {
-                // Support both old and new snapshot formats
                 const displayText =
                   p.code || p.promotion_code || p.name || "Khuyến mãi";
                 return (
@@ -409,7 +457,6 @@ const InvoicesPage = () => {
             </Space>
           );
         } catch (error) {
-          console.log("Error parsing promotion snapshot:", error);
           return <Text type="secondary">-</Text>;
         }
       },
@@ -465,7 +512,6 @@ const InvoicesPage = () => {
       key: "total",
       width: 130,
       render: (_: unknown, record: SaleOrderResponse) => {
-        // Use final_amount from database if available, otherwise calculate
         const total = record.final_amount ?? calculateTotal(record);
         const hasDiscount =
           record.total_discount_amount && record.total_discount_amount > 0;
@@ -641,7 +687,7 @@ const InvoicesPage = () => {
           <Col
             xs={24}
             sm={12}
-            md={5}
+            md={3}
           >
             <Select
               placeholder="Trạng thái"
@@ -660,7 +706,7 @@ const InvoicesPage = () => {
           <Col
             xs={24}
             sm={12}
-            md={7}
+            md={6}
           >
             <RangePicker
               style={{ width: "100%" }}
@@ -672,24 +718,45 @@ const InvoicesPage = () => {
           </Col>
           <Col
             xs={24}
-            sm={12}
-            md={4}
+            sm={8}
+            md={2}
           >
-            <Space>
-              <Button
-                icon={<FilterOutlined />}
-                onClick={handleResetFilters}
-              >
-                Xóa lọc
-              </Button>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={handleRefresh}
-                loading={loading}
-              >
-                Làm mới
-              </Button>
-            </Space>
+            <Button
+              icon={<FilterOutlined />}
+              onClick={handleResetFilters}
+            >
+              Xóa lọc
+            </Button>
+          </Col>
+          <Col
+            xs={24}
+            sm={8}
+            md={2}
+          >
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={handleRefresh}
+              loading={loading}
+            >
+              Làm mới
+            </Button>
+          </Col>
+          <Col
+            xs={24}
+            sm={8}
+            md={3}
+          >
+            <Button
+              type="primary"
+              icon={<FileExcelOutlined />}
+              onClick={handleOpenExportModal}
+              style={{
+                backgroundColor: "#10b981",
+                borderColor: "#10b981",
+              }}
+            >
+              Xuất báo cáo
+            </Button>
           </Col>
         </Row>
       </Card>
@@ -702,7 +769,7 @@ const InvoicesPage = () => {
             columns={columns}
             rowKey="id"
             pagination={{
-              current: currentPage + 1, // Ant Design uses 1-based index, backend uses 0-based
+              current: currentPage + 1,
               pageSize: pageSize,
               total: totalElements,
               showSizeChanger: true,
@@ -710,10 +777,10 @@ const InvoicesPage = () => {
               showTotal: (total, range) =>
                 `${range[0]}-${range[1]} của ${total} hóa đơn`,
               onChange: (page, size) => {
-                setCurrentPage(page - 1); // Convert to 0-based index for backend
+                setCurrentPage(page - 1);
                 if (size !== pageSize) {
                   setPageSize(size);
-                  setCurrentPage(0); // Reset to first page when page size changes
+                  setCurrentPage(0);
                 }
               },
             }}
@@ -731,7 +798,7 @@ const InvoicesPage = () => {
         </Spin>
       </Card>
 
-      {/* Detail Modal */}
+      {/* Modals */}
       <InvoiceDetailModal
         visible={isDetailModalVisible}
         order={selectedOrder}
@@ -743,7 +810,6 @@ const InvoicesPage = () => {
         calculateTotal={calculateTotal}
       />
 
-      {/* Return Confirmation Modal */}
       <ReturnOrderModal
         visible={isReturnModalVisible}
         order={selectedOrder}
@@ -760,7 +826,6 @@ const InvoicesPage = () => {
         getDiscountedUnitPrice={getDiscountedUnitPrice}
       />
 
-      {/* Return Result Modal */}
       <ReturnOrderResultModal
         visible={isResultModalVisible}
         returnData={returnResult}
@@ -770,7 +835,6 @@ const InvoicesPage = () => {
         }}
       />
 
-      {/* Cancel Order Modal */}
       <CancelOrderModal
         visible={isCancelModalVisible}
         order={selectedOrder}
@@ -786,6 +850,104 @@ const InvoicesPage = () => {
         getStatusText={getStatusText}
         calculateTotal={calculateTotal}
       />
+
+      {/* Export Modal */}
+      <Modal
+        title={
+          <Space>
+            <FileExcelOutlined style={{ color: "#10b981" }} />
+            <span>Xuất báo cáo bán hàng</span>
+          </Space>
+        }
+        open={exportModalVisible}
+        onCancel={handleCloseExportModal}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={handleCloseExportModal}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="export"
+            type="primary"
+            icon={<DownloadOutlined />}
+            loading={exportLoading}
+            onClick={handleExportReport}
+            style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+          >
+            Xuất Excel
+          </Button>,
+        ]}
+        width={500}
+      >
+        <Space
+          direction="vertical"
+          style={{ width: "100%" }}
+          size="large"
+        >
+          <div>
+            <label
+              style={{ display: "block", marginBottom: 8, fontWeight: 500 }}
+            >
+              Khoảng thời gian <span style={{ color: "red" }}>*</span>
+            </label>
+            <RangePicker
+              value={exportDateRange}
+              onChange={(dates) => setExportDateRange(dates as [Dayjs, Dayjs])}
+              format="DD/MM/YYYY"
+              placeholder={["Từ ngày", "Đến ngày"]}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div>
+            <label
+              style={{ display: "block", marginBottom: 8, fontWeight: 500 }}
+            >
+              Chi nhánh
+            </label>
+            <Select
+              value={exportBranch}
+              onChange={setExportBranch}
+              placeholder="Chọn chi nhánh"
+              allowClear
+              style={{ width: "100%" }}
+              loading={branchesLoading}
+              options={branches.map((branch) => ({
+                value: branch.branch_id,
+                label: branch.branch_name,
+              }))}
+            />
+            {!exportBranch && (
+              <div style={{ fontSize: 12, color: "#6b7280", marginTop: 4 }}>
+                Để trống = xuất báo cáo toàn hệ thống
+              </div>
+            )}
+          </div>
+
+          <div
+            style={{
+              padding: 12,
+              backgroundColor: "#f0f9ff",
+              borderRadius: 6,
+              border: "1px solid #bae6fd",
+            }}
+          >
+            <div style={{ fontSize: 12, color: "#0369a1" }}>
+              <strong>Lưu ý:</strong>
+              <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+                <li>
+                  Báo cáo sẽ bao gồm tất cả hóa đơn trong khoảng thời gian đã
+                  chọn
+                </li>
+                <li>Nếu không chọn chi nhánh, sẽ xuất báo cáo toàn hệ thống</li>
+                <li>File Excel sẽ được tải xuống tự động</li>
+              </ul>
+            </div>
+          </div>
+        </Space>
+      </Modal>
     </div>
   );
 };
