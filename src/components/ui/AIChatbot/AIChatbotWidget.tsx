@@ -72,9 +72,6 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
   // Quick actions
   const quickActions: QuickAction[] = [
     { id: "1", label: "Đặt lịch hẹn", action: "Tôi muốn đặt lịch hẹn" },
-    { id: "2", label: "Xem dịch vụ", action: "Bạn có những dịch vụ gì?" },
-    { id: "3", label: "Giờ làm việc", action: "Trung tâm làm việc giờ nào?" },
-    { id: "4", label: "Giá cả", action: "Bảng giá dịch vụ như thế nào?" },
   ];
 
   // Auto scroll to bottom when new message arrives
@@ -152,12 +149,15 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
-      // Build conversation history (exclude current message)
+      // Build conversation history BEFORE adding current user message
+      // This ensures we don't include the current message in history
       const conversationHistory = getConversationHistory();
+      
+      // Add user message to state after building history
+      setMessages((prev) => [...prev, userMessage]);
 
       // Call AI Assistant API
       // Note: customer_phone and customer_id are automatically extracted from JWT token by backend
