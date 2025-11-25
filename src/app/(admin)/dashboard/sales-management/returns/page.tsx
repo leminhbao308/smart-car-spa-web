@@ -31,9 +31,9 @@ import {
   UndoOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  PlusOutlined,
+  PlusOutlined, FileExcelOutlined, DownloadOutlined,
 } from "@ant-design/icons";
-import dayjs from "dayjs";
+import dayjs, {Dayjs} from "dayjs";
 import {
   useCreateReturn,
   useFullfilledOrders,
@@ -42,7 +42,7 @@ import {
 import {
   SaleOrderLineResponse,
   SaleOrderResponse,
-  SaleReturnResponse,
+  SaleReturnResponse, SalesOrderService,
 } from "@/lib/api";
 import ReturnOrderResultModal from "@/components/ui/ReturnOrderResult/ReturnOrderResultModal";
 import PromotionSnapshot from "@/components/ui/Invoice/PromotionSnapshot";
@@ -86,6 +86,11 @@ const ReturnsPage = () => {
     null
   );
   const [isResultModalVisible, setIsResultModalVisible] = useState(false);
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+
+  // Export states
+  const [exportDateRange, setExportDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -229,6 +234,50 @@ const ReturnsPage = () => {
         },
       }
     );
+  };
+
+  const handleResetFilters = () => {
+    setSearchText("");
+    setStatusFilter("all");
+    setDateRange(null);
+  };
+
+  // Export handlers
+  const handleOpenExportModal = () => {
+    const startOfMonth = dayjs().startOf("month");
+    const endOfMonth = dayjs().endOf("month");
+    setExportDateRange([startOfMonth, endOfMonth]);
+    setExportModalVisible(true);
+  };
+
+  const handleExportReport = async () => {
+    if (!exportDateRange || !exportDateRange[0] || !exportDateRange[1]) {
+      message.error("Vui lòng chọn khoảng thời gian");
+      return;
+    }
+
+    setExportLoading(true);
+    try {
+      const fromDate = exportDateRange[0].format("YYYY-MM-DD");
+      const toDate = exportDateRange[1].format("YYYY-MM-DD");
+
+      await SalesOrderService.exportReturnsReport(
+        fromDate,
+        toDate
+      );
+
+      message.success("Xuất báo cáo thành công");
+      setExportModalVisible(false);
+    } catch (error: any) {
+      message.error(error?.message || "Có lỗi xảy ra khi xuất báo cáo");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleCloseExportModal = () => {
+    setExportModalVisible(false);
+    setExportDateRange(null);
   };
 
   const columns = [
@@ -438,34 +487,60 @@ const ReturnsPage = () => {
                 sm={12}
                 md={4}
               >
-                <Space>
-                  <Button icon={<FilterOutlined />}>Lọc</Button>
-                  <Button
-                    icon={<ReloadOutlined />}
-                    onClick={() => {
-                      setSearchText("");
-                      setStatusFilter("all");
-                      setDateRange(null);
-                      returnedRefetch();
-                      fullfilledRefetch();
-                    }}
-                    loading={returnedLoading || fullfilledLoading}
-                  >
-                    Làm mới
-                  </Button>
-                </Space>
-              </Col>
-              <Col
-                xs={24}
-                sm={12}
-                md={4}
-              >
                 <Button
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={handleCreateReturn}
                 >
                   Tạo yêu cầu hoàn trả
+                </Button>
+              </Col>
+              <Col
+                xs={24}
+                sm={8}
+                md={2}
+              >
+                <Button
+                  icon={<FilterOutlined />}
+                  onClick={handleResetFilters}
+                >
+                  Xóa lọc
+                </Button>
+              </Col>
+              <Col
+                xs={24}
+                sm={8}
+                md={2}
+              >
+                <Button
+                  icon={<ReloadOutlined />}
+                  onClick={() => {
+                    setSearchText("");
+                    setStatusFilter("all");
+                    setDateRange(null);
+                    returnedRefetch();
+                    fullfilledRefetch();
+                  }}
+                  loading={returnedLoading || fullfilledLoading}
+                >
+                  Làm mới
+                </Button>
+              </Col>
+              <Col
+                xs={24}
+                sm={8}
+                md={3}
+              >
+                <Button
+                  type="primary"
+                  icon={<FileExcelOutlined />}
+                  onClick={handleOpenExportModal}
+                  style={{
+                    backgroundColor: "#10b981",
+                    borderColor: "#10b981",
+                  }}
+                >
+                  Xuất báo cáo
                 </Button>
               </Col>
             </Row>
@@ -947,6 +1022,78 @@ const ReturnsPage = () => {
             setReturnResult(null);
           }}
         />
+
+        {/* Export Modal */}
+        <Modal
+          title={
+            <Space>
+              <FileExcelOutlined style={{ color: "#10b981" }} />
+              <span>Xuất báo cáo bán hàng</span>
+            </Space>
+          }
+          open={exportModalVisible}
+          onCancel={handleCloseExportModal}
+          footer={[
+            <Button
+              key="cancel"
+              onClick={handleCloseExportModal}
+            >
+              Hủy
+            </Button>,
+            <Button
+              key="export"
+              type="primary"
+              icon={<DownloadOutlined />}
+              loading={exportLoading}
+              onClick={handleExportReport}
+              style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+            >
+              Xuất Excel
+            </Button>,
+          ]}
+          width={500}
+        >
+          <Space
+            direction="vertical"
+            style={{ width: "100%" }}
+            size="large"
+          >
+            <div>
+              <label
+                style={{ display: "block", marginBottom: 8, fontWeight: 500 }}
+              >
+                Khoảng thời gian <span style={{ color: "red" }}>*</span>
+              </label>
+              <RangePicker
+                value={exportDateRange}
+                onChange={(dates) => setExportDateRange(dates as [Dayjs, Dayjs])}
+                format="DD/MM/YYYY"
+                placeholder={["Từ ngày", "Đến ngày"]}
+                style={{ width: "100%" }}
+              />
+            </div>
+
+            <div
+              style={{
+                padding: 12,
+                backgroundColor: "#f0f9ff",
+                borderRadius: 6,
+                border: "1px solid #bae6fd",
+              }}
+            >
+              <div style={{ fontSize: 12, color: "#0369a1" }}>
+                <strong>Lưu ý:</strong>
+                <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+                  <li>
+                    Báo cáo sẽ bao gồm tất cả hóa đơn trong khoảng thời gian đã
+                    chọn
+                  </li>
+                  <li>File Excel sẽ được tải xuống tự động</li>
+                </ul>
+              </div>
+            </div>
+          </Space>
+        </Modal>
       </div>
     </Spin>
   );

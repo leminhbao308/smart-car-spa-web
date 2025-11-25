@@ -27,6 +27,7 @@ import { useProductByUrl } from "@/lib/api/hooks/useProducts";
 import { useProductImages } from "@/lib/api/hooks/useProductImages";
 import { usePricing } from "@/lib/api/hooks/usePricing";
 import { useParams } from "next/navigation";
+import { useCart } from "@/contexts/CartContext";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -36,6 +37,7 @@ export default function ProductDetailPage() {
   const { product, isLoading, error } = useProductByUrl(productUrl);
   const { mainImage } = useProductImages(product?.product_id || "");
   const { preview, loading: pricingLoading } = usePricing();
+  const { addToCart } = useCart();
   const [displayPrice, setDisplayPrice] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(1);
 
@@ -205,6 +207,21 @@ export default function ProductDetailPage() {
                 type="primary"
                 size="large"
                 icon={<ShoppingCartOutlined />}
+                onClick={() => {
+                  if (product) {
+                    addToCart({
+                      ...product,
+                      pricing: {
+                        basePrice: displayPrice,
+                        salePrice: displayPrice,
+                      },
+                      mainImageUrl: mainImage?.media_url,
+                      isAvailable: product.is_active,
+                      availableStock: 999, // You may want to fetch actual stock
+                    } as any, quantity);
+                  }
+                }}
+                disabled={!product?.is_active || pricingLoading}
                 style={{
                   backgroundColor: "#6C7BEA",
                   borderColor: "#6C7BEA",

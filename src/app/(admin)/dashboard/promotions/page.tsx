@@ -14,7 +14,7 @@ import {
   DatePicker,
   Input,
   Spin,
-  Tooltip, App,
+  Tooltip, App, Modal,
 } from "antd";
 import {
   EditOutlined,
@@ -28,7 +28,7 @@ import {
   CopyOutlined,
   ReloadOutlined,
   DownloadOutlined,
-  UploadOutlined, DeleteOutlined,
+  UploadOutlined, DeleteOutlined, FileExcelOutlined,
 } from "@ant-design/icons";
 import AdminTable from "@/components/ui/Table/AdminTable";
 import PromotionModal from "@/components/ui/Modal/PromotionModal/PromotionModal";
@@ -48,7 +48,8 @@ import {
   usePromotionManagement,
 } from "@/lib/api/hooks/usePromotions";
 import {formatDate} from "@/components/utils/helper/date.format.helper";
-import dayjs from "dayjs";
+import dayjs, {Dayjs} from "dayjs";
+import {promotionService} from "@/lib/api";
 
 const {Text, Title} = Typography;
 const {RangePicker} = DatePicker;
@@ -62,6 +63,11 @@ const PromotionsPage = () => {
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
   const [viewingPromotion, setViewingPromotion] = useState<Promotion | null>(null);
   const [isViewMode, setisViewMode] = useState(false);
+
+  // Export states
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Filters & Pagination
   const [filters, setFilters] = useState<PromotionFilterParam>({
@@ -389,6 +395,44 @@ const PromotionsPage = () => {
     });
   };
 
+  // Export handlers
+  const handleOpenExportModal = () => {
+    const startOfMonth = dayjs().startOf("month");
+    const endOfMonth = dayjs().endOf("month");
+    setExportDateRange([startOfMonth, endOfMonth]);
+    setExportModalVisible(true);
+  };
+
+  const handleExportReport = async () => {
+    if (!exportDateRange || !exportDateRange[0] || !exportDateRange[1]) {
+      message.error("Vui lòng chọn khoảng thời gian");
+      return;
+    }
+
+    setExportLoading(true);
+    try {
+      const fromDate = exportDateRange[0].format("YYYY-MM-DD");
+      const toDate = exportDateRange[1].format("YYYY-MM-DD");
+
+      await promotionService.exportPromotionsReport(
+        fromDate,
+        toDate
+      );
+
+      message.success("Xuất báo cáo thành công");
+      setExportModalVisible(false);
+    } catch (error: any) {
+      message.error(error?.message || "Có lỗi xảy ra khi xuất báo cáo");
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleCloseExportModal = () => {
+    setExportModalVisible(false);
+    setExportDateRange(null);
+  };
+
   return (
     <div>
       {/* Header Actions */}
@@ -486,6 +530,21 @@ const PromotionsPage = () => {
             </Space>
           </Col>
         </Row>
+        <Row gutter={[16, 16]} style={{marginTop: 12}}>
+          <Col xs={24} sm={12} md={4}>
+            <Button
+              type="primary"
+              icon={<FileExcelOutlined />}
+              onClick={handleOpenExportModal}
+              style={{
+                backgroundColor: "#10b981",
+                borderColor: "#10b981",
+              }}
+            >
+              Xuất báo cáo
+            </Button>
+          </Col>
+        </Row>
       </Card>
 
       {/* Table */}
@@ -529,6 +588,79 @@ const PromotionsPage = () => {
         }
         isViewMode={isViewMode}
       />
+
+      {/* Export Modal */}
+      <Modal
+        title={
+          <Space>
+            <FileExcelOutlined style={{ color: "#10b981" }} />
+            <span>Xuất báo cáo bán hàng</span>
+          </Space>
+        }
+        open={exportModalVisible}
+        onCancel={handleCloseExportModal}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={handleCloseExportModal}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="export"
+            type="primary"
+            icon={<DownloadOutlined />}
+            loading={exportLoading}
+            onClick={handleExportReport}
+            style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+          >
+            Xuất Excel
+          </Button>,
+        ]}
+        width={500}
+      >
+        <Space
+          direction="vertical"
+          style={{ width: "100%" }}
+          size="large"
+        >
+          <div>
+            <label
+              style={{ display: "block", marginBottom: 8, fontWeight: 500 }}
+            >
+              Khoảng thời gian <span style={{ color: "red" }}>*</span>
+            </label>
+            <RangePicker
+              value={exportDateRange}
+              onChange={(dates) => setExportDateRange(dates as [Dayjs, Dayjs])}
+              format="DD/MM/YYYY"
+              placeholder={["Từ ngày", "Đến ngày"]}
+              style={{ width: "100%" }}
+            />
+          </div>
+
+          <div
+            style={{
+              padding: 12,
+              backgroundColor: "#f0f9ff",
+              borderRadius: 6,
+              border: "1px solid #bae6fd",
+            }}
+          >
+            <div style={{ fontSize: 12, color: "#0369a1" }}>
+              <strong>Lưu ý:</strong>
+              <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+                <li>
+                  Báo cáo sẽ bao gồm tất cả hóa đơn trong khoảng thời gian đã
+                  chọn
+                </li>
+                <li>Nếu không chọn chi nhánh, sẽ xuất báo cáo toàn hệ thống</li>
+                <li>File Excel sẽ được tải xuống tự động</li>
+              </ul>
+            </div>
+          </div>
+        </Space>
+      </Modal>
     </div>
   );
 };
