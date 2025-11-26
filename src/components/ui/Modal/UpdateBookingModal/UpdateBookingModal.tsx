@@ -3075,65 +3075,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
               </Select>
             </Form.Item>
 
-            {/* Warning when service duration exceeds original duration */}
-            {(() => {
-              const { isSlot: isSlotBooking, isWalkIn: isWalkInBooking } =
-                detectBookingType(initialData);
-
-              // For slot bookings: show warning when exceeds slot time
-              if (isSlotBooking && !selectedSlot) return null;
-
-              // Skip if not slot booking (walk-in booking không còn ràng buộc về thời gian)
-              if (!isSlotBooking) return null;
-
-              // Calculate total time from scheduled_start_at and scheduled_end_at (actual time range)
-              const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
-              const isServicesChanged =
-                JSON.stringify(
-                  selectedItems.map((item) => item.item_id).sort()
-                ) !==
-                JSON.stringify(
-                  originalItems.map((item) => item.item_id).sort()
-                );
-
-              // For slot booking: show warning when exceeds time time
-              if (
-                isSlotBooking &&
-                isServicesChanged &&
-                totalDuration > totalOriginalSlotTime
-              ) {
-                return (
-                  <Alert
-                    message="Thông báo về thời gian dịch vụ"
-                    description={
-                      <div>
-                        <div>
-                          Tổng thời gian dịch vụ bạn đã chọn:{" "}
-                          <strong>{totalDuration} phút</strong>
-                        </div>
-                        <div>
-                          Tổng thời gian slot đã đặt ban đầu:{" "}
-                          <strong>{totalOriginalSlotTime} phút</strong>
-                        </div>
-                        <div style={{ marginTop: 8, color: "#faad14" }}>
-                          Tổng thời gian dịch vụ vượt quá thời gian slot hiện
-                          tại. Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và
-                          thông báo nếu cần chọn slot khác.
-                        </div>
-                      </div>
-                    }
-                    type="warning"
-                    showIcon
-                    style={{ marginTop: 16 }}
-                  />
-                );
-              }
-
-              // Walk-in booking: Không còn hiển thị warning về thời gian
-              // Backend sẽ kiểm tra và đề xuất bay khác nếu cần
-              return null;
-            })()}
-
             <Divider />
             <Row gutter={16}>
               <Col span={12}>
@@ -4308,27 +4249,6 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
                                         ? `Thời Gian Đã Chọn (${selectedSlot.bayName}):`
                                         : "Chọn Thời Gian Chăm Sóc:"}
                                     </Text>
-                                    {isDurationExceedsOriginal &&
-                                      (() => {
-                                        const totalOriginalSlotTime =
-                                          calculateOriginalSlotTime() || 0;
-
-                                        if (totalOriginalSlotTime > 0) {
-                                          return (
-                                            <Alert
-                                              message="Lưu ý về thời gian dịch vụ"
-                                              description={`Tổng thời gian dịch vụ bạn đã chọn (${totalDuration} phút) vượt quá thời gian slot đã đặt ban đầu (${totalOriginalSlotTime} phút). Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.`}
-                                              type="warning"
-                                              showIcon
-                                              style={{
-                                                marginTop: 8,
-                                                marginBottom: 8,
-                                              }}
-                                            />
-                                          );
-                                        }
-                                        return null;
-                                      })()}
                                     {totalDuration > 60 &&
                                       !isDurationExceedsOriginal && (
                                         <Alert

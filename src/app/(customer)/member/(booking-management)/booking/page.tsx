@@ -1110,6 +1110,25 @@ const CustomerBookingPage = () => {
                     onChange={handleServiceChange}
                     optionLabelProp="label"
                     loading={isLoadingPriceBooks || isLoadingInventory}
+                    showSearch
+                    filterOption={(input, option) => {
+                      const label = option?.label?.toString() || "";
+                      const searchText = input.toLowerCase();
+                      // Tìm kiếm theo tên dịch vụ
+                      if (label.toLowerCase().includes(searchText)) {
+                        return true;
+                      }
+                      // Tìm kiếm theo mô tả dịch vụ
+                      const item = availableServices.find(
+                        (s) => s.item_id === option?.value
+                      );
+                      if (item?.service?.description) {
+                        return item.service.description
+                          .toLowerCase()
+                          .includes(searchText);
+                      }
+                      return false;
+                    }}
                     notFoundContent={
                       isLoadingPriceBooks || isLoadingInventory
                         ? "Đang tải dịch vụ..."

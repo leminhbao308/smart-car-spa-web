@@ -239,6 +239,10 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const isSlotInitialized = useRef(false); // Track if slot has been initialized from initialData
 
+  // Ref to track if we're currently resetting slot to prevent infinite loops
+  const isResettingSlotRef = useRef(false);
+  const lastResetDurationRef = useRef<number | null>(null);
+
   // Calculate totals using useMemo to avoid infinite loops
   const { totalPrice, totalDuration } = useMemo(() => {
     const price = selectedItems.reduce(
@@ -483,6 +487,135 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     }
   }, [bookingDate, selectedSlot]);
 
+  // Calculate original slot time from scheduled_start_at and scheduled_end_at (actual time range)
+  const calculateOriginalSlotTime = useCallback(() => {
+    // Customer bookings are always slot bookings
+    if (!initialData.scheduled_start_at || !initialData.scheduled_end_at) {
+      // Fallback: use estimated_duration_minutes if available
+      if (initialData.estimated_duration_minutes) {
+        return initialData.estimated_duration_minutes;
+      }
+      // Last fallback: use originalTotalDuration
+      return originalTotalDuration || null;
+    }
+
+    // Use actual time range from scheduled_start_at and scheduled_end_at
+    const startTime = dayjs(initialData.scheduled_start_at);
+    const endTime = dayjs(initialData.scheduled_end_at);
+    const diffMinutes = endTime.diff(startTime, "minute");
+
+    if (diffMinutes > 0) {
+      return diffMinutes;
+    }
+
+    // Fallback: use estimated_duration_minutes if available
+    if (initialData.estimated_duration_minutes) {
+      return initialData.estimated_duration_minutes;
+    }
+
+    // Last fallback: use originalTotalDuration
+    return originalTotalDuration || null;
+  }, [initialData, originalTotalDuration]);
+
+  // Reset slot when totalDuration changes and current slot is not suitable
+  // Only reset if slot is not the original slot (user has already selected a slot)
+  useEffect(() => {
+    // Don't run during initialization - only when user makes changes
+    if (!isFormInitialized || isResettingSlotRef.current) {
+      return;
+    }
+
+    // Prevent infinite loop: only reset once per duration change
+    if (lastResetDurationRef.current === totalDuration) {
+      return;
+    }
+
+    if (selectedSlot && totalDuration > 0 && selectedBranch && selectedBay) {
+      // Check if current slot is still suitable for new duration
+      // For original slot, compare with total slot time (number of slots × 60 minutes)
+      // For new slot, compare with selected slot duration
+      const isOriginalSlot =
+        originalSlot &&
+        originalSlot.bayId === selectedSlot.bayId &&
+        originalSlot.startTime === selectedSlot.startTime &&
+        originalSlot.date === selectedSlot.date;
+
+      let slotDuration: number;
+      if (isOriginalSlot) {
+        // Calculate total time from scheduled_start_at and scheduled_end_at (actual time range)
+        const originalSlotTime = calculateOriginalSlotTime();
+        if (originalSlotTime && originalSlotTime > 0) {
+          slotDuration = originalSlotTime;
+        } else {
+          // Fallback: use selected slot duration
+          slotDuration = selectedSlot.serviceDurationMinutes;
+        }
+      } else {
+        // For new slot, use selected slot duration
+        slotDuration = selectedSlot.serviceDurationMinutes;
+      }
+
+      // Only reset if:
+      // 1. New duration exceeds current slot duration
+      // 2. Slot is different from original slot (user has changed it) OR duration has increased from original
+      const originalDuration =
+        originalTotalDuration || originalSlot?.serviceDurationMinutes || 0;
+      const durationIncreased = totalDuration > originalDuration;
+
+      if (
+        totalDuration > slotDuration &&
+        (!isOriginalSlot || durationIncreased)
+      ) {
+        // Mark that we're resetting to prevent loops
+        isResettingSlotRef.current = true;
+        lastResetDurationRef.current = totalDuration;
+
+        console.log(" Service duration increased, resetting slot:", {
+          currentSlotDuration: slotDuration,
+          newTotalDuration: totalDuration,
+          isOriginalSlot,
+          originalDuration,
+          slotInfo: selectedSlot,
+        });
+
+        setSelectedSlot(null);
+        setIsSlotChanged(true); // Mark as changed so user knows they need to select new slot
+
+        // Reset the flag after a short delay to allow state updates to complete
+        setTimeout(() => {
+          isResettingSlotRef.current = false;
+        }, 100);
+      }
+      // If duration changed but slot is still valid (and it's a new slot, not original)
+      // Only update slot duration for new slots, not original slots
+      else if (!isOriginalSlot && totalDuration !== slotDuration) {
+        console.log(" Service duration changed, updating slot duration:", {
+          currentSlotDuration: slotDuration,
+          newTotalDuration: totalDuration,
+          isOriginalSlot,
+        });
+        // Update slot duration to match totalDuration (actual service duration)
+        // Only for new slots, not original slots
+        setSelectedSlot((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            serviceDurationMinutes: totalDuration,
+          };
+        });
+      }
+    }
+  }, [
+    totalDuration,
+    selectedSlot,
+    selectedBranch,
+    selectedBay,
+    isFormInitialized,
+    originalSlot,
+    originalTotalDuration,
+    calculateOriginalSlotTime,
+  ]);
+
   // Calculate totals function - same as UpdateBookingModal
   const calculateTotals = useCallback((items: PriceBookItem[]) => {
     // Remove duplicates by item_id to prevent double counting
@@ -610,6 +743,10 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       setIsSlotChanged(false); // Reset slot change flag
       setIsFormInitialized(true);
 
+      // Reset refs when initializing
+      isResettingSlotRef.current = false;
+      lastResetDurationRef.current = null;
+
       // Update refs
       isInitialized.current = true;
       lastInitialData.current = initialData;
@@ -619,7 +756,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       isInitialized.current = false;
       lastInitialData.current = null;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     initialData?.booking_id, // Only depend on booking_id to detect data change
     open,
@@ -663,7 +799,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       // Recalculate totals with filtered items
       calculateTotals(filteredSelectedItems);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedBranch,
     servicesWithInventory,
@@ -1064,36 +1199,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     return slot.isAvailable;
   }, []);
 
-  // Calculate original slot time from scheduled_start_at and scheduled_end_at (actual time range)
-  const calculateOriginalSlotTime = useCallback(() => {
-    // Customer bookings are always slot bookings
-    if (!initialData.scheduled_start_at || !initialData.scheduled_end_at) {
-      // Fallback: use estimated_duration_minutes if available
-      if (initialData.estimated_duration_minutes) {
-        return initialData.estimated_duration_minutes;
-      }
-      // Last fallback: use originalTotalDuration
-      return originalTotalDuration || null;
-    }
-
-    // Use actual time range from scheduled_start_at and scheduled_end_at
-    const startTime = dayjs(initialData.scheduled_start_at);
-    const endTime = dayjs(initialData.scheduled_end_at);
-    const diffMinutes = endTime.diff(startTime, "minute");
-
-    if (diffMinutes > 0) {
-      return diffMinutes;
-    }
-
-    // Fallback: use estimated_duration_minutes if available
-    if (initialData.estimated_duration_minutes) {
-      return initialData.estimated_duration_minutes;
-    }
-
-    // Last fallback: use originalTotalDuration
-    return originalTotalDuration || null;
-  }, [initialData, originalTotalDuration]);
-
   // Check if service duration exceeds total time of originally booked slots
   // Compare: total service duration vs actual time range from scheduled_start_at and scheduled_end_at
   const isDurationExceedsOriginal = useMemo(() => {
@@ -1112,31 +1217,19 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     return false;
   }, [totalDuration, calculateOriginalSlotTime, initialData.booking_code]);
 
-  // Check if slot can be selected
+  // Check if slot can be selected (available and suitable)
+  // NOTE: Không còn disable slot selection khi duration exceeds - backend sẽ kiểm tra và đề xuất slot mới
   const canSelectSlot = useCallback(
     (slot: SlotInfo) => {
-      // If duration exceeds original slot, disable all slot selection
-      if (isDurationExceedsOriginal) {
-        return false;
-      }
       return isSlotSuitable(slot);
     },
-    [isSlotSuitable, isDurationExceedsOriginal]
+    [isSlotSuitable]
   );
 
   // Handle time selection
   const handleSlotSelect = useCallback(
     (slot: SlotInfo) => {
-      // Prevent time selection if duration exceeds original time
-      if (isDurationExceedsOriginal) {
-        message.warning({
-          content:
-            "Tổng thời gian dịch vụ bạn chọn vượt quá thời gian slot hiện tại. Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.",
-          duration: 4,
-        });
-        return;
-      }
-
+      // NOTE: Không còn chặn slot selection khi duration exceeds - backend sẽ kiểm tra và đề xuất slot mới
       if (canSelectSlot(slot) && selectedBay) {
         const newSlot = {
           bayId: selectedBay.bay_id,
@@ -1148,7 +1241,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
         console.log(" Setting new slot:", newSlot);
         setSelectedSlot(newSlot);
-        setIsSlotChanged(true);
+        setIsSlotChanged(true); // Mark slot as changed
       } else {
         console.log(" Cannot select slot:", {
           canSelect: canSelectSlot(slot),
@@ -1160,9 +1253,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       canSelectSlot,
       bookingDate,
       totalDuration,
-      isDurationExceedsOriginal,
-      message,
-      selectedBay, // Add selectedBay to dependencies
+      selectedBay,
     ]
   );
 
@@ -1187,19 +1278,9 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         return;
       }
 
-      // Validate: Check if total duration exceeds total time of originally booked slots
-      // User can only select services that fit within the total slot time originally booked
-      if (isDurationExceedsOriginal && originalTotalDuration) {
-        const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
-
-        if (totalOriginalSlotTime > 0) {
-          message.warning({
-            content: `Tổng thời gian dịch vụ bạn đã chọn (${totalDuration} phút) vượt quá thời gian slot đã đặt ban đầu (${totalOriginalSlotTime} phút). Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.`,
-            duration: 5,
-          });
-        }
-        return;
-      }
+      // NOTE: Không còn ràng buộc về thời gian tối đa cho slot booking
+      // Backend sẽ kiểm tra conflict và đề xuất slot mới nếu cần
+      // Chỉ hiển thị warning nếu duration exceeds, nhưng vẫn cho phép submit
 
       // Validate: Check inventory for newly added services
       if (selectedBranch && servicesWithInventory && selectedItems.length > 0) {
@@ -1438,55 +1519,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         </Select>
       </Form.Item>
 
-      {/* Warning when service duration exceeds slot duration for slot bookings */}
-      {/* Warning when service duration exceeds slot duration for slot bookings */}
-      {(() => {
-        const { isSlot: isSlotBooking } = detectBookingType(initialData);
-        if (!isSlotBooking || !selectedSlot) return null;
-
-        // Calculate total time of originally booked slots
-        const SLOT_DURATION_MINUTES = 60;
-        const originalSlotCount =
-          originalTotalDuration > 0
-            ? Math.ceil(originalTotalDuration / SLOT_DURATION_MINUTES)
-            : 1;
-        const totalOriginalSlotTime = originalSlotCount * SLOT_DURATION_MINUTES;
-        const isServicesChanged =
-          JSON.stringify(selectedItems.map((item) => item.item_id).sort()) !==
-          JSON.stringify(originalItems.map((item) => item.item_id).sort());
-
-        if (isServicesChanged && totalDuration > totalOriginalSlotTime) {
-          return (
-            <Alert
-              message="Thông báo về thời gian dịch vụ"
-              description={
-                <div>
-                  <div>
-                    Tổng thời gian dịch vụ bạn đã chọn:{" "}
-                    <strong>{totalDuration} phút</strong>
-                  </div>
-                  <div>
-                    Tổng thời gian slot đã đặt ban đầu:{" "}
-                    <strong>{totalOriginalSlotTime} phút</strong> (
-                    {originalSlotCount} slot × {SLOT_DURATION_MINUTES}{" "}
-                    phút/slot)
-                  </div>
-                  <div style={{ marginTop: 8, color: "#faad14" }}>
-                    Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. Bạn
-                    có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần
-                    chọn slot khác.
-                  </div>
-                </div>
-              }
-              type="warning"
-              showIcon
-              style={{ marginTop: 16 }}
-            />
-          );
-        }
-        return null;
-      })()}
-
       <Divider />
       <Row gutter={16}>
         <Col span={12}>
@@ -1650,24 +1682,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             )}
             <div style={{ marginTop: 16 }}>
               <Text strong>Chọn Khu Vực Chăm Sóc Cho Đặt Lịch:</Text>
-              {isDurationExceedsOriginal &&
-                (() => {
-                  const totalOriginalSlotTime =
-                    calculateOriginalSlotTime() || 0;
-
-                  if (totalOriginalSlotTime > 0) {
-                    return (
-                      <Alert
-                        message="Lưu ý về thời gian dịch vụ"
-                        description={`Tổng thời gian dịch vụ bạn đã chọn (${totalDuration} phút) vượt quá thời gian slot đã đặt ban đầu (${totalOriginalSlotTime} phút). Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.`}
-                        type="warning"
-                        showIcon
-                        style={{ marginTop: 8, marginBottom: 8 }}
-                      />
-                    );
-                  }
-                  return null;
-                })()}
               {totalDuration > 60 && !isDurationExceedsOriginal && (
                 <Alert
                   message={`Dịch vụ yêu cầu ${Math.ceil(
@@ -1800,20 +1814,12 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                           .toString()
                           .padStart(2, "0")}`;
 
-                        // Check why slot is not selectable for multi-slot services
+                        // Check why slot is not selectable
                         let tooltipMessage = "";
                         if (canSelect) {
                           tooltipMessage = `Chọn thời gian ${slot.time} (${totalDuration} phút)`;
                         } else {
-                          if (isDurationExceedsOriginal) {
-                            const totalOriginalSlotTime =
-                              calculateOriginalSlotTime() || 0;
-                            if (totalOriginalSlotTime > 0) {
-                              tooltipMessage = `Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá thời gian slot hiện tại (${totalOriginalSlotTime} phút). Bạn vẫn có thể chọn slot này, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.`;
-                            }
-                          } else {
-                            tooltipMessage = "Thời gian không khả dụng";
-                          }
+                          tooltipMessage = "Thời gian không khả dụng";
                         }
 
                         return (
@@ -1972,8 +1978,8 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
               !selectedBranch ||
               selectedItems.length === 0 ||
               !selectedVehicle ||
-              (isSlotBooking && !selectedSlot) ||
-              isDurationExceedsOriginal;
+              (isSlotBooking && !selectedSlot);
+              // Note: Không disable khi duration exceeds original - backend sẽ kiểm tra và đề xuất slot mới
 
             // Debug logging
             console.log(" Button disabled check:", {
