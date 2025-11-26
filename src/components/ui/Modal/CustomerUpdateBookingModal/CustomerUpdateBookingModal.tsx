@@ -347,14 +347,12 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   }, [allPriceBookServices]);
 
   // Check inventory for services when branch is selected
-  const {
-    data: servicesWithInventory,
-    isLoading: isLoadingInventory,
-  } = useServicesWithInventory({
-    services: servicesForInventoryCheck,
-    branchId: selectedBranch?.branch_id || null,
-    enabled: !!selectedBranch && servicesForInventoryCheck.length > 0,
-  });
+  const { data: servicesWithInventory, isLoading: isLoadingInventory } =
+    useServicesWithInventory({
+      services: servicesForInventoryCheck,
+      branchId: selectedBranch?.branch_id || null,
+      enabled: !!selectedBranch && servicesForInventoryCheck.length > 0,
+    });
 
   // Filter PriceBookItems to only show services with enough inventory
   const availableServices = useMemo(() => {
@@ -418,24 +416,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
       setLoadingSlots(true);
       try {
-        console.log(" Loading available slots:", {
-          bay_id: selectedBay.bay_id,
-          date: bookingDate,
-          duration_minutes: duration,
-          totalDuration: duration,
-          selectedItems: selectedItems.map((item) => ({
-            item_name: item.item_name,
-            service_name: item.service?.service_name,
-            estimated_duration: item.service?.estimated_duration,
-          })),
-          calculatedDuration: selectedItems.reduce((sum, item) => {
-            if (item.service) {
-              return sum + (item.service.estimated_duration || 60);
-            }
-            return sum;
-          }, 0),
-        });
-
         // Get available time ranges from backend
         const timeRangesResponse =
           await BookingScheduleService.getAvailableTimeRanges({
@@ -443,145 +423,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             date: bookingDate,
             duration_minutes: duration,
           });
-
-        // Extract current booking time for analysis
-        const currentBookingStart = initialData?.scheduled_start_at
-          ? initialData.scheduled_start_at.split("T")[1]?.substring(0, 5)
-          : null;
-        const currentBookingEnd = initialData?.scheduled_end_at
-          ? initialData.scheduled_end_at.split("T")[1]?.substring(0, 5)
-          : null;
-
-        console.log("📊 Backend time ranges response:", {
-          working_hours: timeRangesResponse.working_hours,
-          available_time_ranges: timeRangesResponse.available_time_ranges,
-          rangesCount: timeRangesResponse.available_time_ranges?.length || 0,
-          rangesDetail: timeRangesResponse.available_time_ranges?.map(
-            (range) => ({
-              start_time: range.start_time,
-              end_time: range.end_time,
-              note: `Range: ${range.start_time} to ${range.end_time}`,
-            })
-          ),
-          requestedDuration: duration,
-          currentBooking: initialData?.booking_id
-            ? {
-                booking_id: initialData.booking_id,
-                scheduled_start_at: initialData.scheduled_start_at,
-                scheduled_end_at: initialData.scheduled_end_at,
-                start_time: currentBookingStart,
-                end_time: currentBookingEnd,
-                note: "Current booking time slot (should be excluded from available ranges)",
-              }
-            : null,
-          note: "Requested duration should match totalDuration (sum of service estimated_duration). Backend should exclude current booking automatically.",
-        });
-
-        // Detailed analysis of ranges
-        if (
-          timeRangesResponse.available_time_ranges &&
-          timeRangesResponse.available_time_ranges.length > 0
-        ) {
-          const range1 = timeRangesResponse.available_time_ranges[0];
-          const range2 = timeRangesResponse.available_time_ranges[1];
-
-          // Parse times for comparison
-          const parseTimeToMinutes = (timeStr: string) => {
-            const [hours, minutes] = timeStr.split(":").map(Number);
-            return hours * 60 + minutes;
-          };
-
-          const range1StartMin = range1
-            ? parseTimeToMinutes(range1.start_time)
-            : 0;
-          const range1EndMin = range1 ? parseTimeToMinutes(range1.end_time) : 0;
-          const range2StartMin = range2
-            ? parseTimeToMinutes(range2.start_time)
-            : 0;
-          const range2EndMin = range2 ? parseTimeToMinutes(range2.end_time) : 0;
-          const slot8_30StartMin = parseTimeToMinutes("08:30");
-          const slot8_30EndMin = parseTimeToMinutes("09:00");
-          const slot9_00StartMin = parseTimeToMinutes("09:00");
-          const slot9_00EndMin = parseTimeToMinutes("09:30");
-
-          console.log(" Detailed range analysis:", {
-            range1: range1
-              ? {
-                  start: range1.start_time,
-                  end: range1.end_time,
-                  startMinutes: range1StartMin,
-                  endMinutes: range1EndMin,
-                  canCover8_30_9_00:
-                    range1StartMin <= slot8_30StartMin &&
-                    range1EndMin >= slot8_30EndMin,
-                  canCover9_00_9_30:
-                    range1StartMin <= slot9_00StartMin &&
-                    range1EndMin >= slot9_00EndMin,
-                  explanation: `Range ${range1.start_time}-${range1.end_time} ${
-                    range1StartMin <= slot8_30StartMin &&
-                    range1EndMin >= slot8_30EndMin
-                      ? "CAN"
-                      : "CANNOT"
-                  } cover slot 8:30-9:00, ${
-                    range1StartMin <= slot9_00StartMin &&
-                    range1EndMin >= slot9_00EndMin
-                      ? "CAN"
-                      : "CANNOT"
-                  } cover slot 9:00-9:30`,
-                }
-              : null,
-            range2: range2
-              ? {
-                  start: range2.start_time,
-                  end: range2.end_time,
-                  startMinutes: range2StartMin,
-                  endMinutes: range2EndMin,
-                  canCover8_30_9_00:
-                    range2StartMin <= slot8_30StartMin &&
-                    range2EndMin >= slot8_30EndMin,
-                  canCover9_00_9_30:
-                    range2StartMin <= slot9_00StartMin &&
-                    range2EndMin >= slot9_00EndMin,
-                  explanation: `Range ${range2.start_time}-${range2.end_time} ${
-                    range2StartMin <= slot8_30StartMin &&
-                    range2EndMin >= slot8_30EndMin
-                      ? "CAN"
-                      : "CANNOT"
-                  } cover slot 8:30-9:00, ${
-                    range2StartMin <= slot9_00StartMin &&
-                    range2EndMin >= slot9_00EndMin
-                      ? "CAN"
-                      : "CANNOT"
-                  } cover slot 9:00-9:30`,
-                }
-              : null,
-            currentBooking:
-              currentBookingStart && currentBookingEnd
-                ? {
-                    start: currentBookingStart,
-                    end: currentBookingEnd,
-                    startMinutes: parseTimeToMinutes(currentBookingStart),
-                    endMinutes: parseTimeToMinutes(currentBookingEnd),
-                    note: "This booking should be excluded from available ranges. Backend should merge ranges around this booking.",
-                  }
-                : null,
-            expectedForSlot8_30:
-              "Backend should return a range that covers 8:30-9:00 (e.g., 8:00-9:00 or 8:30-9:00) if booking 9:00-9:30 is excluded",
-            expectedForSlot9_00:
-              "Backend should return a range that covers 9:00-9:30 (e.g., 9:00-18:00) if booking 9:00-9:30 is excluded, OR slot 9:00 should be marked as current booking",
-            allRanges: timeRangesResponse.available_time_ranges.map(
-              (r, idx) => ({
-                index: idx + 1,
-                start: r.start_time,
-                end: r.end_time,
-                startMinutes: parseTimeToMinutes(r.start_time),
-                endMinutes: parseTimeToMinutes(r.end_time),
-              })
-            ),
-            conclusion:
-              "If no range covers 8:30-9:00, backend is NOT excluding current booking correctly. Backend should merge 8:00-8:30 and 8:30-9:00 into 8:00-9:00 when booking 9:00-9:30 is excluded.",
-          });
-        }
 
         setTimeRangesData(timeRangesResponse);
 
@@ -596,49 +437,14 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             duration,
             30 // 30 minutes interval
           );
-          console.log(" Loaded slots:", slots.length);
-          const slot8_00 = slots.find((s) => s.time === "08:00");
-          const slot8_30 = slots.find((s) => s.time === "08:30");
-          const slot9_00 = slots.find((s) => s.time === "09:00");
-          console.log(" Slots availability:", {
-            slots8_00: slot8_00,
-            slots8_30: slot8_30,
-            slots9_00: slot9_00,
-            slot8_00Available: slot8_00?.isAvailable,
-            slot8_30Available: slot8_30?.isAvailable,
-            slot9_00Available: slot9_00?.isAvailable,
-            allSlots: slots.map((s) => ({
-              time: s.time,
-              isAvailable: s.isAvailable,
-            })),
-          });
 
-          // Debug: Why slot 8:00 or 8:30 is not available?
-          if (slot8_00 && !slot8_00.isAvailable) {
-            console.warn(" Slot 8:00 is NOT available! Checking why...", {
-              slot8_00,
-              timeRanges: timeRangesResponse.available_time_ranges,
-              serviceDuration: duration,
-              requestedDuration: duration,
-              note: "If slot 8:00 is not available, it means no time range covers 8:00-8:30",
-            });
-          }
-          if (slot8_30 && !slot8_30.isAvailable) {
-            console.warn(" Slot 8:30 is NOT available! Checking why...", {
-              slot8_30,
-              timeRanges: timeRangesResponse.available_time_ranges,
-              serviceDuration: duration,
-              requestedDuration: duration,
-              note: "If slot 8:30 is not available, it means no time range covers 8:30-9:00 (or there's a booking at 8:30)",
-            });
-          }
           setAvailableSlots(slots);
         } else {
           console.log(" No working hours or time ranges in response");
           setAvailableSlots([]);
         }
       } catch (error) {
-        console.error("❌ Error loading available time ranges:", error);
+        console.log("Error loading available time ranges:", error);
         setAvailableSlots([]);
         setTimeRangesData(null);
       } finally {
@@ -685,22 +491,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         index === self.findIndex((i) => i.item_id === item.item_id)
     );
 
-    console.log("🧮 Calculating totals:", {
-      originalItemsCount: items.length,
-      uniqueItemsCount: uniqueItems.length,
-      itemsData: uniqueItems.map((item) => ({
-        item_id: item.item_id,
-        item_name: item.item_name,
-        fixed_price: item.fixed_price,
-        service: item.service
-          ? {
-              service_name: item.service.service_name,
-              estimated_duration: item.service.estimated_duration,
-            }
-          : null,
-      })),
-    });
-
     const price = uniqueItems.reduce(
       (sum, item) => sum + (item.fixed_price || 0),
       0
@@ -714,7 +504,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       return sum;
     }, 0);
 
-    console.log("💰 Calculated totals:", {
+    console.log("Calculated totals:", {
       price,
       duration,
       fromItems: uniqueItems.length,
@@ -744,12 +534,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         }
       }
 
-      // Set booking date
-      console.log(" Setting booking date:", {
-        scheduled_start_at: initialData.scheduled_start_at,
-        booking_code: initialData.booking_code,
-      });
-
       // Determine booking type first with fallback
       const { isWalkIn: isWalkInBookingForDate } =
         detectBookingType(initialData);
@@ -757,12 +541,12 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       if (isWalkInBookingForDate) {
         // For walk-in bookings, always use current date (processing date)
         const currentDate = dayjs().format("YYYY-MM-DD");
-        console.log("📅 Using current date for walk-in booking:", currentDate);
+        console.log("Using current date for walk-in booking:", currentDate);
         setBookingDate(currentDate);
       } else if (initialData.scheduled_start_at) {
         // For slot bookings, use scheduled_start_at
         const date = dayjs(initialData.scheduled_start_at).format("YYYY-MM-DD");
-        console.log("📅 Using scheduled_start_at for slot booking:", date);
+        console.log("Using scheduled_start_at for slot booking:", date);
         setBookingDate(date);
       } else {
         console.log(
@@ -780,20 +564,17 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             (v) => v.vehicle_id === initialData.vehicle_id
           );
           if (vehicle) {
-            console.log(
-              "🔧 Setting selectedVehicle from initialData:",
-              vehicle
-            );
+            console.log("Setting selectedVehicle from initialData:", vehicle);
             setSelectedVehicle(vehicle);
           } else {
-            console.warn(" Vehicle not found in userVehicles:", {
+            console.log(" Vehicle not found in userVehicles:", {
               vehicleId: initialData.vehicle_id,
               userVehiclesLength: userVehicles.length,
             });
           }
         } else {
           console.log(
-            "⏳ userVehicles not loaded yet, will set in separate useEffect"
+            "userVehicles not loaded yet, will set in separate useEffect"
           );
         }
       }
@@ -883,7 +664,13 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       calculateTotals(filteredSelectedItems);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranch, servicesWithInventory, isLoadingInventory, selectedItems, form]);
+  }, [
+    selectedBranch,
+    servicesWithInventory,
+    isLoadingInventory,
+    selectedItems,
+    form,
+  ]);
 
   // Initialize services when availableServices are loaded (separate useEffect to handle async loading)
   useEffect(() => {
@@ -907,43 +694,22 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         );
 
       if (shouldInitialize) {
-        console.log(
-          "🔍 Initializing services from booking items (after availableServices loaded):",
-          {
-            booking_items: initialData.booking_items,
-            availableServicesCount: availableServices.length,
-          }
-        );
-
         const services: PriceBookItem[] = [];
         const seenServiceIds = new Set<string>(); // Track already added services
 
         initialData.booking_items.forEach((item) => {
-          console.log(" Processing booking item:", {
-            service_id: item.service_id,
-            service_name: item.service_name,
-          });
-
           if (item.service_id && !seenServiceIds.has(item.service_id)) {
             // Find the service in price books
             const priceBookItem = availableServices.find(
               (service) => service.service?.service_id === item.service_id
             );
             if (priceBookItem && !seenServiceIds.has(priceBookItem.item_id)) {
-              console.log(" Found matching service:", {
-                item_id: priceBookItem.item_id,
-                item_name: priceBookItem.item_name,
-                service: priceBookItem.service
-                  ? priceBookItem.service.service_name
-                  : null,
-                duration: priceBookItem.service?.estimated_duration || 60,
-              });
               services.push(priceBookItem);
               seenServiceIds.add(item.service_id);
               seenServiceIds.add(priceBookItem.item_id);
             } else {
               console.log(
-                "❌ No matching service found or duplicate for service_id:",
+                "No matching service found or duplicate for service_id:",
                 item.service_id
               );
             }
@@ -955,17 +721,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           (service, index, self) =>
             index === self.findIndex((s) => s.item_id === service.item_id)
         );
-
-        console.log(" Final services array:", {
-          originalCount: services.length,
-          uniqueCount: uniqueServices.length,
-          services: uniqueServices.map((s) => ({
-            item_id: s.item_id,
-            item_name: s.item_name,
-            duration: s.service?.estimated_duration || 60,
-            service: s.service ? s.service.service_name : null,
-          })),
-        });
 
         if (uniqueServices.length > 0) {
           setSelectedItems(uniqueServices);
@@ -998,7 +753,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       const originalDuration = initialData.estimated_duration_minutes || 0;
       setOriginalTotalDuration(originalDuration);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     initialData?.booking_id,
     open,
@@ -1023,19 +777,18 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       );
       if (vehicle) {
         console.log(
-          "🔧 Setting selectedVehicle from initialData (after userVehicles loaded):",
+          "Setting selectedVehicle from initialData (after userVehicles loaded):",
           vehicle
         );
         setSelectedVehicle(vehicle);
       } else {
-        console.warn(" Vehicle not found in userVehicles:", {
+        console.log(" Vehicle not found in userVehicles:", {
           vehicleId: initialData.vehicle_id,
           userVehiclesLength: userVehicles.length,
           vehicleIds: userVehicles.map((v) => v.vehicle_id),
         });
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?.vehicle_id, open, isFormInitialized, userVehicles.length]);
 
   // Reset initialization when modal closes
@@ -1083,10 +836,10 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       }
 
       if (bay && !selectedBay) {
-        console.log("🔧 Setting selectedBay from initialData:", bay);
+        console.log("Setting selectedBay from initialData:", bay);
         setSelectedBay(bay);
       } else if (initialData.bay_id && !bay) {
-        console.warn(" Bay not found:", {
+        console.log(" Bay not found:", {
           bayId: initialData.bay_id,
           bayName: initialData.bay_name,
           serviceBaysLength: serviceBays.length,
@@ -1131,7 +884,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         serviceDurationMinutes: actualServiceDuration,
       };
 
-      console.log("🔧 Setting selectedSlot from initialData:", initialSlot);
+      console.log("Setting selectedSlot from initialData:", initialSlot);
       setSelectedSlot(initialSlot);
       isSlotInitialized.current = true; // Mark slot as initialized
 
@@ -1169,21 +922,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         .filter((id): id is string => !!id)
     );
 
-    console.log(" Building booking_items array:", {
-      originalServiceIds: Array.from(originalServiceIds),
-      selectedServiceIds: Array.from(selectedServiceIds),
-      originalItemsCount: originalItems.length,
-      selectedItemsCount: selectedItems.length,
-      originalItems: originalItems.map((i) => ({
-        item_name: i.item_name,
-        service_id: i.service?.service_id,
-      })),
-      selectedItems: selectedItems.map((i) => ({
-        item_name: i.item_name,
-        service_id: i.service?.service_id,
-      })),
-    });
-
     // Step 1: Handle DELETE operations (items in original but not in selected)
     // Backend processes DELETE first, so we add them first
     // Use service_id only for deletion (not booking_item_id)
@@ -1201,12 +939,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             originalItem?.item_name ||
             "",
           operation: "DELETE",
-        });
-        console.log("🗑️ Adding DELETE item (by service_id):", {
-          service_id: serviceId,
-          service_name:
-            originalItem?.service?.service_name || originalItem?.item_name,
-          reason: "Item exists in original but not in selected",
         });
       }
     });
@@ -1238,10 +970,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         // Note: Since we don't have discount/tax in PriceBookItem, we can't update them here
         // But we include the structure for future use
         bookingItems.push(bookingItem);
-        console.log("✏️ Adding UPDATE item:", {
-          service_id: serviceId,
-          service_name: item.service?.service_name || item.item_name,
-        });
       } else {
         // ADD: New item - send service_id and service_name
         const bookingItem: CreateBookingItemRequest = {
@@ -1250,28 +978,16 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           service_description: item.service?.description,
         };
         bookingItems.push(bookingItem);
-        console.log("➕ Adding NEW item:", {
-          service_id: serviceId,
-          service_name: item.service?.service_name || item.item_name,
-          reason: "Item exists in selected but not in original",
-        });
       }
     });
 
-    console.log("📦 Final booking_items array:", bookingItems);
+    console.log("Final booking_items array:", bookingItems);
     return bookingItems;
   }, [originalItems, selectedItems]);
 
   // Handle service selection change (same logic as UpdateBookingModal)
   const handleServiceChange = useCallback(
     (selectedServiceIds: string[]) => {
-      console.log(" Service selection changed (from Select component):", {
-        selectedServiceIds,
-        selectedServiceIdsCount: selectedServiceIds.length,
-        currentSelectedItemsCount: selectedItems.length,
-        availableServicesCount: availableServices.length,
-      });
-
       // Remove duplicates from selectedServiceIds
       const uniqueServiceIds = Array.from(new Set(selectedServiceIds));
 
@@ -1301,20 +1017,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
       const removedServiceIds = Array.from(previousServiceIds).filter(
         (id) => !newServiceIds.has(id)
       );
-
-      console.log(" Selected services:", {
-        uniqueIdsCount: uniqueServiceIds.length,
-        selectedServicesCount: uniqueSelectedServices.length,
-        previousCount: selectedItems.length,
-        services: uniqueSelectedServices.map((s) => ({
-          item_id: s.item_id,
-          item_name: s.item_name,
-          service_id: s.service?.service_id,
-          duration: s.service?.estimated_duration || 60,
-        })),
-        removedServiceIds:
-          removedServiceIds.length > 0 ? removedServiceIds : undefined,
-      });
 
       setSelectedItems(uniqueSelectedServices);
       calculateTotals(uniqueSelectedServices);
@@ -1377,8 +1079,8 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     // Use actual time range from scheduled_start_at and scheduled_end_at
     const startTime = dayjs(initialData.scheduled_start_at);
     const endTime = dayjs(initialData.scheduled_end_at);
-    const diffMinutes = endTime.diff(startTime, 'minute');
-    
+    const diffMinutes = endTime.diff(startTime, "minute");
+
     if (diffMinutes > 0) {
       return diffMinutes;
     }
@@ -1402,7 +1104,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
     // Compare with actual time range from scheduled_start_at and scheduled_end_at
     const totalOriginalSlotTime = calculateOriginalSlotTime();
-    
+
     if (totalOriginalSlotTime && totalOriginalSlotTime > 0) {
       return totalDuration > totalOriginalSlotTime;
     }
@@ -1425,15 +1127,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   // Handle time selection
   const handleSlotSelect = useCallback(
     (slot: SlotInfo) => {
-      console.log("🖱️ handleSlotSelect called:", {
-        slotTime: slot.time,
-        canSelect: canSelectSlot(slot),
-        selectedBay: selectedBay?.bay_id,
-        isDurationExceedsOriginal,
-        bookingDate,
-        totalDuration,
-      });
-
       // Prevent time selection if duration exceeds original time
       if (isDurationExceedsOriginal) {
         message.warning({
@@ -1518,12 +1211,12 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         const servicesWithoutInventory = selectedItems.filter((item) => {
           const serviceId = item.service?.service_id;
           if (!serviceId) return false; // Skip items without service_id
-          
+
           // Check if this is a new service (not in originalItems)
           const isNewService = !originalItems.some(
             (orig) => orig.service?.service_id === serviceId
           );
-          
+
           // Only validate new services
           if (isNewService && !availableServiceIds.has(serviceId)) {
             return true;
@@ -1642,7 +1335,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
     <Card size="small" title="Thông tin xe" style={{ marginBottom: 16 }}>
       <Form.Item
         name="vehicleId"
-        label="Chọn xe"
         rules={[{ required: true, message: "Vui lòng chọn xe" }]}
       >
         <Select
@@ -1675,15 +1367,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
           ))}
         </Select>
       </Form.Item>
-
-      {selectedVehicle && (
-        <Alert
-          message={`Xe: ${selectedVehicle.license_plate}`}
-          description={`${selectedVehicle.brand_name} ${selectedVehicle.model_name} • ${selectedVehicle.type_name}`}
-          type="info"
-          style={{ marginTop: 8 }}
-        />
-      )}
     </Card>
   );
 
@@ -1755,48 +1438,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
         </Select>
       </Form.Item>
 
-      {selectedItems.length > 0 && (
-        <div style={{ marginTop: 16 }}>
-          <Text strong>Dịch vụ đã chọn:</Text>
-          <div style={{ marginTop: 8 }}>
-            {selectedItems.map((item) => (
-              <Tag
-                key={item.item_id}
-                closable
-                onClose={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const newItems = selectedItems.filter(
-                    (i) => i.item_id !== item.item_id
-                  );
-                  console.log("🗑️ Removed service from Tag:", {
-                    removedItem: item.item_name,
-                    removedServiceId: item.service?.service_id,
-                    remainingItems: newItems.map((i) => i.item_name),
-                    remainingServiceIds: newItems.map(
-                      (i) => i.service?.service_id
-                    ),
-                  });
-                  setSelectedItems(newItems);
-                  calculateTotals(newItems);
-                  // Sync form value to match selectedItems (without triggering onChange)
-                  // Use setTimeout to avoid circular reference
-                  setTimeout(() => {
-                    form.setFieldValue(
-                      "services",
-                      newItems.map((i) => i.item_id)
-                    );
-                  }, 0);
-                }}
-                style={{ marginBottom: 4 }}
-              >
-                {item.item_name} - {item.fixed_price?.toLocaleString()} VNĐ
-              </Tag>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Warning when service duration exceeds slot duration for slot bookings */}
       {/* Warning when service duration exceeds slot duration for slot bookings */}
       {(() => {
@@ -1831,8 +1472,9 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                     phút/slot)
                   </div>
                   <div style={{ marginTop: 8, color: "#faad14" }}>
-                     Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. 
-                    Bạn có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.
+                    Tổng thời gian dịch vụ vượt quá thời gian slot hiện tại. Bạn
+                    có thể tiếp tục, hệ thống sẽ kiểm tra và thông báo nếu cần
+                    chọn slot khác.
                   </div>
                 </div>
               }
@@ -1895,83 +1537,92 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
   const renderBranchAndSlotSelection = () => {
     // Always show branch and slot selection for all bookings
     return (
-      <Card
-        size="small"
-        title="Thời gian và địa điểm"
-        style={{ marginBottom: 16 }}
-      >
+      <>
         <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="bookingDate" label="Ngày đặt lịch" rules={[]}>
-              <DatePicker
-                style={{ width: "100%" }}
-                value={bookingDate ? dayjs(bookingDate) : null}
-                placeholder="Chọn ngày"
-                disabledDate={(current) => {
-                  const today = dayjs();
-                  const currentHour = today.hour();
-                  if (currentHour >= 17) {
-                    return (
-                      current && current < today.add(1, "day").startOf("day")
-                    );
-                  }
-                  return current && current < today.startOf("day");
-                }}
-                onChange={(date) => {
-                  const newDate = date ? date.format("YYYY-MM-DD") : "";
-                  console.log("📅 DatePicker onChange:", {
-                    date,
-                    newDate,
-                    isValid: date ? date.isValid() : false,
-                    currentSelectedSlot: selectedSlot,
-                    slotDate: selectedSlot?.date,
-                  });
-                  setBookingDate(newDate);
-                  // Reset slot if the current slot's date doesn't match the new date
-                  if (selectedSlot && selectedSlot.date !== newDate) {
-                    console.log(
-                      "📅 Date changed, resetting slot because date mismatch"
-                    );
-                    setSelectedSlot(null);
-                    setIsSlotChanged(false);
-                  }
-                }}
-              />
-            </Form.Item>
+          <Col span={8}>{renderVehicleSelection()}</Col>
+          <Col span={8}>
+            <Card
+              size="small"
+              title="Ngày đặt lịch"
+              style={{ marginBottom: 16 }}
+            >
+              <Form.Item name="bookingDate">
+                <DatePicker
+                  style={{ width: "100%" }}
+                  value={bookingDate ? dayjs(bookingDate) : null}
+                  placeholder="Chọn ngày"
+                  disabledDate={(current) => {
+                    const today = dayjs();
+                    const currentHour = today.hour();
+                    if (currentHour >= 17) {
+                      return (
+                        current && current < today.add(1, "day").startOf("day")
+                      );
+                    }
+                    return current && current < today.startOf("day");
+                  }}
+                  onChange={(date) => {
+                    const newDate = date ? date.format("YYYY-MM-DD") : "";
+                    console.log("📅 DatePicker onChange:", {
+                      date,
+                      newDate,
+                      isValid: date ? date.isValid() : false,
+                      currentSelectedSlot: selectedSlot,
+                      slotDate: selectedSlot?.date,
+                    });
+                    setBookingDate(newDate);
+                    // Reset slot if the current slot's date doesn't match the new date
+                    if (selectedSlot && selectedSlot.date !== newDate) {
+                      console.log(
+                        "📅 Date changed, resetting slot because date mismatch"
+                      );
+                      setSelectedSlot(null);
+                      setIsSlotChanged(false);
+                    }
+                  }}
+                />
+              </Form.Item>
+            </Card>
           </Col>
 
-          <Col span={12}>
-            <Form.Item name="branchId" label="Chọn chi nhánh" rules={[]}>
-              <Select
-                placeholder="Chọn chi nhánh"
-                optionLabelProp="label"
-                onChange={handleBranchChange}
-                loading={isLoadingBranches}
-                showSearch
-                filterOption={(input, option) => {
-                  const childrenText =
-                    option?.children?.toString().toLowerCase() || "";
-                  return childrenText.includes(input.toLowerCase());
-                }}
-              >
-                {branches.map((branch) => (
-                  <Option
-                    key={branch.branch_id}
-                    value={branch.branch_id}
-                    label={branch.branch_name}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 500 }}>
-                        {branch.branch_name}
+          <Col span={8}>
+            <Card
+              size="small"
+              title="Chọn chi nhánh"
+              style={{ marginBottom: 16 }}
+            >
+              <Form.Item name="branchId">
+                <Select
+                  placeholder="Chọn chi nhánh"
+                  optionLabelProp="label"
+                  onChange={handleBranchChange}
+                  loading={isLoadingBranches}
+                  showSearch
+                  filterOption={(input, option) => {
+                    const childrenText =
+                      option?.children?.toString().toLowerCase() || "";
+                    return childrenText.includes(input.toLowerCase());
+                  }}
+                >
+                  {branches.map((branch) => (
+                    <Option
+                      key={branch.branch_id}
+                      value={branch.branch_id}
+                      label={branch.branch_name}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 500 }}>
+                          {branch.branch_name}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#666" }}>
+                          {branch.branch_code} • {branch.address}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 12, color: "#666" }}>
-                        {branch.branch_code} • {branch.address}
-                      </div>
-                    </div>
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Card>
           </Col>
         </Row>
 
@@ -2001,7 +1652,8 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
               <Text strong>Chọn Khu Vực Chăm Sóc Cho Đặt Lịch:</Text>
               {isDurationExceedsOriginal &&
                 (() => {
-                  const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
+                  const totalOriginalSlotTime =
+                    calculateOriginalSlotTime() || 0;
 
                   if (totalOriginalSlotTime > 0) {
                     return (
@@ -2112,7 +1764,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                 <Divider />
                 <Text strong>
                   {selectedBay
-                    ? `Chọn Thời Gian Chăm Sóc Trong ${selectedBay.bay_name}:`
+                    ? `Chọn Thời Gian Chăm Sóc:`
                     : selectedSlot
                     ? `Thời Gian Đã Chọn (${selectedSlot.bayName}):`
                     : "Chọn Thời Gian Chăm Sóc:"}
@@ -2154,7 +1806,8 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                           tooltipMessage = `Chọn thời gian ${slot.time} (${totalDuration} phút)`;
                         } else {
                           if (isDurationExceedsOriginal) {
-                            const totalOriginalSlotTime = calculateOriginalSlotTime() || 0;
+                            const totalOriginalSlotTime =
+                              calculateOriginalSlotTime() || 0;
                             if (totalOriginalSlotTime > 0) {
                               tooltipMessage = `Tổng thời gian dịch vụ (${totalDuration} phút) vượt quá thời gian slot hiện tại (${totalOriginalSlotTime} phút). Bạn vẫn có thể chọn slot này, hệ thống sẽ kiểm tra và thông báo nếu cần chọn slot khác.`;
                             }
@@ -2164,7 +1817,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                         }
 
                         return (
-                          <Col span={4} key={`${slot.time}-${index}`}>
+                          <Col span={2} key={`${slot.time}-${index}`}>
                             <Tooltip title={tooltipMessage}>
                               <Card
                                 size="small"
@@ -2191,18 +1844,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                               >
                                 <div
                                   style={{
-                                    color: canSelect ? "#52c41a" : "#ff4d4f",
-                                    fontSize: 16,
-                                  }}
-                                >
-                                  {canSelect ? (
-                                    <CheckCircleOutlined />
-                                  ) : (
-                                    <CloseCircleOutlined />
-                                  )}
-                                </div>
-                                <div
-                                  style={{
                                     marginTop: 4,
                                     fontSize: 12,
                                     fontWeight: 500,
@@ -2211,17 +1852,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
                                 >
                                   {slot.time}
                                 </div>
-                                {!canSelect && (
-                                  <div
-                                    style={{
-                                      fontSize: 8,
-                                      color: "#ff4d4f",
-                                      marginTop: 2,
-                                    }}
-                                  >
-                                    Không khả dụng
-                                  </div>
-                                )}
                               </Card>
                             </Tooltip>
                           </Col>
@@ -2280,7 +1910,7 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
             )}
           </>
         )}
-      </Card>
+      </>
     );
   };
 
@@ -2377,9 +2007,6 @@ const CustomerUpdateBookingModal: React.FC<CustomerUpdateBookingModalProps> = ({
 
         {/* Customer Info */}
         {renderCustomerInfo()}
-
-        {/* Vehicle Selection */}
-        {renderVehicleSelection()}
 
         {/* Branch and Slot Selection */}
         {renderBranchAndSlotSelection()}
