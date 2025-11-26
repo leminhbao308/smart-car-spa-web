@@ -37,7 +37,7 @@ const ProductCard: React.FC<{ product: any }> = ({ product }) => {
         });
         setPrice(priceData?.total_price ?? null);
       } catch (error) {
-        console.error("Error fetching price:", error);
+        console.log("Error fetching price:", error);
         setPrice(null);
       }
     };

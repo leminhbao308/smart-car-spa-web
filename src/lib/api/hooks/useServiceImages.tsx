@@ -21,7 +21,7 @@ export const useServiceImages = (serviceId: string | null) => {
       try {
         return await MediaService.getMediaByEntity("SERVICE", serviceId);
       } catch (err) {
-        console.error("Error fetching service images:", err);
+        console.log("Error fetching service images:", err);
         return [];
       }
     },
@@ -60,7 +60,7 @@ export const useServiceMainImage = (serviceId: string | undefined) => {
       try {
         return await MediaService.getMediaByEntity("SERVICE", serviceId);
       } catch (err) {
-        console.error("Error fetching service main image:", err);
+        console.log("Error fetching service main image:", err);
         return [];
       }
     },

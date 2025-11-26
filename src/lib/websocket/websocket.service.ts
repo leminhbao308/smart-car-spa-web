@@ -163,7 +163,7 @@ class WebSocketService {
     // Check token availability
     const token = this.getToken();
     if (!token) {
-      console.error('[WebSocket] Cannot connect: No token available');
+      console.log('[WebSocket] Cannot connect: No token available');
       this.setStatus('ERROR');
       return;
     }
@@ -201,7 +201,7 @@ class WebSocketService {
       
       // Event: STOMP protocol error
       onStompError: (frame) => {
-        console.error('[WebSocket] STOMP error:', frame);
+        console.log('[WebSocket] STOMP error:', frame);
         this.setStatus('ERROR');
       },
       
@@ -222,7 +222,7 @@ class WebSocketService {
 
     // Handle WebSocket connection errors
     this.client.onWebSocketError = (error) => {
-      console.error('[WebSocket] Connection error:', error);
+      console.log('[WebSocket] Connection error:', error);
       this.setStatus('ERROR');
       
       // Auto reconnect với exponential backoff
@@ -237,7 +237,7 @@ class WebSocketService {
           }
         }, delay);
       } else {
-        console.error('[WebSocket] Max reconnection attempts reached');
+        console.log('[WebSocket] Max reconnection attempts reached');
         this.setStatus('ERROR');
       }
     };
@@ -411,12 +411,12 @@ class WebSocketService {
               callback(parsedMessage as any);
             } catch (error) {
               // Error trong callback không ảnh hưởng đến callbacks khác
-              console.error(`[WebSocket] Error in callback for ${topic}:`, error);
+              console.log(`[WebSocket] Error in callback for ${topic}:`, error);
             }
           });
         }
       } catch (error) {
-        console.error(`[WebSocket] Error processing message from ${topic}:`, error);
+        console.log(`[WebSocket] Error processing message from ${topic}:`, error);
       }
     });
 

@@ -81,7 +81,7 @@ export default function ServicesListingPage() {
           );
           setServiceImages(imagesMap);
         } catch (error) {
-          console.error("Error fetching batch data:", error);
+          console.log("Error fetching batch data:", error);
         } finally {
           setPricesLoading(false);
         }

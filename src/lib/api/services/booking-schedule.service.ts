@@ -40,7 +40,7 @@ export class BookingScheduleService {
         throw new Error("Failed to get available time ranges");
       }
     } catch (error) {
-      console.error("Get available time ranges error:", error);
+      console.log("Get available time ranges error:", error);
       throw error;
     }
   }

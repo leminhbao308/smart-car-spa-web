@@ -36,7 +36,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           });
           setDisplayPrice(priceResponse.total_price || 0);
         } catch (error) {
-          console.error("Error fetching price:", error);
+          console.log("Error fetching price:", error);
           setDisplayPrice(0);
         } finally {
           setPriceLoading(false);

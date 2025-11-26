@@ -360,7 +360,7 @@ const ServiceImageGallery: React.FC<ServiceImageGalleryProps> = ({
       addImageUpload.clearFiles();
       addForm.resetFields();
     } catch (error) {
-      console.error("Error adding image:", error);
+      console.log("Error adding image:", error);
     }
   };
 
@@ -399,7 +399,7 @@ const ServiceImageGallery: React.FC<ServiceImageGalleryProps> = ({
       editImageUpload.clearFiles();
       editForm.resetFields();
     } catch (err) {
-      console.error("Error updating image:", err);
+      console.log("Error updating image:", err);
     }
   };
 

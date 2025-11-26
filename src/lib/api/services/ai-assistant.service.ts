@@ -28,7 +28,7 @@ export class AiAssistantService {
         throw new Error(response.data.message || "Failed to get AI response");
       }
     } catch (error: any) {
-      console.error("AI Assistant chat error:", error);
+      console.log("AI Assistant chat error:", error);
       throw error;
     }
   }

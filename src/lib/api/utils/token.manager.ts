@@ -3,6 +3,8 @@
  * Handles automatic token storage, retrieval, and cleanup
  */
 
+import { clearDeviceInfo } from "./device.manager";
+
 // Token storage keys
 const TOKEN_KEYS = {
   ACCESS_TOKEN: "access_token",
@@ -160,7 +162,7 @@ export class TokenManager {
 
   /**
    * Clear all tokens and user info
-   * Also clears AI chatbot conversation history
+   * Also clears AI chatbot conversation history and device info
    */
   static clearAll(): void {
     this.removeAccessToken();
@@ -172,6 +174,9 @@ export class TokenManager {
 
     // Clear AI chatbot conversation history
     this.clearAIChatbotHistory();
+
+    // Clear device info (for multi-device support)
+    clearDeviceInfo();
   }
 
   /**

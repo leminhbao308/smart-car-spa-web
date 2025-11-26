@@ -29,7 +29,7 @@ export const loadConversationHistory = (): AIChatbotMessage[] => {
       timestamp: new Date(msg.timestamp),
     }));
   } catch (error) {
-    console.error("Error loading conversation history from localStorage:", error);
+    console.log("Error loading conversation history from localStorage:", error);
     return [];
   }
 };
@@ -48,7 +48,7 @@ export const saveConversationHistory = (messages: AIChatbotMessage[]): void => {
     
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messagesToSave));
   } catch (error) {
-    console.error("Error saving conversation history to localStorage:", error);
+    console.log("Error saving conversation history to localStorage:", error);
     
     // If storage is full, try to save fewer messages
     if (error instanceof DOMException && error.name === "QuotaExceededError") {
@@ -58,7 +58,7 @@ export const saveConversationHistory = (messages: AIChatbotMessage[]): void => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(messagesToSave));
         console.warn("Storage quota exceeded. Saved only last 20 messages.");
       } catch (retryError) {
-        console.error("Failed to save conversation history even with reduced size:", retryError);
+        console.log("Failed to save conversation history even with reduced size:", retryError);
       }
     }
   }
@@ -75,7 +75,7 @@ export const clearConversationHistory = (): void => {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
-    console.error("Error clearing conversation history from localStorage:", error);
+    console.log("Error clearing conversation history from localStorage:", error);
   }
 };
 

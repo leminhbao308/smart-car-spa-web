@@ -131,7 +131,7 @@ export default function CheckoutPage() {
               );
             }
           } catch (error) {
-            console.error(
+            console.log(
               `❌ Error checking branch ${branch.branch_id}:`,
               error
             );
@@ -149,7 +149,7 @@ export default function CheckoutPage() {
           );
         }
       } catch (error) {
-        console.error("❌ Error checking inventory:", error);
+        console.log("❌ Error checking inventory:", error);
         // Fallback to first branch
         if (branches.length > 0) {
           setSelectedBranch(branches[0]);
@@ -442,7 +442,7 @@ export default function CheckoutPage() {
         router.push(`/checkout/success?orderId=${result.order.id}`);
       }
     } catch (error) {
-      console.error("Checkout error:", error);
+      console.log("Checkout error:", error);
       message.error("Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại");
     }
   };

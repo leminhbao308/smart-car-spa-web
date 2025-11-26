@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   Row,
@@ -37,20 +37,25 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "@/lib/api/hooks/useAuth";
+import { AuthService } from "@/lib/api/services/auth.service";
 import { useUser } from "@/lib/api/hooks/useUsers";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import { UserService } from "@/lib/api/services/user.service";
-import { AuthService } from "@/lib/api/services/auth.service";
 import { useQueryClient } from "@tanstack/react-query";
 import { TokenManager } from "@/lib/api/utils/token.manager";
-import { useCustomerReload } from "@/hooks/useWebSocket";
+import { useCustomerReload, usePasswordChanged } from "@/hooks/useWebSocket";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
 const ProfileMemberPage = () => {
-  const { user: authUser, isAuthenticated, isLoading: authLoading } = useAuth();
+  const {
+    user: authUser,
+    isAuthenticated,
+    isLoading: authLoading,
+    logout,
+  } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [form] = Form.useForm();
@@ -63,6 +68,9 @@ const ProfileMemberPage = () => {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const uploadInProgressRef = React.useRef(false);
+  // Flag to track if password was just changed on this device
+  // This prevents the device from logging out when it receives its own password change notification
+  const justChangedPasswordRef = useRef(false);
 
   // Get fresh user data using React Query
   const {
@@ -94,7 +102,9 @@ const ProfileMemberPage = () => {
   // LÝ DO: Khi admin hoặc user khác cập nhật thông tin user, page này sẽ tự động cập nhật
   useCustomerReload(() => {
     if (isAuthenticated && authUser?.user_id) {
-      console.log('[ProfilePage] WebSocket: Reloading user data due to notification...');
+      console.log(
+        "[ProfilePage] WebSocket: Reloading user data due to notification..."
+      );
       refetchUser();
       // Also invalidate related queries to ensure fresh data
       queryClient.invalidateQueries({
@@ -104,13 +114,54 @@ const ProfileMemberPage = () => {
     }
   });
 
+  // Listen for password changed notification from other devices
+  usePasswordChanged(() => {
+    console.log("[ProfilePage] usePasswordChanged callback triggered");
+    // Ignore notification if password was just changed on this device
+    if (justChangedPasswordRef.current) {
+      console.log(
+        "[ProfilePage] Ignoring password changed notification - password was just changed on this device"
+      );
+      // Clear the flag after a short delay
+      setTimeout(() => {
+        justChangedPasswordRef.current = false;
+      }, 3000);
+      return;
+    }
+
+    // When password is changed on another device, logout this device
+    console.log(
+      "[ProfilePage] Password changed on another device, logging out..."
+    );
+    message.warning(
+      "Mật khẩu đã được thay đổi trên thiết bị khác. Vui lòng đăng nhập lại."
+    );
+
+    // Clear localStorage immediately (tokens may already be revoked by backend)
+    console.log("[ProfilePage] Clearing localStorage immediately...");
+    TokenManager.clearAll();
+
+    // Reset AuthContext state to ensure AccountPopup and other components reflect logout
+    // This is important because AccountPopup gets data from useAuth() hook
+    console.log("[ProfilePage] Resetting AuthContext state...");
+    logout()
+      .then(() => {
+        console.log("[ProfilePage] AuthContext reset completed");
+        router.push("/auth/login");
+      })
+      .catch((error: unknown) => {
+        console.log(
+          "[ProfilePage] AuthContext reset completed with warnings:",
+          error
+        );
+        // Still redirect even if there are warnings
+        router.push("/auth/login");
+      });
+  }, authUser?.user_id || null);
+
   // Set form values when user data loads
   useEffect(() => {
     if (user) {
-      console.log("User data loaded:", user);
-      console.log("Created date:", user.created_date);
-      console.log("Created at:", user.created_at);
-
       form.setFieldsValue({
         full_name: user.full_name,
         email: user.email,
@@ -370,7 +421,10 @@ const ProfileMemberPage = () => {
 
         // Update auth context by updating user in storage with new avatar_url
         try {
-          console.log("Profile: Updating user in storage with avatar_url from response:", newAvatarUrl);
+          console.log(
+            "Profile: Updating user in storage with avatar_url from response:",
+            newAvatarUrl
+          );
 
           // Get current user from storage
           const currentUser = AuthService.getCurrentUserFromStorage();
@@ -383,57 +437,88 @@ const ProfileMemberPage = () => {
               avatar_url: newAvatarUrl,
             };
 
-            console.log("Profile: Updated user object with avatar_url:", updatedUser.avatar_url);
+            console.log(
+              "Profile: Updated user object with avatar_url:",
+              updatedUser.avatar_url
+            );
 
             // Save updated user to storage
             TokenManager.setUserInfo(updatedUser);
 
             // Verify it was saved correctly
             const verifyUser = AuthService.getCurrentUserFromStorage();
-            console.log("Profile: Verified user from storage after save:", verifyUser);
-            console.log("Profile: Verified avatar_url from storage:", verifyUser?.avatar_url);
+            console.log(
+              "Profile: Verified user from storage after save:",
+              verifyUser
+            );
+            console.log(
+              "Profile: Verified avatar_url from storage:",
+              verifyUser?.avatar_url
+            );
 
             // Also sync to cookies for consistency
             const accessToken = TokenManager.getAccessToken();
             const refreshToken = TokenManager.getRefreshToken();
             if (accessToken && refreshToken) {
-              TokenManager.syncToCookies(accessToken, refreshToken, updatedUser);
+              TokenManager.syncToCookies(
+                accessToken,
+                refreshToken,
+                updatedUser
+              );
             }
 
             // Trigger a custom event to notify AccountPopup to refresh
             if (typeof window !== "undefined") {
-              console.log("Profile: Dispatching userAvatarUpdated event with avatar_url:", updatedUser.avatar_url);
-              window.dispatchEvent(new CustomEvent("userAvatarUpdated", {
-                detail: updatedUser
-              }));
+              console.log(
+                "Profile: Dispatching userAvatarUpdated event with avatar_url:",
+                updatedUser.avatar_url
+              );
+              window.dispatchEvent(
+                new CustomEvent("userAvatarUpdated", {
+                  detail: updatedUser,
+                })
+              );
 
               // Also dispatch a simpler event with just the avatar URL for immediate update
-              window.dispatchEvent(new CustomEvent("avatarUrlUpdated", {
-                detail: { avatar_url: updatedUser.avatar_url }
-              }));
+              window.dispatchEvent(
+                new CustomEvent("avatarUrlUpdated", {
+                  detail: { avatar_url: updatedUser.avatar_url },
+                })
+              );
             }
           } else {
             // Fallback: try to get fresh user from API
             console.log("Profile: Falling back to API call...");
             const updatedUser = await AuthService.getCurrentUser();
             console.log("Profile: Updated user from API:", updatedUser);
-            console.log("Profile: Avatar URL in updated user:", updatedUser?.avatar_url);
+            console.log(
+              "Profile: Avatar URL in updated user:",
+              updatedUser?.avatar_url
+            );
 
             if (updatedUser) {
               TokenManager.setUserInfo(updatedUser);
               const accessToken = TokenManager.getAccessToken();
               const refreshToken = TokenManager.getRefreshToken();
               if (accessToken && refreshToken) {
-                TokenManager.syncToCookies(accessToken, refreshToken, updatedUser);
+                TokenManager.syncToCookies(
+                  accessToken,
+                  refreshToken,
+                  updatedUser
+                );
               }
 
               if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("userAvatarUpdated", {
-                  detail: updatedUser
-                }));
-                window.dispatchEvent(new CustomEvent("avatarUrlUpdated", {
-                  detail: { avatar_url: updatedUser.avatar_url }
-                }));
+                window.dispatchEvent(
+                  new CustomEvent("userAvatarUpdated", {
+                    detail: updatedUser,
+                  })
+                );
+                window.dispatchEvent(
+                  new CustomEvent("avatarUrlUpdated", {
+                    detail: { avatar_url: updatedUser.avatar_url },
+                  })
+                );
               }
             }
           }
@@ -479,6 +564,13 @@ const ProfileMemberPage = () => {
     try {
       setIsChangingPassword(true);
 
+      // Mark that password is about to be changed on this device
+      // Set flag BEFORE calling API to ensure it's set before WebSocket notification arrives
+      justChangedPasswordRef.current = true;
+      setTimeout(() => {
+        justChangedPasswordRef.current = false;
+      }, 5000);
+
       // Prepare change password request
       const request = {
         current_password: values.currentPassword,
@@ -488,12 +580,13 @@ const ProfileMemberPage = () => {
       // Call API to change password
       await AuthService.changePassword(request);
 
-      message.success("Đổi mật khẩu thành công! Vui lòng đăng nhập lại.");
-      
-      // Logout user and redirect to login
-      // All tokens are revoked on backend, so we need to clear local storage and redirect
-      await AuthService.logout();
-      router.push("/auth/login");
+      message.success(
+        "Đổi mật khẩu thành công! Các thiết bị khác đã được đăng xuất."
+      );
+
+      // Keep current device logged in - backend only revokes tokens of other devices
+      setIsChangePasswordModalOpen(false);
+      passwordForm.resetFields();
     } catch (error: unknown) {
       console.log("Error changing password:", error);
       const errorMessage =
@@ -532,10 +625,7 @@ const ProfileMemberPage = () => {
 
         <Row gutter={[24, 24]}>
           {/* Profile Card */}
-          <Col
-            xs={24}
-            lg={8}
-          >
+          <Col xs={24} lg={8}>
             <Card
               style={{
                 textAlign: "center",
@@ -556,10 +646,7 @@ const ProfileMemberPage = () => {
                   }}
                 />
                 <div style={{ marginTop: "16px" }}>
-                  <Title
-                    level={3}
-                    style={{ margin: 0 }}
-                  >
+                  <Title level={3} style={{ margin: 0 }}>
                     {user.full_name}
                   </Title>
                   <Text type="secondary">Khách hàng VIP</Text>
@@ -596,9 +683,7 @@ const ProfileMemberPage = () => {
                     disabled={isUploadingAvatar || isSaving}
                     style={{ width: "100%" }}
                   >
-                    {isUploadingAvatar
-                      ? "Đang tải lên..."
-                      : "Đổi ảnh đại diện"}
+                    {isUploadingAvatar ? "Đang tải lên..." : "Đổi ảnh đại diện"}
                   </Button>
                 </Upload>
                 {!isEditing && (
@@ -628,10 +713,7 @@ const ProfileMemberPage = () => {
                 <div style={{ marginBottom: "12px" }}>
                   <Text strong>Trạng thái tài khoản:</Text>
                   <div style={{ marginTop: "4px" }}>
-                    <Tag
-                      color="green"
-                      icon={<CheckCircleOutlined />}
-                    >
+                    <Tag color="green" icon={<CheckCircleOutlined />}>
                       Đã xác thực
                     </Tag>
                   </div>
@@ -652,10 +734,7 @@ const ProfileMemberPage = () => {
           </Col>
 
           {/* Profile Information */}
-          <Col
-            xs={24}
-            lg={16}
-          >
+          <Col xs={24} lg={16}>
             <Card
               title={
                 <div
@@ -690,10 +769,7 @@ const ProfileMemberPage = () => {
                 style={{ marginTop: "16px" }}
               >
                 <Row gutter={[16, 16]}>
-                  <Col
-                    xs={24}
-                    sm={12}
-                  >
+                  <Col xs={24} sm={12}>
                     <Form.Item
                       label="Họ và tên"
                       name="full_name"
@@ -709,10 +785,7 @@ const ProfileMemberPage = () => {
                     </Form.Item>
                   </Col>
 
-                  <Col
-                    xs={24}
-                    sm={12}
-                  >
+                  <Col xs={24} sm={12}>
                     <Form.Item
                       label="Số điện thoại"
                       name="phone_number"
@@ -732,20 +805,28 @@ const ProfileMemberPage = () => {
                         placeholder="Nhập số điện thoại"
                         size="large"
                         disabled={isPhoneLocked}
-                        suffix={isPhoneLocked ? <LockOutlined style={{ color: "#999" }} /> : undefined}
+                        suffix={
+                          isPhoneLocked ? (
+                            <LockOutlined style={{ color: "#999" }} />
+                          ) : undefined
+                        }
                       />
                     </Form.Item>
                     {isPhoneLocked && (
-                      <div style={{ fontSize: "12px", color: "#999", marginTop: "-16px", marginBottom: "8px" }}>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "#999",
+                          marginTop: "-16px",
+                          marginBottom: "8px",
+                        }}
+                      >
                         Số điện thoại đã được xác thực, không thể thay đổi
                       </div>
                     )}
                   </Col>
 
-                  <Col
-                    xs={24}
-                    sm={12}
-                  >
+                  <Col xs={24} sm={12}>
                     <Form.Item
                       label="Email"
                       name="email"
@@ -758,24 +839,29 @@ const ProfileMemberPage = () => {
                         placeholder="Nhập email"
                         size="large"
                         disabled={isEmailLocked}
-                        suffix={isEmailLocked ? <LockOutlined style={{ color: "#999" }} /> : undefined}
+                        suffix={
+                          isEmailLocked ? (
+                            <LockOutlined style={{ color: "#999" }} />
+                          ) : undefined
+                        }
                       />
                     </Form.Item>
                     {isEmailLocked && (
-                      <div style={{ fontSize: "12px", color: "#999", marginTop: "-16px", marginBottom: "8px" }}>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "#999",
+                          marginTop: "-16px",
+                          marginBottom: "8px",
+                        }}
+                      >
                         Email đã được xác thực, không thể thay đổi
                       </div>
                     )}
                   </Col>
 
-                  <Col
-                    xs={24}
-                    sm={12}
-                  >
-                    <Form.Item
-                      label="Ngày sinh"
-                      name="date_of_birth"
-                    >
+                  <Col xs={24} sm={12}>
+                    <Form.Item label="Ngày sinh" name="date_of_birth">
                       <DatePicker
                         style={{ width: "100%" }}
                         placeholder="Chọn ngày sinh"
@@ -785,18 +871,9 @@ const ProfileMemberPage = () => {
                     </Form.Item>
                   </Col>
 
-                  <Col
-                    xs={24}
-                    sm={12}
-                  >
-                    <Form.Item
-                      label="Giới tính"
-                      name="gender"
-                    >
-                      <Select
-                        placeholder="Chọn giới tính"
-                        size="large"
-                      >
+                  <Col xs={24} sm={12}>
+                    <Form.Item label="Giới tính" name="gender">
+                      <Select placeholder="Chọn giới tính" size="large">
                         <Option value="Nam">Nam</Option>
                         <Option value="Nữ">Nữ</Option>
                       </Select>
@@ -804,10 +881,7 @@ const ProfileMemberPage = () => {
                   </Col>
 
                   <Col xs={24}>
-                    <Form.Item
-                      label="Địa chỉ"
-                      name="address"
-                    >
+                    <Form.Item label="Địa chỉ" name="address">
                       <Input.TextArea
                         placeholder="Nhập địa chỉ"
                         rows={3}
@@ -846,15 +920,8 @@ const ProfileMemberPage = () => {
         </Row>
 
         {/* Quick Actions */}
-        <Row
-          gutter={[24, 24]}
-          style={{ marginTop: "24px" }}
-        >
-          <Col
-            xs={24}
-            sm={12}
-            md={6}
-          >
+        <Row gutter={[24, 24]} style={{ marginTop: "24px" }}>
+          <Col xs={24} sm={12} md={6}>
             <Card
               hoverable
               style={{
@@ -874,10 +941,7 @@ const ProfileMemberPage = () => {
                   marginBottom: "12px",
                 }}
               />
-              <Title
-                level={4}
-                style={{ margin: "0 0 8px 0" }}
-              >
+              <Title level={4} style={{ margin: "0 0 8px 0" }}>
                 Quản lý xe
               </Title>
               <div
@@ -895,11 +959,7 @@ const ProfileMemberPage = () => {
             </Card>
           </Col>
 
-          <Col
-            xs={24}
-            sm={12}
-            md={6}
-          >
+          <Col xs={24} sm={12} md={6}>
             <Card
               hoverable
               style={{
@@ -919,10 +979,7 @@ const ProfileMemberPage = () => {
                   marginBottom: "12px",
                 }}
               />
-              <Title
-                level={4}
-                style={{ margin: "0 0 8px 0" }}
-              >
+              <Title level={4} style={{ margin: "0 0 8px 0" }}>
                 Đặt lịch
               </Title>
               <div
@@ -938,11 +995,7 @@ const ProfileMemberPage = () => {
             </Card>
           </Col>
 
-          <Col
-            xs={24}
-            sm={12}
-            md={6}
-          >
+          <Col xs={24} sm={12} md={6}>
             <Card
               hoverable
               style={{
@@ -962,10 +1015,7 @@ const ProfileMemberPage = () => {
                   marginBottom: "12px",
                 }}
               />
-              <Title
-                level={4}
-                style={{ margin: "0 0 8px 0" }}
-              >
+              <Title level={4} style={{ margin: "0 0 8px 0" }}>
                 Lịch sử đặt
               </Title>
               <div
@@ -981,11 +1031,7 @@ const ProfileMemberPage = () => {
             </Card>
           </Col>
 
-          <Col
-            xs={24}
-            sm={12}
-            md={6}
-          >
+          <Col xs={24} sm={12} md={6}>
             <Card
               hoverable
               style={{
@@ -1005,10 +1051,7 @@ const ProfileMemberPage = () => {
                   marginBottom: "12px",
                 }}
               />
-              <Title
-                level={4}
-                style={{ margin: "0 0 8px 0" }}
-              >
+              <Title level={4} style={{ margin: "0 0 8px 0" }}>
                 Lịch sử mua hàng
               </Title>
               <div
@@ -1024,11 +1067,7 @@ const ProfileMemberPage = () => {
             </Card>
           </Col>
 
-          <Col
-            xs={24}
-            sm={12}
-            md={6}
-          >
+          <Col xs={24} sm={12} md={6}>
             <Card
               hoverable
               style={{
@@ -1048,10 +1087,7 @@ const ProfileMemberPage = () => {
                   marginBottom: "12px",
                 }}
               />
-              <Title
-                level={4}
-                style={{ margin: "0 0 8px 0" }}
-              >
+              <Title level={4} style={{ margin: "0 0 8px 0" }}>
                 Theo dõi quá trình chăm sóc
               </Title>
               <div

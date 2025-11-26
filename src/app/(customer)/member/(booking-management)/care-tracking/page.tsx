@@ -450,7 +450,7 @@ const CareTrackingPage = () => {
 
       setServicesWithTrackings(services);
     } catch (error) {
-      console.error("Error loading tracking data:", error);
+      console.log("Error loading tracking data:", error);
       message.error("Không thể tải thông tin quy trình chăm sóc");
       setServicesWithTrackings([]);
     } finally {

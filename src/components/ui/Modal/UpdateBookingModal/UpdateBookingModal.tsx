@@ -678,7 +678,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
         setAvailableSlots([]);
       }
     } catch (error) {
-      console.error("❌ Error loading available time ranges:", error);
+      console.log("❌ Error loading available time ranges:", error);
       setAvailableSlots([]);
       setTimeRangesData(null);
     } finally {
@@ -1112,7 +1112,7 @@ const UpdateBookingModal: React.FC<UpdateBookingModalProps> = ({
               }
               seenServiceIds.add(priceBookItem.item_id);
             } else {
-              console.error(
+              console.log(
                 "❌ Fallback match failed - cannot find service by service_name:",
                 item.service_name,
                 "- This booking item will be missing!"

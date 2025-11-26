@@ -215,7 +215,7 @@ export default function ProductsPage() {
 
         setPricingMap(newPricingMap);
       } catch (error) {
-        console.error("Failed to fetch pricing:", error);
+        console.log("Failed to fetch pricing:", error);
       } finally {
         setPricingLoading(false);
       }

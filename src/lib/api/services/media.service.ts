@@ -203,7 +203,7 @@ export class MediaService {
         throw new Error(response.data.message || "Failed to upload media");
       }
     } catch (error) {
-      console.error("Upload service media error:", error);
+      console.log("Upload service media error:", error);
       throw error;
     }
   }
@@ -388,7 +388,7 @@ export class MediaService {
 
       return imageMap;
     } catch (error) {
-      console.error("Get main images batch error:", error);
+      console.log("Get main images batch error:", error);
       throw error;
     }
   }

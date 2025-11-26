@@ -172,7 +172,7 @@ export default function CheckoutPage() {
         router.push(`/checkout/success?orderId=${result.id}`);
       }
     } catch (error: any) {
-      console.error("Checkout error:", error);
+      console.log("Checkout error:", error);
     }
   };
 

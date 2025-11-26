@@ -56,7 +56,7 @@ export async function enrichServicesWithInventory(
           serviceProductMap.set(service.service_id, []);
         }
       } catch (error) {
-        console.error(`[Inventory Check] Failed to fetch service details for ${service.service_id}:`, error);
+        console.log(`[Inventory Check] Failed to fetch service details for ${service.service_id}:`, error);
         serviceProductMap.set(service.service_id, []);
       }
     } else {
@@ -87,7 +87,7 @@ export async function enrichServicesWithInventory(
         console.log(`[Inventory Check] Product ${productId}: on_hand=${inv.on_hand}, reserved=${inv.reserved}, available=${inv.available}`);
       });
     } catch (error) {
-      console.error("[Inventory Check] Failed to fetch inventory levels:", error);
+      console.log("[Inventory Check] Failed to fetch inventory levels:", error);
       // Continue with empty inventory map (will assume no inventory available)
     }
   } else {

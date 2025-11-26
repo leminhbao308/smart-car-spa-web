@@ -52,7 +52,7 @@ export default function ProductDetailPage() {
           });
           setDisplayPrice(priceResponse.total_price || 0);
         } catch (error) {
-          console.error("Error fetching price:", error);
+          console.log("Error fetching price:", error);
           setDisplayPrice(0);
         }
       }

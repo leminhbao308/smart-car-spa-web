@@ -177,7 +177,7 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
-      console.error("Error sending message to AI:", error);
+      console.log("Error sending message to AI:", error);
       const errorMessage: MessageType = {
         id: (Date.now() + 1).toString(),
         content:

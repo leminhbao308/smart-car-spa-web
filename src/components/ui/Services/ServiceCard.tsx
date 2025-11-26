@@ -52,7 +52,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
           ]);
           setFetchedPrice(pricesMap[service.service_id] || 0);
         } catch (error) {
-          console.error("Error fetching service price:", error);
+          console.log("Error fetching service price:", error);
           setFetchedPrice(0);
         } finally {
           setFetchPriceLoading(false);

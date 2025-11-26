@@ -48,7 +48,7 @@ function OrderSuccessContent() {
           setOrderCode(parseInt(code));
         }
       } catch (e) {
-        console.error("Error parsing payment link:", e);
+        console.log("Error parsing payment link:", e);
       }
     }
   }, [paymentLink]);

@@ -884,7 +884,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           return;
         } catch (walkInError: any) {
-          console.error("Error creating walk-in booking:", walkInError);
+          console.log("Error creating walk-in booking:", walkInError);
 
           // Extract and display error message
           const errorMessage = getErrorMessage(walkInError);
@@ -1002,7 +1002,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           return;
         } catch (walkInError: any) {
-          console.error(
+          console.log(
             "Error creating walk-in booking for existing customer:",
             walkInError
           );
@@ -1112,7 +1112,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           }
           return;
         } catch (bookingError: any) {
-          console.error("Error creating slot booking:", bookingError);
+          console.log("Error creating slot booking:", bookingError);
 
           // Extract and display error message
           const errorMessage = getErrorMessage(bookingError);
@@ -1139,7 +1139,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
         selectedBranch: !!selectedBranch,
       });
     } catch (error: any) {
-      console.error("Booking submission failed:", error);
+      console.log("Booking submission failed:", error);
 
       // Debug form validation errors
       if (error && typeof error === "object" && "errorFields" in error) {

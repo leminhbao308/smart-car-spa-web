@@ -53,7 +53,7 @@ export default function ServiceDetailPage() {
           ]);
           setDisplayPrice(pricesMap[service.service_id] || 0);
         } catch (error) {
-          console.error("Error fetching service price:", error);
+          console.log("Error fetching service price:", error);
           setDisplayPrice(0);
         } finally {
           setPriceLoading(false);
