@@ -587,12 +587,12 @@ const CustomerBookingPage = () => {
       console.log("Booking submission failed:", error);
       const errorMessage = getErrorMessage(error);
       const errorDuration = 3; // Duration in seconds
-      
+
       message.error({
         content: errorMessage,
         duration: errorDuration,
       });
-      
+
       // Reload available slots after error message disappears
       setTimeout(() => {
         if (selectedBranch && selectedBay && bookingDate && totalDuration > 0) {
@@ -820,164 +820,147 @@ const CustomerBookingPage = () => {
                 </div>
               </Card>
 
-              {/* Vehicle Selection */}
-              <Card
-                size="small"
-                title="Thông tin xe"
-                style={{ marginBottom: 16 }}
-              >
-                {userVehicles.length === 0 ? (
-                  <Alert
-                    message="Bạn chưa có xe nào trong hệ thống"
-                    description={
-                      <div>
-                        <p>
-                          Vui lòng thêm thông tin xe để có thể đặt lịch chăm
-                          sóc.
-                        </p>
-                        <Button
-                          type="primary"
-                          icon={<PlusOutlined />}
-                          onClick={handleAddVehicle}
-                          style={{ marginTop: "8px" }}
-                        >
-                          Thêm xe mới
-                        </Button>
-                      </div>
-                    }
-                    type="warning"
-                    showIcon
-                  />
-                ) : (
-                  <Form.Item
-                    name="vehicleId"
-                    label="Chọn xe"
-                    rules={[{ required: true, message: "Vui lòng chọn xe" }]}
-                  >
-                    <Select
-                      placeholder="Chọn xe của bạn"
-                      loading={isLoadingVehicles}
-                      onChange={handleVehicleChange}
-                      optionLabelProp="label"
-                      notFoundContent={
-                        isLoadingVehicles
-                          ? "Đang tải danh sách xe..."
-                          : "Không tìm thấy xe phù hợp"
-                      }
-                      popupRender={(menu) => (
-                        <div>
-                          {menu}
-                          <Divider style={{ margin: "8px 0" }} />
-                          <div
-                            style={{
-                              padding: "8px 12px",
-                              cursor: "pointer",
-                              backgroundColor: "#f8f9fa",
-                              borderRadius: "4px",
-                              margin: "4px 8px",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              color: "#1890ff",
-                              fontWeight: 500,
-                            }}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleAddVehicle();
-                            }}
-                          >
-                            <PlusOutlined />
-                            Thêm xe mới
-                          </div>
-                        </div>
-                      )}
-                    >
-                      {userVehicles.map((vehicle: VehicleProfileDisplay) => (
-                        <Option
-                          key={vehicle.vehicle_id}
-                          value={vehicle.vehicle_id}
-                          label={vehicle.license_plate}
-                        >
-                          <div style={{ padding: "4px 0" }}>
-                            <div
-                              style={{
-                                fontWeight: 500,
-                                fontSize: "14px",
-                                marginBottom: "4px",
-                              }}
-                            >
-                              {vehicle.license_plate}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: "12px",
-                                color: "#666",
-                                lineHeight: "1.4",
-                              }}
-                            >
-                              <div>
-                                <span style={{ fontWeight: 500 }}>Hãng:</span>{" "}
-                                {vehicle.brand_name || "Chưa cập nhật"}
-                              </div>
-                              <div>
-                                <span style={{ fontWeight: 500 }}>Dòng:</span>{" "}
-                                {vehicle.model_name || "Chưa cập nhật"}
-                              </div>
-                              <div>
-                                <span style={{ fontWeight: 500 }}>Loại:</span>{" "}
-                                {vehicle.type_name || "Chưa cập nhật"}
-                              </div>
-                              {vehicle.distance_traveled && (
-                                <div>
-                                  <span style={{ fontWeight: 500 }}>
-                                    Số km:
-                                  </span>{" "}
-                                  {vehicle.distance_traveled.toLocaleString()}{" "}
-                                  km
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-                )}
-
-                {selectedVehicle && (
-                  <Alert
-                    message={
-                      <div>
-                        <div style={{ fontWeight: 500, marginBottom: "4px" }}>
-                          Xe đã chọn: {selectedVehicle.license_plate}
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#666" }}>
-                          {selectedVehicle.brand_name &&
-                          selectedVehicle.model_name &&
-                          selectedVehicle.type_name
-                            ? `${selectedVehicle.brand_name} ${selectedVehicle.model_name} - ${selectedVehicle.type_name}`
-                            : "Thông tin xe đang được cập nhật"}
-                          {selectedVehicle.distance_traveled && (
-                            <span>
-                              {" "}
-                              •{" "}
-                              {selectedVehicle.distance_traveled.toLocaleString()}{" "}
-                              km
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    }
-                    type="success"
-                    style={{ marginTop: 8 }}
-                  />
-                )}
-              </Card>
-
               {/* Date, Time & Branch Section */}
               <Row gutter={16}>
-                <Col span={12}>
+                  {/* Vehicle Selection */}
+                <Col span={8}>
+                  <Card
+                    size="small"
+                    title="Thông tin xe"
+                    style={{ marginBottom: 16 }}
+                  >
+                    {userVehicles.length === 0 ? (
+                      <Alert
+                        message="Bạn chưa có xe nào trong hệ thống"
+                        description={
+                          <div>
+                            <p>
+                              Vui lòng thêm thông tin xe để có thể đặt lịch chăm
+                              sóc.
+                            </p>
+                            <Button
+                              type="primary"
+                              icon={<PlusOutlined />}
+                              onClick={handleAddVehicle}
+                              style={{ marginTop: "8px" }}
+                            >
+                              Thêm xe mới
+                            </Button>
+                          </div>
+                        }
+                        type="warning"
+                        showIcon
+                      />
+                    ) : (
+                      <Form.Item
+                        name="vehicleId"
+                        label="Chọn xe"
+                        rules={[
+                          { required: true, message: "Vui lòng chọn xe" },
+                        ]}
+                      >
+                        <Select
+                          placeholder="Chọn xe của bạn"
+                          loading={isLoadingVehicles}
+                          onChange={handleVehicleChange}
+                          optionLabelProp="label"
+                          notFoundContent={
+                            isLoadingVehicles
+                              ? "Đang tải danh sách xe..."
+                              : "Không tìm thấy xe phù hợp"
+                          }
+                          popupRender={(menu) => (
+                            <div>
+                              {menu}
+                              <Divider style={{ margin: "8px 0" }} />
+                              <div
+                                style={{
+                                  padding: "8px 12px",
+                                  cursor: "pointer",
+                                  backgroundColor: "#f8f9fa",
+                                  borderRadius: "4px",
+                                  margin: "4px 8px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "8px",
+                                  color: "#1890ff",
+                                  fontWeight: 500,
+                                }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleAddVehicle();
+                                }}
+                              >
+                                <PlusOutlined />
+                                Thêm xe mới
+                              </div>
+                            </div>
+                          )}
+                        >
+                          {userVehicles.map(
+                            (vehicle: VehicleProfileDisplay) => (
+                              <Option
+                                key={vehicle.vehicle_id}
+                                value={vehicle.vehicle_id}
+                                label={vehicle.license_plate}
+                              >
+                                <div style={{ padding: "4px 0" }}>
+                                  <div
+                                    style={{
+                                      fontWeight: 500,
+                                      fontSize: "14px",
+                                      marginBottom: "4px",
+                                    }}
+                                  >
+                                    {vehicle.license_plate}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: "12px",
+                                      color: "#666",
+                                      lineHeight: "1.4",
+                                    }}
+                                  >
+                                    <div>
+                                      <span style={{ fontWeight: 500 }}>
+                                        Hãng:
+                                      </span>{" "}
+                                      {vehicle.brand_name || "Chưa cập nhật"}
+                                    </div>
+                                    <div>
+                                      <span style={{ fontWeight: 500 }}>
+                                        Dòng:
+                                      </span>{" "}
+                                      {vehicle.model_name || "Chưa cập nhật"}
+                                    </div>
+                                    <div>
+                                      <span style={{ fontWeight: 500 }}>
+                                        Loại:
+                                      </span>{" "}
+                                      {vehicle.type_name || "Chưa cập nhật"}
+                                    </div>
+                                    {vehicle.distance_traveled && (
+                                      <div>
+                                        <span style={{ fontWeight: 500 }}>
+                                          Số km:
+                                        </span>{" "}
+                                        {vehicle.distance_traveled.toLocaleString()}{" "}
+                                        km
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </Option>
+                            )
+                          )}
+                        </Select>
+                      </Form.Item>
+                    )}
+                  </Card>
+                </Col>
+                {/* Booking Date */}
+                <Col span={8}>
                   <Card
                     size="small"
                     title="Thời gian"
@@ -994,7 +977,6 @@ const CustomerBookingPage = () => {
                         style={{ width: "100%" }}
                         placeholder="Chọn ngày"
                         disabledDate={(current) => {
-                          // TEMPORARILY DISABLED FOR TESTING - Remove this comment and uncomment below logic when done testing
                           return false; // Allow all dates for testing
 
                           // Original logic (commented out for testing):
@@ -1024,8 +1006,8 @@ const CustomerBookingPage = () => {
                     </Form.Item>
                   </Card>
                 </Col>
-
-                <Col span={12}>
+                {/* Chi nhánh */}
+                <Col span={8}>
                   <Card
                     size="small"
                     title="Chi nhánh"
@@ -1081,15 +1063,6 @@ const CustomerBookingPage = () => {
                         ))}
                       </Select>
                     </Form.Item>
-
-                    {selectedBranch && (
-                      <Alert
-                        message={`Chi nhánh: ${selectedBranch.branch_name}`}
-                        description={`${selectedBranch.address} • ${selectedBranch.phone}`}
-                        type="info"
-                        style={{ marginTop: 8 }}
-                      />
-                    )}
                   </Card>
                 </Col>
               </Row>
@@ -1193,41 +1166,6 @@ const CustomerBookingPage = () => {
 
                 {selectedItems.length > 0 && (
                   <div style={{ marginTop: 16 }}>
-                    <Text strong>
-                      Dịch vụ đã chọn ({selectedItems.length}):
-                    </Text>
-                    <div style={{ marginTop: 8 }}>
-                      {selectedItems
-                        .filter((item) => {
-                          // Double-check: only show items that are in availableServices
-                          if (!selectedBranch || !servicesWithInventory)
-                            return true;
-                          const availableServiceIds = new Set(
-                            servicesWithInventory.map((s) => s.service_id)
-                          );
-                          if (!item.service) return false;
-                          return availableServiceIds.has(
-                            item.service.service_id
-                          );
-                        })
-                        .map((item, index) => (
-                          <div
-                            key={`${item.item_id}-${index}`}
-                            style={{
-                              display: "inline-block",
-                              padding: "4px 8px",
-                              margin: "2px",
-                              backgroundColor: "#e6f7ff",
-                              borderRadius: "4px",
-                              fontSize: "12px",
-                            }}
-                          >
-                            {item.item_name} -{" "}
-                            {item.fixed_price?.toLocaleString()} VNĐ
-                          </div>
-                        ))}
-                    </div>
-                    <Divider />
                     <Row gutter={16}>
                       <Col span={12}>
                         <div
@@ -1250,7 +1188,7 @@ const CustomerBookingPage = () => {
                             </Text>
                           </div>
                           <Text type="secondary" style={{ fontSize: 12 }}>
-                            Tổng giá
+                            Tổng tiền
                           </Text>
                         </div>
                       </Col>
@@ -1275,7 +1213,7 @@ const CustomerBookingPage = () => {
                             </Text>
                           </div>
                           <Text type="secondary" style={{ fontSize: 12 }}>
-                            Thời gian dự kiến
+                            Thời gian hoàn thành dự kiến
                           </Text>
                         </div>
                       </Col>
@@ -1287,7 +1225,7 @@ const CustomerBookingPage = () => {
               {/* Slot Selection Section */}
               <Card
                 size="small"
-                title="Chọn Khu Vực Chăm Sóc Và Thời Gian"
+                title="Chọn Khu Vực Chăm Sóc Và Giờ Chăm Sóc"
                 style={{ marginBottom: 16 }}
               >
                 {!selectedBranch || !bookingDate ? (
@@ -1301,7 +1239,7 @@ const CustomerBookingPage = () => {
                   <div>
                     <Row gutter={16} style={{ marginBottom: 16 }}>
                       <Col span={24}>
-                        <Text strong>Chọn Service Bay cho đặt lịch:</Text>
+                        <Text strong>Chọn khu vực chăm sóc:</Text>
                         <div style={{ marginTop: 8 }}>
                           {isLoadingServiceBays ? (
                             <Spin />
@@ -1347,7 +1285,7 @@ const CustomerBookingPage = () => {
                       <div>
                         <Divider />
                         <Text strong>
-                          Chọn Thời Gian Chăm Sóc Trong {selectedBay.bay_name}:
+                          Chọn Giờ Chăm Sóc:
                         </Text>
                         <div style={{ marginTop: 8 }}>
                           {loadingSlots ? (
@@ -1386,7 +1324,7 @@ const CustomerBookingPage = () => {
                                   selectedSlot.startTime === slot.time;
 
                                 return (
-                                  <Col span={4} key={`${slot.time}-${index}`}>
+                                  <Col span={2} key={`${slot.time}-${index}`}>
                                     <Card
                                       size="small"
                                       hoverable={canSelect}
@@ -1414,20 +1352,6 @@ const CustomerBookingPage = () => {
                                     >
                                       <div
                                         style={{
-                                          color: canSelect
-                                            ? "#52c41a"
-                                            : "#ff4d4f",
-                                          fontSize: 16,
-                                        }}
-                                      >
-                                        {canSelect ? (
-                                          <CheckCircleOutlined />
-                                        ) : (
-                                          <CloseCircleOutlined />
-                                        )}
-                                      </div>
-                                      <div
-                                        style={{
                                           marginTop: 4,
                                           fontSize: 12,
                                           fontWeight: 500,
@@ -1436,17 +1360,6 @@ const CustomerBookingPage = () => {
                                       >
                                         {slot.time}
                                       </div>
-                                      {!canSelect && (
-                                        <div
-                                          style={{
-                                            fontSize: 8,
-                                            color: "#ff4d4f",
-                                            marginTop: 2,
-                                          }}
-                                        >
-                                          Không khả dụng
-                                        </div>
-                                      )}
                                     </Card>
                                   </Col>
                                 );
