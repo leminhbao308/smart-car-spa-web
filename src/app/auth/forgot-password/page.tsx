@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Form, Button, Typography, App } from "antd";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import CustomerHeader from "@/components/layout/Header/customer.header";
 import {
   AuthIntegrationService,
@@ -21,6 +22,7 @@ const { Title, Text } = Typography;
 
 const ForgotPasswordPage: React.FC = () => {
   const { message } = App.useApp();
+  const router = useRouter();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // 1: Phone, 2: OTP, 3: New Password, 4: Success
@@ -161,8 +163,12 @@ const ForgotPasswordPage: React.FC = () => {
       // Call API to reset password
       await AuthService.forgotPassword(request);
 
-      setCurrentStep(4);
-      message.success("Đặt lại mật khẩu thành công!");
+      message.success("Đặt lại mật khẩu thành công! Vui lòng đăng nhập lại.");
+      
+      // All tokens are revoked on backend, redirect to login after a short delay
+      setTimeout(() => {
+        router.push("/auth/login");
+      }, 2000);
     } catch (error: unknown) {
       console.log("Error resetting password:", error);
       const errorMessage =

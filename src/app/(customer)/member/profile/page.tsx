@@ -44,6 +44,7 @@ import { UserService } from "@/lib/api/services/user.service";
 import { AuthService } from "@/lib/api/services/auth.service";
 import { useQueryClient } from "@tanstack/react-query";
 import { TokenManager } from "@/lib/api/utils/token.manager";
+import { useCustomerReload } from "@/hooks/useWebSocket";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -71,12 +72,37 @@ const ProfileMemberPage = () => {
   } = useUser(authUser?.user_id || null);
   const { message } = App.useApp();
 
+  // Check if email and phone are locked (already set and cannot be changed)
+  const isEmailLocked = React.useMemo(
+    () => Boolean(user?.email && user.email.trim().length > 0),
+    [user?.email]
+  );
+  const isPhoneLocked = React.useMemo(
+    () => Boolean(user?.phone_number && user.phone_number.trim().length > 0),
+    [user?.phone_number]
+  );
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push("/auth/login");
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // WebSocket: Subscribe to customer reload notifications for realtime updates
+  // MỤC ĐÍCH: Tự động reload user data khi có thay đổi từ backend (update profile, upload avatar)
+  // LÝ DO: Khi admin hoặc user khác cập nhật thông tin user, page này sẽ tự động cập nhật
+  useCustomerReload(() => {
+    if (isAuthenticated && authUser?.user_id) {
+      console.log('[ProfilePage] WebSocket: Reloading user data due to notification...');
+      refetchUser();
+      // Also invalidate related queries to ensure fresh data
+      queryClient.invalidateQueries({
+        queryKey: ["users", "detail", authUser.user_id],
+      });
+      queryClient.invalidateQueries({ queryKey: ["auth", "user"] });
+    }
+  });
 
   // Set form values when user data loads
   useEffect(() => {
@@ -462,9 +488,12 @@ const ProfileMemberPage = () => {
       // Call API to change password
       await AuthService.changePassword(request);
 
-      message.success("Đổi mật khẩu thành công!");
-      setIsChangePasswordModalOpen(false);
-      passwordForm.resetFields();
+      message.success("Đổi mật khẩu thành công! Vui lòng đăng nhập lại.");
+      
+      // Logout user and redirect to login
+      // All tokens are revoked on backend, so we need to clear local storage and redirect
+      await AuthService.logout();
+      router.push("/auth/login");
     } catch (error: unknown) {
       console.log("Error changing password:", error);
       const errorMessage =
@@ -689,7 +718,7 @@ const ProfileMemberPage = () => {
                       name="phone_number"
                       rules={[
                         {
-                          required: true,
+                          required: !isPhoneLocked,
                           message: "Vui lòng nhập số điện thoại!",
                         },
                         {
@@ -702,8 +731,15 @@ const ProfileMemberPage = () => {
                         prefix={<PhoneOutlined />}
                         placeholder="Nhập số điện thoại"
                         size="large"
+                        disabled={isPhoneLocked}
+                        suffix={isPhoneLocked ? <LockOutlined style={{ color: "#999" }} /> : undefined}
                       />
                     </Form.Item>
+                    {isPhoneLocked && (
+                      <div style={{ fontSize: "12px", color: "#999", marginTop: "-16px", marginBottom: "8px" }}>
+                        Số điện thoại đã được xác thực, không thể thay đổi
+                      </div>
+                    )}
                   </Col>
 
                   <Col
@@ -721,8 +757,15 @@ const ProfileMemberPage = () => {
                         prefix={<MailOutlined />}
                         placeholder="Nhập email"
                         size="large"
+                        disabled={isEmailLocked}
+                        suffix={isEmailLocked ? <LockOutlined style={{ color: "#999" }} /> : undefined}
                       />
                     </Form.Item>
+                    {isEmailLocked && (
+                      <div style={{ fontSize: "12px", color: "#999", marginTop: "-16px", marginBottom: "8px" }}>
+                        Email đã được xác thực, không thể thay đổi
+                      </div>
+                    )}
                   </Col>
 
                   <Col

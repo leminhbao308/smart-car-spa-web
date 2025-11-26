@@ -13,6 +13,7 @@ import {CarOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PhoneOutlined} f
 import {Promotion, UserManagementInfo} from "@/lib/api/types";
 import { useUserManagement } from "@/lib/api/hooks/useUserManagement";
 import { calculateAge } from "@/components/utils/helper/member.helper";
+import { useCustomerReload } from "@/hooks/useWebSocket";
 
 const MembersPage = () => {
   const { message } = App.useApp();
@@ -45,6 +46,14 @@ const MembersPage = () => {
     // Set filter to only show CUSTOMER users
     setFilters({ userType: "CUSTOMER" });
   }, [setFilters]);
+
+  // WebSocket: Subscribe to customer reload notifications for realtime updates
+  // MỤC ĐÍCH: Tự động reload danh sách khách hàng khi có thay đổi từ backend (tạo/cập nhật/xóa user, upload avatar)
+  // LÝ DO: Khi member hoặc admin khác cập nhật thông tin user, page này sẽ tự động cập nhật
+  useCustomerReload(() => {
+    console.log('[MembersPage] WebSocket: Reloading customers due to notification...');
+    refreshUsers();
+  });
 
   // Handle error display
   useEffect(() => {
