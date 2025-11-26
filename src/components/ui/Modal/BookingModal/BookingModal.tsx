@@ -286,18 +286,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
   const servicesForInventoryCheck = useMemo(() => {
     return allPriceBookServices
       .map((item) => item.service)
-      .filter((service): service is NonNullable<typeof service> => service !== undefined);
+      .filter(
+        (service): service is NonNullable<typeof service> =>
+          service !== undefined
+      );
   }, [allPriceBookServices]);
 
   // Check inventory for services when branch is selected
-  const {
-    data: servicesWithInventory,
-    isLoading: isLoadingInventory,
-  } = useServicesWithInventory({
-    services: servicesForInventoryCheck,
-    branchId: selectedBranch?.branch_id || null,
-    enabled: !!selectedBranch && servicesForInventoryCheck.length > 0,
-  });
+  const { data: servicesWithInventory, isLoading: isLoadingInventory } =
+    useServicesWithInventory({
+      services: servicesForInventoryCheck,
+      branchId: selectedBranch?.branch_id || null,
+      enabled: !!selectedBranch && servicesForInventoryCheck.length > 0,
+    });
 
   // Filter PriceBookItems to only show services with enough inventory
   const availableServices = useMemo(() => {
@@ -334,27 +335,39 @@ const BookingModal: React.FC<BookingModalProps> = ({
     // If a service is NOT in availableServiceIds but was checked, it failed (should be hidden)
     return allPriceBookServices.filter((item) => {
       if (!item.service) return false;
-      
+
       // Check if this service was in the inventory check list
-      const wasChecked = servicesForInventoryCheck.some(s => s.service_id === item.service!.service_id);
-      
+      const wasChecked = servicesForInventoryCheck.some(
+        (s) => s.service_id === item.service!.service_id
+      );
+
       if (!wasChecked) {
         // Service was not in the check list - this shouldn't happen if logic is correct
         // But to be safe, hide it (we can't verify its inventory status)
-        console.warn(`[BookingModal] Service ${item.service.service_name} (${item.service.service_id}) was not in inventory check list`);
+        console.warn(
+          `[BookingModal] Service ${item.service.service_name} (${item.service.service_id}) was not in inventory check list`
+        );
         return false;
       }
-      
+
       // Service was checked - only show if it passed inventory check (is in availableServiceIds)
       const isAvailable = availableServiceIds.has(item.service.service_id);
-      
+
       if (!isAvailable) {
-        console.log(`[BookingModal] Hiding service ${item.service.service_name} - failed inventory check`);
+        console.log(
+          `[BookingModal] Hiding service ${item.service.service_name} - failed inventory check`
+        );
       }
-      
+
       return isAvailable;
     });
-  }, [allPriceBookServices, selectedBranch, servicesWithInventory, isLoadingInventory, servicesForInventoryCheck]);
+  }, [
+    allPriceBookServices,
+    selectedBranch,
+    servicesWithInventory,
+    isLoadingInventory,
+    servicesForInventoryCheck,
+  ]);
 
   // Filter selectedItems to remove services that are no longer available when branch/inventory changes
   useEffect(() => {
@@ -370,14 +383,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
     // Filter selectedItems to only keep services that are still available
     const filteredSelectedItems = selectedItems.filter((item) => {
       if (!item.service) return false;
-      
+
       // Check if service is still available in the new branch
       const isStillAvailable = availableServiceIds.has(item.service.service_id);
-      
+
       if (!isStillAvailable) {
-        console.log(`[BookingModal] Removing service ${item.service.service_name} from selectedItems - no longer available in branch ${selectedBranch.branch_name}`);
+        console.log(
+          `[BookingModal] Removing service ${item.service.service_name} from selectedItems - no longer available in branch ${selectedBranch.branch_name}`
+        );
       }
-      
+
       return isStillAvailable;
     });
 
@@ -393,7 +408,13 @@ const BookingModal: React.FC<BookingModalProps> = ({
     // Note: form is stable (same reference) so including it won't cause re-renders
     // calculateTotals is also stable (empty deps) but defined later, so we exclude it to avoid hoisting issues
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranch, servicesWithInventory, isLoadingInventory, selectedItems, form]);
+  }, [
+    selectedBranch,
+    servicesWithInventory,
+    isLoadingInventory,
+    selectedItems,
+    form,
+  ]);
 
   // Load available time ranges from API and convert to slots
   const loadAvailableSlots = useCallback(async () => {
@@ -409,7 +430,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       const timeRangesResponse =
         await BookingScheduleService.getAvailableTimeRanges({
           bay_id: selectedBay.bay_id,
-        date: bookingDate,
+          date: bookingDate,
           duration_minutes: totalDuration,
         });
 
@@ -425,7 +446,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           timeRangesResponse.working_hours,
           totalDuration,
           30 // 30 minutes interval
-      );
+        );
         setAvailableSlots(slots);
       } else {
         setAvailableSlots([]);
@@ -688,7 +709,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
         console.log(" selectedSlot state updated, will trigger re-render");
       } else {
-        console.log(" Cannot select slot - canSelectSlot returned false or no bay selected"
+        console.log(
+          " Cannot select slot - canSelectSlot returned false or no bay selected"
         );
       }
     },
@@ -730,7 +752,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
         return;
       }
 
-      console.log(" Customer validation passed, proceeding with booking creation..."
+      console.log(
+        " Customer validation passed, proceeding with booking creation..."
       );
       console.log(" Booking type conditions:", {
         isNewCustomer,
@@ -808,7 +831,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             selectedBranch.branch_id
           );
           console.log("Walk-in booking created:", walkInResponse);
-          
+
           // Show success notification
           notification.success({
             message: "Đặt lịch thành công!",
@@ -816,10 +839,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
             placement: "topRight",
             duration: 2,
           });
-          
+
           // Wait a bit before closing modal
           await new Promise((resolve) => setTimeout(resolve, 1500));
-          
+
           onOk(walkInResponse);
           // Refresh table data
           if (onRefresh) {
@@ -828,7 +851,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           return;
         } catch (walkInError: any) {
           console.error("Error creating walk-in booking:", walkInError);
-          
+
           // Extract and display error message
           const errorMessage = getErrorMessage(walkInError);
           notification.error({
@@ -837,7 +860,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             placement: "topRight",
             duration: 5,
           });
-          
+
           // Don't call onOk when there's an error - let user retry
           return;
         }
@@ -926,7 +949,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             "Walk-in booking created for existing customer:",
             walkInResponse
           );
-          
+
           // Show success notification
           notification.success({
             message: "Đặt lịch thành công!",
@@ -934,10 +957,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
             placement: "topRight",
             duration: 2,
           });
-          
+
           // Wait a bit before closing modal
           await new Promise((resolve) => setTimeout(resolve, 1500));
-          
+
           onOk(walkInResponse);
           // Refresh table data
           if (onRefresh) {
@@ -949,7 +972,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             "Error creating walk-in booking for existing customer:",
             walkInError
           );
-          
+
           // Extract and display error message
           const errorMessage = getErrorMessage(walkInError);
           notification.error({
@@ -958,7 +981,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             placement: "topRight",
             duration: 5,
           });
-          
+
           // Don't call onOk when there's an error - let user retry
           return;
         }
@@ -1031,13 +1054,11 @@ const BookingModal: React.FC<BookingModalProps> = ({
             notes: values.notes || "",
           };
 
-          console.log(" Creating regular booking with request:",
-            createRequest
-          );
+          console.log(" Creating regular booking with request:", createRequest);
           const createResponse =
             await createBookingWithSlotMutation.mutateAsync(createRequest);
           console.log(" Booking creation response:", createResponse);
-          
+
           // Show success notification
           const bookingCode = createResponse?.booking_code || "N/A";
           notification.success({
@@ -1046,10 +1067,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
             placement: "topRight",
             duration: 2,
           });
-          
+
           // Wait a bit before closing modal
           await new Promise((resolve) => setTimeout(resolve, 1500));
-          
+
           onOk(createRequest);
           // Refresh table data
           if (onRefresh) {
@@ -1058,7 +1079,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           return;
         } catch (bookingError: any) {
           console.error("Error creating slot booking:", bookingError);
-          
+
           // Extract and display error message
           const errorMessage = getErrorMessage(bookingError);
           notification.error({
@@ -1067,7 +1088,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             placement: "topRight",
             duration: 5,
           });
-          
+
           // Don't call onOk when there's an error - let user retry
           return;
         }
@@ -1105,7 +1126,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             warnings: field.warnings,
           });
         });
-        
+
         // Show validation error notification
         const firstError = errorFields[0]?.errors?.[0];
         if (firstError) {
@@ -1260,7 +1281,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 <Input
                   placeholder="Nhập biển số xe"
                   onChange={(e) => {
-                    console.log(" New vehicle license plate changed:",
+                    console.log(
+                      " New vehicle license plate changed:",
                       e.target.value
                     );
                     setNewVehicle((prev) => ({
@@ -1610,15 +1632,18 @@ const BookingModal: React.FC<BookingModalProps> = ({
             style={{ marginBottom: 16 }}
           />
         )}
-        {selectedBranch && !isLoadingInventory && availableServices.length === 0 && allPriceBookServices.length > 0 && (
-          <Alert
-            message="Không có dịch vụ khả dụng"
-            description="Tất cả dịch vụ tại chi nhánh này đều thiếu hàng. Vui lòng chọn chi nhánh khác hoặc liên hệ quản lý để nhập hàng."
-            type="warning"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-        )}
+        {selectedBranch &&
+          !isLoadingInventory &&
+          availableServices.length === 0 &&
+          allPriceBookServices.length > 0 && (
+            <Alert
+              message="Không có dịch vụ khả dụng"
+              description="Tất cả dịch vụ tại chi nhánh này đều thiếu hàng. Vui lòng chọn chi nhánh khác hoặc liên hệ quản lý để nhập hàng."
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
         <Form.Item
           name="services"
           label="Dịch vụ chăm sóc xe"
@@ -1683,29 +1708,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
         {selectedItems.length > 0 && (
           <div style={{ marginTop: 16 }}>
-            <Text strong>Dịch vụ đã chọn ({selectedItems.length}):</Text>
-            <div style={{ marginTop: 8 }}>
-              {selectedItems
-                .filter((item) => {
-                  // Double-check: only show items that are in availableServices
-                  if (!selectedBranch || !servicesWithInventory) return true;
-                  const availableServiceIds = new Set(
-                    servicesWithInventory.map((s) => s.service_id)
-                  );
-                  if (!item.service) return false;
-                  return availableServiceIds.has(item.service.service_id);
-                })
-                .map((item, index) => (
-                <Tag
-                  key={`${item.item_id}-${index}`}
-                  color="blue"
-                  style={{ marginBottom: 4 }}
-                >
-                  {item.item_name} - {item.fixed_price?.toLocaleString()} VNĐ
-                </Tag>
-              ))}
-            </div>
-            <Divider />
             <Row gutter={16}>
               <Col span={12}>
                 <div
@@ -1823,15 +1825,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 ))}
               </Select>
             </Form.Item>
-
-            {selectedBranch && (
-              <Alert
-                message={`Chi nhánh: ${selectedBranch.branch_name}`}
-                description={`${selectedBranch.address} • ${selectedBranch.phone}`}
-                type="info"
-                style={{ marginTop: 8 }}
-              />
-            )}
           </Card>
         </Col>
       </Row>
@@ -1961,7 +1954,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               bayRecommendation?.queue &&
                               Array.isArray(bayRecommendation.queue)
                             ) {
-                              console.log(" Restoring original queue from recommendation"
+                              console.log(
+                                " Restoring original queue from recommendation"
                               );
                               setQueueItems(
                                 bayRecommendation.queue as unknown as typeof queueItems
@@ -1969,14 +1963,16 @@ const BookingModal: React.FC<BookingModalProps> = ({
                             } else if (
                               bayRecommendation?.recommended_bay?.bay_id
                             ) {
-                              console.log(" Loading queue for recommended bay:",
+                              console.log(
+                                " Loading queue for recommended bay:",
                                 bayRecommendation.recommended_bay.bay_id
                               );
                               const queue = await getBayQueue(
                                 bayRecommendation.recommended_bay.bay_id,
                                 bookingDate
                               );
-                              console.log(" Queue loaded for recommended bay:",
+                              console.log(
+                                " Queue loaded for recommended bay:",
                                 queue
                               );
                               setQueueItems(
@@ -1984,7 +1980,8 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               );
                             }
                           } catch (error) {
-                            console.log(" Error loading queue for recommended bay:",
+                            console.log(
+                              " Error loading queue for recommended bay:",
                               error
                             );
                             setQueueItems([]);
@@ -2056,9 +2053,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               queue as unknown as typeof queueItems
                             );
                           } catch (error) {
-                            console.log(" Error loading queue for bay:",
-                              error
-                            );
+                            console.log(" Error loading queue for bay:", error);
                             setQueueItems([]);
                           } finally {
                             setIsLoadingQueue(false);
@@ -2409,9 +2404,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                               queue as unknown as typeof queueItems
                             );
                           } catch (error) {
-                            console.log(" Error loading queue for bay:",
-                              error
-                            );
+                            console.log(" Error loading queue for bay:", error);
                             setQueueItems([]);
                           } finally {
                             setIsLoadingQueue(false);
@@ -2501,14 +2494,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   ? [
                       {
                         key: "booking",
-                        label: <span>📅 Đặt lịch ({serviceBays.length})</span>,
+                        label: <span>Đặt lịch</span>,
                         children: (
                           <div>
                             <Row gutter={16} style={{ marginBottom: 16 }}>
                               <Col span={24}>
-                                <Text strong>
-                                  Chọn Service Bay cho đặt lịch:
-                                </Text>
+                                <Text strong>Chọn khu vực chăm sóc:</Text>
                                 <div style={{ marginTop: 8 }}>
                                   {isLoadingServiceBays ? (
                                     <Spin />
@@ -2557,10 +2548,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                             {selectedBay && (
                               <div>
                                 <Divider />
-                                <Text strong>
-                                  Chọn Thời Gian Chăm Sóc Trong{" "}
-                                  {selectedBay.bay_name}:
-                                </Text>
+                                <Text strong>Chọn giờ chăm sóc:</Text>
                                 <div style={{ marginTop: 8 }}>
                                   {loadingSlots ? (
                                     <div
@@ -2595,7 +2583,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                                           selectedSlot?.startTime === slot.time;
                                         return (
                                           <Col
-                                            span={4}
+                                            span={2}
                                             key={`${slot.time}-${index}`}
                                           >
                                             <Tooltip
@@ -2633,20 +2621,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
                                               >
                                                 <div
                                                   style={{
-                                                    color: canSelect
-                                                      ? "#52c41a"
-                                                      : "#ff4d4f",
-                                                    fontSize: 16,
-                                                  }}
-                                                >
-                                                  {canSelect ? (
-                                                    <CheckCircleOutlined />
-                                                  ) : (
-                                                    <CloseCircleOutlined />
-                                                  )}
-                                                </div>
-                                                <div
-                                                  style={{
                                                     marginTop: 4,
                                                     fontSize: 12,
                                                     fontWeight: 500,
@@ -2657,17 +2631,6 @@ const BookingModal: React.FC<BookingModalProps> = ({
                                                 >
                                                   {slot.time}
                                                 </div>
-                                                {!canSelect && (
-                                                  <div
-                                                    style={{
-                                                      fontSize: 8,
-                                                      color: "#ff4d4f",
-                                                      marginTop: 2,
-                                                    }}
-                                                  >
-                                                    Không khả dụng
-                                                  </div>
-                                                )}
                                               </Card>
                                             </Tooltip>
                                           </Col>
@@ -2743,101 +2706,101 @@ const BookingModal: React.FC<BookingModalProps> = ({
         onCancel={onCancel}
         width={1200}
         footer={[
-        <Button key="cancel" onClick={onCancel}>
-          Hủy
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          loading={loading || createBookingWithSlotMutation.isPending}
-          onClick={handleSubmit}
-          disabled={(() => {
-            console.log(
-              "🔍 Button disabled check called at:",
-              new Date().toISOString()
-            );
-            console.log(" Current selectedSlot state:", selectedSlot);
+          <Button key="cancel" onClick={onCancel}>
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={loading || createBookingWithSlotMutation.isPending}
+            onClick={handleSubmit}
+            disabled={(() => {
+              console.log(
+                "🔍 Button disabled check called at:",
+                new Date().toISOString()
+              );
+              console.log(" Current selectedSlot state:", selectedSlot);
 
-            // Check if new customer has all required fields
-            const newCustomerValid =
-              customerType === "new"
-                ? newCustomer?.full_name &&
-                  newCustomer?.phone_number &&
-                  // Email is optional, not required
-                  newVehicle?.license_plate &&
-                  newVehicle?.brand_name &&
-                  newVehicle?.model_name &&
-                  newVehicle?.type_name &&
-                  newVehicle?.color
-                : true;
-
-            const isDisabled =
-              !selectedBranch ||
-              selectedItems.length === 0 ||
-              (customerType === "existing" &&
-                (!selectedCustomer || !selectedVehicle)) ||
-              (customerType === "new" && !newCustomerValid) ||
-              // For walk-in booking (onsite processing), need selectedWalkInBay
-              (customerType === "new" && !selectedWalkInBay) ||
-              // For existing customer, need either selectedWalkInBay OR selectedSlot
-              (customerType === "existing" &&
-                !selectedWalkInBay &&
-                !selectedSlot);
-
-            console.log(" Button disabled check:", {
-              selectedBranch: !!selectedBranch,
-              selectedItems: selectedItems.length,
-              customerType,
-              selectedCustomer: !!selectedCustomer,
-              selectedVehicle: !!selectedVehicle,
-              newCustomer: !!newCustomer,
-              newVehicle: !!newVehicle,
-              newCustomerValid,
-              selectedWalkInBay: !!selectedWalkInBay,
-              selectedSlot: !!selectedSlot,
-              selectedSlotDetails: selectedSlot,
-              isDisabled,
-              // Debug the specific condition
-              existingCustomerCondition:
-                customerType === "existing" &&
-                !selectedWalkInBay &&
-                !selectedSlot,
-              walkInCondition: customerType === "new" && !selectedWalkInBay,
-              newCustomerDetails:
+              // Check if new customer has all required fields
+              const newCustomerValid =
                 customerType === "new"
-                  ? {
-                      name: newCustomer?.full_name,
-                      phone: newCustomer?.phone_number,
-                      email: newCustomer?.email,
-                      plate: newVehicle?.license_plate,
-                      brand: newVehicle?.brand_name,
-                      model: newVehicle?.model_name,
-                      type: newVehicle?.type_name,
-                      color: newVehicle?.color,
-                    }
-                  : null,
-            });
+                  ? newCustomer?.full_name &&
+                    newCustomer?.phone_number &&
+                    // Email is optional, not required
+                    newVehicle?.license_plate &&
+                    newVehicle?.brand_name &&
+                    newVehicle?.model_name &&
+                    newVehicle?.type_name &&
+                    newVehicle?.color
+                  : true;
 
-            return isDisabled;
-          })()}
-        >
-          Đặt lịch
-        </Button>,
-      ]}
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        preserve={false}
-        initialValues={{
-          priority: "NORMAL",
-          bookingDate: dayjs(), // Set default date to today
-        }}
+              const isDisabled =
+                !selectedBranch ||
+                selectedItems.length === 0 ||
+                (customerType === "existing" &&
+                  (!selectedCustomer || !selectedVehicle)) ||
+                (customerType === "new" && !newCustomerValid) ||
+                // For walk-in booking (onsite processing), need selectedWalkInBay
+                (customerType === "new" && !selectedWalkInBay) ||
+                // For existing customer, need either selectedWalkInBay OR selectedSlot
+                (customerType === "existing" &&
+                  !selectedWalkInBay &&
+                  !selectedSlot);
+
+              console.log(" Button disabled check:", {
+                selectedBranch: !!selectedBranch,
+                selectedItems: selectedItems.length,
+                customerType,
+                selectedCustomer: !!selectedCustomer,
+                selectedVehicle: !!selectedVehicle,
+                newCustomer: !!newCustomer,
+                newVehicle: !!newVehicle,
+                newCustomerValid,
+                selectedWalkInBay: !!selectedWalkInBay,
+                selectedSlot: !!selectedSlot,
+                selectedSlotDetails: selectedSlot,
+                isDisabled,
+                // Debug the specific condition
+                existingCustomerCondition:
+                  customerType === "existing" &&
+                  !selectedWalkInBay &&
+                  !selectedSlot,
+                walkInCondition: customerType === "new" && !selectedWalkInBay,
+                newCustomerDetails:
+                  customerType === "new"
+                    ? {
+                        name: newCustomer?.full_name,
+                        phone: newCustomer?.phone_number,
+                        email: newCustomer?.email,
+                        plate: newVehicle?.license_plate,
+                        brand: newVehicle?.brand_name,
+                        model: newVehicle?.model_name,
+                        type: newVehicle?.type_name,
+                        color: newVehicle?.color,
+                      }
+                    : null,
+              });
+
+              return isDisabled;
+            })()}
+          >
+            Đặt lịch
+          </Button>,
+        ]}
       >
-        {/* All Content */}
-        {renderAllContent()}
-      </Form>
-    </Modal>
+        <Form
+          form={form}
+          layout="vertical"
+          preserve={false}
+          initialValues={{
+            priority: "NORMAL",
+            bookingDate: dayjs(), // Set default date to today
+          }}
+        >
+          {/* All Content */}
+          {renderAllContent()}
+        </Form>
+      </Modal>
     </App>
   );
 };
