@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { VehicleService } from "../services/vehicle.service";
 import {
@@ -9,7 +10,7 @@ import {
   CreateVehicleModelRequest,
   UpdateVehicleModelRequest,
 } from "../types";
-import { message } from "antd";
+import { App } from "antd";
 
 /**
  * Hook for vehicle models management
@@ -45,22 +46,51 @@ export const useVehicleModels = (params?: GetAllVehicleModelsRequest) => {
 /**
  * Hook for vehicle models dropdown data
  * Uses React Query for caching and automatic refetching
+ * @param brandId Optional brand ID to filter models
+ * @param typeId Optional type ID to filter models
  */
-export const useVehicleModelsDropdown = () => {
+export const useVehicleModelsDropdown = (brandId?: string, typeId?: string) => {
+  const isEnabled = !!(brandId && typeId);
+  
   const {
     data: dropdownData = [],
     isLoading: loading,
     error,
     refetch,
   } = useQuery({
-    queryKey: ["vehicle-models", "dropdown"],
+    queryKey: ["vehicle-models", "dropdown", brandId, typeId],
     queryFn: async () => {
-      const response = await VehicleService.getVehicleModelsForDropdown();
+      console.log("🔄 Loading vehicle models with filters:", { brandId, typeId, isEnabled });
+      if (!brandId || !typeId) {
+        console.warn("⚠️ Missing brandId or typeId, returning empty array");
+        return [];
+      }
+      const response = await VehicleService.getVehicleModelsForDropdown(
+        brandId,
+        typeId
+      );
+      console.log("✅ Vehicle models response:", {
+        count: response.data?.length || 0,
+        models: response.data?.map(m => m.model_name) || [],
+      });
       return response.data;
     },
-    staleTime: 10 * 60 * 1000, // 10 minutes - dropdown data changes rarely
+    enabled: isEnabled, // Only fetch when both brandId and typeId are provided
+    staleTime: 0, // Always refetch when filters change
     gcTime: 30 * 60 * 1000, // 30 minutes
   });
+
+  // Debug log when enabled state changes
+  React.useEffect(() => {
+    console.log("🔍 useVehicleModelsDropdown state:", {
+      brandId,
+      typeId,
+      isEnabled,
+      modelsCount: dropdownData.length,
+      loading,
+      hasError: !!error,
+    });
+  }, [brandId, typeId, isEnabled, dropdownData.length, loading, error]);
 
   return {
     dropdownData,
@@ -104,6 +134,7 @@ export const useVehicleModel = (modelId: string | null) => {
  */
 export const useCreateVehicleModel = () => {
   const queryClient = useQueryClient();
+  const { message } = App.useApp();
 
   return useMutation({
     mutationFn: async (data: CreateVehicleModelRequest) => {
@@ -128,6 +159,7 @@ export const useCreateVehicleModel = () => {
  */
 export const useUpdateVehicleModel = () => {
   const queryClient = useQueryClient();
+  const { message } = App.useApp();
 
   return useMutation({
     mutationFn: async ({ modelId, data }: { modelId: string; data: UpdateVehicleModelRequest }) => {
@@ -154,6 +186,7 @@ export const useUpdateVehicleModel = () => {
  */
 export const useDeleteVehicleModel = () => {
   const queryClient = useQueryClient();
+  const { message } = App.useApp();
 
   return useMutation({
     mutationFn: async (modelId: string) => {

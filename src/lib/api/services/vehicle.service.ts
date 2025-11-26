@@ -464,11 +464,29 @@ export class VehicleService {
 
   /**
    * Get vehicle models for dropdown
+   * @param brandId Optional brand ID to filter models
+   * @param typeId Optional type ID to filter models
    */
-  static async getVehicleModelsForDropdown(): Promise<VehicleModelDropdownResponse> {
+  static async getVehicleModelsForDropdown(
+    brandId?: string,
+    typeId?: string
+  ): Promise<VehicleModelDropdownResponse> {
     try {
-      const response = await apiClient.get("/vehicles/models/dropdown");
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      if (brandId) {
+        queryParams.append("brand_id", brandId);
+      }
+      if (typeId) {
+        queryParams.append("type_id", typeId);
+      }
+
+      const url = `/vehicles/models/dropdown${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
+      console.log("Fetching vehicle models from URL:", url);
+      console.log("Query params:", { brandId, typeId });
+      const response = await apiClient.get(url);
       console.log("Vehicle models dropdown API response:", response);
+      console.log("Models count:", response.data?.data?.length || 0);
 
       if (response.data.success && response.data.data) {
         return response.data;

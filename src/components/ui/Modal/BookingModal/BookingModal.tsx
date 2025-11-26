@@ -51,6 +51,11 @@ import { ServiceBay } from "@/lib/api/types/service-bay.types";
 import { BookingType } from "@/lib/api/types/booking.types";
 import { useServicesWithInventory } from "@/lib/api/hooks/useServicesWithInventory";
 import { getErrorMessage } from "@/components/utils/helper/error.helper";
+import {
+  useVehicleBrandsDropdown,
+  useVehicleTypesDropdown,
+  useVehicleModelsDropdown,
+} from "@/lib/api/hooks";
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -101,17 +106,46 @@ const BookingModal: React.FC<BookingModalProps> = ({
   } | null>(null);
   const [newVehicle, setNewVehicle] = useState<{
     license_plate: string;
+    brand_id?: string;
     brand_name: string;
-    model_name: string;
+    type_id?: string;
     type_name: string;
+    model_id?: string;
+    model_name: string;
     color: string;
     year?: number;
   } | null>(null);
+
+  // Vehicle filter states for new customer
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
 
   // Track customer type (existing vs new)
   const [customerType, setCustomerType] = useState<"existing" | "new">(
     "existing"
   );
+
+  // Load vehicle brands, types, and models
+  const { dropdownData: brands, loading: loadingBrands } =
+    useVehicleBrandsDropdown();
+  const { dropdownData: types, loading: loadingTypes } =
+    useVehicleTypesDropdown();
+  const { dropdownData: models, loading: loadingModels } =
+    useVehicleModelsDropdown(selectedBrandId || undefined, selectedTypeId || undefined);
+
+  // Debug: Log filter states
+  useEffect(() => {
+    if (customerType === "new") {
+      console.log("Vehicle filter states:", {
+        selectedBrandId,
+        selectedTypeId,
+        selectedModelId,
+        modelsCount: models.length,
+        loadingModels,
+      });
+    }
+  }, [selectedBrandId, selectedTypeId, selectedModelId, models.length, loadingModels, customerType]);
   const [selectedBranch, setSelectedBranch] = useState<BranchDisplay | null>(
     null
   );
@@ -1251,7 +1285,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
               {newCustomer && (
                 <Alert
-                  message={`Khách hàng mới: ${newCustomer.full_name}`}
+                  message={`Khách vãng lai: ${newCustomer.full_name}`}
                   description={`SĐT: ${newCustomer.phone_number}${
                     newCustomer.email ? ` • Email: ${newCustomer.email}` : ""
                   }`}
@@ -1306,56 +1340,46 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     rules={[
                       {
                         required: customerType === "new",
-                        message: "Vui lòng nhập hãng xe",
+                        message: "Vui lòng chọn hãng xe",
                       },
                     ]}
                   >
-                    <Input
-                      placeholder="VD: Toyota, Honda"
-                      onChange={(e) => {
+                    <Select
+                      placeholder="Chọn hãng xe"
+                      loading={loadingBrands}
+                      allowClear
+                      value={selectedBrandId || undefined}
+                      onChange={(value) => {
+                        console.log("🔵 Brand changed:", value);
+                        setSelectedBrandId(value || null);
+                        setSelectedModelId(null); // Reset model when brand changes
+                        const selectedBrand = brands.find(
+                          (b) => b.brand_id === value
+                        );
+                        console.log("🔵 Selected brand:", selectedBrand);
                         setNewVehicle((prev) => ({
                           ...prev,
                           license_plate: prev?.license_plate || "",
-                          brand_name: e.target.value,
-                          model_name: prev?.model_name || "",
+                          brand_id: value || undefined,
+                          brand_name: selectedBrand?.brand_name || "",
+                          model_id: undefined,
+                          model_name: "",
+                          type_id: prev?.type_id || undefined,
                           type_name: prev?.type_name || "",
                           color: prev?.color || "",
                           year: prev?.year || new Date().getFullYear(),
                         }));
+                        form.setFieldsValue({ newVehicleModel: undefined });
                       }}
-                    />
+                    >
+                      {brands.map((brand) => (
+                        <Option key={brand.brand_id} value={brand.brand_id}>
+                          {brand.brand_name}
+                        </Option>
+                      ))}
+                    </Select>
                   </Form.Item>
                 </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="newVehicleModel"
-                    label="Model xe"
-                    rules={[
-                      {
-                        required: customerType === "new",
-                        message: "Vui lòng nhập model xe",
-                      },
-                    ]}
-                  >
-                    <Input
-                      placeholder="VD: Camry, Civic"
-                      onChange={(e) => {
-                        setNewVehicle((prev) => ({
-                          ...prev,
-                          license_plate: prev?.license_plate || "",
-                          brand_name: prev?.brand_name || "",
-                          model_name: e.target.value,
-                          type_name: prev?.type_name || "",
-                          color: prev?.color || "",
-                          year: prev?.year || new Date().getFullYear(),
-                        }));
-                      }}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={8}>
                 <Col span={12}>
                   <Form.Item
                     name="newVehicleType"
@@ -1363,24 +1387,105 @@ const BookingModal: React.FC<BookingModalProps> = ({
                     rules={[
                       {
                         required: customerType === "new",
-                        message: "Vui lòng nhập loại xe",
+                        message: "Vui lòng chọn loại xe",
                       },
                     ]}
                   >
-                    <Input
-                      placeholder="VD: Sedan, SUV"
-                      onChange={(e) => {
+                    <Select
+                      placeholder="Chọn loại xe"
+                      loading={loadingTypes}
+                      allowClear
+                      value={selectedTypeId || undefined}
+                      onChange={(value) => {
+                        console.log("🟢 Type changed:", value);
+                        setSelectedTypeId(value || null);
+                        setSelectedModelId(null); // Reset model when type changes
+                        const selectedType = types.find(
+                          (t) => t.type_id === value
+                        );
+                        console.log("🟢 Selected type:", selectedType);
                         setNewVehicle((prev) => ({
                           ...prev,
                           license_plate: prev?.license_plate || "",
+                          brand_id: prev?.brand_id || undefined,
                           brand_name: prev?.brand_name || "",
-                          model_name: prev?.model_name || "",
-                          type_name: e.target.value,
+                          model_id: undefined,
+                          model_name: "",
+                          type_id: value || undefined,
+                          type_name: selectedType?.type_name || "",
+                          color: prev?.color || "",
+                          year: prev?.year || new Date().getFullYear(),
+                        }));
+                        form.setFieldsValue({ newVehicleModel: undefined });
+                      }}
+                    >
+                      {types.map((type) => (
+                        <Option key={type.type_id} value={type.type_id}>
+                          {type.type_name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={8}>
+                <Col span={12}>
+                  <Form.Item
+                    name="newVehicleModel"
+                    label="Model xe"
+                    rules={[
+                      {
+                        required: customerType === "new",
+                        message: "Vui lòng chọn model xe",
+                      },
+                    ]}
+                  >
+                    <Select
+                      placeholder={
+                        !selectedBrandId || !selectedTypeId
+                          ? "Vui lòng chọn Hãng xe và Loại xe trước"
+                          : "Chọn model xe"
+                      }
+                      disabled={!selectedBrandId || !selectedTypeId}
+                      loading={loadingModels}
+                      allowClear
+                      value={selectedModelId || undefined}
+                      onChange={(value) => {
+                        console.log("🟡 Model changed:", value);
+                        setSelectedModelId(value || null);
+                        const selectedModel = models.find(
+                          (m) => m.model_id === value
+                        );
+                        console.log("🟡 Selected model:", selectedModel);
+                        setNewVehicle((prev) => ({
+                          ...prev,
+                          license_plate: prev?.license_plate || "",
+                          brand_id: prev?.brand_id || undefined,
+                          brand_name: prev?.brand_name || "",
+                          model_id: value || undefined,
+                          model_name: selectedModel?.model_name || "",
+                          type_id: prev?.type_id || undefined,
+                          type_name: prev?.type_name || "",
                           color: prev?.color || "",
                           year: prev?.year || new Date().getFullYear(),
                         }));
                       }}
-                    />
+                    >
+                      {models.map((model) => (
+                        <Option key={model.model_id} value={model.model_id}>
+                          {model.model_name}
+                        </Option>
+                      ))}
+                    </Select>
+                    {selectedBrandId &&
+                      selectedTypeId &&
+                      models.length === 0 &&
+                      !loadingModels && (
+                        <div style={{ color: "#ff4d4f", fontSize: "12px", marginTop: 4 }}>
+                          Không tìm thấy model nào phù hợp với Hãng xe và Loại xe đã chọn
+                        </div>
+                      )}
                   </Form.Item>
                 </Col>
                 <Col span={12}>
@@ -1444,6 +1549,10 @@ const BookingModal: React.FC<BookingModalProps> = ({
             setSelectedVehicle(null);
             setNewCustomer(null);
             setNewVehicle(null);
+            // Reset vehicle filter states
+            setSelectedBrandId(null);
+            setSelectedTypeId(null);
+            setSelectedModelId(null);
 
             // Reset slot selection when switching customer types
             setSelectedBay(null);
@@ -1470,7 +1579,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           items={[
             {
               key: "existing",
-              label: <span>👤 Khách hàng có sẵn</span>,
+              label: <span>Khách hàng thành viên</span>,
               children: (
                 <div>
                   <Row gutter={16}>
@@ -1611,7 +1720,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
             },
             {
               key: "new",
-              label: <span>➕ Khách hàng mới</span>,
+              label: <span>Khách vãng lai</span>,
               children: renderNewCustomerForm(),
             },
           ]}

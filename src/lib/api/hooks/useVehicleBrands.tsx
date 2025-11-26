@@ -14,7 +14,7 @@ import {
   CreateVehicleBrandRequest,
   UpdateVehicleBrandRequest,
 } from "../types";
-import { message } from "antd";
+import { App } from "antd";
 
 /**
  * Hook for vehicle brands dropdown data
@@ -109,6 +109,7 @@ export const useVehicleBrand = (brandId: string | null) => {
  */
 export const useCreateVehicleBrand = () => {
   const queryClient = useQueryClient();
+  const { message } = App.useApp();
 
   return useMutation({
     mutationFn: async (data: CreateVehicleBrandRequest) => {
@@ -133,6 +134,7 @@ export const useCreateVehicleBrand = () => {
  */
 export const useUpdateVehicleBrand = () => {
   const queryClient = useQueryClient();
+  const { message } = App.useApp();
 
   return useMutation({
     mutationFn: async ({ brandId, data }: { brandId: string; data: UpdateVehicleBrandRequest }) => {
@@ -159,6 +161,7 @@ export const useUpdateVehicleBrand = () => {
  */
 export const useDeleteVehicleBrand = () => {
   const queryClient = useQueryClient();
+  const { message } = App.useApp();
 
   return useMutation({
     mutationFn: async (brandId: string) => {

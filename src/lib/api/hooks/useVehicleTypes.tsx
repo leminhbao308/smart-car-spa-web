@@ -14,7 +14,7 @@ import {
   CreateVehicleTypeRequest,
   UpdateVehicleTypeRequest,
 } from "../types";
-import { message } from "antd";
+import { App } from "antd";
 
 /**
  * Hook for vehicle types dropdown data
@@ -109,6 +109,7 @@ export const useVehicleType = (typeId: string | null) => {
  */
 export const useCreateVehicleType = () => {
   const queryClient = useQueryClient();
+  const { message } = App.useApp();
 
   return useMutation({
     mutationFn: async (data: CreateVehicleTypeRequest) => {
@@ -133,6 +134,7 @@ export const useCreateVehicleType = () => {
  */
 export const useUpdateVehicleType = () => {
   const queryClient = useQueryClient();
+  const { message } = App.useApp();
 
   return useMutation({
     mutationFn: async ({ typeId, data }: { typeId: string; data: UpdateVehicleTypeRequest }) => {
@@ -159,6 +161,7 @@ export const useUpdateVehicleType = () => {
  */
 export const useDeleteVehicleType = () => {
   const queryClient = useQueryClient();
+  const { message } = App.useApp();
 
   return useMutation({
     mutationFn: async (typeId: string) => {
