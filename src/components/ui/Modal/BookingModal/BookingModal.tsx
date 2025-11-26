@@ -55,30 +55,6 @@ import { getErrorMessage } from "@/components/utils/helper/error.helper";
 const { Option } = Select;
 const { Text } = Typography;
 
-// Slot status colors
-const slotStatusColors = {
-  AVAILABLE: "#52c41a",
-  BOOKED: "#ff4d4f",
-  IN_PROGRESS: "#1890ff",
-  COMPLETED: "#52c41a",
-  CANCELLED: "#8c8c8c",
-  BLOCKED: "#faad14",
-  MAINTENANCE: "#722ed1",
-  UNAVAILABLE: "#d9d9d9",
-};
-
-// Slot status icons
-const slotStatusIcons = {
-  AVAILABLE: <CheckCircleOutlined />,
-  BOOKED: <CloseCircleOutlined />,
-  IN_PROGRESS: <ClockCircleOutlined />,
-  COMPLETED: <CheckCircleOutlined />,
-  CANCELLED: <CloseCircleOutlined />,
-  BLOCKED: <ExclamationCircleOutlined />,
-  MAINTENANCE: <SettingOutlined />,
-  UNAVAILABLE: <CloseCircleOutlined />,
-};
-
 interface BookingModalProps {
   open: boolean;
   onCancel: () => void;

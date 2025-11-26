@@ -1,5 +1,4 @@
 "use client";
-
 import React from "react";
 import {
   Modal,
@@ -31,7 +30,11 @@ import {
   ToolOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { BookingInfoDto, BookingStatus, BookingType } from "@/lib/api/types/booking.types";
+import {
+  BookingInfoDto,
+  BookingStatus,
+  BookingType,
+} from "@/lib/api/types/booking.types";
 
 const { Text, Title } = Typography;
 
@@ -163,22 +166,6 @@ const CustomerBookingDetailModal: React.FC<CustomerBookingDetailModalProps> = ({
         <Text>{minutes ? `${minutes} phút` : "-"}</Text>
       ),
     },
-    {
-      title: "Trạng thái",
-      dataIndex: "item_status",
-      key: "item_status",
-      align: "center" as const,
-      render: (status: string) => {
-        if (!status) return "-";
-        const color =
-          status === "COMPLETED"
-            ? "green"
-            : status === "IN_PROGRESS"
-            ? "blue"
-            : "default";
-        return <Tag color={color}>{status}</Tag>;
-      },
-    },
   ];
 
   return (
@@ -222,8 +209,14 @@ const CustomerBookingDetailModal: React.FC<CustomerBookingDetailModalProps> = ({
               </Text>
             </Descriptions.Item>
             <Descriptions.Item label="Loại đặt lịch">
-              <Tag color={booking.booking_type === BookingType.SCHEDULED ? "blue" : "green"}>
-                {getBookingTypeText(booking.booking_type)}
+              <Tag
+                color={
+                  booking.booking_code.split("-")[0] === "BK" ? "blue" : "green"
+                }
+              >
+                {booking.booking_code.split("-")[0] === "BK"
+                  ? "Booking-Online"
+                  : "Walk-In"}
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Trạng thái">
@@ -406,9 +399,7 @@ const CustomerBookingDetailModal: React.FC<CustomerBookingDetailModalProps> = ({
                 <Space>
                   <ClockCircleOutlined />
                   <Text>
-                    {dayjs(booking.scheduled_end_at).format(
-                      "DD/MM/YYYY HH:mm"
-                    )}
+                    {dayjs(booking.scheduled_end_at).format("DD/MM/YYYY HH:mm")}
                   </Text>
                 </Space>
               </Descriptions.Item>
@@ -430,9 +421,7 @@ const CustomerBookingDetailModal: React.FC<CustomerBookingDetailModalProps> = ({
                 <Space>
                   <CarOutlined />
                   <Text>
-                    {dayjs(booking.actual_start_at).format(
-                      "DD/MM/YYYY HH:mm"
-                    )}
+                    {dayjs(booking.actual_start_at).format("DD/MM/YYYY HH:mm")}
                   </Text>
                 </Space>
               </Descriptions.Item>
@@ -477,8 +466,10 @@ const CustomerBookingDetailModal: React.FC<CustomerBookingDetailModalProps> = ({
               columns={bookingItemsColumns}
               dataSource={booking.booking_items}
               rowKey={(record) =>
-                record.booking_item_id || 
-                `item-${record.service_id || ''}-${record.display_order || ''}-${record.service_name || ''}`
+                record.booking_item_id ||
+                `item-${record.service_id || ""}-${
+                  record.display_order || ""
+                }-${record.service_name || ""}`
               }
               pagination={false}
               size="small"
@@ -503,7 +494,10 @@ const CustomerBookingDetailModal: React.FC<CustomerBookingDetailModalProps> = ({
                   <Descriptions.Item label="Tổng tiền">
                     <Space>
                       <DollarOutlined style={{ color: "#52c41a" }} />
-                      <Text strong style={{ fontSize: "16px", color: "#52c41a" }}>
+                      <Text
+                        strong
+                        style={{ fontSize: "16px", color: "#52c41a" }}
+                      >
                         {booking.total_price.toLocaleString("vi-VN")}{" "}
                         {booking.currency || "VND"}
                       </Text>
@@ -586,4 +580,3 @@ const CustomerBookingDetailModal: React.FC<CustomerBookingDetailModalProps> = ({
 };
 
 export default CustomerBookingDetailModal;
-

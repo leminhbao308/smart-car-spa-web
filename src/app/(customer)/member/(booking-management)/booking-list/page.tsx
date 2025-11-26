@@ -433,7 +433,6 @@ const CustomerBookingListPage = () => {
     const start = (pagination.current - 1) * pagination.pageSize;
     const end = start + pagination.pageSize;
     return filteredBookings.slice(start, end);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredBookings, pagination.current, pagination.pageSize]);
 
   // Cancel booking mutation
@@ -506,18 +505,6 @@ const CustomerBookingListPage = () => {
     const now = dayjs();
     const isFutureBooking = bookingDate.isAfter(now);
 
-    // Debug logging
-    console.log(" Cancel booking check:", {
-      bookingType: booking.booking_type,
-      bookingCode: booking.booking_code,
-      status: booking.status,
-      scheduledStartAt: booking.scheduled_start_at,
-      bookingDate: bookingDate.format("YYYY-MM-DD HH:mm"),
-      now: now.format("YYYY-MM-DD HH:mm"),
-      isFutureBooking,
-      hoursUntilBooking: bookingDate.diff(now, "hour"),
-    });
-
     if (!isFutureBooking) {
       console.log(" Booking cannot be cancelled - booking time has passed");
       return false;
@@ -556,7 +543,6 @@ const CustomerBookingListPage = () => {
   // Calculate statistics from filtered bookings
   const totalBookings = filteredBookings.length;
   const upcomingBookings = filteredBookings.filter(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (booking: any) => dayjs(booking.scheduled_start_at).isAfter(dayjs())
   ).length;
   const completedBookings = filteredBookings.filter(
@@ -645,7 +631,6 @@ const CustomerBookingListPage = () => {
   };
 
   // Table columns
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const columns: any[] = [
     {
       title: "STT",
