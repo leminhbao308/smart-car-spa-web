@@ -32,8 +32,10 @@ import {
   useBookings,
   useCompleteService,
   useStartService,
+  bookingKeys,
 } from "@/lib/api/hooks/useBooking";
-import { useBookingReload } from "@/hooks/useWebSocket";
+import { useBookingEvents } from "@/hooks/useWebSocket";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCustomersDropdown } from "@/lib/api/hooks/useUsers";
 import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
 import { useBranches } from "@/lib/api/hooks/useBranches";
@@ -135,6 +137,7 @@ const BookingsPage = () => {
   >(undefined);
 
   const { notification } = App.useApp();
+  const queryClient = useQueryClient();
 
   // API hooks - Load all data for client-side filtering
   const {
@@ -146,13 +149,41 @@ const BookingsPage = () => {
   const completeServiceMutation = useCompleteService();
   const startServiceMutation = useStartService();
 
-  // WebSocket: Subscribe to booking reload notifications
-  // MỤC ĐÍCH: Tự động reload booking list khi có thay đổi từ backend
-  // LÝ DO: Khi admin khác tạo/cập nhật/xóa booking, page này sẽ tự động reload
-  // FLOW: Backend gửi signal "RELOAD_BOOKING" → hook nhận signal → gọi refetchBookings()
-  useBookingReload(() => {
-    console.log('[BookingsPage] WebSocket: Reloading bookings due to notification...');
-    refetchBookings();
+  // WebSocket: Subscribe to booking events for realtime updates
+  // MỤC ĐÍCH: Tự động cập nhật booking list khi có thay đổi từ backend
+  // LÝ DO: Khi mobile app hoặc admin khác tạo/cập nhật/xóa booking, page này sẽ tự động cập nhật
+  useBookingEvents({
+    onBookingCreated: (event) => {
+      if (event.booking_data) {
+        // Add new booking to list
+        const filterParam = { page: 0, size: 1000 };
+        queryClient.setQueryData(
+          bookingKeys.list(filterParam),
+          (old: BookingInfoDto[] | undefined) => {
+            // Check if booking already exists (avoid duplicates)
+            const exists = old?.some(b => b.booking_id === event.booking_id);
+            if (exists) {
+              return old;
+            }
+            // Add new booking to the beginning of the list
+            return [event.booking_data!, ...(old || [])];
+          }
+        );
+        
+        notification.success({
+          message: 'Booking mới đã được tạo',
+          description: event.message || `Booking ${event.booking_code} đã được tạo`,
+        });
+      } else {
+        // If no booking_data, refetch to get latest data
+        refetchBookings();
+      }
+    },
+    onReload: () => {
+      // Fallback: reload all bookings when receiving reload signal
+      console.log('[BookingsPage] WebSocket: Reloading bookings due to notification...');
+      refetchBookings();
+    },
   });
 
   // Fetch additional data for enrichment

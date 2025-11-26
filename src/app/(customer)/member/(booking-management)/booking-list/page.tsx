@@ -278,6 +278,31 @@ const CustomerBookingListPage = () => {
 
   // WebSocket: Subscribe to booking events for realtime updates
   useBookingEvents({
+    onBookingCreated: (event) => {
+      if (event.booking_data) {
+        // Add new booking to list if it belongs to current user
+        const newBooking = event.booking_data;
+        if (newBooking.customer_id === user?.user_id) {
+          queryClient.setQueryData(['bookings', 'customer', user?.user_id], (old: BookingInfoDto[] | undefined) => {
+            // Check if booking already exists (avoid duplicates)
+            const exists = old?.some(b => b.booking_id === event.booking_id);
+            if (exists) {
+              return old;
+            }
+            // Add new booking to the beginning of the list
+            return [newBooking, ...(old || [])];
+          });
+          
+          notification.success({
+            message: 'Đặt lịch thành công',
+            description: event.message || `Booking ${event.booking_code} đã được tạo`,
+          });
+        }
+      } else {
+        // If no booking_data, refetch to get latest data
+        refetch();
+      }
+    },
     onBookingUpdated: (event) => {
       if (event.booking_data) {
         // Update booking in list
