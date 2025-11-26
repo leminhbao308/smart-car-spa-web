@@ -21,6 +21,7 @@ import { useVehicleProfiles } from "@/lib/api/hooks/useVehicleProfiles";
 import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
 import CreateVehicleProfileModal from "@/components/ui/Modal/CarProfileModal/CreateVehicleProfileModal";
 import EditVehicleProfileModal from "@/components/ui/Modal/CarProfileModal/EditVehicleProfileModal";
+import { useVehicleProfileReload } from "@/hooks/useWebSocket";
 
 const { Title, Text } = Typography;
 
@@ -55,6 +56,14 @@ const VehiclePage = () => {
       router.push("/auth/login");
     }
   }, [authLoading, isAuthenticated, router]);
+
+  // WebSocket: Subscribe to vehicle profile reload notifications for realtime updates
+  // MỤC ĐÍCH: Tự động reload danh sách xe khi có thay đổi từ backend (tạo/cập nhật/xóa)
+  // LÝ DO: Khi admin hoặc user khác tạo/cập nhật/xóa xe, page này sẽ tự động cập nhật
+  useVehicleProfileReload(() => {
+    console.log('[VehiclePage] WebSocket: Reloading vehicle profiles due to notification...');
+    refreshProfiles();
+  });
 
   // Handle add vehicle modal
   const handleAddVehicle = () => {

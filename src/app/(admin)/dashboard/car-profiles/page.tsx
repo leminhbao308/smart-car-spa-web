@@ -20,6 +20,7 @@ import {
   CreateVehicleProfileRequest,
   UpdateVehicleProfileRequest,
 } from "@/lib/api/types/vehicle-profile.types";
+import {useVehicleProfileReload} from "@/hooks/useWebSocket";
 
 const CarProfilesPage = () => {
   const {showModal} = useConfirmationModalContext();
@@ -53,6 +54,14 @@ const CarProfilesPage = () => {
   const [selectedData, setSelectedData] =
     useState<VehicleProfileDisplay | null>(null);
   const [editData, setEditData] = useState<VehicleProfileDisplay | null>(null);
+
+  // WebSocket: Subscribe to vehicle profile reload notifications for realtime updates
+  // MỤC ĐÍCH: Tự động reload danh sách xe khi có thay đổi từ backend (tạo/cập nhật/xóa)
+  // LÝ DO: Khi member hoặc admin khác tạo/cập nhật/xóa xe, page này sẽ tự động cập nhật
+  useVehicleProfileReload(() => {
+    console.log('[CarProfilesPage] WebSocket: Reloading vehicle profiles due to notification...');
+    refreshProfiles();
+  });
 
   // Định nghĩa columns
   const columns: ColumnsType<VehicleProfileDisplay> = [

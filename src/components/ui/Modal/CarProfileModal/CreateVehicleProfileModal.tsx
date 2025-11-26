@@ -24,9 +24,8 @@ const { Title, Text } = Typography;
 import { CreateVehicleProfileRequest } from "@/lib/api/types/vehicle-profile.types";
 import { useVehicleTypesDropdown } from "@/lib/api/hooks/useVehicleTypes";
 import { useVehicleBrandsDropdown } from "@/lib/api/hooks/useVehicleBrands";
-import { VehicleBrandSelect } from "@/components/ui/VehicleBrandSelect";
-import { VehicleTypeSelect } from "@/components/ui/VehicleTypeSelect";
-import { VehicleModelSelect } from "@/components/ui/VehicleModelSelect";
+import { useVehicleModelsDropdown } from "@/lib/api/hooks/useVehicleModels";
+import { Select } from "antd";
 import { CustomerSelect } from "@/components/ui/CustomerSelect";
 import { CustomerModal } from "@/components/ui/Modal";
 import {
@@ -59,18 +58,29 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
     (() => void) | null
   >(null);
 
+  // Vehicle filter states for cascade filtering
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+
   // fetch user by ownerId and set to form if ownerId is provided
   const { user: owner, loading: isOwnerLoading } = useUser(ownerId || null);
 
   // Get dropdown data from APIs
-  const { loading: typesLoading, error: typesError } =
-    useVehicleTypesDropdown();
-  const { loading: brandsLoading, error: brandsError } =
+  const { dropdownData: brands, loading: brandsLoading, error: brandsError } =
     useVehicleBrandsDropdown();
+  const { dropdownData: types, loading: typesLoading, error: typesError } =
+    useVehicleTypesDropdown();
+  const { dropdownData: models, loading: loadingModels } =
+    useVehicleModelsDropdown(selectedBrandId || undefined, selectedTypeId || undefined);
 
   useEffect(() => {
     if (visible) {
       form.resetFields();
+      // Reset filter states
+      setSelectedBrandId(null);
+      setSelectedTypeId(null);
+      setSelectedModelId(null);
       // Set default values
       form.setFieldsValue({
         distance_traveled: 0,
@@ -492,15 +502,32 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
                 name="vehicle_brand_id"
                 rules={[{ required: true, message: "Vui lòng chọn hãng xe!" }]}
               >
-                <VehicleBrandSelect
+                <Select
                   placeholder="Chọn hãng xe"
                   loading={brandsLoading}
+                  allowClear
                   size="large"
+                  value={selectedBrandId || undefined}
+                  onChange={(value) => {
+                    setSelectedBrandId(value || null);
+                    setSelectedTypeId(null); // Reset type when brand changes
+                    setSelectedModelId(null); // Reset model when brand changes
+                    form.setFieldsValue({
+                      vehicle_type_id: undefined,
+                      vehicle_model_id: undefined,
+                    });
+                  }}
                   style={{
                     borderRadius: 8,
                     border: "1px solid #d1d5db",
                   }}
-                />
+                >
+                  {brands.map((brand) => (
+                    <Select.Option key={brand.brand_id} value={brand.brand_id}>
+                      {brand.brand_name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
 
@@ -514,15 +541,30 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
                 name="vehicle_type_id"
                 rules={[{ required: true, message: "Vui lòng chọn loại xe!" }]}
               >
-                <VehicleTypeSelect
+                <Select
                   placeholder="Chọn loại xe"
                   loading={typesLoading}
+                  allowClear
                   size="large"
+                  value={selectedTypeId || undefined}
+                  onChange={(value) => {
+                    setSelectedTypeId(value || null);
+                    setSelectedModelId(null); // Reset model when type changes
+                    form.setFieldsValue({
+                      vehicle_model_id: undefined,
+                    });
+                  }}
                   style={{
                     borderRadius: 8,
                     border: "1px solid #d1d5db",
                   }}
-                />
+                >
+                  {types.map((type) => (
+                    <Select.Option key={type.type_id} value={type.type_id}>
+                      {type.type_name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -538,14 +580,43 @@ const CreateVehicleProfileModal: React.FC<CreateVehicleProfileModalProps> = ({
                 name="vehicle_model_id"
                 rules={[{ required: true, message: "Vui lòng chọn dòng xe!" }]}
               >
-                <VehicleModelSelect
-                  placeholder="Chọn dòng xe"
+                <Select
+                  placeholder={
+                    !selectedBrandId || !selectedTypeId
+                      ? "Vui lòng chọn Hãng xe và Loại xe trước"
+                      : "Chọn dòng xe"
+                  }
+                  disabled={!selectedBrandId || !selectedTypeId}
+                  loading={loadingModels}
+                  allowClear
                   size="large"
+                  value={selectedModelId || undefined}
+                  onChange={(value) => {
+                    setSelectedModelId(value || null);
+                  }}
                   style={{
                     borderRadius: 8,
                     border: "1px solid #d1d5db",
                   }}
-                />
+                  notFoundContent={
+                    loadingModels ? (
+                      <Spin size="small" />
+                    ) : models.length === 0 && !loadingModels ? (
+                      <div style={{ color: "#ff4d4f", fontSize: "12px" }}>
+                        Không tìm thấy model nào phù hợp với Hãng xe và Loại xe
+                        đã chọn
+                      </div>
+                    ) : (
+                      "Không tìm thấy dòng xe"
+                    )
+                  }
+                >
+                  {models.map((model) => (
+                    <Select.Option key={model.model_id} value={model.model_id}>
+                      {model.model_name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>

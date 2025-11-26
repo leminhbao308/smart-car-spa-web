@@ -35,6 +35,7 @@ import {
 import {useVehicleBrandsDropdown} from "@/lib/api/hooks/useVehicleBrands";
 import {useVehicleModelsDropdown} from "@/lib/api/hooks/useVehicleModels";
 import {useVehicleTypesDropdown} from "@/lib/api/hooks/useVehicleTypes";
+import {useVehicleProfileReload} from "@/hooks/useWebSocket";
 
 const {Text} = Typography;
 const {Option} = Select;
@@ -107,6 +108,16 @@ const CustomerVehiclesModal: React.FC<CustomerVehiclesModalProps> = ({
   useEffect(() => {
     refreshData();
   }, [visible, customerData]);
+
+  // WebSocket: Subscribe to vehicle profile reload notifications for realtime updates
+  // MỤC ĐÍCH: Tự động reload danh sách xe khi có thay đổi từ backend (tạo/cập nhật/xóa)
+  // LÝ DO: Khi admin hoặc member tạo/cập nhật/xóa xe, modal này sẽ tự động cập nhật
+  useVehicleProfileReload(() => {
+    if (visible && customerData) {
+      console.log('[CustomerVehiclesModal] WebSocket: Reloading vehicle profiles due to notification...');
+      refreshData();
+    }
+  });
 
   // Columns definition
   const columns: ColumnsType<VehicleProfileDisplay> = [

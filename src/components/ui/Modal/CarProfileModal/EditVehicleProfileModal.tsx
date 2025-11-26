@@ -1,5 +1,4 @@
 ﻿"use client";
-
 import React, { useState, useEffect } from "react";
 import {
   Modal,
@@ -14,6 +13,7 @@ import {
   App,
   Input,
   Switch,
+  Select,
 } from "antd";
 import {
   CarOutlined,
@@ -28,9 +28,7 @@ const { Title, Text } = Typography;
 import { VehicleProfileDisplay } from "@/lib/api/types/vehicle-profile.types";
 import { useVehicleTypesDropdown } from "@/lib/api/hooks/useVehicleTypes";
 import { useVehicleBrandsDropdown } from "@/lib/api/hooks/useVehicleBrands";
-import { VehicleBrandSelect } from "@/components/ui/VehicleBrandSelect";
-import { VehicleTypeSelect } from "@/components/ui/VehicleTypeSelect";
-import { VehicleModelSelect } from "@/components/ui/VehicleModelSelect";
+import { useVehicleModelsDropdown } from "@/lib/api/hooks/useVehicleModels";
 import { CustomerSelect } from "@/components/ui/CustomerSelect";
 import { VehicleProfileService } from "@/lib/api/services/vehicle-profile.service";
 import {
@@ -61,17 +59,39 @@ const EditVehicleProfileModalInner: React.FC<EditVehicleProfileModalProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const { message } = App.useApp();
 
+  // Vehicle filter states for cascade filtering
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+
   // fetch user by ownerId and set to form if ownerId is provided
   const { user: owner, loading: isOwnerLoading } = useUser(ownerId || null);
 
   // Get dropdown data from APIs
-  const { loading: typesLoading, error: typesError } =
-    useVehicleTypesDropdown();
-  const { loading: brandsLoading, error: brandsError } =
-    useVehicleBrandsDropdown();
+  const {
+    dropdownData: brands,
+    loading: brandsLoading,
+    error: brandsError,
+  } = useVehicleBrandsDropdown();
+  const {
+    dropdownData: types,
+    loading: typesLoading,
+    error: typesError,
+  } = useVehicleTypesDropdown();
+  const { dropdownData: models, loading: loadingModels } =
+    useVehicleModelsDropdown(
+      selectedBrandId || undefined,
+      selectedTypeId || undefined
+    );
 
+  // Initialize filter states from profile when modal opens
   useEffect(() => {
     if (visible && profile) {
+      // Set filter states from profile
+      setSelectedBrandId(profile.vehicle_brand_id || null);
+      setSelectedTypeId(profile.vehicle_type_id || null);
+      setSelectedModelId(profile.vehicle_model_id || null);
+
       // Set form values from profile data
       form.setFieldsValue({
         license_plate: profile.license_plate,
@@ -90,6 +110,11 @@ const EditVehicleProfileModalInner: React.FC<EditVehicleProfileModalProps> = ({
           owner_id: ownerId,
         });
       }
+    } else if (visible && !profile) {
+      // Reset filter states when modal opens without profile
+      setSelectedBrandId(null);
+      setSelectedTypeId(null);
+      setSelectedModelId(null);
     }
   }, [visible, profile, form, ownerId]);
 
@@ -501,15 +526,32 @@ const EditVehicleProfileModalInner: React.FC<EditVehicleProfileModalProps> = ({
                 name="vehicle_brand_id"
                 rules={[{ required: true, message: "Vui lòng chọn hãng xe!" }]}
               >
-                <VehicleBrandSelect
+                <Select
                   placeholder="Chọn hãng xe"
                   loading={brandsLoading}
+                  allowClear
                   size="large"
+                  value={selectedBrandId || undefined}
+                  onChange={(value) => {
+                    setSelectedBrandId(value || null);
+                    setSelectedTypeId(null); // Reset type when brand changes
+                    setSelectedModelId(null); // Reset model when brand changes
+                    form.setFieldsValue({
+                      vehicle_type_id: undefined,
+                      vehicle_model_id: undefined,
+                    });
+                  }}
                   style={{
                     borderRadius: 8,
                     border: "1px solid #d1d5db",
                   }}
-                />
+                >
+                  {brands.map((brand) => (
+                    <Select.Option key={brand.brand_id} value={brand.brand_id}>
+                      {brand.brand_name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
 
@@ -523,15 +565,30 @@ const EditVehicleProfileModalInner: React.FC<EditVehicleProfileModalProps> = ({
                 name="vehicle_type_id"
                 rules={[{ required: true, message: "Vui lòng chọn loại xe!" }]}
               >
-                <VehicleTypeSelect
+                <Select
                   placeholder="Chọn loại xe"
                   loading={typesLoading}
+                  allowClear
                   size="large"
+                  value={selectedTypeId || undefined}
+                  onChange={(value) => {
+                    setSelectedTypeId(value || null);
+                    setSelectedModelId(null); // Reset model when type changes
+                    form.setFieldsValue({
+                      vehicle_model_id: undefined,
+                    });
+                  }}
                   style={{
                     borderRadius: 8,
                     border: "1px solid #d1d5db",
                   }}
-                />
+                >
+                  {types.map((type) => (
+                    <Select.Option key={type.type_id} value={type.type_id}>
+                      {type.type_name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -547,14 +604,43 @@ const EditVehicleProfileModalInner: React.FC<EditVehicleProfileModalProps> = ({
                 name="vehicle_model_id"
                 rules={[{ required: true, message: "Vui lòng chọn dòng xe!" }]}
               >
-                <VehicleModelSelect
-                  placeholder="Chọn dòng xe"
+                <Select
+                  placeholder={
+                    !selectedBrandId || !selectedTypeId
+                      ? "Vui lòng chọn Hãng xe và Loại xe trước"
+                      : "Chọn dòng xe"
+                  }
+                  disabled={!selectedBrandId || !selectedTypeId}
+                  loading={loadingModels}
+                  allowClear
                   size="large"
+                  value={selectedModelId || undefined}
+                  onChange={(value) => {
+                    setSelectedModelId(value || null);
+                  }}
                   style={{
                     borderRadius: 8,
                     border: "1px solid #d1d5db",
                   }}
-                />
+                  notFoundContent={
+                    loadingModels ? (
+                      <Spin size="small" />
+                    ) : models.length === 0 && !loadingModels ? (
+                      <div style={{ color: "#ff4d4f", fontSize: "12px" }}>
+                        Không tìm thấy model nào phù hợp với Hãng xe và Loại xe
+                        đã chọn
+                      </div>
+                    ) : (
+                      "Không tìm thấy dòng xe"
+                    )
+                  }
+                >
+                  {models.map((model) => (
+                    <Select.Option key={model.model_id} value={model.model_id}>
+                      {model.model_name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -711,7 +797,9 @@ const EditVehicleProfileModalInner: React.FC<EditVehicleProfileModalProps> = ({
   );
 };
 
-const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = (props) => {
+const EditVehicleProfileModal: React.FC<EditVehicleProfileModalProps> = (
+  props
+) => {
   return (
     <App>
       <EditVehicleProfileModalInner {...props} />
