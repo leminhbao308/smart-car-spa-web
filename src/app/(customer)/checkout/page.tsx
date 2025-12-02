@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {useState, useEffect, useMemo, useCallback} from "react";
 import {
   Row,
   Col,
@@ -15,6 +15,7 @@ import {
   Table,
   Tag,
   App,
+  Select,
 } from "antd";
 import {
   ShoppingCartOutlined,
@@ -24,52 +25,61 @@ import {
   GiftOutlined,
   BankOutlined,
 } from "@ant-design/icons";
-import { useCart } from "@/contexts/CartContext";
-import { useRouter } from "next/navigation";
-import { useAuth, CatalogService } from "@/lib/api";
-import { useBranches } from "@/lib/api/hooks/useBranches";
-import { useCreateAndPay } from "@/lib/api/hooks/usePayment";
-import { useActivePromotions } from "@/lib/api/hooks/usePromotions";
-import type { CheckoutFormData } from "@/lib/api/types/customer-order.types";
-import type { Promotion } from "@/lib/api/types/promotion.types";
-import type { BranchDisplay } from "@/lib/api/types/branch.types";
+import {useCart} from "@/contexts/CartContext";
+import {useRouter} from "next/navigation";
+import {useAuth, CatalogService} from "@/lib/api";
+import {useBranches} from "@/lib/api/hooks/useBranches";
+import {useCreateAndPay} from "@/lib/api/hooks/usePayment";
+import {useActivePromotions} from "@/lib/api/hooks/usePromotions";
+import {useProvinces, useCommunes} from "@/lib/api/hooks/useShipping";
+import type {CheckoutFormData} from "@/lib/api/types/customer-order.types";
+import type {Promotion} from "@/lib/api/types/promotion.types";
+import type {BranchDisplay} from "@/lib/api/types/branch.types";
 import PromotionModal from "@/components/ui/Modal/PosModal/PromotionModal";
 import {
   calculateTotalDiscounts,
   isPromotionApplicable,
 } from "@/lib/utils/promotion-calculator";
-import { recalculateAllFreeItems } from "@/lib/utils/free-item-manager";
-import type { CartItem } from "@/components/ui/Pos/CartSection";
+import {recalculateAllFreeItems} from "@/lib/utils/free-item-manager";
+import type {CartItem} from "@/components/ui/Pos/CartSection";
 
-const { Title, Text } = Typography;
+const {Title, Text} = Typography;
+const {Option} = Select;
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [form] = Form.useForm();
-  const { message } = App.useApp();
-  const { isAuthenticated, user } = useAuth();
-  const { cart: rawCart, clearCart } = useCart();
-  const { mutateAsync: createAndPay, isPending: isCreatingOrder } =
+  const {message} = App.useApp();
+  const {isAuthenticated, user} = useAuth();
+  const {cart: rawCart, clearCart} = useCart();
+  const {mutateAsync: createAndPay, isPending: isCreatingOrder} =
     useCreateAndPay();
 
-  const { branches } = useBranches();
+  const {branches} = useBranches();
   const [selectedBranch, setSelectedBranch] = useState<BranchDisplay | null>(
     null
   );
   const [isCheckoutComplete, setIsCheckoutComplete] = useState(false);
+
+  // Shipping state
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState<
+    string | null
+  >(null);
+  const {data: provinces, isLoading: isLoadingProvinces} = useProvinces();
+  const {data: communes, isLoading: isLoadingCommunes} = useCommunes(
+    selectedProvinceCode
+  );
 
   // Check inventory for all branches and select the best one
   useEffect(() => {
     const checkInventoryAndSelectBranch = async () => {
       if (!branches || branches.length === 0 || rawCart.length === 0) return;
 
-      // Reset selected branch when dependencies change
-      if (selectedBranch) return; // Already selected, don't recheck
+      if (selectedBranch) return;
 
-      console.log(" Checking inventory across branches...");
+      console.log("🔍 Checking inventory across branches...");
 
       try {
-        // Check each branch's catalog to find one with sufficient stock
         for (const branch of branches) {
           try {
             console.log(`📦 Checking branch: ${branch.branch_name}`);
@@ -79,12 +89,11 @@ export default function CheckoutPage() {
 
             if (!catalog?.items) {
               console.log(
-                `   No catalog items for branch ${branch.branch_name}`
+                `⚠️ No catalog items for branch ${branch.branch_name}`
               );
               continue;
             }
 
-            // Build inventory map for this branch
             const inventoryMap = new Map<string, number>();
             for (const item of catalog.items) {
               inventoryMap.set(
@@ -94,11 +103,10 @@ export default function CheckoutPage() {
             }
 
             console.log(
-              `  📊 Inventory map:`,
+              `📊 Inventory map:`,
               Object.fromEntries(inventoryMap)
             );
 
-            // Check if this branch has enough stock for all cart items
             let hasAllStock = true;
             for (const cartItem of rawCart) {
               const availableStock = inventoryMap.get(
@@ -107,7 +115,7 @@ export default function CheckoutPage() {
               const needed = cartItem.quantity;
 
               console.log(
-                `  🛒 ${
+                `🛒 ${
                   cartItem.product.product_name
                 }: need ${needed}, available ${availableStock || 0}`
               );
@@ -119,15 +127,12 @@ export default function CheckoutPage() {
             }
 
             if (hasAllStock) {
-              console.log(`  ✅ Branch ${branch.branch_name} has all items!`);
+              console.log(`✅ Branch ${branch.branch_name} has all items!`);
               setSelectedBranch(branch);
-              message.success(
-                `Đã tìm thấy chi nhánh có đủ hàng: ${branch.branch_name}`
-              );
-              return; // Found a suitable branch, stop searching
+              return;
             } else {
               console.log(
-                `  ❌ Branch ${branch.branch_name} missing some items`
+                `❌ Branch ${branch.branch_name} missing some items`
               );
             }
           } catch (error) {
@@ -139,18 +144,12 @@ export default function CheckoutPage() {
           }
         }
 
-        // No branch has all items in stock - select first branch as fallback
-        console.log(" No branch has all items, using fallback");
+        console.log("⚠️ No branch has all items, using fallback");
         if (branches.length > 0) {
           setSelectedBranch(branches[0]);
-          message.warning(
-            "Một số sản phẩm có thể không đủ hàng tại thời điểm này. Chúng tôi sẽ liên hệ để xác nhận đơn hàng và thời gian giao hàng.",
-            5 // Show for 5 seconds
-          );
         }
       } catch (error) {
         console.log("❌ Error checking inventory:", error);
-        // Fallback to first branch
         if (branches.length > 0) {
           setSelectedBranch(branches[0]);
         }
@@ -160,7 +159,7 @@ export default function CheckoutPage() {
     checkInventoryAndSelectBranch();
   }, [branches, rawCart, message, selectedBranch]);
 
-  const { data: promotionsData } = useActivePromotions({});
+  const {data: promotionsData} = useActivePromotions({});
   const [selectedPromotions, setSelectedPromotions] = useState<Promotion[]>([]);
   const [isPromotionModalVisible, setIsPromotionModalVisible] = useState(false);
 
@@ -192,7 +191,6 @@ export default function CheckoutPage() {
     return map;
   }, [rawCart]);
 
-  // Cart with free items from promotions
   const cart: CartItem[] = useMemo(() => {
     return recalculateAllFreeItems(baseCart, selectedPromotions, productLookup);
   }, [baseCart, selectedPromotions, productLookup]);
@@ -218,16 +216,11 @@ export default function CheckoutPage() {
           (p) => p.promotion_id === promotion.promotion_id
         );
         if (isSelected) {
-          message.success(`Đã bỏ chọn khuyến mãi "${promotion.name}"`);
           return prev.filter((p) => p.promotion_id !== promotion.promotion_id);
         } else {
           if (!isPromotionApplicable(promotion, baseCart)) {
-            message.warning(
-              "Khuyến mãi này không áp dụng cho đơn hàng hiện tại"
-            );
             return prev;
           }
-          message.success(`Đã áp dụng khuyến mãi "${promotion.name}"`);
           return [...prev, promotion];
         }
       });
@@ -244,11 +237,6 @@ export default function CheckoutPage() {
       setSelectedPromotions((prev) =>
         prev.filter((promo) => isPromotionApplicable(promo, baseCart))
       );
-      for (const promo of nonApplicablePromotions) {
-        message.warning(
-          `Khuyến mãi "${promo.name}" không còn áp dụng và đã bị bỏ chọn`
-        );
-      }
     }
   }, [baseCart, selectedPromotions, message]);
 
@@ -259,7 +247,6 @@ export default function CheckoutPage() {
   }, [isAuthenticated, router]);
 
   useEffect(() => {
-    // Don't redirect if checkout is complete (payment in progress)
     if (cart.length === 0 && !isCheckoutComplete) {
       router.push("/products");
     }
@@ -269,10 +256,38 @@ export default function CheckoutPage() {
     if (user) {
       form.setFieldsValue({
         fullName: user.full_name || "",
-        phone: user.email || "",
+        phone_number: user.email || "",
       });
     }
   }, [user, form]);
+
+  // Handle province change
+  const handleProvinceChange = (provinceCode: string) => {
+    setSelectedProvinceCode(provinceCode);
+    form.setFieldsValue({
+      ward: undefined,
+      district: undefined,
+    });
+
+    // Set city name automatically
+    const province = provinces?.find((p) => p.code === provinceCode);
+    if (province) {
+      form.setFieldsValue({
+        city: province.name,
+      });
+    }
+  };
+
+  // Handle commune change
+  const handleCommuneChange = (communeCode: string) => {
+    const commune = communes?.find((c) => c.code === communeCode);
+    if (commune) {
+      form.setFieldsValue({
+        ward: commune.name,
+        district: "", // You might want to add district API later
+      });
+    }
+  };
 
   const columns = [
     {
@@ -289,7 +304,7 @@ export default function CheckoutPage() {
             {record.isFreeItem && (
               <Tag
                 color="success"
-                style={{ marginLeft: 8 }}
+                style={{marginLeft: 8}}
               >
                 Tặng
               </Tag>
@@ -297,7 +312,7 @@ export default function CheckoutPage() {
           </Text>
           <Text
             type="secondary"
-            style={{ fontSize: "12px" }}
+            style={{fontSize: "12px"}}
           >
             {record.categoryName}
           </Text>
@@ -345,14 +360,12 @@ export default function CheckoutPage() {
   const handleSubmit = async (values: CheckoutFormData) => {
     try {
       if (!selectedBranch) {
-        message.error("Không tìm thấy chi nhánh có sẵn hàng");
         return;
       }
       if (!user?.user_id) {
-        message.error("Không tìm thấy thông tin người dùng");
         return;
       }
-      // Prepare full promotion snapshot
+
       const promotionSnapshot = selectedPromotions.map((promo) => ({
         promotion_id: promo.promotion_id,
         code: promo.promotion_code,
@@ -367,10 +380,10 @@ export default function CheckoutPage() {
         coupon_redeem_once: promo.coupon_redeem_once,
         branch: promo.branch
           ? {
-              branch_id: promo.branch.branch_id,
-              branch_name: promo.branch.branch_name,
-              branch_url: promo.branch.branch_url,
-            }
+            branch_id: promo.branch.branch_id,
+            branch_name: promo.branch.branch_name,
+            branch_url: promo.branch.branch_url,
+          }
           : null,
         discount_lines: promo.promotion_lines.map((line) => ({
           promotion_line_id: line.promotion_line_id,
@@ -405,7 +418,6 @@ export default function CheckoutPage() {
           cartSummary?.subtotal && cartSummary.subtotal > 0
             ? (cartSummary.totalDiscount / cartSummary.subtotal) * 100
             : 0,
-        // Shipping address - use customer's address
         shipping_full_name: values.fullName,
         shipping_phone: values.phone,
         shipping_address: values.address || "",
@@ -423,27 +435,24 @@ export default function CheckoutPage() {
         return_url: `${baseUrl}/payment/success`,
         cancel_url: `${baseUrl}/payment/cancel`,
       };
+
       const result = await createAndPay(orderPayload);
-      console.log(" Create-and-pay result:", result);
+      console.log("✅ Create-and-pay result:", result);
       console.log("📦 Order ID:", result?.order?.id);
       console.log("💳 Payment URL:", result?.payment?.payment_url);
 
-      // Mark checkout as complete to prevent redirect to products
       setIsCheckoutComplete(true);
       clearCart();
 
-      // Redirect to PayOS payment page
       if (result?.payment?.payment_url) {
         console.log("🔀 Redirecting to PayOS:", result.payment.payment_url);
-        // Use globalThis.location.href for external redirect to PayOS
         globalThis.location.href = result.payment.payment_url;
       } else {
-        console.log(" No payment URL, redirecting to success page");
+        console.log("✅ No payment URL, redirecting to success page");
         router.push(`/checkout/success?orderId=${result.order.id}`);
       }
     } catch (error) {
       console.log("Checkout error:", error);
-      message.error("Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại");
     }
   };
 
@@ -451,24 +460,23 @@ export default function CheckoutPage() {
     return null;
   }
 
-  // Show alert if no branch has been selected yet
   if (!selectedBranch) {
     return (
-      <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
+      <div style={{padding: "24px", maxWidth: "1400px", margin: "0 auto"}}>
         <Button
-          icon={<ArrowLeftOutlined />}
+          icon={<ArrowLeftOutlined/>}
           onClick={() => router.push("/cart")}
-          style={{ marginBottom: 16 }}
+          style={{marginBottom: 16}}
         >
           Quay lại giỏ hàng
         </Button>
-        <Card style={{ marginTop: 24 }}>
+        <Card style={{marginTop: 24}}>
           <Space
             direction="vertical"
             size={16}
-            style={{ width: "100%", textAlign: "center" }}
+            style={{width: "100%", textAlign: "center"}}
           >
-            <div style={{ fontSize: "48px" }}>⏳</div>
+            <div style={{fontSize: "48px"}}>⏳</div>
             <Title level={3}>Đang kiểm tra tồn kho...</Title>
             <Text type="secondary">
               Chúng tôi đang tìm chi nhánh có đủ hàng cho đơn hàng của bạn
@@ -480,12 +488,12 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
-      <div style={{ marginBottom: 24 }}>
+    <div style={{padding: "24px", maxWidth: "1400px", margin: "0 auto"}}>
+      <div style={{marginBottom: 24}}>
         <Button
-          icon={<ArrowLeftOutlined />}
+          icon={<ArrowLeftOutlined/>}
           onClick={() => router.push("/cart")}
-          style={{ marginBottom: 16 }}
+          style={{marginBottom: 16}}
         >
           Quay lại giỏ hàng
         </Button>
@@ -507,12 +515,12 @@ export default function CheckoutPage() {
             <Space
               direction="vertical"
               size={24}
-              style={{ width: "100%" }}
+              style={{width: "100%"}}
             >
               <Card
                 title={
                   <>
-                    <EnvironmentOutlined /> Địa chỉ giao hàng
+                    <EnvironmentOutlined/> Địa chỉ giao hàng
                   </>
                 }
               >
@@ -520,7 +528,7 @@ export default function CheckoutPage() {
                   message="Vui lòng nhập đầy đủ địa chỉ để chúng tôi giao hàng chính xác"
                   type="info"
                   showIcon
-                  style={{ marginBottom: 16 }}
+                  style={{marginBottom: 16}}
                 />
                 <Row gutter={16}>
                   <Col span={24}>
@@ -563,6 +571,75 @@ export default function CheckoutPage() {
                   </Col>
                   <Col span={24}>
                     <Form.Item
+                      label="Tỉnh/Thành phố"
+                      name="city"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng chọn tỉnh/thành phố",
+                        },
+                      ]}
+                    >
+                      <Select
+                        placeholder="Chọn tỉnh/thành phố"
+                        size="large"
+                        showSearch
+                        loading={isLoadingProvinces}
+                        onChange={handleProvinceChange}
+                        filterOption={(input, option) =>
+                          (option?.children as string)
+                            .toLowerCase()
+                            .includes(input.toLowerCase())
+                        }
+                      >
+                        {provinces?.map((province) => (
+                          <Option
+                            key={province.code}
+                            value={province.code}
+                          >
+                            {province.name}
+                          </Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={24}>
+                    <Form.Item
+                      label="Phường/Xã"
+                      name="ward"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng chọn phường/xã",
+                        },
+                      ]}
+                    >
+                      <Select
+                        placeholder="Chọn phường/xã"
+                        size="large"
+                        showSearch
+                        loading={isLoadingCommunes}
+                        disabled={!selectedProvinceCode}
+                        onChange={handleCommuneChange}
+                        filterOption={(input, option) =>
+                          (option?.children as string)
+                            .toLowerCase()
+                            .includes(input.toLowerCase())
+                        }
+                      >
+                        {communes?.map((commune) => (
+                          <Option
+                            key={commune.code}
+                            value={commune.code}
+                          >
+                            {commune.name}
+                          </Option>
+                        ))}
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={24}>
+                    <Form.Item
                       label="Địa chỉ cụ thể"
                       name="address"
                       rules={[
@@ -574,66 +651,6 @@ export default function CheckoutPage() {
                     >
                       <Input
                         placeholder="Số nhà, tên đường"
-                        size="large"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col
-                    xs={24}
-                    md={8}
-                  >
-                    <Form.Item
-                      label="Phường/Xã"
-                      name="ward"
-                      rules={[
-                        {
-                          required: true,
-                          message: "Vui lòng nhập phường/xã",
-                        },
-                      ]}
-                    >
-                      <Input
-                        placeholder="Phường 1"
-                        size="large"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col
-                    xs={24}
-                    md={8}
-                  >
-                    <Form.Item
-                      label="Quận/Huyện"
-                      name="district"
-                      rules={[
-                        {
-                          required: true,
-                          message: "Vui lòng nhập quận/huyện",
-                        },
-                      ]}
-                    >
-                      <Input
-                        placeholder="Quận 1"
-                        size="large"
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col
-                    xs={24}
-                    md={8}
-                  >
-                    <Form.Item
-                      label="Tỉnh/Thành phố"
-                      name="city"
-                      rules={[
-                        {
-                          required: true,
-                          message: "Vui lòng nhập tỉnh/thành phố",
-                        },
-                      ]}
-                    >
-                      <Input
-                        placeholder="TP. Hồ Chí Minh"
                         size="large"
                       />
                     </Form.Item>
@@ -655,14 +672,14 @@ export default function CheckoutPage() {
               <Card
                 title={
                   <>
-                    <CreditCardOutlined /> Phương thức thanh toán & Giao hàng
+                    <CreditCardOutlined/> Phương thức thanh toán & Giao hàng
                   </>
                 }
               >
                 <Space
                   direction="vertical"
                   size={12}
-                  style={{ width: "100%" }}
+                  style={{width: "100%"}}
                 >
                   <Alert
                     message={
@@ -673,16 +690,15 @@ export default function CheckoutPage() {
                         <Text strong>Chuyển khoản ngân hàng / QR Code</Text>
                         <Text
                           type="secondary"
-                          style={{ fontSize: "12px" }}
+                          style={{fontSize: "12px"}}
                         >
-                          Thanh toán qua PayOS với mã QR. Bạn sẽ được chuyển đến
-                          trang thanh toán sau khi đặt hàng.
+                          Bạn sẽ được chuyển đến trang thanh toán sau khi đặt hàng.
                         </Text>
                       </Space>
                     }
                     type="info"
                     showIcon
-                    icon={<BankOutlined />}
+                    icon={<BankOutlined/>}
                   />
                   <Alert
                     message={
@@ -693,10 +709,10 @@ export default function CheckoutPage() {
                         <Text strong>🚚 Giao hàng tận nơi</Text>
                         <Text
                           type="secondary"
-                          style={{ fontSize: "12px" }}
+                          style={{fontSize: "12px"}}
                         >
                           Hàng sẽ được giao đến địa chỉ bạn đã nhập trong thời
-                          gian sớm nhất. Phí vận chuyển: Miễn phí.
+                          gian sớm nhất.
                         </Text>
                       </Space>
                     }
@@ -712,19 +728,19 @@ export default function CheckoutPage() {
             xs={24}
             lg={10}
           >
-            <div style={{ position: "sticky", top: 24 }}>
+            <div style={{position: "sticky", top: 24}}>
               <Card title="Đơn hàng của bạn">
                 <Space
                   direction="vertical"
                   size={16}
-                  style={{ width: "100%" }}
+                  style={{width: "100%"}}
                 >
                   <Button
-                    icon={<GiftOutlined />}
+                    icon={<GiftOutlined/>}
                     onClick={() => setIsPromotionModalVisible(true)}
                     block
                     size="large"
-                    style={{ marginBottom: 8 }}
+                    style={{marginBottom: 8}}
                   >
                     Chọn khuyến mãi ({selectedPromotions.length})
                   </Button>
@@ -733,14 +749,14 @@ export default function CheckoutPage() {
                     <div>
                       <Text
                         strong
-                        style={{ marginBottom: 8, display: "block" }}
+                        style={{marginBottom: 8, display: "block"}}
                       >
                         Khuyến mãi đã áp dụng:
                       </Text>
                       <Space
                         direction="vertical"
                         size={4}
-                        style={{ width: "100%" }}
+                        style={{width: "100%"}}
                       >
                         {selectedPromotions.map((promo) => (
                           <Tag
@@ -768,10 +784,10 @@ export default function CheckoutPage() {
                     }
                   />
 
-                  <Divider style={{ margin: "8px 0" }} />
+                  <Divider style={{margin: "8px 0"}}/>
 
                   <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
+                    style={{display: "flex", justifyContent: "space-between"}}
                   >
                     <Text>Tạm tính:</Text>
                     <Text strong>
@@ -789,21 +805,14 @@ export default function CheckoutPage() {
                       <Text>Giảm giá:</Text>
                       <Text
                         strong
-                        style={{ color: "#52c41a" }}
+                        style={{color: "#52c41a"}}
                       >
                         -{cartSummary.totalDiscount.toLocaleString("vi-VN")}đ
                       </Text>
                     </div>
                   )}
 
-                  <div
-                    style={{ display: "flex", justifyContent: "space-between" }}
-                  >
-                    <Text>Phí vận chuyển:</Text>
-                    <Tag color="success">Miễn phí</Tag>
-                  </div>
-
-                  <Divider style={{ margin: "8px 0" }} />
+                  <Divider style={{margin: "8px 0"}}/>
 
                   <div
                     style={{
@@ -814,13 +823,13 @@ export default function CheckoutPage() {
                   >
                     <Text
                       strong
-                      style={{ fontSize: "16px" }}
+                      style={{fontSize: "16px"}}
                     >
                       Tổng cộng:
                     </Text>
                     <Title
                       level={3}
-                      style={{ margin: 0, color: "#ff4d4f" }}
+                      style={{margin: 0, color: "#ff4d4f"}}
                     >
                       {cartSummary.finalTotal.toLocaleString("vi-VN")}đ
                     </Title>
@@ -832,7 +841,7 @@ export default function CheckoutPage() {
                     block
                     htmlType="submit"
                     loading={isCreatingOrder}
-                    icon={<ShoppingCartOutlined />}
+                    icon={<ShoppingCartOutlined/>}
                   >
                     Thanh toán
                   </Button>

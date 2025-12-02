@@ -8,9 +8,9 @@ import { TokenManager } from "./utils/token.manager";
 import { ApiResponse, ApiError } from "./types/common.types";
 
 // Base URL configuration
-const BASE_URL = "http://192.168.1.16:8081/api";
+const BASE_URL = "http://localhost:8081/api";
 
-// Token refresh state management 
+// Token refresh state management
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value?: unknown) => void;

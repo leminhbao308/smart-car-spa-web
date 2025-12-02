@@ -82,6 +82,7 @@ const transformToCustomerOrder = (
     cancellationReason: order.cancellation_reason,
     canCancel: order.status === "CONFIRMED" && paymentStatus !== "COMPLETED",
     canReturn: order.status === "FULFILLED",
+    shippingInfo: `${order.shipping_address}, ${order.shipping_ward}, ${order.shipping_city}` || "",
   };
 };
 

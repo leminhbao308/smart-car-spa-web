@@ -87,9 +87,9 @@ const StaffPage = () => {
       width: 150,
       render: (_, record: UserManagementInfo) => (
         <div>
-          <Tag color="blue">{record.role.role_name}</Tag>
+          <Tag color="blue">{record?.role?.role_name}</Tag>
           <div style={{ fontSize: 11, color: "#666", fontFamily: "monospace" }}>
-            {record.role.role_code}
+            {record?.role?.role_code}
           </div>
         </div>
       ),
