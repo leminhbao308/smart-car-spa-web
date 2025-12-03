@@ -5,6 +5,8 @@
 import { AIChatbotMessage } from "../types";
 
 const STORAGE_KEY = "ai_chatbot_conversation_history";
+const SESSION_ID_KEY = "ai_chat_session_id";
+const DRAFT_ID_KEY = "ai_chat_draft_id";
 const MAX_MESSAGES = 50; // Giới hạn số lượng messages để tránh localStorage quá lớn
 
 /**
@@ -85,5 +87,122 @@ export const clearConversationHistory = (): void => {
 export const getConversationHistorySize = (): number => {
   const messages = loadConversationHistory();
   return messages.length;
+};
+
+/**
+ * Generate a new session ID (UUID)
+ */
+export const generateSessionId = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+/**
+ * Get or create session ID
+ */
+export const getOrCreateSessionId = (): string => {
+  if (typeof window === "undefined") {
+    return generateSessionId();
+  }
+
+  try {
+    let sessionId = localStorage.getItem(SESSION_ID_KEY);
+    if (!sessionId) {
+      sessionId = generateSessionId();
+      localStorage.setItem(SESSION_ID_KEY, sessionId);
+    }
+    return sessionId;
+  } catch (error) {
+    console.log("Error getting/creating session ID:", error);
+    return generateSessionId();
+  }
+};
+
+/**
+ * Save session ID
+ */
+export const saveSessionId = (sessionId: string): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    localStorage.setItem(SESSION_ID_KEY, sessionId);
+  } catch (error) {
+    console.log("Error saving session ID:", error);
+  }
+};
+
+/**
+ * Clear session ID
+ */
+export const clearSessionId = (): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    localStorage.removeItem(SESSION_ID_KEY);
+  } catch (error) {
+    console.log("Error clearing session ID:", error);
+  }
+};
+
+/**
+ * Get draft ID
+ */
+export const getDraftId = (): string | null => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return localStorage.getItem(DRAFT_ID_KEY);
+  } catch (error) {
+    console.log("Error getting draft ID:", error);
+    return null;
+  }
+};
+
+/**
+ * Save draft ID
+ */
+export const saveDraftId = (draftId: string): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    localStorage.setItem(DRAFT_ID_KEY, draftId);
+  } catch (error) {
+    console.log("Error saving draft ID:", error);
+  }
+};
+
+/**
+ * Clear draft ID
+ */
+export const clearDraftId = (): void => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    localStorage.removeItem(DRAFT_ID_KEY);
+  } catch (error) {
+    console.log("Error clearing draft ID:", error);
+  }
+};
+
+/**
+ * Clear all chatbot-related data (session, draft, conversation history)
+ */
+export const clearAllChatbotData = (): void => {
+  clearConversationHistory();
+  clearSessionId();
+  clearDraftId();
 };
 

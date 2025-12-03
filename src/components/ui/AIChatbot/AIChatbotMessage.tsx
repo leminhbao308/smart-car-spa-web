@@ -72,7 +72,7 @@ const AIChatbotMessage: React.FC<AIChatbotMessageProps> = ({ message }) => {
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Spin size="small" />
                 <Text style={{ color: isUser ? "#fff" : "#000", fontSize: "14px" }}>
-                  Đang soạn tin nhắn...
+                  Đang trả lời...
                 </Text>
               </div>
             ) : (
