@@ -46,7 +46,7 @@ export const InventoryService = {
       branchId,
     });
 
-    const response = await api.get(`/inv/export-inventory-report?${params.toString()}`, {
+    const response = await api.get(`/reports/inventory/report?${params.toString()}`, {
       responseType: 'blob',
     });
 

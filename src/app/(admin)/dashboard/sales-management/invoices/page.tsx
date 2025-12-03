@@ -139,7 +139,7 @@ const InvoicesPage = () => {
       case "FULFILLED":
         return "Hoàn thành";
       case "CONFIRMED":
-        return "Chờ thanh toán";
+        return "Chờ giao hàng";
       case "DRAFT":
         return "Nháp";
       case "RETURNED":
@@ -228,6 +228,8 @@ const InvoicesPage = () => {
       message.success(
         `Xác nhận đơn hàng ${order.id.substring(0, 8)}... thành công`
       );
+
+      refetch();
     } catch (error) {
       // Error handled by mutation
     }
@@ -239,6 +241,8 @@ const InvoicesPage = () => {
       message.success(
         `Hoàn thành đơn hàng ${order.id.substring(0, 8)}... thành công`
       );
+
+      refetch();
     } catch (error) {
       // Error handled by mutation
     }
@@ -271,6 +275,8 @@ const InvoicesPage = () => {
       message.success(
         `Hủy đơn hàng ${selectedOrder.id.substring(0, 8)}... thành công`
       );
+
+      refetch();
     } catch (error) {
       // Error handled by mutation or validation
     }
@@ -301,6 +307,8 @@ const InvoicesPage = () => {
           8
         )}... thành công`
       );
+
+      refetch();
     } catch (error) {
       // Error handled by mutation or validation
     }
@@ -311,6 +319,9 @@ const InvoicesPage = () => {
     message.loading(
       `Đang tạo link thanh toán cho đơn hàng ${order.id.substring(0, 8)}...`
     );
+
+    // refresh data
+    refetch();
   };
 
   const handlePrint = (order: SaleOrderResponse) => {

@@ -271,24 +271,6 @@ const CartSummary: React.FC<{
           </div>
         )}
 
-        {/* Shipping */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Text>Phí vận chuyển:</Text>
-          <Text>
-            {shippingAmount === 0 ? (
-              <Tag color="success">Miễn phí</Tag>
-            ) : (
-              `${shippingAmount.toLocaleString("vi-VN")}đ`
-            )}
-          </Text>
-        </div>
-
         <Divider style={{ margin: "8px 0" }} />
 
         {/* Total */}
@@ -401,15 +383,6 @@ export default function CartPage() {
           Bạn có {cartSummary.itemCount} sản phẩm trong giỏ hàng
         </Text>
       </div>
-
-      {/* Info Alert */}
-      <Alert
-        message="Miễn phí vận chuyển cho đơn hàng trên 500.000đ"
-        type="info"
-        showIcon
-        closable
-        style={{ marginBottom: 24 }}
-      />
 
       <Row gutter={[24, 24]}>
         {/* Left Column - Cart Items */}

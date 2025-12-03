@@ -564,7 +564,7 @@ export const promotionService = {
     });
 
     const response = await api.get(
-      `/promotions/export-summary-report?${params.toString()}`,
+      `/reports/promotion/export-summary?${params.toString()}`,
       {
         responseType: "blob",
       }

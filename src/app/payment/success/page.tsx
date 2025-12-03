@@ -31,10 +31,6 @@ const SuccessPaymentContent = () => {
     router.push("/");
   };
 
-  const handleContinueShopping = () => {
-    router.push("/pos");
-  };
-
   // Show loading state
   if (isVerifying || isLoading) {
     return (
@@ -105,15 +101,6 @@ const SuccessPaymentContent = () => {
           title="Thanh toán thành công!"
           subTitle={paymentStatus.message || "Đơn hàng của bạn đã được xử lý thành công"}
           extra={[
-            <Button
-              type="primary"
-              key="continue"
-              icon={<ShoppingOutlined/>}
-              onClick={handleContinueShopping}
-              size="large"
-            >
-              Tiếp tục mua hàng
-            </Button>,
             <Button
               key="home"
               icon={<HomeOutlined/>}

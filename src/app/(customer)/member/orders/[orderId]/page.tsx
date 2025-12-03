@@ -21,7 +21,7 @@ import {
   HomeOutlined,
   ShoppingOutlined,
 } from "@ant-design/icons";
-import { useParams, useRouter } from "next/navigation";
+import {useParams, useRouter} from "next/navigation";
 import {
   useOrderDetail,
 } from "@/lib/api/hooks/useCustomerShop";
@@ -31,7 +31,7 @@ import type {
 } from "@/lib/api/types/customer-order.types";
 import dayjs from "dayjs";
 
-const { Title, Text } = Typography;
+const {Title, Text} = Typography;
 
 /**
  * Status color mapping
@@ -66,7 +66,7 @@ export default function OrderDetailPage() {
   const orderId = params.orderId as string;
 
   // Fetch order details
-  const { order, loading } = useOrderDetail(orderId);
+  const {order, loading} = useOrderDetail(orderId);
 
   // Handle print
   const handlePrint = () => {
@@ -84,7 +84,7 @@ export default function OrderDetailPage() {
           minHeight: "400px",
         }}
       >
-        <Spin size="large" />
+        <Spin size="large"/>
       </div>
     );
   }
@@ -92,7 +92,7 @@ export default function OrderDetailPage() {
   // Order not found
   if (!order) {
     return (
-      <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
+      <div style={{padding: "24px", maxWidth: "1400px", margin: "0 auto"}}>
         <Alert
           message="Không tìm thấy đơn hàng"
           description="Đơn hàng không tồn tại hoặc đã bị xóa."
@@ -126,7 +126,7 @@ export default function OrderDetailPage() {
           {record.product.sku && (
             <Text
               type="secondary"
-              style={{ fontSize: "12px" }}
+              style={{fontSize: "12px"}}
             >
               SKU: {record.product.sku}
             </Text>
@@ -156,13 +156,13 @@ export default function OrderDetailPage() {
         <Space
           direction="vertical"
           size={0}
-          style={{ alignItems: "flex-end" }}
+          style={{alignItems: "flex-end"}}
         >
           <Text strong>{subtotal.toLocaleString("vi-VN")}đ</Text>
           {record.isFreeItem && (
             <Tag
               color="green"
-              style={{ margin: 0 }}
+              style={{margin: 0}}
             >
               Quà tặng
             </Tag>
@@ -173,20 +173,20 @@ export default function OrderDetailPage() {
   ];
 
   return (
-    <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
+    <div style={{padding: "24px", maxWidth: "1400px", margin: "0 auto"}}>
       {/* Breadcrumb */}
       <Breadcrumb
-        style={{ marginBottom: 24 }}
+        style={{marginBottom: 24}}
         items={[
           {
             href: "/",
-            title: <HomeOutlined />,
+            title: <HomeOutlined/>,
           },
           {
             href: "/member/orders",
             title: (
               <>
-                <ShoppingOutlined />
+                <ShoppingOutlined/>
                 <span>Đơn hàng của tôi</span>
               </>
             ),
@@ -198,11 +198,11 @@ export default function OrderDetailPage() {
       />
 
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{marginBottom: 24}}>
         <Button
-          icon={<ArrowLeftOutlined />}
+          icon={<ArrowLeftOutlined/>}
           onClick={() => router.push("/member/orders")}
-          style={{ marginBottom: 16 }}
+          style={{marginBottom: 16}}
         >
           Quay lại
         </Button>
@@ -217,7 +217,7 @@ export default function OrderDetailPage() {
           <div>
             <Title
               level={2}
-              style={{ marginBottom: 8 }}
+              style={{marginBottom: 8}}
             >
               Chi tiết đơn hàng #{order.orderNumber}
             </Title>
@@ -236,7 +236,7 @@ export default function OrderDetailPage() {
       {/* Order Timeline */}
       <Card
         title="Trạng thái đơn hàng"
-        style={{ marginBottom: 24 }}
+        style={{marginBottom: 24}}
       >
         <Timeline
           items={[
@@ -245,7 +245,7 @@ export default function OrderDetailPage() {
               children: (
                 <div>
                   <Text strong>Đơn hàng đã được tạo</Text>
-                  <br />
+                  <br/>
                   <Text type="secondary">
                     {dayjs(order.orderDate).format("DD/MM/YYYY HH:mm")}
                   </Text>
@@ -254,72 +254,95 @@ export default function OrderDetailPage() {
             },
             ...(order.paidDate
               ? [
-                  {
-                    color: "blue",
-                    children: (
-                      <div>
-                        <Text strong>Đã thanh toán</Text>
-                        <br />
-                        <Text type="secondary">
-                          {dayjs(order.paidDate).format("DD/MM/YYYY HH:mm")}
-                        </Text>
-                      </div>
-                    ),
-                  },
-                ]
+                {
+                  color: "blue",
+                  children: (
+                    <div>
+                      <Text strong>Đã thanh toán</Text>
+                      <br/>
+                      <Text type="secondary">
+                        {dayjs(order.paidDate).format("DD/MM/YYYY HH:mm")}
+                      </Text>
+                    </div>
+                  ),
+                },
+              ]
               : []),
             ...(order.completedDate
               ? [
-                  {
-                    color: "green",
-                    children: (
-                      <div>
-                        <Text strong>Đã hoàn thành</Text>
-                        <br />
-                        <Text type="secondary">
-                          {dayjs(order.completedDate).format(
-                            "DD/MM/YYYY HH:mm"
-                          )}
-                        </Text>
-                      </div>
-                    ),
-                  },
-                ]
+                {
+                  color: "green",
+                  children: (
+                    <div>
+                      <Text strong>Đã hoàn thành</Text>
+                      <br/>
+                      <Text type="secondary">
+                        {dayjs(order.completedDate).format(
+                          "DD/MM/YYYY HH:mm"
+                        )}
+                      </Text>
+                    </div>
+                  ),
+                },
+              ]
               : []),
             ...(order.cancelledDate
               ? [
-                  {
-                    color: "red",
-                    children: (
-                      <div>
-                        <Text strong>Đã hủy</Text>
-                        <br />
-                        <Text type="secondary">
-                          {dayjs(order.cancelledDate).format(
-                            "DD/MM/YYYY HH:mm"
-                          )}
-                        </Text>
-                        {order.cancellationReason && (
-                          <>
-                            <br />
-                            <Text type="secondary">
-                              Lý do: {order.cancellationReason}
-                            </Text>
-                          </>
+                {
+                  color: "red",
+                  children: (
+                    <div>
+                      <Text strong>Đã hủy</Text>
+                      <br/>
+                      <Text type="secondary">
+                        {dayjs(order.cancelledDate).format(
+                          "DD/MM/YYYY HH:mm"
                         )}
-                      </div>
-                    ),
-                  },
-                ]
+                      </Text>
+                      {order.cancellationReason && (
+                        <>
+                          <br/>
+                          <Text type="secondary">
+                            Lý do: {order.cancellationReason}
+                          </Text>
+                        </>
+                      )}
+                    </div>
+                  ),
+                },
+              ]
               : []),
           ]}
         />
       </Card>
 
+      {/* Customer Info */}
+      {order.customer && (
+        <Card
+          title="Thông tin khách hàng"
+          style={{marginBottom: 24}}
+        >
+          <Descriptions
+            column={1}
+            size="small"
+          >
+            <Descriptions.Item label="Họ tên">
+              {order.customer.full_name}
+            </Descriptions.Item>
+            <Descriptions.Item label="Email">
+              {order.customer.email}
+            </Descriptions.Item>
+            <Descriptions.Item label="Địa chỉ nhận hàng">
+              {order.shippingInfo}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
+
       {/* Order Items */}
       <Card
         title="Sản phẩm"
-        style={{ marginBottom: 24 }}
+        style={{marginBottom: 24}}
       >
         <Table
           dataSource={order.lines}
@@ -332,12 +355,12 @@ export default function OrderDetailPage() {
       {/* Order Summary */}
       <Card
         title="Thanh toán"
-        style={{ marginBottom: 24 }}
+        style={{marginBottom: 24}}
       >
         <Space
           direction="vertical"
           size={16}
-          style={{ width: "100%" }}
+          style={{width: "100%"}}
         >
           <div
             style={{
@@ -359,7 +382,7 @@ export default function OrderDetailPage() {
               <Text>Giảm giá:</Text>
               <Text
                 strong
-                style={{ color: "#52c41a" }}
+                style={{color: "#52c41a"}}
               >
                 -{order.discountAmount.toLocaleString("vi-VN")}đ
               </Text>
@@ -367,7 +390,7 @@ export default function OrderDetailPage() {
           )}
 
           {order.appliedPromotions && order.appliedPromotions.length > 0 && (
-            <div style={{ paddingLeft: 16 }}>
+            <div style={{paddingLeft: 16}}>
               {order.appliedPromotions.map((promo) => (
                 <Tag
                   key={promo.id}
@@ -389,7 +412,7 @@ export default function OrderDetailPage() {
             <Tag color="success">Miễn phí</Tag>
           </div>
 
-          <Divider style={{ margin: 0 }} />
+          <Divider style={{margin: 0}}/>
 
           <div
             style={{
@@ -400,19 +423,19 @@ export default function OrderDetailPage() {
           >
             <Text
               strong
-              style={{ fontSize: "16px" }}
+              style={{fontSize: "16px"}}
             >
               Tổng cộng:
             </Text>
             <Title
               level={3}
-              style={{ margin: 0, color: "#ff4d4f" }}
+              style={{margin: 0, color: "#ff4d4f"}}
             >
               {order.finalAmount.toLocaleString("vi-VN")}đ
             </Title>
           </div>
 
-          <Divider style={{ margin: 0 }} />
+          <Divider style={{margin: 0}}/>
 
           {/* Payment Info */}
           <Descriptions
@@ -434,23 +457,6 @@ export default function OrderDetailPage() {
           </Descriptions>
         </Space>
       </Card>
-
-      {/* Customer Info */}
-      {order.customer && (
-        <Card title="Thông tin khách hàng">
-          <Descriptions
-            column={1}
-            size="small"
-          >
-            <Descriptions.Item label="Họ tên">
-              {order.customer.full_name}
-            </Descriptions.Item>
-            <Descriptions.Item label="Email">
-              {order.customer.email}
-            </Descriptions.Item>
-          </Descriptions>
-        </Card>
-      )}
     </div>
   );
 }

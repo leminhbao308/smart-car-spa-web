@@ -119,6 +119,7 @@ export interface CustomerOrder {
   // Tracking
   canCancel: boolean; // Can cancel if PENDING/PAID
   canReturn: boolean; // Can return if COMPLETED
+  shippingInfo: string
 }
 
 /**

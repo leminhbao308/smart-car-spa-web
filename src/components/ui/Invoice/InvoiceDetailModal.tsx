@@ -164,11 +164,18 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
             {order.branch.branch_name}
           </Descriptions.Item>
           <Descriptions.Item
-            label="Địa chỉ"
+            label="Địa chỉ chi nhánh"
             span={1}
           >
             {order.branch.address}
           </Descriptions.Item>
+          { (order.shipping_address && order.shipping_ward && order.shipping_city) &&
+            <Descriptions.Item
+            label="Địa chỉ nhận hàng"
+            span={2}
+          >
+            {order.shipping_address}, {order.shipping_ward}, {order.shipping_city}
+          </Descriptions.Item>}
           <Descriptions.Item
             label="Trạng thái"
             span={1}

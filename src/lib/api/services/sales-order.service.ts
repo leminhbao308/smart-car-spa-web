@@ -97,7 +97,7 @@ export const SalesOrderService = {
     }
 
     const response = await api.get(
-      `/so/export-sales-report?${params.toString()}`,
+      `/reports/sales/export?${params.toString()}`,
       {
         responseType: "blob",
       }
@@ -137,7 +137,7 @@ export const SalesOrderService = {
     });
 
     const response = await api.get(
-      `/so/export-returns-report?${params.toString()}`,
+      `/reports/sales/export-returns?${params.toString()}`,
       {
         responseType: "blob",
       }

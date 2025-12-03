@@ -46,7 +46,7 @@ export const PurchaseOrderService = {
     }
 
     const response = await api.get(
-      `/po/export-purchase-report?${params.toString()}`,
+      `/reports/purchase/export?${params.toString()}`,
       {
         responseType: "blob",
       }
