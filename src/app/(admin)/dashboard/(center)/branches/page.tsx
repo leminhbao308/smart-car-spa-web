@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Tag, Space, Typography, message } from "antd";
+import { Tag, Space, Typography, App } from "antd";
 import {
   EditOutlined,
   DeleteOutlined,
@@ -24,6 +24,7 @@ import {
 const { Text } = Typography;
 
 const BranchesPage = () => {
+  const { message } = App.useApp();
   const { centers } = useCenters();
   const centerId = centers.length > 0 ? centers[0].center_id : null;
   const { branches, loading, refreshBranches } = useBranchesByCenter(centerId);

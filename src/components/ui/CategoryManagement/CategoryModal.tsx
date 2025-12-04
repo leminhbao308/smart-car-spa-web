@@ -287,9 +287,6 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
               <Select placeholder="Chọn loại danh mục">
                 <Option value="PRODUCT">Sản phẩm</Option>
                 <Option value="SERVICE">Dịch vụ</Option>
-                <Option value="PRODUCT_SYS">Sản phẩm hệ thống</Option>
-                <Option value="SERVICE_SYS">Dịch vụ hệ thống</Option>
-                <Option value="PROMOTION_SYS">Khuyến mãi hệ thống</Option>
                 <Option value="OTHER">Khác</Option>
               </Select>
             </Form.Item>

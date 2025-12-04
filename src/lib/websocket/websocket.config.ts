@@ -31,9 +31,8 @@
  * LƯU Ý: Với context-path=/api, SockJS info endpoint cần /api/ws/info
  */
 export const getWebSocketUrl = (): string => {
-  // Lấy API base URL từ axios config
-  // TODO: Có thể lấy từ environment variable hoặc axios config
-  // const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.1.16:8081/api';
+  // Lấy API base URL từ environment variable hoặc default
+  // QUAN TRỌNG: Phải match với axios baseURL trong axios.ts
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081/api';
   
   // GIỮ NGUYÊN /api prefix vì backend có context-path=/api
@@ -45,10 +44,11 @@ export const getWebSocketUrl = (): string => {
   // SockJS sẽ tự động upgrade sang WebSocket nếu browser support
   const wsUrl = `${apiBaseUrl}/ws`;
 
-  // Debug logging
+  // Debug logging - luôn log trong development để debug
   if (process.env.NODE_ENV === 'development') {
     console.log('[WebSocket Config] API Base URL:', apiBaseUrl);
     console.log('[WebSocket Config] WebSocket URL (with /api prefix):', wsUrl);
+    console.log('[WebSocket Config] Current origin:', typeof window !== 'undefined' ? window.location.origin : 'server-side');
   }
 
   return wsUrl;

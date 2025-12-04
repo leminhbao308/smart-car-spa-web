@@ -6,7 +6,7 @@ import {
   Input,
   Select,
   Button,
-  message,
+  App,
   Row,
   Col,
   DatePicker,
@@ -48,6 +48,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
   editData,
   title = "Thêm nhân viên mới",
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [rolesLoading, setRolesLoading] = useState(false);

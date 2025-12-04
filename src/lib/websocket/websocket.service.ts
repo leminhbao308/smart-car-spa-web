@@ -201,7 +201,13 @@ class WebSocketService {
       
       // Event: STOMP protocol error
       onStompError: (frame) => {
-        console.log('[WebSocket] STOMP error:', frame);
+        console.error('[WebSocket] STOMP error:', frame);
+        console.error('[WebSocket] STOMP error details:', {
+          command: frame?.command,
+          headers: frame?.headers,
+          body: frame?.body,
+          url: this.buildWebSocketUrl().substring(0, 100) + '...',
+        });
         this.setStatus('ERROR');
       },
       
@@ -222,7 +228,14 @@ class WebSocketService {
 
     // Handle WebSocket connection errors
     this.client.onWebSocketError = (error) => {
-      console.log('[WebSocket] Connection error:', error);
+      console.error('[WebSocket] Connection error:', error);
+      console.error('[WebSocket] Error details:', {
+        message: error?.message,
+        type: error?.type,
+        target: error?.target,
+        url: this.buildWebSocketUrl().substring(0, 100) + '...',
+        origin: typeof window !== 'undefined' ? window.location.origin : 'server-side',
+      });
       this.setStatus('ERROR');
       
       // Auto reconnect với exponential backoff
@@ -237,7 +250,7 @@ class WebSocketService {
           }
         }, delay);
       } else {
-        console.log('[WebSocket] Max reconnection attempts reached');
+        console.error('[WebSocket] Max reconnection attempts reached');
         this.setStatus('ERROR');
       }
     };

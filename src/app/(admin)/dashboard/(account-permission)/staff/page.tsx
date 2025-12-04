@@ -7,11 +7,12 @@ import {
   StaffDetailModal,
 } from "@/components/ui/Modal";
 import { ColumnsType } from "antd/es/table";
-import { Tag, Avatar, message } from "antd";
+import { Tag, Avatar, App } from "antd";
 import { UserManagementInfo } from "@/lib/api/types";
 import { useUserManagement } from "@/lib/api/hooks/useUserManagement";
 
 const StaffPage = () => {
+  const { message } = App.useApp();
   const { showModal } = useConfirmationModalContext();
 
   // User Management Hook
@@ -221,7 +222,7 @@ const StaffPage = () => {
         scroll={{ x: 1200 }}
         rowKey="user_id"
         pagination={{
-          current: pagination?.page ? pagination.page + 1 : 1,
+          current: pagination?.page !== undefined ? pagination.page + 1 : 1,
           pageSize: pagination?.size || 10,
           total: pagination?.total_elements || 0,
           showSizeChanger: true,
@@ -229,14 +230,23 @@ const StaffPage = () => {
           showTotal: (total: number, range: [number, number]) =>
             `${range[0]}-${range[1]} của ${total} nhân viên`,
           pageSizeOptions: ["10", "20", "50", "100"],
-          onChange: (page: number, pageSize: number) => {
-            if (pageSize !== pagination?.size) {
-              changePageSize(pageSize || 10);
+          onChange: async (page: number, pageSize: number) => {
+            // page is 1-indexed from Ant Design, convert to 0-indexed for backend
+            const pageIndex = page - 1;
+            const currentPageSize = pagination?.size || 10;
+            
+            // If page size changed, reset to page 0 with new size
+            // Note: onShowSizeChange handles size changes, so this handles page-only changes
+            if (pageSize !== currentPageSize) {
+              // Size changed, reset to page 0
+              await changePageSize(pageSize);
             } else {
-              goToPage(page - 1);
+              // Only page changed, navigate to new page
+              await goToPage(pageIndex);
             }
           },
-          onShowSizeChange: (current: number, size: number) => {
+          onShowSizeChange: (_current: number, size: number) => {
+            // When page size changes, always reset to page 0 (backend uses 0-indexed)
             changePageSize(size);
           },
         }}

@@ -70,9 +70,9 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
           const matchesSearch =
             !searchText ||
             node.category_name
-              .toLowerCase()
+              ?.toLowerCase()
               .includes(searchText.toLowerCase()) ||
-            node.description.toLowerCase().includes(searchText.toLowerCase());
+            (node.description && node.description.toLowerCase().includes(searchText.toLowerCase()));
 
           const matchesType =
             typeFilter === "ALL" || node.category_type === typeFilter;
@@ -132,10 +132,17 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
     if (record.children && record.children.length > 0) {
       const isExpanded = expandedRowKeys.includes(record.category_id);
       if (isExpanded) {
-        // Collapse
-        setExpandedRowKeys((prev) =>
-          prev.filter((key) => key !== record.category_id)
-        );
+        // Collapse - also collapse all children
+        const collapseChildren = (node: CategoryTreeNode, keys: React.Key[]): React.Key[] => {
+          let newKeys = keys.filter((key) => key !== node.category_id);
+          if (node.children) {
+            node.children.forEach((child) => {
+              newKeys = collapseChildren(child, newKeys);
+            });
+          }
+          return newKeys;
+        };
+        setExpandedRowKeys((prev) => collapseChildren(record, prev));
       } else {
         // Expand
         setExpandedRowKeys((prev) => [...prev, record.category_id]);
@@ -189,116 +196,50 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
       key: "category_name",
       width: "30%",
       render: (text: string, record: CategoryTreeNode) => {
+        const level = record.level || 0;
         const hasChildren = record.children && record.children.length > 0;
-        const isExpanded = expandedRowKeys.includes(record.category_id);
-
-        // Enhanced tree structure with visual hierarchy
-        const getTreePrefix = () => {
-          const levelIndent = record.level * 20; // 20px per level
-          
-          return (
-            <div style={{ display: "flex", alignItems: "center" }}>
-              {/* Level indentation */}
-              <div style={{ width: levelIndent }} />
-              
-              {/* Expand/collapse icon or bullet */}
-              <div
-                style={{
-                  width: 20,
-                  height: 20,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: "4px",
-                  backgroundColor: hasChildren ? "#f0f0f0" : "transparent",
-                  border: hasChildren ? "1px solid #d9d9d9" : "none",
-                  cursor: hasChildren ? "pointer" : "default",
-                  transition: "all 0.2s ease",
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (hasChildren) {
-                    handleCategoryNameClick(record);
-                  }
-                }}
-              >
-                {hasChildren ? (
-                  <span
-                    style={{
-                      fontSize: "10px",
-                      color: "#1890ff",
-                      fontWeight: "bold",
-                      transform: isExpanded ? "rotate(0deg)" : "rotate(-90deg)",
-                      transition: "transform 0.2s ease",
-                    }}
-                  >
-                    ▼
-                  </span>
-                ) : (
-                  <span
-                    style={{
-                      fontSize: "8px",
-                      color: "#8c8c8c",
-                    }}
-                  >
-                    ●
-                  </span>
-                )}
-              </div>
-            </div>
-          );
-        };
 
         return (
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              padding: "8px 0",
-              cursor: "pointer",
-              borderRadius: "6px",
-              transition: "background-color 0.2s ease",
-              backgroundColor: "transparent",
-              borderLeft: record.level > 0 ? `3px solid #e6f7ff` : "none",
-              marginLeft: record.level > 0 ? "8px" : "0",
-            }}
-            onClick={() => handleCategoryNameClick(record)}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "#f5f5f5";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "transparent";
+              padding: "4px 0",
             }}
           >
-            {/* Tree structure prefix */}
-            {getTreePrefix()}
-
-            {/* Category name with enhanced styling */}
-            <div style={{ flex: 1, marginLeft: "8px" }}>
+            {/* Category name - simple styling */}
+            <div
+              style={{
+                flex: 1,
+                padding: "4px 0",
+              }}
+            >
               <div
                 style={{
-                  fontSize: record.level === 0 ? "15px" : "14px",
-                  fontWeight: record.level === 0 ? "600" : "400",
-                  color: record.level === 0 ? "#262626" : "#595959",
-                  lineHeight: "1.4",
+                  fontSize: level === 0 ? "15px" : "14px",
+                  fontWeight: level === 0 ? "600" : "400",
+                  color: "#262626",
+                  lineHeight: "1.5",
                 }}
               >
-                {text}
+                {text || record.category_name || "Không có tên"}
               </div>
               {record.description && (
                 <div
                   style={{
                     fontSize: "12px",
                     color: "#8c8c8c",
-                    marginTop: "2px",
-                    fontStyle: "italic",
+                    marginTop: "4px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
+                  title={record.description}
                 >
                   {record.description}
                 </div>
               )}
             </div>
-
           </div>
         );
       },
@@ -311,7 +252,7 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
       render: (text: string) => (
         <div style={{ display: "flex", justifyContent: "center" }}>
           <Text code style={{ fontSize: "12px" }}>
-            /{text}
+            {text ? `/${text}` : "-"}
           </Text>
         </div>
       ),
@@ -323,7 +264,9 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
       width: "10%",
       render: (type: string) => (
         <div style={{ display: "flex", justifyContent: "center" }}>
-          <Tag color={getTypeColor(type)}>{getTypeLabel(type)}</Tag>
+          <Tag color={getTypeColor(type || "OTHER")}>
+            {getTypeLabel(type || "OTHER")}
+          </Tag>
         </div>
       ),
     },
@@ -400,7 +343,7 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
     <div>
       <style jsx global>{`
         .ant-table-tbody > tr > td {
-          padding: 12px 8px !important;
+          padding: 8px 8px !important;
           border-bottom: 1px solid #f0f0f0 !important;
           vertical-align: middle !important;
           text-align: center !important;
@@ -422,6 +365,7 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
         .ant-table-tbody > tr > td:first-child {
           padding-left: 16px !important;
           text-align: left !important;
+          position: relative;
         }
         .ant-table-tbody > tr > td:last-child {
           text-align: center !important;
@@ -434,6 +378,10 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
         .ant-table-tbody > tr > td .ant-tag,
         .ant-table-tbody > tr > td .ant-switch {
           margin: 0 auto;
+        }
+        /* Simple tree structure styling */
+        .ant-table-tbody > tr[data-level="0"] > td {
+          font-weight: 600;
         }
       `}</style>
       <Card>
@@ -501,13 +449,48 @@ const CategoryTreeTable: React.FC<CategoryTreeTableProps> = ({
               setExpandedRowKeys(keys as React.Key[]),
             defaultExpandAllRows: false,
             childrenColumnName: "children",
-            expandRowByClick: false,
-            indentSize: 0, // No default indentation
-            expandIcon: () => null, // Hide default expand icon
+            expandRowByClick: true,
+            indentSize: 24, // Indentation size for tree structure
+            expandIcon: ({ expanded, onExpand, record }) => {
+              const hasChildren = record.children && record.children.length > 0;
+              if (!hasChildren) return null;
+              
+              return (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onExpand(record, !expanded);
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: "16px",
+                    height: "16px",
+                    cursor: "pointer",
+                    color: "#595959",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      transform: expanded ? "rotate(0deg)" : "rotate(-90deg)",
+                      transition: "transform 0.2s ease",
+                      display: "inline-block",
+                    }}
+                  >
+                    ▶
+                  </span>
+                </span>
+              );
+            },
             rowExpandable: (record) =>
               !!(record.children && record.children.length > 0),
           }}
-          scroll={{ x: 800 }}
+          scroll={{ x: 800, y: 600 }}
+          onRow={(record) => ({
+            'data-level': record.level || 0,
+          })}
         />
       </Card>
 

@@ -28,9 +28,11 @@ export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Use ref to store current params to avoid dependency issues
+  // Use ref to store current params and ownerId to avoid dependency issues
   const paramsRef = useRef(params);
   paramsRef.current = params;
+  const ownerIdRef = useRef(ownerId);
+  ownerIdRef.current = ownerId;
 
   const fetchProfiles = useCallback(async (currentParams: VehicleProfileRequest) => {
     setLoading(true);
@@ -81,19 +83,23 @@ export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) =
   }, [fetchProfiles, fetchProfilesByOwnerId, ownerId]);
 
   const refreshProfiles = useCallback(() => {
-    if (ownerId) {
-      return fetchProfilesByOwnerId(ownerId, paramsRef.current);
+    // Use ref to get latest ownerId to avoid stale closure
+    const currentOwnerId = ownerIdRef.current;
+    if (currentOwnerId) {
+      return fetchProfilesByOwnerId(currentOwnerId, paramsRef.current);
     }
     return fetchProfiles(paramsRef.current);
-  }, [fetchProfiles, fetchProfilesByOwnerId, ownerId]);
+  }, [fetchProfiles, fetchProfilesByOwnerId]);
 
   const createProfile = useCallback(async (data: CreateVehicleProfileRequest) => {
     try {
       const response = await VehicleProfileService.createVehicleProfile(data);
 
       // Refresh the list after successful creation
-      if (ownerId) {
-        await fetchProfilesByOwnerId(ownerId, paramsRef.current);
+      // Use ref to get latest ownerId to avoid stale closure
+      const currentOwnerId = ownerIdRef.current;
+      if (currentOwnerId) {
+        await fetchProfilesByOwnerId(currentOwnerId, paramsRef.current);
       } else {
         await fetchProfiles(paramsRef.current);
       }
@@ -103,14 +109,16 @@ export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) =
       console.log("Failed to create vehicle profile:", err);
       throw err;
     }
-  }, [fetchProfiles]);
+  }, [fetchProfiles, fetchProfilesByOwnerId]);
 
   const updateProfile = useCallback(async (profileId: string, data: UpdateVehicleProfileRequest) => {
     try {
       const response = await VehicleProfileService.updateVehicleProfile(profileId, data);
       // Refresh the list after successful update
-      if (ownerId) {
-        await fetchProfilesByOwnerId(ownerId, paramsRef.current);
+      // Use ref to get latest ownerId to avoid stale closure
+      const currentOwnerId = ownerIdRef.current;
+      if (currentOwnerId) {
+        await fetchProfilesByOwnerId(currentOwnerId, paramsRef.current);
       } else {
         await fetchProfiles(paramsRef.current);
       }
@@ -120,15 +128,17 @@ export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) =
       console.log("Failed to update vehicle profile:", err);
       throw err;
     }
-  }, [fetchProfiles]);
+  }, [fetchProfiles, fetchProfilesByOwnerId]);
 
   const deleteProfile = useCallback(async (profileId: string) => {
     try {
       await VehicleProfileService.deleteVehicleProfile(profileId);
 
       // Refresh the list after successful deletion
-      if (ownerId) {
-        await fetchProfilesByOwnerId(ownerId, paramsRef.current);
+      // Use ref to get latest ownerId to avoid stale closure
+      const currentOwnerId = ownerIdRef.current;
+      if (currentOwnerId) {
+        await fetchProfilesByOwnerId(currentOwnerId, paramsRef.current);
       } else {
         await fetchProfiles(paramsRef.current);
       }
@@ -136,7 +146,7 @@ export const useVehicleProfiles = ({ownerId, params}: UseVehicleProfilesProps) =
       console.log("Failed to delete vehicle profile:", err);
       throw err;
     }
-  }, [fetchProfiles]);
+  }, [fetchProfiles, fetchProfilesByOwnerId]);
 
   return {profiles, pagination, loading, error, refreshProfiles, createProfile, updateProfile, deleteProfile};
 };

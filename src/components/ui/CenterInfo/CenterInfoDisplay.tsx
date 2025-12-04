@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import {
   Card,
   Row,
@@ -42,15 +42,6 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
   centerInfo,
   onEdit,
 }) => {
-  const [statistics, setStatistics] = useState({
-    totalBranches: 0,
-    totalServiceBays: 0,
-    activeBranches: 0,
-    activeServiceBays: 0,
-    totalEmployees: 0,
-    totalCustomers: 0,
-  });
-
   // Fetch branches data
   const { branches, loading: branchesLoading } = useBranchesByCenter(
     centerInfo?.center_id || null
@@ -73,30 +64,23 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
   // Fetch customers data
   const { customers, loading: customersLoading } = useCustomersDropdown();
 
-  // Calculate statistics
-  useEffect(() => {
-    if (branches && serviceBaysData?.data?.content && employees && customers) {
-      const totalBranches = branches.length;
-      const activeBranches = branches.filter(
-        (branch) => branch.is_active
-      ).length;
-      const totalServiceBays = serviceBaysData.data.content.length;
-      const activeServiceBays = serviceBaysData.data.content.filter(
-        (bay) => bay.is_active
-      ).length;
-      const totalEmployees = employees.length;
-      const totalCustomers = customers.length;
+  // Calculate statistics using useMemo instead of useEffect + setState
+  // This prevents infinite loops since useMemo doesn't trigger re-renders
+  const statistics = useMemo(() => {
+    const branchesArray = branches || [];
+    const serviceBaysArray = serviceBaysData?.data?.content || [];
+    const employeesArray = employees || [];
+    const customersArray = customers || [];
 
-      setStatistics({
-        totalBranches,
-        totalServiceBays,
-        activeBranches,
-        activeServiceBays,
-        totalEmployees,
-        totalCustomers,
-      });
-    }
-  }, [branches, serviceBaysData, employees, customers]);
+    return {
+      totalBranches: branchesArray.length,
+      activeBranches: branchesArray.filter((branch) => branch.is_active).length,
+      totalServiceBays: serviceBaysArray.length,
+      activeServiceBays: serviceBaysArray.filter((bay) => bay.is_active).length,
+      totalEmployees: employeesArray.length,
+      totalCustomers: customersArray.length,
+    };
+  }, [branches, serviceBaysData?.data?.content, employees, customers]);
 
   // Null safety check
   if (!centerInfo) {
@@ -277,8 +261,7 @@ const CenterInfoDisplay: React.FC<CenterInfoDisplayProps> = ({
                     style={{ marginRight: 8, color: "#1890ff" }}
                   />
                   <Text>
-                    {centerInfo.business_hours?.monday?.open || "N/A"} -{" "}
-                    {centerInfo.business_hours?.sunday?.close || "N/A"}
+                   8:00 - 18:00 (Thứ 2 - Thứ CN)
                   </Text>
                 </div>
               </div>

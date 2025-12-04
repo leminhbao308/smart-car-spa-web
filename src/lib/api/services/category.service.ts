@@ -57,22 +57,22 @@ export const categoryService = {
   },
 
   createCategory: async (data: any): Promise<ApiResponse<Category>> => {
-    const response = await apiClient.post('/categories', data);
+    const response = await apiClient.post('/categories/create', data);
     return response.data;
   },
 
   updateCategory: async (categoryId: string, data: any): Promise<ApiResponse<Category>> => {
-    const response = await apiClient.put(`/categories/${categoryId}`, data);
+    const response = await apiClient.post(`/categories/${categoryId}/update`, data);
     return response.data;
   },
 
   deleteCategory: async (categoryId: string): Promise<ApiResponse<void>> => {
-    const response = await apiClient.delete(`/categories/${categoryId}`);
+    const response = await apiClient.post(`/categories/${categoryId}/delete`);
     return response.data;
   },
 
   updateCategoryStatus: async (categoryId: string, isActive: boolean): Promise<ApiResponse<Category>> => {
-    const response = await apiClient.patch(`/categories/${categoryId}/status`, {
+    const response = await apiClient.post(`/categories/${categoryId}/status`, {
       is_active: isActive
     });
     return response.data;

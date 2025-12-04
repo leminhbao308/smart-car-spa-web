@@ -12,6 +12,7 @@ import {
   useContext,
   createContext,
   ReactNode,
+  useRef,
 } from "react";
 import { UserService } from "../services/user.service";
 import {
@@ -74,6 +75,12 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
       direction: "DESC",
     },
   });
+
+  // Use ref to always have access to latest state without causing re-renders
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   /**
    * Fetch users with current filters and sort
@@ -362,36 +369,47 @@ export function UserManagementProvider({ children }: { children: ReactNode }) {
 
   /**
    * Go to specific page
+   * @param page - 0-indexed page number (backend uses 0-indexed)
    */
   const goToPage = useCallback(
     async (page: number) => {
-      const currentState = state;
+      // Ensure page is non-negative and 0-indexed
+      const pageIndex = Math.max(0, page);
+      
+      // Get current state values from ref to avoid stale closure
+      const currentState = stateRef.current;
       await fetchUsers({ 
-        page,
+        page: pageIndex,
         size: currentState.pagination?.size ?? 10,
         userType: currentState.filters.userType,
         direction: currentState.sort.direction,
         sort: currentState.sort.field
       });
     },
-    [fetchUsers, state]
+    [fetchUsers]
   );
 
   /**
    * Change page size
+   * Always resets to page 0 when size changes (backend uses 0-indexed pages)
+   * @param size - New page size
    */
   const changePageSize = useCallback(
     async (size: number) => {
-      const currentState = state;
+      // Ensure size is positive
+      const pageSize = Math.max(1, size);
+      
+      // Get current state values from ref to avoid stale closure
+      const currentState = stateRef.current;
       await fetchUsers({ 
-        page: 0, 
-        size,
+        page: 0, // Always reset to first page when size changes
+        size: pageSize,
         userType: currentState.filters.userType,
         direction: currentState.sort.direction,
         sort: currentState.sort.field
       });
     },
-    [fetchUsers, state]
+    [fetchUsers]
   );
 
   /**
