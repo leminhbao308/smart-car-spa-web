@@ -9,7 +9,7 @@ import {
   Col,
   Typography,
   Divider,
-  message,
+  App,
 } from "antd";
 import { Category } from "@/lib/api/types/category.types";
 import {
@@ -46,6 +46,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
   parentCategory,
   mode,
 }) => {
+  const { message } = App.useApp();
   const [form] = Form.useForm();
   const createCategoryMutation = useCreateCategory();
   const updateCategoryMutation = useUpdateCategory();
@@ -53,6 +54,36 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
 
   const isEdit = mode === "edit";
   const isSubCategory = !!parentCategory;
+  
+  // Determine if the category being edited is a subcategory
+  const isEditingSubCategory = isEdit && category && !!category.parent_category_id;
+  
+  // Helper function to flatten categories tree (including subcategories)
+  const flattenCategories = (categories: Category[]): Category[] => {
+    const result: Category[] = [];
+    const flatten = (cats: Category[]) => {
+      cats.forEach((cat) => {
+        result.push(cat);
+        if (cat.subcategories && cat.subcategories.length > 0) {
+          flatten(cat.subcategories);
+        }
+      });
+    };
+    flatten(categories);
+    return result;
+  };
+  
+  // Find parent category from categories list if editing a subcategory
+  const actualParentCategory = isEditingSubCategory && category?.parent_category_id
+    ? (() => {
+        const allCategories = categoriesData?.data?.content
+          ? flattenCategories(categoriesData.data.content)
+          : [];
+        return allCategories.find(
+          (cat) => cat.category_id === category.parent_category_id
+        );
+      })()
+    : parentCategory;
 
   useEffect(() => {
     if (visible) {
@@ -60,11 +91,12 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
         const editValues = {
           category_name: category.category_name,
           category_url: category.category_url,
-          description: category.description,
+          description: category.description || "",
           category_type: category.category_type,
           parent_category_id: category.parent_category_id || null,
           is_active: category.is_active,
         };
+        console.log("Setting form values for edit:", editValues);
         form.setFieldsValue(editValues);
       } else if (isSubCategory && parentCategory) {
         const subCategoryValues = {
@@ -88,13 +120,22 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
     try {
       // Debug: Log current form values before validation
       const currentValues = form.getFieldsValue();
+      console.log("Current form values before validation:", currentValues);
+      console.log("Is editing subcategory:", isEditingSubCategory);
+      console.log("Category data:", category);
 
       // Check if form is properly initialized
       if (!form) {
         throw new Error("Form chưa được khởi tạo");
       }
 
-      const values = await form.validateFields();
+      // Validate only visible fields when editing subcategory
+      const fieldsToValidate = isEditingSubCategory
+        ? ["category_name", "category_url", "category_type", "description", "is_active"]
+        : undefined; // Validate all fields otherwise
+
+      const values = await form.validateFields(fieldsToValidate);
+      console.log("Form validation passed, values:", values);
 
       // Additional validation checks
       if (!values.category_name || values.category_name.trim() === "") {
@@ -108,10 +149,17 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
       }
 
       if (isEdit && category) {
-        await updateCategoryMutation.mutateAsync({
+        // When editing a subcategory, preserve the original parent_category_id
+        // When editing a parent category, allow changing parent_category_id
+        const updateData = {
           category_id: category.category_id,
           ...values,
-        });
+          parent_category_id: isEditingSubCategory
+            ? category.parent_category_id // Preserve original parent when editing subcategory
+            : values.parent_category_id || null, // Allow change when editing parent category
+        };
+        console.log("Update data to send:", updateData);
+        await updateCategoryMutation.mutateAsync(updateData);
       } else {
         // Prepare data for create category
         const createData = {
@@ -174,11 +222,18 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
     form.setFieldsValue({ category_url: url });
   };
 
-  // Get available parent categories (exclude current category and its children in edit mode)
+  // Get available parent categories (only categories with parent_category_id = null)
+  // Exclude current category and its children in edit mode
   const getAvailableParentCategories = () => {
     if (!categoriesData?.data?.content) return [];
 
-    let available = categoriesData.data.content.filter((cat) => cat.is_active);
+    // Flatten all categories to search through the entire tree
+    const allCategories = flattenCategories(categoriesData.data.content);
+    
+    // Only get parent categories (parent_category_id = null)
+    let available = allCategories.filter(
+      (cat) => cat.is_active && cat.parent_category_id === null
+    );
 
     if (isEdit && category) {
       // Exclude current category and its descendants
@@ -226,13 +281,13 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
         }}
       >
         {/* Parent Category Info (for sub-category) */}
-        {isSubCategory && parentCategory && (
+        {(isSubCategory || isEditingSubCategory) && actualParentCategory && (
           <>
             <Row gutter={16}>
               <Col span={24}>
                 <Text type="secondary">
                   Danh mục cha:{" "}
-                  <Text strong>{parentCategory.category_name}</Text>
+                  <Text strong>{actualParentCategory.category_name}</Text>
                 </Text>
               </Col>
             </Row>
@@ -292,37 +347,46 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
             </Form.Item>
           </Col>
           <Col span={12}>
+            {/* Always include parent_category_id field in form, but hide it when editing subcategory */}
             <Form.Item
-              label="Danh mục cha"
+              label={!isEditingSubCategory ? "Danh mục cha" : undefined}
               name="parent_category_id"
+              hidden={isEditingSubCategory}
               tooltip={
-                isSubCategory
-                  ? "Danh mục cha được xác định tự động"
-                  : "Để trống nếu đây là danh mục gốc"
+                !isEditingSubCategory
+                  ? isSubCategory
+                    ? "Danh mục cha được xác định tự động"
+                    : "Để trống nếu đây là danh mục gốc"
+                  : undefined
               }
             >
-              <Select
-                placeholder={
-                  isSubCategory
-                    ? "Danh mục cha"
-                    : "Chọn danh mục cha (tùy chọn)"
-                }
-                allowClear={!isSubCategory}
-                showSearch={!isSubCategory}
-                disabled={isSubCategory}
-                optionFilterProp="children"
-                filterOption={(input, option) =>
-                  (option?.children as unknown as string)
-                    ?.toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-              >
-                {getAvailableParentCategories().map((cat) => (
-                  <Option key={cat.category_id} value={cat.category_id}>
-                    {cat.category_name}
-                  </Option>
-                ))}
-              </Select>
+              {!isEditingSubCategory ? (
+                <Select
+                  placeholder={
+                    isSubCategory
+                      ? "Danh mục cha"
+                      : "Chọn danh mục cha (tùy chọn)"
+                  }
+                  allowClear={!isSubCategory}
+                  showSearch={true}
+                  disabled={isSubCategory}
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    (option?.children as unknown as string)
+                      ?.toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                >
+                  {getAvailableParentCategories().map((cat) => (
+                    <Option key={cat.category_id} value={cat.category_id}>
+                      {cat.category_name}
+                    </Option>
+                  ))}
+                </Select>
+              ) : (
+                // Hidden input to preserve the value when editing subcategory
+                <Input type="hidden" />
+              )}
             </Form.Item>
           </Col>
         </Row>

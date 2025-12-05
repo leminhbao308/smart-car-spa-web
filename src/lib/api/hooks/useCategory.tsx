@@ -63,8 +63,10 @@ export const useUpdateCategory = () => {
   const message = useAppMessage();
 
   return useMutation({
-    mutationFn: (data: UpdateCategoryRequest) =>
-      categoryService.updateCategory(data),
+    mutationFn: (data: UpdateCategoryRequest) => {
+      const { category_id, ...updateData } = data;
+      return categoryService.updateCategory(category_id, updateData);
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       queryClient.invalidateQueries({
