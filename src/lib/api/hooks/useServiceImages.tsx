@@ -168,9 +168,9 @@ export const useSetMainServiceImage = () => {
 
   return useMutation({
     mutationFn: async (variables: { serviceId: string; mediaId: string }) => {
-      return await MediaService.updateMedia(variables.mediaId, {
-        isMain: true,
-      } as never);
+      return await MediaService.updateMediaMainStatus(variables.mediaId, {
+        isMain: true, // Frontend type uses camelCase, but backend expects is_main in JSON
+      });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

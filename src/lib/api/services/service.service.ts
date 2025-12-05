@@ -234,8 +234,14 @@ export class ServiceService {
   static async createService(data: CreateServiceRequest): Promise<Service> {
     try {
       console.log("Creating service with data:", data);
+      console.log("Full URL will be:", `${apiClient.defaults.baseURL}/services/create`);
+      console.log("Request method: POST");
 
-      const response = await apiClient.post("/services/create", data);
+      const response = await apiClient.post("/services/create", data, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
       console.log("Create service API response:", response);
 

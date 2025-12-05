@@ -27,18 +27,25 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
   const { data: categoriesData, isLoading: categoriesLoading } = useActiveCategories();
 
   useEffect(() => {
-    if (initialData) {
-      form.setFieldsValue({
-        productTypeName: initialData.product_type_name,
-        productTypeCode: initialData.product_type_code,
-        description: initialData.description,
-        categoryId: initialData.category_id,
-        isActive: initialData.is_active,
-      });
-    } else {
-      form.resetFields();
+    if (open) {
+      if (initialData) {
+        // Set form values when editing
+        form.setFieldsValue({
+          productTypeName: initialData.product_type_name,
+          productTypeCode: initialData.product_type_code,
+          description: initialData.description || "",
+          categoryId: initialData.category_id,
+          isActive: initialData.is_active,
+        });
+      } else {
+        // Reset form with default values when adding new
+        form.resetFields();
+        form.setFieldsValue({
+          isActive: true, // Set default value for switch
+        });
+      }
     }
-  }, [initialData, form]);
+  }, [open, initialData, form]);
 
   const handleOk = async () => {
     try {
@@ -49,7 +56,7 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
         const updateData: UpdateProductTypeRequest = {
           product_type_name: values.productTypeName,
           product_type_code: values.productTypeCode,
-          description: values.description,
+          description: values.description || "",
           category_id: values.categoryId,
           is_active: values.isActive,
         };
@@ -63,7 +70,7 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
         const createData: CreateProductTypeRequest = {
           product_type_name: values.productTypeName,
           product_type_code: values.productTypeCode,
-          description: values.description,
+          description: values.description || "",
           category_id: values.categoryId,
           is_active: values.isActive ?? true, // Mặc định là true cho sản phẩm mới
         };
@@ -71,6 +78,11 @@ const ProductTypeModal: React.FC<ProductTypeModalProps> = ({
         await createMutation.mutateAsync(createData);
       }
 
+      // Reset form after successful submission
+      form.resetFields();
+      form.setFieldsValue({
+        isActive: true,
+      });
       onSuccess();
     } catch (error) {
       console.log("Form validation or submission error:", error);

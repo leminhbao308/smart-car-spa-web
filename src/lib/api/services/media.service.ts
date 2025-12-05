@@ -264,9 +264,22 @@ export class MediaService {
     try {
       console.log("Updating media main status with data:", statusData);
 
+      // Ensure isMain is a valid boolean value
+      const isMain = statusData.isMain !== undefined && statusData.isMain !== null 
+        ? Boolean(statusData.isMain) 
+        : true; // Default to true if not provided
+
+      // Transform camelCase to snake_case for backend
+      // Backend expects is_main (snake_case) as per @JsonProperty("is_main")
+      const requestBody = {
+        is_main: isMain,
+      };
+
+      console.log("Request body to send:", requestBody);
+
       const response = await apiClient.post(
         `/media/${mediaId}/main-status`,
-        statusData
+        requestBody
       );
       console.log("Update media main status API response:", response);
 

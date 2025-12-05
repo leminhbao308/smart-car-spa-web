@@ -60,7 +60,7 @@ export interface CreateCategoryRequest {
   category_name: string;
   category_url: string;
   description: string;
-  type: "PRODUCT" | "SERVICE" | "PRODUCT-SYSTEM" | "SERVICE-SYSTEM" | "PROMOTION-SYSTEM" | "OTHER";
+  category_type: "PRODUCT" | "SERVICE" | "PRODUCT-SYSTEM" | "SERVICE-SYSTEM" | "PROMOTION-SYSTEM" | "OTHER"; // Backend expects category_type (snake_case) as per @JsonProperty("category_type")
   parent_category_id?: string | null;
   is_active?: boolean;
 }

@@ -630,7 +630,7 @@ const ServiceModal: React.FC<ServiceModalProps> = ({
               initialValue={editData?.required_skill_level}
             >
               <Select placeholder="Chọn cấp độ kỹ năng">
-                <Option value="BASIC">Cơ bản</Option>
+                <Option value="BEGINNER">Cơ bản</Option>
                 <Option value="INTERMEDIATE">Trung bình</Option>
                 <Option value="ADVANCED">Nâng cao</Option>
                 <Option value="EXPERT">Chuyên gia</Option>

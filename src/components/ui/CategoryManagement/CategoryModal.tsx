@@ -99,17 +99,36 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
         console.log("Setting form values for edit:", editValues);
         form.setFieldsValue(editValues);
       } else if (isSubCategory && parentCategory) {
+        // Reset form first to clear any previous values
+        form.resetFields();
+        
+        // Ensure category_type is valid, fallback to PRODUCT if not
+        const parentCategoryType = parentCategory.category_type || "PRODUCT";
+        const validCategoryTypes = ["PRODUCT", "SERVICE", "OTHER"];
+        const categoryType = validCategoryTypes.includes(parentCategoryType) 
+          ? parentCategoryType 
+          : "PRODUCT";
+        
         const subCategoryValues = {
           parent_category_id: parentCategory.category_id,
-          category_type: parentCategory.category_type, // Inherit type from parent
+          category_type: categoryType, // Inherit type from parent
           is_active: true,
+          category_name: "", // Clear name
+          category_url: "", // Clear URL
+          description: "", // Clear description
         };
+        console.log("Setting form values for subcategory:", subCategoryValues);
+        console.log("Parent category type:", parentCategory.category_type);
         form.setFieldsValue(subCategoryValues);
       } else {
+        // Reset form for new root category
         form.resetFields();
         const newCategoryValues = {
           parent_category_id: null, // Root category
           is_active: true,
+          category_name: "",
+          category_url: "",
+          description: "",
         };
         form.setFieldsValue(newCategoryValues);
       }
@@ -162,15 +181,57 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
         await updateCategoryMutation.mutateAsync(updateData);
       } else {
         // Prepare data for create category
-        const createData = {
-          ...values,
+        // Backend expects category_type (snake_case) as per @JsonProperty("category_type")
+        // When creating subcategory, use parent's category_type if not set
+        const categoryType = values.category_type || 
+          (isSubCategory && parentCategory ? parentCategory.category_type : null);
+        
+        if (!categoryType) {
+          throw new Error("Loại danh mục không được để trống!");
+        }
+
+        // Generate category_code from category_name if not provided
+        // Backend validates uniqueness even for null, so we generate a unique code
+        const generateCategoryCode = (name: string): string => {
+          const baseCode = name
+            .toUpperCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "") // Remove diacritics
+            .replace(/[^A-Z0-9\s]/g, "") // Remove special characters
+            .replace(/\s+/g, "_") // Replace spaces with underscores
+            .substring(0, 40); // Reserve space for suffix
+          
+          // Add timestamp suffix to ensure uniqueness
+          const suffix = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+          return `${baseCode}_${suffix}`.substring(0, 50); // Max 50 characters
+        };
+
+        const createData: any = {
+          category_name: values.category_name,
+          category_url: values.category_url,
+          description: values.description || "",
+          category_type: categoryType, // Backend expects category_type (snake_case)
           // Set parent_category_id based on context
           parent_category_id:
             isSubCategory && parentCategory
               ? parentCategory.category_id
               : values.parent_category_id || null,
+          is_active: values.is_active ?? true,
         };
 
+        // Generate category_code to avoid null uniqueness validation issue
+        // Backend checks uniqueness even for null values
+        if (values.category_code && values.category_code.trim()) {
+          createData.category_code = values.category_code.trim();
+        } else {
+          // Generate unique code from category name with timestamp
+          createData.category_code = generateCategoryCode(values.category_name);
+        }
+
+        console.log("Create data to send:", createData);
+        console.log("Values from form:", values);
+        console.log("Is subcategory:", isSubCategory);
+        console.log("Parent category:", parentCategory);
         await createCategoryMutation.mutateAsync(createData);
       }
 
@@ -339,7 +400,10 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
                 { required: true, message: "Vui lòng chọn loại danh mục!" },
               ]}
             >
-              <Select placeholder="Chọn loại danh mục">
+              <Select 
+                placeholder="Chọn loại danh mục"
+                disabled={isSubCategory} // Disable when creating subcategory (inherits from parent)
+              >
                 <Option value="PRODUCT">Sản phẩm</Option>
                 <Option value="SERVICE">Dịch vụ</Option>
                 <Option value="OTHER">Khác</Option>
