@@ -43,6 +43,7 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
   const { message, modal } = App.useApp();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   /**
    * Get welcome message with user's name
@@ -79,6 +80,16 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatWindowRef = useRef<HTMLDivElement>(null);
 
+  // Detect mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Initialize session ID on mount
   useEffect(() => {
     const session = getOrCreateSessionId();
@@ -98,15 +109,42 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
 
   // Auto scroll to bottom when new message arrives
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const messagesContainer = document.querySelector('.ai-chatbot-messages-container');
+    if (messagesContainer) {
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   // Auto scroll to bottom when new message arrives
   useEffect(() => {
     if (isOpen && !isMinimized) {
-      scrollToBottom();
+      // Use setTimeout to ensure DOM is updated
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
     }
   }, [messages, isOpen, isMinimized]);
+
+  // Handle mobile keyboard behavior
+  useEffect(() => {
+    if (isMobile && isOpen && !isMinimized) {
+      const handleFocus = () => {
+        setTimeout(() => {
+          scrollToBottom();
+        }, 300); // Wait for keyboard animation
+      };
+
+      const textArea = document.querySelector('.ai-chatbot-input textarea');
+      if (textArea) {
+        textArea.addEventListener('focus', handleFocus);
+        return () => {
+          textArea.removeEventListener('focus', handleFocus);
+        };
+      }
+    }
+  }, [isOpen, isMinimized, isMobile]);
 
   // Save conversation history to localStorage whenever messages change
   useEffect(() => {
@@ -454,10 +492,13 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
           ref={chatWindowRef}
           style={{
             position: "fixed",
-            ...positionStyles,
-            width: isMinimized ? "320px" : "380px",
-            height: isMinimized ? "60px" : "600px",
-            maxHeight: "calc(100vh - 40px)",
+            ...(isMobile && !isMinimized
+              ? { left: 0, right: 0, top: 0, bottom: 0 }
+              : positionStyles),
+            width: isMinimized ? "320px" : isMobile ? "100vw" : "380px",
+            height: isMinimized ? "60px" : isMobile ? "100vh" : "600px",
+            maxHeight: isMobile ? "100vh" : "calc(100vh - 40px)",
+            maxWidth: isMobile ? "100vw" : "380px",
             zIndex: 1000,
             transition: "all 0.3s ease",
           }}
@@ -557,6 +598,8 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
                     overflowX: "hidden",
                     padding: "16px 0",
                     backgroundColor: "#fafafa",
+                    WebkitOverflowScrolling: "touch",
+                    scrollBehavior: "smooth",
                   }}
                 >
                   {messages.length === 0 ? (

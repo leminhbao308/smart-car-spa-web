@@ -18,15 +18,53 @@ const AIChatbotInput: React.FC<AIChatbotInputProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState("");
   const textAreaRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
 
   const handleSend = () => {
     if (inputValue.trim() && !disabled) {
-      onSendMessage(inputValue.trim());
-      setInputValue("");
-      // Reset textarea height
-      if (textAreaRef.current?.resizableTextArea?.textArea) {
-        textAreaRef.current.resizableTextArea.textArea.style.height = "auto";
+      const message = inputValue.trim();
+      
+      // Get current height before clearing to maintain layout
+      const inputContainer = inputContainerRef.current;
+      const textArea = textAreaRef.current?.resizableTextArea?.textArea;
+      let currentHeight = inputContainer?.offsetHeight || 44;
+      
+      // Lock height temporarily to prevent jump
+      if (inputContainer && textArea) {
+        inputContainer.style.height = `${currentHeight}px`;
+        inputContainer.style.overflow = "hidden";
       }
+      
+      // Send message and clear input
+      onSendMessage(message);
+      setInputValue("");
+      
+      // Reset height smoothly after a brief delay
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (textArea) {
+            // Reset to auto height
+            textArea.style.height = "auto";
+            // Force reflow
+            void textArea.offsetHeight;
+          }
+          
+          // Unlock container height with smooth transition
+          if (inputContainer) {
+            inputContainer.style.transition = "height 0.2s ease";
+            inputContainer.style.height = "auto";
+            inputContainer.style.overflow = "";
+            
+            // Remove transition after animation completes
+            setTimeout(() => {
+              if (inputContainer) {
+                inputContainer.style.transition = "";
+              }
+            }, 200);
+          }
+        });
+      });
     }
   };
 
@@ -37,26 +75,73 @@ const AIChatbotInput: React.FC<AIChatbotInputProps> = ({
     }
   };
 
+  // Handle mobile keyboard behavior - scroll to bottom when input is focused
+  useEffect(() => {
+    const handleFocus = () => {
+      // Scroll to bottom when keyboard appears on mobile
+      if (window.innerWidth <= 768) {
+        setTimeout(() => {
+          const messagesContainer = document.querySelector('.ai-chatbot-messages-container');
+          if (messagesContainer) {
+            // Smooth scroll to bottom
+            messagesContainer.scrollTo({
+              top: messagesContainer.scrollHeight,
+              behavior: 'smooth'
+            });
+          }
+        }, 300); // Wait for keyboard animation
+      }
+    };
+
+    const textArea = textAreaRef.current?.resizableTextArea?.textArea;
+    if (textArea) {
+      textArea.addEventListener('focus', handleFocus);
+      return () => {
+        textArea.removeEventListener('focus', handleFocus);
+      };
+    }
+  }, []);
+
   return (
     <div
+      ref={containerRef}
+      className="ai-chatbot-input"
       style={{
         borderTop: "1px solid #f0f0f0",
         padding: "12px 16px",
         backgroundColor: "#fff",
         flexShrink: 0,
+        position: "sticky",
+        bottom: 0,
+        zIndex: 10,
       }}
     >
       <div
+        ref={inputContainerRef}
         style={{
           display: "flex",
-          alignItems: "flex-end",
+          alignItems: "center",
           gap: "8px",
           backgroundColor: "#f5f5f5",
           borderRadius: "24px",
-          padding: "4px 4px 4px 12px",
+          padding: "8px 4px 8px 12px",
+          minHeight: "44px",
+          boxSizing: "border-box",
         }}
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div 
+          style={{ 
+            flex: 1, 
+            minWidth: 0, 
+            display: "flex", 
+            alignItems: "center",
+            justifyContent: "flex-start",
+            minHeight: "28px",
+            maxHeight: "100px",
+            overflowY: "auto",
+            overflowX: "hidden",
+          }}
+        >
           <TextArea
             ref={textAreaRef}
             value={inputValue}
@@ -70,7 +155,15 @@ const AIChatbotInput: React.FC<AIChatbotInputProps> = ({
               resize: "none",
               backgroundColor: "transparent",
               fontSize: "14px",
+              lineHeight: "20px",
+              padding: "0",
+              margin: "0",
+              border: "none",
+              outline: "none",
+              boxShadow: "none",
+              width: "100%",
             }}
+            rows={1}
           />
         </div>
 
@@ -84,10 +177,16 @@ const AIChatbotInput: React.FC<AIChatbotInputProps> = ({
           style={{
             width: "36px",
             height: "36px",
+            minWidth: "36px",
+            minHeight: "36px",
+            maxWidth: "36px",
+            maxHeight: "36px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             flexShrink: 0,
+            padding: "0",
+            margin: "0",
           }}
         />
       </div>
