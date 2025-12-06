@@ -13,27 +13,24 @@ export const useBookingWithInventory = () => {
   const startServiceMutation = useStartService();
   const { reserveInventory, fulfillInventory, releaseInventory } = useBookingInventory();
 
-  // Enhanced confirm booking with inventory fulfillment
+  // Enhanced confirm booking (NO inventory fulfillment - backend handles it automatically when status becomes IN_PROGRESS)
   const confirmBookingWithInventory = useCallback(async (
     booking: BookingInfoDto,
     branchId: string
   ) => {
     try {
-      console.log(` Confirming booking ${booking.booking_id} with inventory fulfillment`);
+      console.log(` Confirming booking ${booking.booking_id}`);
       
-      // 1. Confirm booking first
+      // Confirm booking - backend will automatically fulfill inventory when booking status becomes IN_PROGRESS
       await confirmBookingMutation.mutateAsync(booking.booking_id);
       
-      // 2. Fulfill inventory (reserved -> fulfilled)
-      await fulfillInventory({ booking, branchId });
-      
-      console.log(`✅ Successfully confirmed booking ${booking.booking_id} and fulfilled inventory`);
+      console.log(`✅ Successfully confirmed booking ${booking.booking_id}`);
       
     } catch (error) {
       console.log(`❌ Error confirming booking ${booking.booking_id}:`, error);
       throw error;
     }
-  }, [confirmBookingMutation, fulfillInventory]);
+  }, [confirmBookingMutation]);
 
   // Enhanced cancel booking with inventory release
   const cancelBookingWithInventory = useCallback(async (
@@ -63,27 +60,16 @@ export const useBookingWithInventory = () => {
     }
   }, [cancelBookingMutation, releaseInventory]);
 
-  // Enhanced start service with inventory fulfillment (if not already fulfilled)
+  // Enhanced start service (NO manual inventory fulfillment - backend handles it automatically when status becomes IN_PROGRESS)
   const startServiceWithInventory = useCallback(async (
     booking: BookingInfoDto,
     branchId: string
   ) => {
     try {
-      console.log(` Starting service for booking ${booking.booking_id} with inventory check`);
+      console.log(` Starting service for booking ${booking.booking_id}`);
       
-      // 1. Start service
+      // Start service - backend will automatically fulfill inventory when booking status becomes IN_PROGRESS
       await startServiceMutation.mutateAsync(booking.booking_id);
-      
-      // 2. Ensure inventory is fulfilled (in case it wasn't done during confirm)
-      // This is a safety check - if inventory was already fulfilled, this will be a no-op
-      try {
-        await fulfillInventory({ booking, branchId });
-        console.log(`✅ Inventory already fulfilled or successfully fulfilled for booking ${booking.booking_id}`);
-      } catch (inventoryError) {
-        console.warn(` Inventory fulfillment failed for booking ${booking.booking_id}, but service started:`, inventoryError);
-        // Don't fail the entire operation if inventory fulfillment fails
-        // Note: Warning notification should be handled by the component using App.useApp()
-      }
       
       console.log(`✅ Successfully started service for booking ${booking.booking_id}`);
       
@@ -91,7 +77,7 @@ export const useBookingWithInventory = () => {
       console.log(`❌ Error starting service for booking ${booking.booking_id}:`, error);
       throw error;
     }
-  }, [startServiceMutation, fulfillInventory]);
+  }, [startServiceMutation]);
 
   return {
     // Enhanced mutations with inventory

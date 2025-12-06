@@ -111,7 +111,7 @@ export const InventoryService = {
         product_id: product.productId,
         qty: product.quantity,
         ref_id: bookingId,
-        ref_type: "SALE_ORDER"
+        ref_type: "BOOKING" // QUAN TRỌNG: Booking phải dùng BOOKING, không dùng SALE_ORDER
       })
     );
 
@@ -132,7 +132,7 @@ export const InventoryService = {
         product_id: product.productId,
         qty: product.quantity,
         ref_id: bookingId,
-        ref_type: "SALE_ORDER"
+        ref_type: "BOOKING" // QUAN TRỌNG: Booking phải dùng BOOKING, không dùng SALE_ORDER
       })
     );
 
@@ -153,7 +153,7 @@ export const InventoryService = {
         product_id: product.productId,
         qty: product.quantity,
         ref_id: bookingId,
-        ref_type: "SALE_ORDER"
+        ref_type: "BOOKING" // QUAN TRỌNG: Booking phải dùng BOOKING, không dùng SALE_ORDER
       })
     );
 
