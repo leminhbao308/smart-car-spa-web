@@ -15,7 +15,7 @@ import {
   Input,
   Button,
   Space,
-  message,
+  App,
 } from "antd";
 import { FilterOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
@@ -32,6 +32,8 @@ const { Search } = Input;
 const { Option } = Select;
 
 const ServiceTypesPage = () => {
+  const { message } = App.useApp();
+  
   // React Query hooks
   const { data: serviceTypesData, isLoading } = useServiceTypes({});
   const createServiceTypeMutation = useCreateServiceType();
