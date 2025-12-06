@@ -14,6 +14,7 @@ import {
   Alert,
   App,
   Tabs,
+  Spin,
 } from "antd";
 import {
   ToolOutlined,
@@ -30,12 +31,13 @@ import {
   ShoppingCartOutlined,
   PlayCircleOutlined,
 } from "@ant-design/icons";
-import { Service, SERVICE_STATUS_OPTIONS } from "@/lib/api/types/service.types";
+import { Service, SERVICE_STATUS_OPTIONS, ServiceProduct } from "@/lib/api/types/service.types";
 import { ServiceProcessInfoDto } from "@/lib/api/types/service-process.types";
 import { ServiceProcessService } from "@/lib/api/services/service-process.service";
 import { useServiceTypes } from "@/lib/api/hooks/useServiceTypes";
 import CareProcessDetailModal from "@/components/ui/Modal/CarProcessModal/CareProcessDetailModal";
 import ServiceImageGallery from "@/components/ui/Service/ServiceImageGallery";
+import { productService } from "@/lib/api/services/product.service";
 
 const { Title, Text } = Typography;
 
@@ -60,6 +62,10 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
     useState<ServiceProcessInfoDto | null>(null);
   const [processModalOpen, setProcessModalOpen] = useState(false);
   const [loadingProcess, setLoadingProcess] = useState(false);
+
+  // State for enriched service products with attribute values
+  const [enrichedServiceProducts, setEnrichedServiceProducts] = useState<ServiceProduct[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   const loadProcessDetails = useCallback(async () => {
     if (!data?.service_process_id) return;
@@ -98,12 +104,64 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
     );
   };
 
+  // Load product details with attribute values
+  const loadProductDetails = useCallback(async () => {
+    if (!data?.service_products || data.service_products.length === 0) {
+      setEnrichedServiceProducts([]);
+      return;
+    }
+
+    setLoadingProducts(true);
+    try {
+      // Fetch product details for each service product to get attribute_values
+      const enrichedProducts = await Promise.all(
+        data.service_products.map(async (serviceProduct) => {
+          try {
+            const productDetail = await productService.getProductById(
+              serviceProduct.product_info.product_id
+            );
+            return {
+              ...serviceProduct,
+              product_info: {
+                ...serviceProduct.product_info,
+                attribute_values: productDetail.attribute_values || [],
+              },
+            };
+          } catch (error) {
+            console.log(
+              `Error loading product details for ${serviceProduct.product_info.product_id}:`,
+              error
+            );
+            // Return original product if fetch fails
+            return serviceProduct;
+          }
+        })
+      );
+      setEnrichedServiceProducts(enrichedProducts);
+    } catch (error) {
+      console.log("Error loading product details:", error);
+      // Fallback to original data
+      setEnrichedServiceProducts(data.service_products);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [data?.service_products]);
+
   // Load process details when service has a process
   useEffect(() => {
     if (visible && data?.service_process_id) {
       loadProcessDetails();
     }
   }, [visible, data?.service_process_id, loadProcessDetails]);
+
+  // Load product details when modal opens
+  useEffect(() => {
+    if (visible && data) {
+      loadProductDetails();
+    } else {
+      setEnrichedServiceProducts([]);
+    }
+  }, [visible, data, loadProductDetails]);
 
   const handleViewProcess = () => {
     if (processDetails) {
@@ -383,10 +441,21 @@ const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
   );
 
   // Tab 2: Sản phẩm sử dụng
-  const productsTab =
-    displayData.service_products && displayData.service_products.length > 0 ? (
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {displayData.service_products.map((product, index) => (
+  // Use enriched products if available, otherwise fallback to original data
+  const productsToDisplay = enrichedServiceProducts.length > 0 
+    ? enrichedServiceProducts 
+    : (displayData.service_products || []);
+
+  const productsTab = loadingProducts ? (
+    <div style={{ textAlign: "center", padding: "40px 20px" }}>
+      <Spin size="large" />
+      <div style={{ marginTop: 16, color: "#8c8c8c" }}>
+        Đang tải thông tin sản phẩm...
+      </div>
+    </div>
+  ) : productsToDisplay && productsToDisplay.length > 0 ? (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {productsToDisplay.map((product, index) => (
           <div
             key={product.id}
             style={{
