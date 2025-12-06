@@ -28,7 +28,7 @@ const AIChatbotInput: React.FC<AIChatbotInputProps> = ({
       // Get current height before clearing to maintain layout
       const inputContainer = inputContainerRef.current;
       const textArea = textAreaRef.current?.resizableTextArea?.textArea;
-      let currentHeight = inputContainer?.offsetHeight || 44;
+      const currentHeight = inputContainer?.offsetHeight || 44;
       
       // Lock height temporarily to prevent jump
       if (inputContainer && textArea) {
