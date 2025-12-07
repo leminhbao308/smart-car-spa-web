@@ -3,7 +3,6 @@ import React from "react";
 import {
   FeaturedServices,
   ProductCategories,
-  NewsSection,
   FeaturedProductsSection,
 } from "@/components/ui/Home";
 
@@ -24,11 +23,6 @@ export default function HomePage() {
       {/*<div style={{ paddingBottom: "40px" }}>*/}
       {/*  <ProductCategories />*/}
       {/*</div>*/}
-
-      {/* News Section */}
-      <div style={{ paddingBottom: "60px" }}>
-        <NewsSection />
-      </div>
     </div>
   );
 }

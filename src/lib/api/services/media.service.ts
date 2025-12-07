@@ -368,6 +368,10 @@ export class MediaService {
    * Get main images for multiple entities in parallel
    * This optimizes N+1 queries by fetching all main images concurrently
    *
+   * Logic:
+   * 1. Try to get main media (is_main = true) first
+   * 2. If no main media, get first media from sorted list (by sortOrder)
+   *
    * @param entityIds - Array of entity IDs to fetch main images for
    * @param entityType - Type of entities (e.g., "SERVICE", "PRODUCT")
    * @returns Record mapping entity_id to media_url
@@ -377,15 +381,37 @@ export class MediaService {
     entityType: string
   ): Promise<Record<string, string>> {
     try {
-      // Fetch all main images in parallel using Promise.all
+      // Fetch all images in parallel using Promise.all
       const results = await Promise.allSettled(
         entityIds.map(async (entityId) => {
           try {
-            const media = await this.getMainMediaByEntity(entityType, entityId);
-            return { entityId, url: media.media_url || "" };
+            // First, try to get main media (is_main = true)
+            try {
+              const mainMedia = await this.getMainMediaByEntity(entityType, entityId);
+              if (mainMedia?.media_url) {
+                return { entityId, url: mainMedia.media_url };
+              }
           } catch {
-            // If no main image found, return empty string
-            console.warn(`No main image for ${entityType}:${entityId}`);
+              // Main media not found, continue to fallback
+            }
+
+            // Fallback: Get all media and use main one or first one (sorted by sortOrder)
+            const allMedia = await this.getMediaByEntity(entityType, entityId);
+            if (allMedia && allMedia.length > 0) {
+              // Try to find main media first (is_main = true)
+              const mainMedia = allMedia.find(media => media.is_main === true);
+              if (mainMedia?.media_url) {
+                return { entityId, url: mainMedia.media_url };
+              }
+              // If no main media, use first one (already sorted by sortOrder ASC from backend)
+              const firstMedia = allMedia[0];
+              return { entityId, url: firstMedia.media_url || "" };
+            }
+
+            // No media found at all
+            return { entityId, url: "" };
+          } catch (error) {
+            console.warn(`Error fetching image for ${entityType}:${entityId}:`, error);
             return { entityId, url: "" };
           }
         })

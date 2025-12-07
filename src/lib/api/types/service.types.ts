@@ -118,10 +118,23 @@ export interface ServiceResponse {
   success: boolean;
   message: string;
   timestamp: string;
-  data: Service[] | ServicePageResponse;
+  data: Service[] | ServicePageResponse | ServicePaginatedResponse;
 }
 
-// For paginated responses
+// For paginated responses from ResponseBuilder.paginated() (new format)
+export interface ServicePaginatedResponse {
+  content: Service[];
+  page: number; // 0-based from Spring Page.getNumber()
+  size: number;
+  total_elements: number;
+  total_pages: number;
+  first: boolean;
+  last: boolean;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
+// For paginated responses from Spring Page directly (old format)
 export interface ServicePageResponse {
   content: Service[];
   pageable: {
@@ -140,7 +153,7 @@ export interface ServicePageResponse {
   totalElements: number;
   totalPages: number;
   size: number;
-  number: number;
+  number: number; // 0-based from Spring Page
   first: boolean;
   numberOfElements: number;
   sort: {

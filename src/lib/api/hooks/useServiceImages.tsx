@@ -49,6 +49,10 @@ export const useServiceImages = (serviceId: string | null) => {
 
 /**
  * Hook to get the main image URL for a service
+ * Logic:
+ * 1. Try to get main media (is_main = true) first
+ * 2. If no main media, get first media from sorted list (by sortOrder)
+ * 
  * @param serviceId - The ID of the service
  * @returns The main image URL or null if not found
  */
@@ -58,7 +62,28 @@ export const useServiceMainImage = (serviceId: string | undefined) => {
     queryFn: async () => {
       if (!serviceId) return [];
       try {
-        return await MediaService.getMediaByEntity("SERVICE", serviceId);
+        // First try to get main media (is_main = true)
+        try {
+          const mainMedia = await MediaService.getMainMediaByEntity("SERVICE", serviceId);
+          if (mainMedia?.media_url) {
+            return [mainMedia];
+          }
+        } catch {
+          // Main media not found, continue to get all media
+        }
+
+        // Fallback: Get all media (sorted by sortOrder from backend)
+        const allMedia = await MediaService.getMediaByEntity("SERVICE", serviceId);
+        if (allMedia && allMedia.length > 0) {
+          // Try to find main media first (is_main = true)
+          const mainMedia = allMedia.find(media => media.is_main === true);
+          if (mainMedia) {
+            return [mainMedia];
+          }
+          // If no main media, return all media (will use first one)
+          return allMedia;
+        }
+        return [];
       } catch (err) {
         console.log("Error fetching service main image:", err);
         return [];
@@ -68,9 +93,8 @@ export const useServiceMainImage = (serviceId: string | undefined) => {
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
-  // Find the main image (is_main === true) or use first image
-  const mainImage =
-    images?.find((img: MediaInfoDto) => img.is_main) || images?.[0];
+  // Get the first image (which is either main image or first from sorted list)
+  const mainImage = images?.[0];
   const mainImageUrl = mainImage?.media_url || null;
 
   return { mainImageUrl, loading: isLoading };

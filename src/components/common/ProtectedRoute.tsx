@@ -44,10 +44,31 @@ export default function ProtectedRoute({
     }
 
     // Kiểm tra required role nếu có
-    if (requiredRole && user?.role?.role_code !== requiredRole) {
-      // Redirect về trang chủ nếu không đúng role
+    // Nếu requiredRole là CUSTOMER, cho phép ADMIN và EMPLOYEE cũng truy cập
+    // (vì Admin/Employee có thể làm tất cả những gì Customer làm)
+    if (requiredRole) {
+      const userRole = user?.role?.role_code;
+      const userType = user?.user_type;
+      
+      if (requiredRole === 'CUSTOMER') {
+        // Cho phép CUSTOMER, ADMIN, và EMPLOYEE (user_type là EMPLOYEE hoặc ADMIN)
+        const isAllowed = 
+          userRole === 'CUSTOMER' || 
+          userRole === 'ADMIN' || 
+          userType === 'EMPLOYEE' || 
+          userType === 'ADMIN';
+        
+        if (!isAllowed) {
+          router.push('/');
+          return;
+        }
+      } else if (requiredRole === 'ADMIN') {
+        // Chỉ cho phép ADMIN
+        if (userRole !== 'ADMIN') {
       router.push('/');
       return;
+        }
+      }
     }
   }, [isAuthenticated, isLoading, user, pathname, router, requiredRole]);
 
@@ -98,7 +119,25 @@ export default function ProtectedRoute({
   }
 
   // Nếu có required role nhưng không đúng role
-  if (requiredRole && user?.role?.role_code !== requiredRole) {
+  if (requiredRole) {
+    const userRole = user?.role?.role_code;
+    const userType = user?.user_type;
+    
+    let hasAccess = false;
+    
+    if (requiredRole === 'CUSTOMER') {
+      // Cho phép CUSTOMER, ADMIN, và EMPLOYEE
+      hasAccess = 
+        userRole === 'CUSTOMER' || 
+        userRole === 'ADMIN' || 
+        userType === 'EMPLOYEE' || 
+        userType === 'ADMIN';
+    } else if (requiredRole === 'ADMIN') {
+      // Chỉ cho phép ADMIN
+      hasAccess = userRole === 'ADMIN';
+    }
+    
+    if (!hasAccess) {
     return fallback || (
       <Result
         status="403"
@@ -111,6 +150,7 @@ export default function ProtectedRoute({
         }
       />
     );
+    }
   }
 
   // Hiển thị children nếu có quyền truy cập

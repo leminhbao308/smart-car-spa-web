@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Tag,
   Typography,
@@ -10,6 +10,10 @@ import {
   Button,
   App,
   Modal,
+  Select,
+  Space,
+  Input,
+  DatePicker,
 } from "antd";
 import {
   EyeOutlined,
@@ -19,7 +23,9 @@ import {
   PauseCircleOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
+import type { Dayjs } from "dayjs";
 import AdminTable from "@/components/ui/Table/AdminTable";
 import VehicleTrackingModal from "@/components/ui/Modal/VehicleTrackingModal";
 import UpdateTrackingModal from "@/components/ui/Modal/UpdateTrackingModal";
@@ -45,6 +51,7 @@ import { ServiceProcessTrackingService } from "@/lib/api/services/service-proces
 import dayjs from "dayjs";
 
 const { Text } = Typography;
+const { RangePicker } = DatePicker;
 
 // Helper functions
 const getStatusConfig = (status: BookingStatus) => {
@@ -115,6 +122,13 @@ const VehiclesInCarePage = () => {
   const [selectedStepName, setSelectedStepName] = useState<string>("");
   const [bookingTrackingModalOpen, setBookingTrackingModalOpen] =
     useState(false);
+  
+  // Filter states
+  const [statusFilter, setStatusFilter] = useState<BookingStatus | "all">("all");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("all");
+  const [searchText, setSearchText] = useState<string>("");
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+  
   const { notification } = App.useApp();
 
   // API hook - Load bookings for management (optimized: single API call)
@@ -143,13 +157,78 @@ const VehiclesInCarePage = () => {
   // Only show active bookings (not cancelled) for vehicles in care
   // CANCELLED bookings should not appear in "vehicles in care" page
   const bookingsArray = Array.isArray(allBookings) ? allBookings : [];
-  const data = bookingsArray.filter(
+  const baseData = bookingsArray.filter(
     (booking) =>
       booking.status === BookingStatus.CHECKED_IN ||
       booking.status === BookingStatus.IN_PROGRESS ||
       booking.status === BookingStatus.COMPLETED
     // Note: CANCELLED bookings are filtered out as they shouldn't appear in "vehicles in care" page
   );
+
+  // Helper function to check if date is in range
+  const isDateInRange = (dateStr: string, start: Dayjs, end: Dayjs): boolean => {
+    const date = new Date(dateStr);
+    const startDate = start.startOf('day').toDate();
+    const endDate = end.endOf('day').toDate();
+    return date >= startDate && date <= endDate;
+  };
+
+  // Handle date range change
+  const handleDateRangeChange = (
+    dates: [Dayjs | null, Dayjs | null] | null
+  ) => {
+    if (dates && dates[0] && dates[1]) {
+      setDateRange([dates[0], dates[1]]);
+    } else {
+      setDateRange(null);
+    }
+  };
+
+  // Apply filters
+  const data = useMemo(() => {
+    let filtered = baseData;
+
+    // Filter by status
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((booking) => booking.status === statusFilter);
+    }
+
+    // Filter by payment status
+    if (paymentStatusFilter !== "all") {
+      filtered = filtered.filter(
+        (booking) => booking.payment_status === paymentStatusFilter
+      );
+    }
+
+    // Filter by search text
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter((booking) => {
+        const customerName = booking.customer_name?.toLowerCase() || "";
+        const licensePlate = booking.vehicle_license_plate?.toLowerCase() || "";
+        const brandName = booking.vehicle_brand_name?.toLowerCase() || "";
+        const modelName = booking.vehicle_model_name?.toLowerCase() || "";
+        
+        return (
+          customerName.includes(searchLower) ||
+          licensePlate.includes(searchLower) ||
+          brandName.includes(searchLower) ||
+          modelName.includes(searchLower)
+        );
+      });
+    }
+
+    // Filter by date range
+    if (dateRange) {
+      const [start, end] = dateRange;
+      filtered = filtered.filter((booking) => {
+        if (!booking.scheduled_start_at) return false;
+        return isDateInRange(booking.scheduled_start_at, start, end);
+      });
+    }
+
+    return filtered;
+  }, [baseData, statusFilter, paymentStatusFilter, searchText, dateRange]);
 
   // Error handling
   useEffect(() => {
@@ -540,6 +619,104 @@ const VehiclesInCarePage = () => {
 
   return (
     <App>
+      <Card 
+        style={{ marginBottom: 12 }}
+        bodyStyle={{ padding: "12px 16px" }}
+      >
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} sm={12} md={8} lg={6} xl={5}>
+            <Space direction="vertical" size={4} style={{ width: "100%" }}>
+              <Text strong style={{ fontSize: 12, color: "#595959" }}>
+                Tìm kiếm
+              </Text>
+              <Input
+                placeholder="Tên KH, biển số..."
+                prefix={<SearchOutlined />}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                allowClear
+                size="middle"
+                style={{ width: "100%" }}
+              />
+            </Space>
+          </Col>
+          <Col xs={24} sm={12} md={8} lg={6} xl={5}>
+            <Space direction="vertical" size={4} style={{ width: "100%" }}>
+              <Text strong style={{ fontSize: 12, color: "#595959" }}>
+                Khoảng thời gian
+              </Text>
+              <RangePicker
+                value={dateRange}
+                onChange={handleDateRangeChange}
+                placeholder={["Từ ngày", "Đến ngày"]}
+                format="DD/MM/YYYY"
+                size="middle"
+                style={{ width: "100%" }}
+              />
+            </Space>
+          </Col>
+          <Col xs={24} sm={12} md={8} lg={5} xl={4}>
+            <Space direction="vertical" size={4} style={{ width: "100%" }}>
+              <Text strong style={{ fontSize: 12, color: "#595959" }}>
+                Trạng thái
+              </Text>
+              <Select
+                value={statusFilter}
+                onChange={setStatusFilter}
+                placeholder="Chọn trạng thái"
+                size="middle"
+                style={{ width: "100%" }}
+              >
+                <Select.Option value="all">Tất cả</Select.Option>
+                <Select.Option value={BookingStatus.CHECKED_IN}>
+                  Đã check-in
+                </Select.Option>
+                <Select.Option value={BookingStatus.IN_PROGRESS}>
+                  Đang thực hiện
+                </Select.Option>
+                <Select.Option value={BookingStatus.COMPLETED}>
+                  Hoàn thành
+                </Select.Option>
+              </Select>
+            </Space>
+          </Col>
+          <Col xs={24} sm={12} md={8} lg={5} xl={4}>
+            <Space direction="vertical" size={4} style={{ width: "100%" }}>
+              <Text strong style={{ fontSize: 12, color: "#595959" }}>
+                Thanh toán
+              </Text>
+              <Select
+                value={paymentStatusFilter}
+                onChange={setPaymentStatusFilter}
+                placeholder="Chọn thanh toán"
+                size="middle"
+                style={{ width: "100%" }}
+              >
+                <Select.Option value="all">Tất cả</Select.Option>
+                <Select.Option value="PENDING">Chờ thanh toán</Select.Option>
+                <Select.Option value="PAID">Đã thanh toán</Select.Option>
+                <Select.Option value="FAILED">Thanh toán thất bại</Select.Option>
+                <Select.Option value="REFUNDED">Đã hoàn tiền</Select.Option>
+              </Select>
+            </Space>
+          </Col>
+          <Col xs={24} sm={24} md={24} lg={2} xl={6}>
+            <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: 20 }}>
+              <Button
+                onClick={() => {
+                  setStatusFilter("all");
+                  setPaymentStatusFilter("all");
+                  setSearchText("");
+                  setDateRange(null);
+                }}
+                size="middle"
+              >
+                Xóa bộ lọc
+              </Button>
+            </div>
+          </Col>
+        </Row>
+      </Card>
       <AdminTable
         title="Quản lý chăm sóc xe"
         dataSource={data}
@@ -558,6 +735,8 @@ const VehiclesInCarePage = () => {
           showTotal: (total: number, range: [number, number]) =>
             `${range[0]}-${range[1]} của ${total} xe`,
         }}
+        searchable={false}
+        showDateRangeFilter={false}
       />
 
       {/* Modal theo dõi quá trình chăm sóc xe */}

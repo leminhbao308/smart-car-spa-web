@@ -460,6 +460,129 @@ const AboutPage = () => {
         </Row>
       </div>
 
+      {/* Branches Section */}
+      {branches && branches.length > 0 && (
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: "60px auto",
+            padding: "0 24px",
+          }}
+        >
+          <Title
+            level={2}
+            style={{
+              textAlign: "center",
+              marginBottom: 40,
+              color: "#1890ff",
+            }}
+          >
+            <ShopOutlined style={{ marginRight: 12 }} />
+            Các Chi Nhánh
+          </Title>
+          <Row gutter={[24, 24]}>
+            {branches.map((branch) => (
+              <Col
+                key={branch.branch_id}
+                xs={24}
+                sm={12}
+                lg={8}
+              >
+                <Card
+                  hoverable
+                  style={{
+                    height: "100%",
+                    borderRadius: 12,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  <Space
+                    direction="vertical"
+                    size="middle"
+                    style={{ width: "100%" }}
+                  >
+                    <div>
+                      <Title
+                        level={4}
+                        style={{ margin: 0, marginBottom: 8 }}
+                      >
+                        {branch.branch_name}
+                      </Title>
+                      <Tag color="blue">{branch.branch_code}</Tag>
+                      <Tag
+                        color={
+                          branch.operating_status === "ACTIVE"
+                            ? "green"
+                            : branch.operating_status === "INACTIVE"
+                            ? "red"
+                            : "orange"
+                        }
+                      >
+                        {branch.operating_status === "ACTIVE"
+                          ? "Đang hoạt động"
+                          : branch.operating_status === "INACTIVE"
+                          ? "Tạm dừng"
+                          : "Bảo trì"}
+                      </Tag>
+                    </div>
+
+                    {branch.description && (
+                      <Paragraph
+                        type="secondary"
+                        style={{ marginBottom: 0, fontSize: 14 }}
+                      >
+                        {branch.description}
+                      </Paragraph>
+                    )}
+
+                    <Divider style={{ margin: "12px 0" }} />
+
+                    <Space
+                      direction="vertical"
+                      size="small"
+                      style={{ width: "100%" }}
+                    >
+                      <div>
+                        <EnvironmentOutlined
+                          style={{ marginRight: 8, color: "#1890ff" }}
+                        />
+                        <Text style={{ fontSize: 14 }}>{branch.address}</Text>
+                      </div>
+                      {branch.phone && (
+                        <div>
+                          <PhoneOutlined
+                            style={{ marginRight: 8, color: "#52c41a" }}
+                          />
+                          <a
+                            href={`tel:${branch.phone}`}
+                            style={{ color: "inherit", fontSize: 14 }}
+                          >
+                            {branch.phone}
+                          </a>
+                        </div>
+                      )}
+                      {branch.email && (
+                        <div>
+                          <MailOutlined
+                            style={{ marginRight: 8, color: "#722ed1" }}
+                          />
+                          <a
+                            href={`mailto:${branch.email}`}
+                            style={{ color: "inherit", fontSize: 14 }}
+                          >
+                            {branch.email}
+                          </a>
+                        </div>
+                      )}
+                    </Space>
+                  </Space>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </div>
+      )}
+
       {/* CTA Section */}
       <div
         style={{

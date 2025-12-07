@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
@@ -11,6 +11,7 @@ import {
   Space,
   Divider,
   App,
+  Switch,
 } from "antd";
 import {
   SaveOutlined,
@@ -93,6 +94,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           display_order: editData.display_order,
           status: editData.status,
           notes: editData.notes,
+          allow_booking: editData.allow_booking ?? true,
         });
 
         // Set technician data
@@ -128,6 +130,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           display_order: editData.display_order,
           status: editData.status,
           notes: editData.notes,
+          allow_booking: editData.allow_booking ?? true,
         });
       } else {
         console.warn("Branch not found in branches list:", editData.branch_id);
@@ -147,6 +150,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           display_order: values.display_order as number | undefined,
           status: (values.status as BayStatus) || BayStatus.ACTIVE,
           notes: values.notes as string | undefined,
+          allow_booking: values.allow_booking as boolean | undefined,
           // Technician management fields
           technician_ids: selectedTechnicians,
           default_technician_status: defaultTechnicianStatus,
@@ -166,6 +170,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           display_order: (values.display_order as number) || 1,
           status: (values.status as BayStatus) || BayStatus.ACTIVE,
           notes: values.notes as string | undefined,
+          allow_booking: (values.allow_booking as boolean) ?? true,
         };
         result = await createServiceBayMutation.mutateAsync(createData);
 
@@ -260,6 +265,7 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
           scrollToFirstError
           initialValues={{
             status: "ACTIVE",
+            allow_booking: true,
           }}
         >
           <Form.Item
@@ -346,6 +352,19 @@ const ServiceBayModal: React.FC<ServiceBayModalProps> = ({
                   min={1}
                   placeholder="1"
                   style={{ width: "100%" }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="allow_booking"
+                label="Cho phép đặt lịch"
+                valuePropName="checked"
+                tooltip="Bật để cho phép khách hàng đặt lịch online. Tắt để chỉ dùng cho xử lý tại chỗ (walk-in)."
+              >
+                <Switch
+                  checkedChildren="📅 Cho đặt lịch"
+                  unCheckedChildren="🔧 Xử lý tại chỗ"
                 />
               </Form.Item>
             </Col>

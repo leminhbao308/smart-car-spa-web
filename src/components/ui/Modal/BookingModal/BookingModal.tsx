@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Modal,
@@ -1900,11 +1900,36 @@ const BookingModal: React.FC<BookingModalProps> = ({
                 style={{ width: "100%" }}
                 placeholder="Chọn ngày"
                 disabledDate={(current) => {
-                  return false; // Allow all dates for testing
+                  if (!current) return false;
+                  
+                  const now = dayjs();
+                  const today = now.startOf("day");
+                  const currentDate = current.startOf("day");
+                  
+                  // Disable all past dates
+                  if (currentDate.isBefore(today)) {
+                    return true;
+                  }
+                  
+                  // If it's today, check if current time is after 17:00 (5 PM)
+                  if (currentDate.isSame(today)) {
+                    const currentHour = now.hour();
+                    // If current time is 17:00 (5 PM) or later, disable today
+                    if (currentHour >= 17) {
+                      return true;
+                    }
+                  }
+                  
+                  // Allow today (if before 17:00) and all future dates
+                  return false;
                 }}
                 onChange={(date) => {
                   const newDate = date ? date.format("YYYY-MM-DD") : "";
                   setBookingDate(newDate);
+                  // Reset bay recommendation when booking date changes
+                  setBayRecommendation(null);
+                  setSelectedWalkInBay(null);
+                  setManualBaySelection(false);
                 }}
               />
             </Form.Item>

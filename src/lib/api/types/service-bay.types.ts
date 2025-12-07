@@ -97,6 +97,7 @@ export interface CreateServiceBayRequest {
   display_order?: number;
   status: BayStatus;
   notes?: string;
+  allow_booking?: boolean;
 }
 
 export interface UpdateServiceBayRequest {
@@ -106,6 +107,7 @@ export interface UpdateServiceBayRequest {
   display_order?: number;
   status: BayStatus;
   notes?: string;
+  allow_booking?: boolean;
 
   // Technician management fields
   technician_ids?: string[];

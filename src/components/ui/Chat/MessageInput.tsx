@@ -86,15 +86,19 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <div
+      className="message-input-container"
       style={{
         borderTop: "1px solid #f0f0f0",
         padding: "12px 16px",
         backgroundColor: "#fff",
         flexShrink: 0,
+        position: "sticky",
+        bottom: 0,
+        zIndex: 10,
       }}
     >
       <div style={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <TextArea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}

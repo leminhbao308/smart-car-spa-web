@@ -16,6 +16,7 @@ import {
 import { SearchOutlined, FilterOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useServices } from "@/lib/api/hooks/useServices";
+import { useActiveServiceTypes } from "@/lib/api/hooks/useServiceTypes";
 import ServiceCard from "@/components/ui/Services/ServiceCard";
 import type { ServiceFilterParam } from "@/lib/api/types/service.types";
 import { PricingService } from "@/lib/api/services/pricing.service";
@@ -32,14 +33,25 @@ interface Service {
 }
 
 export default function ServicesListingPage() {
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  // Track client-side filter by service type (not sent to backend)
+  const [selectedServiceType, setSelectedServiceType] = useState<string | undefined>(undefined);
+  // Track client-side sort by price separately (not sent to backend)
+  // Default to null (no price sorting)
+  const [sortByPrice, setSortByPrice] = useState<"ASC" | "DESC" | null>(null);
   const [params, setParams] = useState<ServiceFilterParam>({
-    page: 0,
-    size: 12,
-    sort: "createdDate",
-    direction: "DESC",
+    page: 0, // Backend uses 0-based, but we'll load all for client-side filtering
+    size: 1000, // Load more services to filter/sort client-side
+    sort: "serviceName", // Use valid backend sort field
+    direction: "ASC",
   });
+  
+  // Client-side pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 12;
 
   const { data: servicesResponse, isLoading } = useServices(params);
+  const { data: serviceTypesResponse } = useActiveServiceTypes();
   const [servicePrices, setServicePrices] = useState<Record<string, number>>(
     {}
   );
@@ -48,25 +60,92 @@ export default function ServicesListingPage() {
   );
   const [pricesLoading, setPricesLoading] = useState(false);
 
-  // Memoize services array to prevent unnecessary re-renders
+  // Memoize service types for dropdown
+  const serviceTypeOptions = useMemo(() => {
+    // Handle different response formats
+    let types: any[] = [];
+    
+    // useActiveServiceTypes returns ServiceType[] directly (not wrapped in response.data)
+    if (Array.isArray(serviceTypesResponse)) {
+      types = serviceTypesResponse;
+    } else if (serviceTypesResponse?.data) {
+      const data = serviceTypesResponse.data;
+      // Check if data is array
+      if (Array.isArray(data)) {
+        types = data;
+      }
+      // Check if data has content (pagination)
+      else if (data && typeof data === 'object' && 'content' in data) {
+        types = Array.isArray(data.content) ? data.content : [];
+      }
+    }
+
+    console.log("[ServicesPage] Service types response:", serviceTypesResponse);
+    console.log("[ServicesPage] Service types loaded:", types.length, types);
+
+    const options = [
+      { label: "Tất cả", value: undefined },
+      ...types.map((type: any) => ({
+        label: type.service_type_name || type.name || type.service_type_code || "Loại dịch vụ",
+        value: type.service_type_id || type.id,
+      })),
+    ];
+
+    console.log("[ServicesPage] Service type options:", options);
+    return options;
+  }, [serviceTypesResponse]);
+
+  // Memoize all services with client-side filtering and sorting
+  const allFilteredServices = useMemo(() => {
+    let servicesList = Array.isArray(servicesResponse?.data)
+      ? servicesResponse?.data
+      : servicesResponse?.data?.content || [];
+
+    // Filter by service type (client-side)
+    if (selectedServiceType) {
+      servicesList = servicesList.filter((service: Service) => {
+        return service.service_type_id === selectedServiceType;
+      });
+    }
+
+    // Sort by price (client-side) after filtering
+    if (sortByPrice && Object.keys(servicePrices).length > 0) {
+      servicesList = [...servicesList].sort((a: Service, b: Service) => {
+        const priceA = servicePrices[a.service_id] || 0;
+        const priceB = servicePrices[b.service_id] || 0;
+        return sortByPrice === "ASC" ? priceA - priceB : priceB - priceA;
+      });
+    }
+
+    return servicesList;
+  }, [servicesResponse, servicePrices, sortByPrice, selectedServiceType]);
+
+  // Paginate filtered services client-side
   const services = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return allFilteredServices.slice(startIndex, endIndex);
+  }, [allFilteredServices, currentPage, pageSize]);
+
+  // Calculate total elements after client-side filtering
+  const totalElements = useMemo(() => {
+    return allFilteredServices.length;
+  }, [allFilteredServices]);
+
+  // Get raw services list (before client-side sorting) for fetching prices/images
+  const rawServices = useMemo(() => {
     return Array.isArray(servicesResponse?.data)
       ? servicesResponse?.data
       : servicesResponse?.data?.content || [];
   }, [servicesResponse]);
 
-  const totalElements =
-    !Array.isArray(servicesResponse?.data) && servicesResponse?.data
-      ? servicesResponse?.data?.totalElements || 0
-      : 0;
-
   // Batch fetch prices and images for all services
   useEffect(() => {
     const fetchBatchData = async () => {
-      if (services.length > 0) {
+      if (rawServices.length > 0) {
         try {
           setPricesLoading(true);
-          const serviceIds = services.map((s: Service) => s.service_id);
+          const serviceIds = rawServices.map((s: Service) => s.service_id);
 
           // Fetch all prices in one batch call
           const pricesMap = await PricingService.getServicePricesBatch(
@@ -88,23 +167,65 @@ export default function ServicesListingPage() {
       }
     };
     fetchBatchData();
-  }, [services]);
+  }, [rawServices]);
 
-  const handleSearch = () => {
-    setParams({ ...params, page: 0 });
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setParams({
+      ...params,
+      search: value || undefined,
+      page: 0, // Backend uses 0-based
+    });
+    setCurrentPage(1); // Reset client-side pagination
+  };
+
+  const handleServiceTypeChange = (value: string | undefined) => {
+    // Filter by service type is done client-side, no need to send to backend
+    setSelectedServiceType(value);
+    // Reset to first page when filter changes
+    setCurrentPage(1);
   };
 
   const handlePageChange = (page: number) => {
-    setParams({ ...params, page: page - 1 });
+    // Client-side pagination
+    setCurrentPage(page);
+    // Scroll to top when page changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSortChange = (value: string) => {
+    // Handle "none" or empty value for "Bất kỳ"
+    if (!value || value === "none" || value === "") {
+      setSortByPrice(null);
+      setCurrentPage(1); // Reset to first page
+      return;
+    }
+
     const [sort, direction] = value.split("-");
+    
+    // Always sort by price client-side (don't send to backend)
+    if (sort === "base_price" || sort === "price") {
+      setSortByPrice(direction as "ASC" | "DESC");
+      setCurrentPage(1); // Reset to first page
+    } else {
+      // For other sorts (if any in future), use backend sorting
+      setSortByPrice(null); // Clear price sort
+      setCurrentPage(1); // Reset to first page
+    }
+  };
+
+  const handleResetFilters = () => {
+    // Reset all filters and search
+    setSearchTerm("");
+    setSelectedServiceType(undefined);
+    setSortByPrice(null);
+    setCurrentPage(1);
     setParams({
-      ...params,
-      sort,
-      direction: direction as "ASC" | "DESC",
       page: 0,
+      size: 1000,
+      sort: "serviceName",
+      direction: "ASC",
+      search: undefined,
     });
   };
 
@@ -141,7 +262,10 @@ export default function ServicesListingPage() {
             <Input.Search
               placeholder="Tìm kiếm dịch vụ..."
               prefix={<SearchOutlined />}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               onSearch={handleSearch}
+              allowClear
             />
           </Col>
           <Col
@@ -151,14 +275,14 @@ export default function ServicesListingPage() {
             lg={6}
           >
             <Select
-              defaultValue="createdDate-DESC"
+              defaultValue="none"
+              value={sortByPrice ? `base_price-${sortByPrice}` : "none"}
               onChange={handleSortChange}
               style={{ width: "100%" }}
               options={[
-                { label: "Mới nhất", value: "createdDate-DESC" },
-                { label: "Cũ nhất", value: "createdDate-ASC" },
-                { label: "Tên (A-Z)", value: "service_name-ASC" },
-                { label: "Tên (Z-A)", value: "service_name-DESC" },
+                { label: "Bất kỳ", value: "none" },
+                { label: "Giá tăng dần", value: "base_price-ASC" },
+                { label: "Giá giảm dần", value: "base_price-DESC" },
               ]}
             />
           </Col>
@@ -172,7 +296,10 @@ export default function ServicesListingPage() {
               placeholder="Loại dịch vụ"
               style={{ width: "100%" }}
               allowClear
-              options={[{ label: "Tất cả", value: "" }]}
+              value={selectedServiceType}
+              onChange={handleServiceTypeChange}
+              options={serviceTypeOptions}
+              loading={!serviceTypesResponse}
             />
           </Col>
           <Col
@@ -182,12 +309,12 @@ export default function ServicesListingPage() {
             lg={6}
           >
             <Button
-              type="primary"
+              type="default"
               block
-              style={{ height: "40px", backgroundColor: "#6C7BEA" }}
-              icon={<FilterOutlined />}
+              style={{ height: "40px" }}
+              onClick={handleResetFilters}
             >
-              Lọc
+              Reset bộ lọc và tìm kiếm
             </Button>
           </Col>
         </Row>
@@ -244,12 +371,12 @@ export default function ServicesListingPage() {
           </Col>
         )}
       </Row>
-      {services.length > 0 && totalElements > 0 && (
+      {allFilteredServices.length > 0 && (
         <div style={{ textAlign: "center", marginBottom: "30px" }}>
           <Pagination
-            current={(params.page || 0) + 1}
+            current={currentPage}
             total={totalElements}
-            pageSize={params.size || 12}
+            pageSize={pageSize}
             onChange={handlePageChange}
             showSizeChanger={false}
           />
