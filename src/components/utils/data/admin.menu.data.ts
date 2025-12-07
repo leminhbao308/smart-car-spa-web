@@ -25,7 +25,7 @@ import {
   HomeOutlined,
   DatabaseOutlined,
   IdcardOutlined,
-  ThunderboltOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 
 type MenuItem = Required<MenuProps>["items"][number];
@@ -53,11 +53,11 @@ export const adminMenuItems: MenuItem[] = [
       },
     ],
   },
-        {
-        key: "pos",
-        label: "Bán hàng (POS)",
-        icon: React.createElement(BarcodeOutlined),
-      },
+  {
+    key: "pos",
+    label: "Bán hàng (POS)",
+    icon: React.createElement(BarcodeOutlined),
+  },
   {
     key: "sales-management",
     label: "Quản lý hóa đơn",
@@ -79,6 +79,11 @@ export const adminMenuItems: MenuItem[] = [
     key: "pricing",
     label: "Quản Lý Bảng Giá",
     icon: React.createElement(DollarOutlined),
+  },
+  {
+    key: "reports",
+    label: "Báo cáo & Thống kê",
+    icon: React.createElement(BarChartOutlined),
   },
   {
     key: "promotions",
@@ -262,6 +267,7 @@ export const menuKeyToPath: Record<string, string> = {
   "promotions-list": "/dashboard/promotions",
   "promotions-history": "/dashboard/promotions/history",
   pricing: "/dashboard/price-table",
+  reports: "/dashboard/reports",
   suppliers: "/dashboard/supplier",
   pos: "/dashboard/pos",
   invoices: "/dashboard/sales-management/invoices",

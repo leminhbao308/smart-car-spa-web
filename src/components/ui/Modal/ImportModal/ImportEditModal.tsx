@@ -11,7 +11,7 @@ import {
   message,
   Divider,
   Spin,
-  Input,
+  Input, App,
 } from "antd";
 import {ColumnsType} from "antd/es/table";
 import {PlusOutlined, DeleteOutlined} from "@ant-design/icons";
@@ -50,6 +50,8 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
                                                            record,
                                                            loading = false,
                                                          }) => {
+  const {message} = App.useApp();
+
   const [form] = Form.useForm();
   const [items, setItems] = useState<ImportLineItem[]>([]);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -75,8 +77,8 @@ const ImportEditModal: React.FC<ImportEditModalProps> = ({
     try {
       const [branchesRes, productsRes, suppliersRes] = await Promise.all([
         BranchService.getAllBranches(),
-        ProductService.getAllProducts(),
-        SupplierService.getAllSuppliers(),
+        ProductService.getAllProducts({size: 1000}),
+        SupplierService.getAllSuppliers({size: 1000}),
       ]);
 
       setBranches(branchesRes.branches);
