@@ -71,6 +71,9 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
         // Nếu chưa đăng nhập, hiển thị modal yêu cầu đăng nhập
         setLoginModalVisible(true);
       }
+    } else if (key === "care") {
+      // Chuyển đến trang danh sách dịch vụ
+      router.push("/services");
     } else if (key === "aboutUs") {
       // Chuyển đến trang về chúng tôi
       router.push("/about");
@@ -83,17 +86,25 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
     }
   };
 
-  // Chuyển đổi menu items sang format của Ant Design, giữ nguyên children cho submenu
-  const antdMenuItems: MenuProps["items"] = menuItems.map((item) => ({
-    key: item.key,
-    label: item.label,
-    children: item.children?.map((subItem) => ({
-      key: subItem.key,
-      label: subItem.label,
-      onClick: () => handleMenuClick(subItem.key),
-    })),
-    onClick: () => handleMenuClick(item.key),
-  }));
+  // Chuyển đổi menu items sang format của Ant Design
+  const antdMenuItems: MenuProps["items"] = menuItems.map((item) => {
+    const menuItem: any = {
+      key: item.key,
+      label: item.label,
+      onClick: () => handleMenuClick(item.key),
+    };
+    
+    // Chỉ thêm children nếu có
+    if (item.children && item.children.length > 0) {
+      menuItem.children = item.children.map((subItem) => ({
+        key: subItem.key,
+        label: subItem.label,
+        onClick: () => handleMenuClick(subItem.key),
+      }));
+    }
+    
+    return menuItem;
+  });
 
   return (
     <Header

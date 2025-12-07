@@ -9,6 +9,7 @@ import { UserInfo } from '../types';
 export const ROLES = {
   CUSTOMER: 'CUSTOMER',
   ADMIN: 'ADMIN',
+  EMPLOYEE: 'EMPLOYEE', // Nhân viên (có thể có nhiều role_code khác nhau như MANAGER, TECHNICIAN, etc.)
 } as const;
 
 export type RoleCode = typeof ROLES[keyof typeof ROLES];
@@ -45,6 +46,22 @@ export function isCustomer(user: UserInfo | null): boolean {
 }
 
 /**
+ * Kiểm tra xem user có phải employee/staff không
+ * Employee có thể có nhiều role_code khác nhau (MANAGER, TECHNICIAN, CASHIER, etc.)
+ * nhưng user_type sẽ là "STAFF" hoặc "ADMIN"
+ */
+export function isEmployee(user: UserInfo | null): boolean {
+  if (!user) return false;
+  
+  // Nếu user_type là STAFF hoặc ADMIN, coi như employee
+  if (user.user_type === "EMPLOYEE" || user.user_type === "ADMIN") {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Kiểm tra xem user có quyền truy cập route group không
  */
 export function hasRouteAccess(user: UserInfo | null, routeGroup: RouteGroup): boolean {
@@ -52,9 +69,14 @@ export function hasRouteAccess(user: UserInfo | null, routeGroup: RouteGroup): b
     return routeGroup === ROUTE_GROUPS.PUBLIC;
   }
 
-  // ADMIN có quyền truy cập public routes và admin routes
+  // ADMIN có quyền truy cập public routes, admin routes và customer routes
+  // (vì Admin/Employee có thể làm tất cả những gì Guest & Member làm)
   if (isAdmin(user)) {
-    return routeGroup === ROUTE_GROUPS.PUBLIC || routeGroup === ROUTE_GROUPS.ADMIN;
+    return (
+      routeGroup === ROUTE_GROUPS.PUBLIC ||
+      routeGroup === ROUTE_GROUPS.ADMIN ||
+      routeGroup === ROUTE_GROUPS.CUSTOMER
+    );
   }
 
   // CUSTOMER có quyền truy cập public routes và customer routes
@@ -62,16 +84,25 @@ export function hasRouteAccess(user: UserInfo | null, routeGroup: RouteGroup): b
     return routeGroup === ROUTE_GROUPS.PUBLIC || routeGroup === ROUTE_GROUPS.CUSTOMER;
   }
 
+  // Employee/Staff có quyền truy cập public routes và customer routes
+  // (vì Employee có thể làm tất cả những gì Guest & Member làm)
+  if (isEmployee(user)) {
+    return (
+      routeGroup === ROUTE_GROUPS.PUBLIC ||
+      routeGroup === ROUTE_GROUPS.CUSTOMER
+    );
+  }
+
   return false;
 }
 
 /**
  * Lấy redirect path dựa trên role
+ * Tất cả user (admin, employee, customer) đều về trang chủ sau khi đăng nhập
  */
-export function getRedirectPathByRole(role?: string): string {
-  if (role === ROLES.ADMIN) {
-    return '/dashboard';
-  } else if (role === ROLES.CUSTOMER) {
+export function getRedirectPathByRole(role?: string, userType?: string): string {
+  // Tất cả user đều về trang chủ
+  if (role || userType) {
     return '/';
   }
   return '/auth/login';
@@ -81,9 +112,10 @@ export function getRedirectPathByRole(role?: string): string {
  * Kiểm tra xem path có thuộc route group nào không
  */
 export function getRouteGroupFromPath(pathname: string): RouteGroup | null {
-  // Public routes
+  // Public routes - Guest có thể xem: danh sách sản phẩm, danh sách dịch vụ, thông tin trung tâm & chi nhánh
   if (pathname.startsWith('/auth') || pathname.startsWith('/api') || 
-      pathname === '/' || pathname.startsWith('/services')) {
+      pathname === '/' || pathname.startsWith('/services') ||
+      pathname.startsWith('/products') || pathname.startsWith('/about')) {
     return ROUTE_GROUPS.PUBLIC;
   }
   
@@ -127,8 +159,13 @@ export function getAccessDeniedMessage(user: UserInfo | null, pathname: string):
     return 'Bạn không có quyền truy cập trang quản trị';
   }
   
-  if (routeGroup === ROUTE_GROUPS.CUSTOMER && !isCustomer(user)) {
-    return 'Bạn không có quyền truy cập trang khách hàng';
+  // CUSTOMER routes: Cho phép CUSTOMER, ADMIN, và EMPLOYEE
+  // (vì Admin/Employee có thể làm tất cả những gì Customer làm)
+  if (routeGroup === ROUTE_GROUPS.CUSTOMER) {
+    const hasAccess = isCustomer(user) || isAdmin(user) || isEmployee(user);
+    if (!hasAccess) {
+      return 'Bạn không có quyền truy cập trang khách hàng';
+    }
   }
   
   return 'Bạn không có quyền truy cập trang này';

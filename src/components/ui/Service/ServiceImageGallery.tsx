@@ -11,6 +11,7 @@ import {
   Spin,
   Empty,
   Tooltip,
+  App,
 } from "antd";
 import {
   PlusOutlined,
@@ -256,6 +257,7 @@ const ServiceImageGallery: React.FC<ServiceImageGalleryProps> = ({
   serviceId,
   editable = true,
 }) => {
+  const { modal } = App.useApp();
   const { images, loading } = useServiceImages(serviceId);
   const uploadImageMutation = useUploadServiceImage();
   const deleteImageMutation = useDeleteServiceImage();
@@ -319,12 +321,12 @@ const ServiceImageGallery: React.FC<ServiceImageGalleryProps> = ({
 
       const draggedImage = localImages[oldIndex];
       if (draggedImage?.is_main) {
-        Modal.warning({ title: "Không thể di chuyển ảnh chính" });
+        modal.warning({ title: "Không thể di chuyển ảnh chính" });
         return;
       }
 
       if (newIndex === 0) {
-        Modal.warning({
+        modal.warning({
           title: "Không thể di chuyển ảnh lên vị trí của ảnh chính",
         });
         return;
@@ -342,7 +344,7 @@ const ServiceImageGallery: React.FC<ServiceImageGalleryProps> = ({
       }
 
       if (addImageUpload.fileList.length === 0) {
-        Modal.error({ title: "Vui lòng chọn file ảnh" });
+        modal.error({ title: "Vui lòng chọn file ảnh" });
         return;
       }
 
@@ -404,7 +406,7 @@ const ServiceImageGallery: React.FC<ServiceImageGalleryProps> = ({
   };
 
   const handleDeleteImage = (mediaId: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: "Xác nhận xóa ảnh",
       content: "Bạn có chắc chắn muốn xóa ảnh này không?",
       okText: "Xóa",

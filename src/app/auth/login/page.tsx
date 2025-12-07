@@ -40,17 +40,8 @@ const LoginForm = () => {
   // Kiểm tra nếu user đã đăng nhập thì redirect
   useEffect(() => {
     if (isAuthenticated) {
-      const userInfo = AuthService.getCurrentUserFromStorage();
-      if (userInfo) {
-        const role = userInfo.role?.role_code;
-        if (role === "ADMIN") {
-          router.push(ROUTES.DASHBOARD);
-        } else {
-          router.push(ROUTES.HOME);
-        }
-      } else {
-        router.push(ROUTES.HOME);
-      }
+      // Tất cả user (admin, employee, customer) đều về trang chủ
+      router.push(ROUTES.HOME);
     }
   }, [isAuthenticated, router]);
 
@@ -104,18 +95,8 @@ const LoginForm = () => {
         localStorage.removeItem(REMEMBERED_EMAIL_KEY);
       }
 
-      // Redirect dựa trên role của user
-      const userInfo = AuthService.getCurrentUserFromStorage();
-      if (userInfo) {
-        const role = userInfo.role?.role_code;
-        if (role === "ADMIN") {
-          router.push(ROUTES.DASHBOARD);
-        } else {
-          router.push(ROUTES.HOME);
-        }
-      } else {
-        router.push(ROUTES.HOME);
-      }
+      // Tất cả user (admin, employee, customer) đều về trang chủ sau khi đăng nhập
+      router.push(ROUTES.HOME);
     } catch (error) {
       console.log("Login error:", error);
       message.error("Đăng nhập thất bại!");

@@ -15,6 +15,8 @@ import {
   Skeleton,
   Statistic,
   Descriptions,
+  Carousel,
+  Image,
 } from "antd";
 import {
   HeartOutlined,
@@ -26,9 +28,9 @@ import {
   SettingOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
-import Image from "next/image";
+import NextImage from "next/image";
 import { useServiceByUrl } from "@/lib/api/hooks/useServices";
-import { useServiceMainImage } from "@/lib/api/hooks/useServiceImages";
+import { useServiceImages } from "@/lib/api/hooks/useServiceImages";
 import { PricingService } from "@/lib/api/services/pricing.service";
 import { useParams } from "next/navigation";
 
@@ -38,9 +40,17 @@ export default function ServiceDetailPage() {
   const params = useParams();
   const serviceUrl = params.id as string;
   const { data: service, isLoading, error } = useServiceByUrl(serviceUrl);
-  const { mainImageUrl } = useServiceMainImage(service?.service_id || "");
+  const { images: serviceImages, mainImage, loading: imagesLoading } = useServiceImages(service?.service_id || null);
   const [displayPrice, setDisplayPrice] = useState(0);
   const [priceLoading, setPriceLoading] = useState(true);
+
+  // Debug: Log images để kiểm tra
+  useEffect(() => {
+    if (serviceImages) {
+      console.log("Service Images:", serviceImages);
+      console.log("Number of images:", serviceImages.length);
+    }
+  }, [serviceImages]);
 
   useEffect(() => {
     const fetchPrice = async () => {
@@ -103,207 +113,266 @@ export default function ServiceDetailPage() {
 
   // Process Tab - Quy trình dịch vụ
   const processTab = service.service_process ? (
-    <Row gutter={[24, 24]}>
-      {/* Process Info Section */}
-      <Col
-        xs={24}
-        md={8}
+    <div>
+      {/* Header Section */}
+      <div
+        style={{
+          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          borderRadius: "16px",
+          padding: "32px",
+          marginBottom: "32px",
+          color: "white",
+        }}
       >
-        <Card
-          title="Thông tin quy trình"
-          style={{
-            backgroundColor: "#f8f9fa",
-            height: "100%",
-          }}
-        >
-          <Space
-            direction="vertical"
-            style={{ width: "100%" }}
-            size="middle"
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
+          <div
+            style={{
+              width: "56px",
+              height: "56px",
+              borderRadius: "12px",
+              background: "rgba(255, 255, 255, 0.2)",
+              backdropFilter: "blur(10px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "24px",
+            }}
           >
-            <div>
-              <Text
-                type="secondary"
-                style={{
-                  fontSize: "13px",
-                  display: "block",
-                  marginBottom: "4px",
-                }}
-              >
-                Tên quy trình
-              </Text>
-              <Text
-                strong
-                style={{ fontSize: "15px" }}
-              >
-                {service.service_process.name}
-              </Text>
-            </div>
-
-            <div>
-              <Text
-                type="secondary"
-                style={{
-                  fontSize: "13px",
-                  display: "block",
-                  marginBottom: "4px",
-                }}
-              >
-                Số bước thực hiện
-              </Text>
-              <Tag
-                color="cyan"
-                style={{ fontSize: "13px" }}
-              >
-                {service.service_process.process_steps?.length || 0} bước
-              </Tag>
-            </div>
-
-            {service.service_process.description && (
-              <div>
-                <Text
-                  type="secondary"
-                  style={{
-                    fontSize: "13px",
-                    display: "block",
-                    marginBottom: "4px",
-                  }}
-                >
-                  Mô tả
-                </Text>
-                <Text style={{ fontSize: "14px", color: "#595959" }}>
-                  {service.service_process.description}
-                </Text>
-              </div>
-            )}
-          </Space>
-        </Card>
-      </Col>
+            <SettingOutlined />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Title
+              level={3}
+              style={{ color: "white", margin: 0, marginBottom: "8px" }}
+            >
+              {service.service_process.name}
+            </Title>
+            <Text style={{ color: "rgba(255, 255, 255, 0.9)", fontSize: "15px" }}>
+              {service.service_process.description || "Quy trình chăm sóc chuyên nghiệp"}
+            </Text>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: "24px", marginTop: "20px" }}>
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.15)",
+              backdropFilter: "blur(10px)",
+              padding: "12px 20px",
+              borderRadius: "10px",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+            }}
+          >
+            <Text
+              style={{
+                color: "rgba(255, 255, 255, 0.8)",
+                fontSize: "13px",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              Tổng số bước
+            </Text>
+            <Text
+              strong
+              style={{ color: "white", fontSize: "24px", display: "block" }}
+            >
+              {service.service_process.process_steps?.length || 0}
+            </Text>
+          </div>
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.15)",
+              backdropFilter: "blur(10px)",
+              padding: "12px 20px",
+              borderRadius: "10px",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+            }}
+          >
+            <Text
+              style={{
+                color: "rgba(255, 255, 255, 0.8)",
+                fontSize: "13px",
+                display: "block",
+                marginBottom: "4px",
+              }}
+            >
+              Thời gian dự kiến
+            </Text>
+            <Text
+              strong
+              style={{ color: "white", fontSize: "24px", display: "block" }}
+            >
+              {service.service_process.estimated_duration || service.estimated_duration || "N/A"} phút
+            </Text>
+          </div>
+        </div>
+      </div>
 
       {/* Process Steps Section */}
-      <Col
-        xs={24}
-        md={16}
-      >
-        <Card
-          title={`Các bước thực hiện (${
-            service.service_process.process_steps?.length || 0
-          })`}
-        >
-          {service.service_process.process_steps &&
-          service.service_process.process_steps.length > 0 ? (
-            <div style={{ position: "relative" }}>
-              {/* Timeline line */}
-              <div
-                style={{
-                  position: "absolute",
-                  left: 20,
-                  top: 12,
-                  bottom: 12,
-                  width: 2,
-                  backgroundColor: "#e8e8e8",
-                  zIndex: 1,
-                }}
-              />
+      {service.service_process.process_steps &&
+      service.service_process.process_steps.length > 0 ? (
+        <div style={{ position: "relative" }}>
+          {/* Elegant Timeline line with gradient */}
+          <div
+            style={{
+              position: "absolute",
+              left: "28px",
+              top: "20px",
+              bottom: "20px",
+              width: "3px",
+              background: "linear-gradient(180deg, #667eea 0%, #764ba2 100%)",
+              borderRadius: "2px",
+              zIndex: 1,
+              boxShadow: "0 0 10px rgba(102, 126, 234, 0.3)",
+            }}
+          />
 
-              {service.service_process.process_steps.map((step, index) => (
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            {service.service_process.process_steps.map((step, index) => (
+              <div
+                key={step.id}
+                style={{
+                  position: "relative",
+                  paddingLeft: "80px",
+                  zIndex: 2,
+                }}
+              >
+                {/* Elegant Timeline step indicator */}
                 <div
-                  key={step.id}
                   style={{
-                    position: "relative",
-                    paddingLeft: 70,
-                    paddingBottom:
-                      index ===
-                      (service.service_process?.process_steps?.length || 0) - 1
-                        ? 0
-                        : 24,
-                    zIndex: 2,
+                    position: "absolute",
+                    left: "12px",
+                    top: "4px",
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: index === 0 
+                      ? "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                      : "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                    border: "4px solid #ffffff",
+                    boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4), 0 0 0 4px rgba(102, 126, 234, 0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "16px",
+                    fontWeight: "bold",
+                    color: "white",
+                    zIndex: 3,
+                    transition: "all 0.3s ease",
                   }}
                 >
-                  {/* Timeline step number */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 6,
-                      top: 2,
-                      width: 32,
-                      height: 32,
-                      borderRadius: "50%",
-                      backgroundColor: "#6C7BEA",
-                      border: "3px solid #ffffff",
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 16,
-                      fontWeight: "bold",
-                      color: "white",
-                      zIndex: 3,
-                    }}
-                  >
-                    {step.step_order}
-                  </div>
+                  {step.step_order}
+                </div>
 
-                  {/* Step content */}
+                {/* Elegant Step content card */}
+                <Card
+                  hoverable
+                  style={{
+                    background: "linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)",
+                    border: "1px solid rgba(102, 126, 234, 0.15)",
+                    borderRadius: "16px",
+                    boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+                    transition: "all 0.3s ease",
+                    overflow: "hidden",
+                  }}
+                  styles={{ body: { padding: "24px" } }}
+                >
                   <div
                     style={{
-                      backgroundColor: "#ffffff",
-                      border: "1px solid #e8e8e8",
-                      borderRadius: 8,
-                      padding: 16,
-                      boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "16px",
+                      marginBottom: step.description ? "12px" : "0",
                     }}
                   >
                     <div
                       style={{
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "12px",
+                        background: index === 0
+                          ? "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)"
+                          : "linear-gradient(135deg, rgba(240, 147, 251, 0.1) 0%, rgba(245, 87, 108, 0.1) 100%)",
                         display: "flex",
                         alignItems: "center",
-                        gap: 12,
-                        marginBottom: 8,
+                        justifyContent: "center",
+                        fontSize: "20px",
+                        color: index === 0 ? "#667eea" : "#f5576c",
+                        flexShrink: 0,
                       }}
                     >
-                      <Text
-                        strong
-                        style={{ fontSize: 15, color: "#262626", flex: 1 }}
-                      >
-                        {step.name}
-                      </Text>
-                      {step.is_required && (
-                        <Tag
-                          color="red"
-                          style={{ margin: 0, fontSize: 12 }}
-                        >
-                          Bắt buộc
-                        </Tag>
-                      )}
+                      <PlayCircleOutlined />
                     </div>
-
-                    {step.description && (
-                      <Text
+                    <div style={{ flex: 1 }}>
+                      <div
                         style={{
-                          fontSize: 13,
-                          color: "#666",
-                          display: "block",
-                          marginTop: 8,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "12px",
+                          marginBottom: step.description ? "8px" : "0",
+                          flexWrap: "wrap",
                         }}
                       >
-                        {step.description}
-                      </Text>
-                    )}
+                        <Title
+                          level={4}
+                          style={{
+                            margin: 0,
+                            color: "#1a1a1a",
+                            fontSize: "18px",
+                            fontWeight: 600,
+                            flex: 1,
+                            minWidth: "200px",
+                          }}
+                        >
+                          {step.name}
+                        </Title>
+                        {step.is_required && (
+                          <Tag
+                            color="error"
+                            style={{
+                              margin: 0,
+                              fontSize: "12px",
+                              padding: "2px 10px",
+                              borderRadius: "6px",
+                              fontWeight: 500,
+                            }}
+                          >
+                            Bắt buộc
+                          </Tag>
+                        )}
+                      </div>
+
+                      {step.description && (
+                        <Text
+                          style={{
+                            fontSize: "14px",
+                            color: "#666",
+                            lineHeight: "1.7",
+                            display: "block",
+                            marginTop: "8px",
+                          }}
+                        >
+                          {step.description}
+                        </Text>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <Empty description="Chưa có bước quy trình nào" />
-          )}
-        </Card>
-      </Col>
-    </Row>
+                </Card>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <Empty
+          description="Chưa có bước quy trình nào"
+          style={{ padding: "60px 0" }}
+        />
+      )}
+    </div>
   ) : (
     <Empty
       description="Dịch vụ này chưa được thiết lập quy trình thực hiện cụ thể"
-      style={{ padding: "40px 0" }}
+      style={{ padding: "60px 0" }}
     />
   );
 
@@ -456,114 +525,97 @@ export default function ServiceDetailPage() {
       <Empty description="Dịch vụ này không sử dụng sản phẩm cụ thể" />
     );
 
-  // Specifications Tab - Thông tin chi tiết
-  const specificationsTab = (
-    <div>
-      <Row gutter={[16, 24]}>
-        {/* Statistics Cards */}
-        <Col
-          xs={12}
-          sm={8}
-        >
-          <Card style={{ textAlign: "center", borderRadius: 12 }}>
-            <Statistic
-              title="Thời gian dự kiến"
-              value={
-                service.service_process?.estimated_duration ||
-                service.estimated_duration ||
-                0
-              }
-              suffix="phút"
-              valueStyle={{ color: "#1890ff", fontSize: 28 }}
-              prefix={<ClockCircleOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col
-          xs={12}
-          sm={8}
-        >
-          <Card style={{ textAlign: "center", borderRadius: 12 }}>
-            <Statistic
-              title="Số sản phẩm"
-              value={service.service_products?.length || 0}
-              valueStyle={{ color: "#52c41a", fontSize: 28 }}
-              prefix={<ShoppingCartOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col
-          xs={12}
-          sm={8}
-        >
-          <Card style={{ textAlign: "center", borderRadius: 12 }}>
-            <Statistic
-              title="Số bước quy trình"
-              value={service.service_process?.process_steps?.length || 0}
-              valueStyle={{ color: "#722ed1", fontSize: 28 }}
-              prefix={<PlayCircleOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Detailed Information */}
-      <Card
-        title="Thông tin chi tiết"
-        style={{ marginTop: 24, borderRadius: 12 }}
+  // Specifications Section - Thông tin chi tiết (hiển thị bên phải)
+  const specificationsSection = (
+    <Card
+      style={{
+        marginTop: "24px",
+        borderRadius: "16px",
+        background: "linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)",
+        border: "1px solid rgba(102, 126, 234, 0.1)",
+        boxShadow: "0 4px 20px rgba(102, 126, 234, 0.08)",
+      }}
+    >
+      <Title
+        level={4}
+        style={{
+          marginBottom: "24px",
+          color: "#1a1a1a",
+          fontSize: "20px",
+          fontWeight: 600,
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+        }}
       >
-        <Descriptions
-          column={1}
-          size="middle"
-        >
-          <Descriptions.Item
-            label={
-              <Space>
-                <TagOutlined style={{ color: "#1890ff" }} />
-                <Text strong>Danh mục</Text>
-              </Space>
-            }
-          >
-            <Tag
-              color="blue"
-              style={{ fontSize: 14 }}
-            >
-              {service.category_name || "Chưa phân loại"}
-            </Tag>
-          </Descriptions.Item>
-          <Descriptions.Item
-            label={
-              <Space>
-                <SettingOutlined style={{ color: "#1890ff" }} />
-                <Text strong>Loại dịch vụ</Text>
-              </Space>
-            }
-          >
-            <Tag
-              color="purple"
-              style={{ fontSize: 14 }}
-            >
-              {service.service_type_name || "N/A"}
-            </Tag>
-          </Descriptions.Item>
-          <Descriptions.Item
-            label={
-              <Space>
-                <ClockCircleOutlined style={{ color: "#1890ff" }} />
-                <Text strong>Thời gian thực hiện</Text>
-              </Space>
-            }
-          >
-            <Text style={{ fontSize: 14 }}>
-              {service.service_process?.estimated_duration ||
-                service.estimated_duration ||
-                "N/A"}{" "}
-              phút
+        <div
+          style={{
+            width: "4px",
+            height: "24px",
+            borderRadius: "2px",
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          }}
+        />
+        Thông tin chi tiết
+      </Title>
+
+      {/* Simple Text Information - No labels */}
+      <Space
+        direction="vertical"
+        size="small"
+        style={{ width: "100%" }}
+      >
+        {service.category_name && (
+          <div>
+            <Text style={{ fontSize: "14px", color: "#595959" }}>
+              <TagOutlined style={{ marginRight: "8px", color: "#8c8c8c" }} />
+              {service.category_name}
             </Text>
-          </Descriptions.Item>
-        </Descriptions>
-      </Card>
-    </div>
+          </div>
+        )}
+        {service.service_type_name && (
+          <div>
+            <Text style={{ fontSize: "14px", color: "#595959" }}>
+              <SettingOutlined style={{ marginRight: "8px", color: "#8c8c8c" }} />
+              {service.service_type_name}
+            </Text>
+          </div>
+        )}
+        <div>
+          <Text style={{ fontSize: "14px", color: "#595959" }}>
+            <ClockCircleOutlined style={{ marginRight: "8px", color: "#8c8c8c" }} />
+            {service.service_process?.estimated_duration ||
+              service.estimated_duration ||
+              "N/A"}{" "}
+            phút
+          </Text>
+        </div>
+        {/* Service Attributes */}
+        {service.attribute_values && service.attribute_values.length > 0 && (
+          <>
+            <Divider style={{ margin: "16px 0" }} />
+            <Space
+              direction="vertical"
+              size="small"
+              style={{ width: "100%" }}
+            >
+              {service.attribute_values.map((attr, index) => (
+                <div key={index}>
+                  <Text style={{ fontSize: "14px", color: "#595959" }}>
+                    <span style={{ fontWeight: 500, color: "#8c8c8c" }}>
+                      {attr.attribute_name}:
+                    </span>{" "}
+                    <span style={{ fontWeight: 600, color: "#1a1a1a" }}>
+                      {attr.attribute_value}
+                    </span>
+                  </Text>
+                </div>
+              ))}
+            </Space>
+          </>
+        )}
+      </Space>
+    </Card>
   );
 
   const tabItems = [
@@ -572,28 +624,16 @@ export default function ServiceDetailPage() {
       label: "Mô tả",
       children: (
         <div>
-          <Paragraph style={{ fontSize: "15px", lineHeight: "1.8" }}>
+          <Paragraph style={{ fontSize: "15px", lineHeight: "1.8", color: "#595959" }}>
             {service.description || "Chưa có mô tả"}
           </Paragraph>
         </div>
       ),
     },
     {
-      key: "specifications",
-      label: "Thông tin chi tiết",
-      children: specificationsTab,
-    },
-    {
       key: "products",
       label: `Sản phẩm sử dụng (${service.service_products?.length || 0})`,
       children: productsTab,
-    },
-    {
-      key: "process",
-      label: `Quy trình thực hiện (${
-        service.service_process?.process_steps?.length || 0
-      })`,
-      children: processTab,
     },
   ];
 
@@ -619,24 +659,95 @@ export default function ServiceDetailPage() {
           xs={24}
           md={12}
         >
-          <div
-            style={{
-              position: "relative",
-              width: "100%",
-              paddingBottom: "100%",
-              borderRadius: "12px",
-              overflow: "hidden",
-              backgroundColor: "#f0f0f0",
-            }}
-          >
-            <Image
-              src={mainImageUrl || "/images/placeholder.jpg"}
-              alt={service.service_name}
-              fill
-              style={{ objectFit: "cover" }}
-              sizes="(max-width: 768px) 100vw, 50vw"
+          {imagesLoading ? (
+            <Skeleton.Image
+              active
+              style={{ width: "100%", height: "500px", borderRadius: "12px" }}
             />
-          </div>
+          ) : serviceImages && Array.isArray(serviceImages) && serviceImages.length > 0 ? (
+            serviceImages.length > 1 ? (
+              // Nhiều hình: Hiển thị Carousel
+              <div style={{ borderRadius: "12px", overflow: "hidden" }}>
+                <Image.PreviewGroup>
+                  <Carousel
+                    autoplay
+                    dots
+                    style={{
+                      borderRadius: "12px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {serviceImages.map((img) => (
+                      <div
+                        key={img.media_id}
+                        style={{
+                          width: "100%",
+                          height: "500px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "#f0f0f0",
+                        }}
+                      >
+                        <Image
+                          src={img.media_url}
+                          alt={img.alt_text || service.service_name}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                          preview={{
+                            mask: "Xem ảnh",
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </Carousel>
+                </Image.PreviewGroup>
+              </div>
+            ) : (
+              // Chỉ có 1 hình: Hiển thị hình đơn
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  paddingBottom: "100%",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  backgroundColor: "#f0f0f0",
+                }}
+              >
+              <NextImage
+                src={serviceImages[0]?.media_url || "/images/placeholder.jpg"}
+                alt={serviceImages[0]?.alt_text || service.service_name}
+                fill
+                style={{ objectFit: "cover" }}
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+              </div>
+            )
+          ) : (
+            // Không có hình: Hiển thị placeholder
+            <div
+              style={{
+                position: "relative",
+                width: "100%",
+                paddingBottom: "100%",
+                borderRadius: "12px",
+                overflow: "hidden",
+                backgroundColor: "#f0f0f0",
+              }}
+            >
+              <NextImage
+                src="/images/placeholder.jpg"
+                alt={service.service_name}
+                fill
+                style={{ objectFit: "cover" }}
+                sizes="(max-width: 768px) 100vw, 50vw"
+              />
+            </div>
+          )}
         </Col>
         <Col
           xs={24}
@@ -650,79 +761,95 @@ export default function ServiceDetailPage() {
             <div>
               <Title
                 level={2}
-                style={{ margin: "0 0 12px 0" }}
+                style={{
+                  margin: "0 0 16px 0",
+                  fontSize: "32px",
+                  fontWeight: 700,
+                  color: "#1a1a1a",
+                  lineHeight: "1.3",
+                }}
               >
                 {service.service_name}
               </Title>
             </div>
             <div
               style={{
-                backgroundColor: "#f5f5f5",
-                padding: "12px",
-                borderRadius: "8px",
+                background: "linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)",
+                padding: "20px 24px",
+                borderRadius: "16px",
+                border: "1px solid rgba(102, 126, 234, 0.2)",
               }}
             >
               <Text
-                strong
-                style={{ fontSize: "24px", color: "#6C7BEA" }}
+                style={{
+                  fontSize: "28px",
+                  fontWeight: 700,
+                  background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
               >
                 {priceLoading ? "Đang tải..." : formatPrice(displayPrice)}
               </Text>
             </div>
-            <Space wrap>
-              {service.service_type_name && (
-                <Tag color="blue">{service.service_type_name}</Tag>
-              )}
-              {service.is_active && <Tag color="green">Có sẵn</Tag>}
-            </Space>
-            <Space
-              direction="vertical"
-              style={{ width: "100%", paddingTop: "16px" }}
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                alignItems: "center",
+                padding: "12px 16px",
+                background: "rgba(102, 126, 234, 0.05)",
+                borderRadius: "12px",
+                border: "1px solid rgba(102, 126, 234, 0.1)",
+              }}
             >
-              <div
-                style={{ display: "flex", gap: "12px", alignItems: "center" }}
-              >
-                <ClockCircleOutlined
-                  style={{ fontSize: "16px", color: "#6C7BEA" }}
-                />
-                <Text>
-                  Thời gian thực hiện: {service.estimated_duration || "N/A"} phút
-                </Text>
-              </div>
-            </Space>
-            <Space style={{ width: "100%", paddingTop: "16px" }}>
-              <Button
-                type="primary"
-                size="large"
-                style={{
-                  backgroundColor: "#6C7BEA",
-                  border: "none",
-                  height: "40px",
-                  borderRadius: "8px",
-                  flex: 1,
-                }}
-              >
-                Đặt dịch vụ
-              </Button>
-              {/* <Button
-                type="default"
-                size="large"
-                icon={<HeartOutlined />}
-                style={{ height: "40px", borderRadius: "8px" }}
+              <ClockCircleOutlined
+                style={{ fontSize: "18px", color: "#667eea" }}
               />
-              <Button
-                type="default"
-                size="large"
-                icon={<ShareAltOutlined />}
-                style={{ height: "40px", borderRadius: "8px" }}
-              /> */}
-            </Space>
+              <Text style={{ fontSize: "14px", color: "#595959" }}>
+                Thời gian thực hiện: <Text strong>{service.estimated_duration || "N/A"}</Text> phút
+              </Text>
+            </div>
           </Space>
+          
+          {/* Thông tin chi tiết section */}
+          {specificationsSection}
         </Col>
       </Row>
-      <Card style={{ marginTop: "32px", borderRadius: "12px" }}>
-        <Tabs items={tabItems} />
+      <Card
+        style={{
+          marginTop: "32px",
+          borderRadius: "16px",
+          border: "1px solid rgba(0,0,0,0.06)",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        }}
+      >
+        <Tabs
+          items={tabItems}
+          style={{
+            fontSize: "15px",
+          }}
+        />
       </Card>
+
+      {/* Quy trình thực hiện - Section riêng */}
+      {service.service_process && (
+        <Card
+          style={{
+            marginTop: "32px",
+            borderRadius: "16px",
+            border: "1px solid rgba(102, 126, 234, 0.15)",
+            background: "linear-gradient(135deg, #ffffff 0%, #fafbff 100%)",
+            boxShadow: "0 4px 24px rgba(102, 126, 234, 0.1)",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ padding: "32px" }}>
+            {processTab}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

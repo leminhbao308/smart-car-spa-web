@@ -73,28 +73,49 @@ const ServicesPage = () => {
 
   // Load services data
   const loadServices = useCallback(
-    async (page: number = 0, size: number = 10) => {
+    async (page: number = 1, size: number = 10) => {
       try {
         setLoading(true);
+        // Frontend uses 1-based page, backend will standardize to 0-based
         const response = await ServiceService.getAllServices({ page, size });
 
-        // Handle both Service[] and ServicePageResponse
+        // Handle both Service[] and PaginatedResponse
         if (Array.isArray(response.data)) {
-          // Direct array response
+          // Direct array response (no pagination)
           setServiceData(response.data);
           setPagination({
             current: 1,
             pageSize: response.data.length,
             total: response.data.length,
           });
+        } else if (response.data && 'content' in response.data) {
+          // Paginated response - check for PaginatedResponse format (from ResponseBuilder.paginated)
+          const paginatedData = response.data as any;
+          if ('page' in paginatedData) {
+            // New format: PaginatedResponse with 'page' field (0-based from Spring, but we display as 1-based)
+            setServiceData(paginatedData.content || []);
+            setPagination({
+              current: (paginatedData.page || 0) + 1, // Convert 0-based to 1-based for display
+              pageSize: paginatedData.size || size,
+              total: paginatedData.total_elements || paginatedData.totalElements || 0,
+            });
+          } else if ('number' in paginatedData) {
+            // Old format: Spring Page with 'number' field (0-based)
+            setServiceData(paginatedData.content || []);
+            setPagination({
+              current: (paginatedData.number || 0) + 1, // Convert 0-based to 1-based for display
+              pageSize: paginatedData.size || size,
+              total: paginatedData.totalElements || 0,
+            });
+          } else {
+            // Fallback
+            setServiceData([]);
+            setPagination({ current: 1, pageSize: size, total: 0 });
+          }
         } else {
-          // Paginated response
-          setServiceData(response.data.content || []);
-          setPagination({
-            current: response.data.number + 1,
-            pageSize: response.data.size,
-            total: response.data.totalElements,
-          });
+          // Unexpected format
+          setServiceData([]);
+          setPagination({ current: 1, pageSize: size, total: 0 });
         }
       } catch (error) {
         message.error("Không thể tải danh sách dịch vụ");
@@ -109,7 +130,7 @@ const ServicesPage = () => {
   // Refresh data function
   const refreshData = async () => {
     try {
-      await loadServices(pagination.current - 1, pagination.pageSize);
+      await loadServices(pagination.current, pagination.pageSize);
       setTableKey((prev) => prev + 1); // Force table re-render
     } catch (error) {
       console.log("Error refreshing data:", error);
@@ -342,8 +363,8 @@ const ServicesPage = () => {
     // Chỉ cần đóng modal và refresh data
     setEditModalVisible(false);
     setEditData(null);
-    // Refresh data
-    loadServices(pagination.current - 1, pagination.pageSize);
+    // Refresh data - use 1-based page number
+    loadServices(pagination.current, pagination.pageSize);
     setTableKey((prev) => prev + 1); // Force table re-render
   };
 
@@ -500,7 +521,8 @@ const ServicesPage = () => {
           showTotal: (total: number, range: [number, number]) =>
             `${range[0]}-${range[1]} của ${total} dịch vụ`,
           onChange: (page: number, pageSize?: number) => {
-            loadServices(page - 1, pageSize || 10);
+            // Ant Design Pagination uses 1-based page numbers
+            loadServices(page, pageSize || pagination.pageSize);
           },
         }}
       />

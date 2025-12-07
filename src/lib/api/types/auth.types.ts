@@ -63,7 +63,7 @@ export interface UserInfo extends BaseEntity {
   avatar_url?: string | null;
   is_active: boolean;
   role: Role;
-  user_type: "CUSTOMER" | "ADMIN" | "STAFF";
+  user_type: "CUSTOMER" | "ADMIN" | "EMPLOYEE";
   customer_rank?: string | null;
   accumulated_points: number;
   total_orders: number;

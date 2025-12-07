@@ -4,7 +4,8 @@ import type { NextRequest } from "next/server";
 // Route groups và permissions
 const ROUTE_GROUPS = {
   // Public routes - không cần authentication (ai cũng truy cập được)
-  PUBLIC: ["/auth", "/api", "/", "/services"],
+  // Guest có thể xem: danh sách sản phẩm, danh sách dịch vụ, thông tin trung tâm & chi nhánh
+  PUBLIC: ["/auth", "/api", "/", "/services", "/products", "/about"],
   // Customer routes - cần CUSTOMER role
   CUSTOMER: ["/member"],
   // Admin routes - cần ADMIN role
@@ -15,6 +16,7 @@ const ROUTE_GROUPS = {
 const ROLES = {
   CUSTOMER: "CUSTOMER",
   ADMIN: "ADMIN",
+  EMPLOYEE: "EMPLOYEE", // Nhân viên (có thể có nhiều role_code khác nhau như MANAGER, TECHNICIAN, etc.)
 } as const;
 
 /**
@@ -55,7 +57,7 @@ function getRouteGroup(pathname: string): string | null {
  */
 function getUserFromRequest(
   request: NextRequest
-): { role: string; isAuthenticated: boolean; hasRefreshToken: boolean } | null {
+): { role: string; userType: string | null; isAuthenticated: boolean; hasRefreshToken: boolean } | null {
   try {
     // Lấy token từ cookie - KHÔNG kiểm tra expiry
     const refreshToken = request.cookies.get("refresh_token")?.value;
@@ -76,7 +78,8 @@ function getUserFromRequest(
       // Trả về role mặc định để middleware cho phép vào
       // Client side sẽ xử lý việc refresh token và lấy user info
       return {
-        role: null,
+        role: "",
+        userType: null,
         isAuthenticated: true, // Coi như authenticated vì có refresh token
         hasRefreshToken: true,
       };
@@ -87,6 +90,7 @@ function getUserFromRequest(
 
     return {
       role: userInfo?.role?.role_code || null,
+      userType: userInfo?.user_type || null,
       isAuthenticated: true,
       hasRefreshToken: true,
     };
@@ -97,6 +101,25 @@ function getUserFromRequest(
 }
 
 /**
+ * Kiểm tra xem role có phải là employee/staff không
+ * Employee có thể có nhiều role_code khác nhau (MANAGER, TECHNICIAN, CASHIER, etc.)
+ * nhưng không phải là CUSTOMER
+ */
+function isEmployeeRole(userRole: string | null, userType: string | null): boolean {
+  if (!userRole) return false;
+  
+  // Nếu user_type là EMPLOYEE hoặc ADMIN, coi như employee
+  if (userType === "EMPLOYEE" || userType === "ADMIN") {
+    return true;
+  }
+  
+  // Nếu role_code không phải CUSTOMER và không phải ADMIN (đã xử lý ở trên)
+  // thì có thể là employee với role_code khác
+  // Tuy nhiên, để an toàn, chỉ xử lý khi có user_type
+  return false;
+}
+
+/**
  * Kiểm tra quyền truy cập
  * NOTE: Nếu user có refresh token nhưng không có role (đang refresh),
  * middleware sẽ cho phép vào và để client-side xử lý
@@ -104,7 +127,8 @@ function getUserFromRequest(
 function hasPermission(
   userRole: string | null,
   requiredGroup: string,
-  hasRefreshToken: boolean
+  hasRefreshToken: boolean,
+  userType: string | null = null
 ): boolean {
   // Nếu không có user role, chỉ cho phép truy cập public routes
   if (!userRole) {
@@ -119,9 +143,14 @@ function hasPermission(
     return requiredGroup === "PUBLIC";
   }
 
-  // ADMIN có quyền truy cập public routes và admin routes
+  // ADMIN có quyền truy cập public routes, admin routes và customer routes
+  // (vì Admin/Employee có thể làm tất cả những gì Guest & Member làm)
   if (userRole === ROLES.ADMIN) {
-    return requiredGroup === "PUBLIC" || requiredGroup === "ADMIN";
+    return (
+      requiredGroup === "PUBLIC" ||
+      requiredGroup === "ADMIN" ||
+      requiredGroup === "CUSTOMER"
+    );
   }
 
   // CUSTOMER có quyền truy cập public routes và customer routes
@@ -129,20 +158,27 @@ function hasPermission(
     return requiredGroup === "PUBLIC" || requiredGroup === "CUSTOMER";
   }
 
+  // Employee/Staff (có user_type là STAFF hoặc role_code khác CUSTOMER/ADMIN)
+  // có quyền truy cập public routes và customer routes
+  // (vì Employee có thể làm tất cả những gì Guest & Member làm)
+  if (isEmployeeRole(userRole, userType)) {
+    return (
+      requiredGroup === "PUBLIC" ||
+      requiredGroup === "CUSTOMER"
+    );
+  }
+
   return false;
 }
 
 /**
  * Tạo redirect URL dựa trên role
+ * Tất cả user (admin, employee, customer) đều về trang chủ sau khi đăng nhập
  */
 function getRedirectUrl(userRole: string | null, currentPath: string): string {
-  // Nếu đang ở trang login/signup và đã đăng nhập, redirect về trang chính
+  // Nếu đang ở trang login/signup và đã đăng nhập, redirect về trang chủ
   if (currentPath.startsWith("/auth/") && userRole) {
-    if (userRole === ROLES.ADMIN) {
-      return "/dashboard";
-    } else if (userRole === ROLES.CUSTOMER) {
-      return "/";
-    }
+    return "/";
   }
 
   // Nếu chưa đăng nhập và cố gắng truy cập protected route
@@ -187,7 +223,8 @@ export function middleware(request: NextRequest) {
   const hasAccess = hasPermission(
     userInfo?.role || null,
     routeGroup,
-    userInfo?.hasRefreshToken || false
+    userInfo?.hasRefreshToken || false,
+    userInfo?.userType || null
   );
 
   if (!hasAccess) {
