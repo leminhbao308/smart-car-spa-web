@@ -39,77 +39,77 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
 
   return (
     <Link href={`/services/${service.service_url || service.service_id}`}>
-      <Card
-        hoverable
-        style={{
-          borderRadius: "12px",
-          overflow: "hidden",
-          marginBottom: "24px",
-          border: "none",
-          height: "280px",
-          transition: "all 0.3s ease",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-        }}
-        styles={{
-          body: {
-            padding: 0,
-            height: "100%",
-          },
-        }}
-      >
-        <div
-          style={{
-            position: "relative",
-            width: "100%",
-            height: "100%",
-            overflow: "hidden",
-          }}
-        >
-          <Image
+  <Card
+    hoverable
+    style={{
+      borderRadius: "12px",
+      overflow: "hidden",
+      marginBottom: "24px",
+      border: "none",
+      height: "280px",
+      transition: "all 0.3s ease",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+    }}
+    styles={{
+      body: {
+        padding: 0,
+        height: "100%",
+      },
+    }}
+  >
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+      }}
+    >
+      <Image
             src={imageUrl || "/images/background01.jpg"}
             alt={service.service_name}
-            fill
-            style={{
-              objectFit: "cover",
-            }}
-          />
-          <div
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: 0,
-              right: 0,
-              background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
-              padding: "24px",
-              color: "white",
-            }}
-          >
-            <Title
-              level={4}
-              style={{
-                color: "white",
-                marginBottom: "8px",
-                fontSize: "18px",
-                fontWeight: "bold",
-              }}
-            >
+        fill
+        style={{
+          objectFit: "cover",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
+          padding: "24px",
+          color: "white",
+        }}
+      >
+        <Title
+          level={4}
+          style={{
+            color: "white",
+            marginBottom: "8px",
+            fontSize: "18px",
+            fontWeight: "bold",
+          }}
+        >
               {service.service_name}
-            </Title>
+        </Title>
             {service.description && (
-              <Text
-                style={{
-                  color: "rgba(255,255,255,0.9)",
-                  fontSize: "14px",
-                  lineHeight: "1.4",
+          <Text
+            style={{
+              color: "rgba(255,255,255,0.9)",
+              fontSize: "14px",
+              lineHeight: "1.4",
                   display: "block",
                   marginBottom: "8px",
-                }}
-              >
+            }}
+          >
                 {service.description.length > 100
                   ? `${service.description.substring(0, 100)}...`
                   : service.description}
-              </Text>
-            )}
+          </Text>
+        )}
             <Text
               style={{
                 color: "#6C7BEA",
@@ -120,11 +120,11 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
             >
               {formatPrice(price)}
             </Text>
-          </div>
-        </div>
-      </Card>
+      </div>
+    </div>
+  </Card>
     </Link>
-  );
+);
 };
 
 const FeaturedServices: React.FC = () => {
@@ -252,12 +252,12 @@ const FeaturedServices: React.FC = () => {
               lg={8}
               xl={8}
             >
-              <ServiceCard
+            <ServiceCard
                 service={service}
                 imageUrl={service.imageUrl}
                 price={service.price}
-              />
-            </Col>
+            />
+          </Col>
           ))
         ) : (
           <Col span={24}>

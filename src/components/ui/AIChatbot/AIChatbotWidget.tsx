@@ -113,7 +113,7 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
     if (messagesContainer) {
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
     } else {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -122,7 +122,7 @@ const AIChatbotWidget: React.FC<AIChatbotWidgetProps> = ({
     if (isOpen && !isMinimized) {
       // Use setTimeout to ensure DOM is updated
       setTimeout(() => {
-        scrollToBottom();
+      scrollToBottom();
       }, 100);
     }
   }, [messages, isOpen, isMinimized]);

@@ -178,7 +178,7 @@ function hasPermission(
 function getRedirectUrl(userRole: string | null, currentPath: string): string {
   // Nếu đang ở trang login/signup và đã đăng nhập, redirect về trang chủ
   if (currentPath.startsWith("/auth/") && userRole) {
-    return "/";
+      return "/";
   }
 
   // Nếu chưa đăng nhập và cố gắng truy cập protected route

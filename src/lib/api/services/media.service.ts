@@ -367,7 +367,7 @@ export class MediaService {
   /**
    * Get main images for multiple entities in parallel
    * This optimizes N+1 queries by fetching all main images concurrently
-   * 
+   *
    * Logic:
    * 1. Try to get main media (is_main = true) first
    * 2. If no main media, get first media from sorted list (by sortOrder)
@@ -391,7 +391,7 @@ export class MediaService {
               if (mainMedia?.media_url) {
                 return { entityId, url: mainMedia.media_url };
               }
-            } catch {
+          } catch {
               // Main media not found, continue to fallback
             }
 

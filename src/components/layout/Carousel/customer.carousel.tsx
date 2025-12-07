@@ -255,7 +255,7 @@ const CustomerCarousel = ({ carouselData }: CustomerCarouselProps) => {
       loadServiceImages();
     }
   }, [servicesResponse, carouselData, isLoading, pathname]);
-
+  
   // Chỉ hiển thị carousel ở trang chủ
   if (pathname !== "/") {
     return null;

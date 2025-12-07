@@ -65,8 +65,8 @@ export default function ProtectedRoute({
       } else if (requiredRole === 'ADMIN') {
         // Chỉ cho phép ADMIN
         if (userRole !== 'ADMIN') {
-          router.push('/');
-          return;
+      router.push('/');
+      return;
         }
       }
     }
@@ -138,18 +138,18 @@ export default function ProtectedRoute({
     }
     
     if (!hasAccess) {
-      return fallback || (
-        <Result
-          status="403"
-          title="Không có quyền truy cập"
-          subTitle={`Trang này chỉ dành cho ${requiredRole === 'ADMIN' ? 'quản trị viên' : 'khách hàng'}`}
-          extra={
-            <Button type="primary" onClick={() => router.push('/')}>
-              Về trang chủ
-            </Button>
-          }
-        />
-      );
+    return fallback || (
+      <Result
+        status="403"
+        title="Không có quyền truy cập"
+        subTitle={`Trang này chỉ dành cho ${requiredRole === 'ADMIN' ? 'quản trị viên' : 'khách hàng'}`}
+        extra={
+          <Button type="primary" onClick={() => router.push('/')}>
+            Về trang chủ
+          </Button>
+        }
+      />
+    );
     }
   }
 

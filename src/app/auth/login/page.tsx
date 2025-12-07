@@ -41,7 +41,7 @@ const LoginForm = () => {
   useEffect(() => {
     if (isAuthenticated) {
       // Tất cả user (admin, employee, customer) đều về trang chủ
-      router.push(ROUTES.HOME);
+        router.push(ROUTES.HOME);
     }
   }, [isAuthenticated, router]);
 
@@ -96,7 +96,7 @@ const LoginForm = () => {
       }
 
       // Tất cả user (admin, employee, customer) đều về trang chủ sau khi đăng nhập
-      router.push(ROUTES.HOME);
+        router.push(ROUTES.HOME);
     } catch (error) {
       console.log("Login error:", error);
       message.error("Đăng nhập thất bại!");

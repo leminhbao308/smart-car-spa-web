@@ -89,18 +89,18 @@ const CustomerHeader = ({ isLoginPage = false }: CustomerHeaderProps) => {
   // Chuyển đổi menu items sang format của Ant Design
   const antdMenuItems: MenuProps["items"] = menuItems.map((item) => {
     const menuItem: any = {
-      key: item.key,
-      label: item.label,
+    key: item.key,
+    label: item.label,
       onClick: () => handleMenuClick(item.key),
     };
     
     // Chỉ thêm children nếu có
     if (item.children && item.children.length > 0) {
       menuItem.children = item.children.map((subItem) => ({
-        key: subItem.key,
-        label: subItem.label,
-        onClick: () => handleMenuClick(subItem.key),
-      }));
+      key: subItem.key,
+      label: subItem.label,
+      onClick: () => handleMenuClick(subItem.key),
+  }));
     }
     
     return menuItem;

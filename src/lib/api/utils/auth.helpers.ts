@@ -164,7 +164,7 @@ export function getAccessDeniedMessage(user: UserInfo | null, pathname: string):
   if (routeGroup === ROUTE_GROUPS.CUSTOMER) {
     const hasAccess = isCustomer(user) || isAdmin(user) || isEmployee(user);
     if (!hasAccess) {
-      return 'Bạn không có quyền truy cập trang khách hàng';
+    return 'Bạn không có quyền truy cập trang khách hàng';
     }
   }
   
