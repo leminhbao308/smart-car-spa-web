@@ -1,0 +1,1299 @@
+"use client";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  Modal,
+  Card,
+  Row,
+  Col,
+  Tag,
+  Typography,
+  Descriptions,
+  Statistic,
+  Space,
+  Button,
+  Alert,
+  App,
+  Tabs,
+  Spin,
+} from "antd";
+import {
+  ToolOutlined,
+  TagOutlined,
+  StarOutlined,
+  LinkOutlined,
+  ClockCircleOutlined,
+  UserOutlined,
+  SettingOutlined,
+  CheckCircleOutlined,
+  InfoCircleOutlined,
+  EyeOutlined,
+  FileTextOutlined,
+  ShoppingCartOutlined,
+  PlayCircleOutlined,
+} from "@ant-design/icons";
+import { Service, SERVICE_STATUS_OPTIONS, ServiceProduct } from "@/lib/api/types/service.types";
+import { ServiceProcessInfoDto } from "@/lib/api/types/service-process.types";
+import { ServiceProcessService } from "@/lib/api/services/service-process.service";
+import { useServiceTypes } from "@/lib/api/hooks/useServiceTypes";
+import CareProcessDetailModal from "@/components/ui/Modal/CarProcessModal/CareProcessDetailModal";
+import ServiceImageGallery from "@/components/ui/Service/ServiceImageGallery";
+import { productService } from "@/lib/api/services/product.service";
+
+const { Title, Text } = Typography;
+
+interface ServiceDetailModalProps {
+  visible: boolean;
+  onCancel: () => void;
+  data?: Service | null;
+}
+
+const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
+  visible,
+  onCancel,
+  data,
+}) => {
+  const { message } = App.useApp();
+
+  // Get service types for mapping
+  const { data: serviceTypesData } = useServiceTypes({});
+
+  // State for process details and modals
+  const [processDetails, setProcessDetails] =
+    useState<ServiceProcessInfoDto | null>(null);
+  const [processModalOpen, setProcessModalOpen] = useState(false);
+  const [loadingProcess, setLoadingProcess] = useState(false);
+
+  // State for enriched service products with attribute values
+  const [enrichedServiceProducts, setEnrichedServiceProducts] = useState<ServiceProduct[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
+  const loadProcessDetails = useCallback(async () => {
+    if (!data?.service_process_id) return;
+
+    setLoadingProcess(true);
+    try {
+      const process = await ServiceProcessService.getServiceProcessById(
+        data.service_process_id
+      );
+      setProcessDetails(process);
+    } catch (error) {
+      console.log("Error loading process details:", error);
+      message.error("Không thể tải chi tiết quy trình");
+    } finally {
+      setLoadingProcess(false);
+    }
+  }, [data?.service_process_id, message]);
+
+  // Create service type mapping
+  const serviceTypeMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (serviceTypesData?.data?.content) {
+      serviceTypesData.data.content.forEach((type) => {
+        map.set(type.service_type_id, type.name);
+      });
+    }
+    return map;
+  }, [serviceTypesData]);
+
+  // Helper function to get service type name
+  const getServiceTypeName = (service: Service) => {
+    return (
+      service.service_type_name ||
+      serviceTypeMap.get(service.service_type_id) ||
+      "Không xác định"
+    );
+  };
+
+  // Load product details with attribute values
+  const loadProductDetails = useCallback(async () => {
+    if (!data?.service_products || data.service_products.length === 0) {
+      setEnrichedServiceProducts([]);
+      return;
+    }
+
+    setLoadingProducts(true);
+    try {
+      // Fetch product details for each service product to get attribute_values
+      const enrichedProducts = await Promise.all(
+        data.service_products.map(async (serviceProduct) => {
+          try {
+            const productDetail = await productService.getProductById(
+              serviceProduct.product_info.product_id
+            );
+            return {
+              ...serviceProduct,
+              product_info: {
+                ...serviceProduct.product_info,
+                attribute_values: productDetail.attribute_values || [],
+              },
+            };
+          } catch (error) {
+            console.log(
+              `Error loading product details for ${serviceProduct.product_info.product_id}:`,
+              error
+            );
+            // Return original product if fetch fails
+            return serviceProduct;
+          }
+        })
+      );
+      setEnrichedServiceProducts(enrichedProducts);
+    } catch (error) {
+      console.log("Error loading product details:", error);
+      // Fallback to original data
+      setEnrichedServiceProducts(data.service_products);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [data?.service_products]);
+
+  // Load process details when service has a process
+  useEffect(() => {
+    if (visible && data?.service_process_id) {
+      loadProcessDetails();
+    }
+  }, [visible, data?.service_process_id, loadProcessDetails]);
+
+  // Load product details when modal opens
+  useEffect(() => {
+    if (visible && data) {
+      loadProductDetails();
+    } else {
+      setEnrichedServiceProducts([]);
+    }
+  }, [visible, data, loadProductDetails]);
+
+  const handleViewProcess = () => {
+    if (processDetails) {
+      setProcessModalOpen(true);
+    }
+  };
+
+  if (!data) return null;
+
+  // Use service data
+  const displayData = data;
+
+  // Get skill level config
+  const skillConfig = SERVICE_STATUS_OPTIONS.find(
+    (s) => s.value === displayData.required_skill_level
+  );
+
+  // Tab 1: Thông tin chung
+  const generalInfoTab = (
+    <div>
+      {/* Header Stats */}
+      <Row
+        gutter={[20, 20]}
+        style={{ marginBottom: 32 }}
+      >
+        <Col
+          xs={24}
+          sm={6}
+        >
+          <Card
+            size="small"
+            style={{
+              textAlign: "center",
+              borderRadius: 12,
+              border: "1px solid #e8e8e8",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            }}
+          >
+            <Statistic
+              title={
+                <span
+                  style={{ fontSize: 14, fontWeight: 500, color: "#595959" }}
+                >
+                  Thời gian ước tính
+                </span>
+              }
+              value={displayData.service_process?.estimated_duration || 0}
+              valueStyle={{ color: "#1890ff", fontSize: 24, fontWeight: 600 }}
+              prefix={<ClockCircleOutlined style={{ fontSize: 20 }} />}
+            />
+          </Card>
+        </Col>
+        <Col
+          xs={24}
+          sm={6}
+        >
+          <Card
+            size="small"
+            style={{
+              textAlign: "center",
+              borderRadius: 12,
+              border: "1px solid #e8e8e8",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            }}
+          >
+            <Statistic
+              title={
+                <span
+                  style={{ fontSize: 14, fontWeight: 500, color: "#595959" }}
+                >
+                  Số sản phẩm
+                </span>
+              }
+              value={displayData.service_products?.length || 0}
+              valueStyle={{ color: "#52c41a", fontSize: 24, fontWeight: 600 }}
+              prefix={<ShoppingCartOutlined style={{ fontSize: 20 }} />}
+            />
+          </Card>
+        </Col>
+        <Col
+          xs={24}
+          sm={6}
+        >
+          <Card
+            size="small"
+            style={{
+              textAlign: "center",
+              borderRadius: 12,
+              border: "1px solid #e8e8e8",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            }}
+          >
+            <Statistic
+              title={
+                <span
+                  style={{ fontSize: 14, fontWeight: 500, color: "#595959" }}
+                >
+                  Số bước quy trình
+                </span>
+              }
+              value={displayData.service_process?.process_steps?.length || 0}
+              valueStyle={{ color: "#722ed1", fontSize: 24, fontWeight: 600 }}
+              prefix={<PlayCircleOutlined style={{ fontSize: 20 }} />}
+            />
+          </Card>
+        </Col>
+        <Col
+          xs={24}
+          sm={6}
+        >
+          <Card
+            size="small"
+            style={{
+              textAlign: "center",
+              borderRadius: 12,
+              border: "1px solid #e8e8e8",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+            }}
+          >
+            <Statistic
+              title={
+                <span
+                  style={{ fontSize: 14, fontWeight: 500, color: "#595959" }}
+                >
+                  Cấp độ kỹ năng
+                </span>
+              }
+              value={skillConfig?.label || displayData.required_skill_level}
+              valueStyle={{ color: "#fa8c16", fontSize: 18, fontWeight: 600 }}
+              prefix={<UserOutlined style={{ fontSize: 20 }} />}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Basic Information */}
+      <Card
+        title={
+          <span style={{ fontSize: 18, fontWeight: 600, color: "#262626" }}>
+            Thông tin cơ bản
+          </span>
+        }
+        size="small"
+        style={{
+          marginBottom: 20,
+          borderRadius: 12,
+          border: "1px solid #e8e8e8",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+        }}
+      >
+        <Descriptions
+          column={1}
+          size="middle"
+        >
+          <Descriptions.Item
+            label={
+              <Space>
+                <ToolOutlined style={{ color: "#1890ff", fontSize: 16 }} />
+                <Text
+                  strong
+                  style={{ fontSize: 15, color: "#262626" }}
+                >
+                  Tên dịch vụ
+                </Text>
+              </Space>
+            }
+          >
+            <Text
+              strong
+              style={{ fontSize: 18, color: "#262626" }}
+            >
+              {displayData.service_name}
+            </Text>
+          </Descriptions.Item>
+          <Descriptions.Item
+            label={
+              <Space>
+                <LinkOutlined style={{ color: "#1890ff", fontSize: 16 }} />
+                <Text
+                  strong
+                  style={{ fontSize: 15, color: "#262626" }}
+                >
+                  URL dịch vụ
+                </Text>
+              </Space>
+            }
+          >
+            <Text
+              code
+              style={{
+                fontSize: 14,
+                backgroundColor: "#f5f5f5",
+                padding: "4px 8px",
+                borderRadius: 4,
+              }}
+            >
+              {displayData.service_url}
+            </Text>
+          </Descriptions.Item>
+          <Descriptions.Item
+            label={
+              <Space>
+                <TagOutlined style={{ color: "#1890ff", fontSize: 16 }} />
+                <Text
+                  strong
+                  style={{ fontSize: 15, color: "#262626" }}
+                >
+                  Danh mục
+                </Text>
+              </Space>
+            }
+          >
+            <Tag
+              color="blue"
+              icon={<TagOutlined />}
+              style={{ fontSize: 14, padding: "4px 12px", borderRadius: 6 }}
+            >
+              {displayData.category_name}
+            </Tag>
+          </Descriptions.Item>
+          <Descriptions.Item
+            label={
+              <Space>
+                <SettingOutlined style={{ color: "#1890ff", fontSize: 16 }} />
+                <Text
+                  strong
+                  style={{ fontSize: 15, color: "#262626" }}
+                >
+                  Loại dịch vụ
+                </Text>
+              </Space>
+            }
+          >
+            <Tag
+              color="purple"
+              icon={<SettingOutlined />}
+              style={{ fontSize: 14, padding: "4px 12px", borderRadius: 6 }}
+            >
+              {getServiceTypeName(displayData)}
+            </Tag>
+          </Descriptions.Item>
+          <Descriptions.Item
+            label={
+              <Space>
+                <UserOutlined style={{ color: "#1890ff", fontSize: 16 }} />
+                <Text
+                  strong
+                  style={{ fontSize: 15, color: "#262626" }}
+                >
+                  Cấp độ kỹ năng
+                </Text>
+              </Space>
+            }
+          >
+            <Tag
+              color={skillConfig?.color || "default"}
+              icon={<UserOutlined />}
+              style={{ fontSize: 14, padding: "4px 12px", borderRadius: 6 }}
+            >
+              {skillConfig?.label || displayData.required_skill_level}
+            </Tag>
+          </Descriptions.Item>
+        </Descriptions>
+      </Card>
+
+      {/* Description */}
+      {displayData.description && (
+        <Card
+          title="Mô tả dịch vụ"
+          size="small"
+          style={{ marginBottom: 20 }}
+        >
+          <Text>{displayData.description}</Text>
+        </Card>
+      )}
+    </div>
+  );
+
+  // Tab 2: Sản phẩm sử dụng
+  // Use enriched products if available, otherwise fallback to original data
+  const productsToDisplay = enrichedServiceProducts.length > 0 
+    ? enrichedServiceProducts 
+    : (displayData.service_products || []);
+
+  const productsTab = loadingProducts ? (
+    <div style={{ textAlign: "center", padding: "40px 20px" }}>
+      <Spin size="large" />
+      <div style={{ marginTop: 16, color: "#8c8c8c" }}>
+        Đang tải thông tin sản phẩm...
+      </div>
+    </div>
+  ) : productsToDisplay && productsToDisplay.length > 0 ? (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {productsToDisplay.map((product, index) => (
+          <div
+            key={product.id}
+            style={{
+              border: "1px solid #e8e8e8",
+              borderRadius: 12,
+              backgroundColor: "#ffffff",
+              overflow: "hidden",
+            }}
+          >
+            <Row gutter={0}>
+              {/* Product info - Left */}
+              <Col
+                xs={24}
+                lg={14}
+              >
+                <div
+                  style={{
+                    padding: 20,
+                    backgroundColor: "#f8f9fa",
+                    borderRight: "1px solid #e8e8e8",
+                    height: "100%",
+                  }}
+                >
+                  {/* Header with index and product name */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        backgroundColor: "#52c41a",
+                        color: "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 14,
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {index + 1}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <Text
+                        strong
+                        style={{
+                          fontSize: 16,
+                          color: "#262626",
+                          display: "block",
+                          marginBottom: 4,
+                        }}
+                      >
+                        {product.product_info.product_name}
+                      </Text>
+                      {product.is_required && (
+                        <Tag
+                          color="red"
+                          style={{ margin: 0, fontSize: 12 }}
+                        >
+                          Bắt buộc
+                        </Tag>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Product details */}
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: "#8c8c8c",
+                          minWidth: 110,
+                        }}
+                      >
+                        Số lượng sử dụng:
+                      </Text>
+                      <Tag
+                        color="blue"
+                        style={{
+                          margin: 0,
+                          fontSize: 14,
+                          padding: "4px 10px",
+                          borderRadius: 4,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {product.quantity} {product.unit}
+                      </Tag>
+                    </div>
+
+                    {product.product_info.brand && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#8c8c8c",
+                            minWidth: 110,
+                          }}
+                        >
+                          Thương hiệu:
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#262626",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {product.product_info.brand}
+                        </Text>
+                      </div>
+                    )}
+
+                    {product.product_info.model && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#8c8c8c",
+                            minWidth: 110,
+                          }}
+                        >
+                          Model:
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#262626",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {product.product_info.model}
+                        </Text>
+                      </div>
+                    )}
+
+                    {product.product_info.sku && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#8c8c8c",
+                            minWidth: 110,
+                          }}
+                        >
+                          SKU:
+                        </Text>
+                        <Text
+                          code
+                          style={{
+                            fontSize: 13,
+                            backgroundColor: "#e6f7ff",
+                            padding: "3px 8px",
+                            borderRadius: 3,
+                          }}
+                        >
+                          {product.product_info.sku}
+                        </Text>
+                      </div>
+                    )}
+
+                    {product.notes && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 10,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#8c8c8c",
+                            minWidth: 110,
+                            marginTop: 2,
+                          }}
+                        >
+                          Ghi chú:
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: "#595959",
+                            fontStyle: "italic",
+                            flex: 1,
+                          }}
+                        >
+                          {product.notes}
+                        </Text>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Col>
+
+              {/* Product attributes - Right */}
+              <Col
+                xs={24}
+                lg={10}
+              >
+                <div
+                  style={{
+                    padding: 20,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <div style={{ marginBottom: 16 }}>
+                    <Text
+                      strong
+                      style={{
+                        fontSize: 15,
+                        color: "#262626",
+                        marginBottom: 8,
+                        display: "block",
+                      }}
+                    >
+                      Thuộc tính sản phẩm
+                    </Text>
+                  </div>
+
+                  {product.product_info.attribute_values &&
+                  product.product_info.attribute_values.length > 0 ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
+                      {product.product_info.attribute_values.map(
+                        (attr, attrIndex) => (
+                          <div
+                            key={attrIndex}
+                            style={{
+                              padding: 10,
+                              backgroundColor: "#f6f6f6",
+                              borderRadius: 4,
+                              border: "1px solid #e8e8e8",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 10,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                color: "#8c8c8c",
+                                minWidth: 90,
+                                flexShrink: 0,
+                              }}
+                            >
+                              {attr.attribute_name}:
+                            </Text>
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                color: "#262626",
+                                fontWeight: 500,
+                                flex: 1,
+                              }}
+                            >
+                              {attr.display_value}
+                            </Text>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "40px 20px",
+                        color: "#8c8c8c",
+                        backgroundColor: "#fafafa",
+                        borderRadius: 8,
+                        border: "1px dashed #d9d9d9",
+                      }}
+                    >
+                      <ShoppingCartOutlined
+                        style={{
+                          fontSize: 24,
+                          marginBottom: 8,
+                          display: "block",
+                        }}
+                      />
+                      <Text style={{ fontSize: 13 }}>Không có thuộc tính</Text>
+                    </div>
+                  )}
+                </div>
+              </Col>
+            </Row>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <Alert
+        message="Chưa có sản phẩm"
+        description="Dịch vụ này chưa sử dụng sản phẩm nào"
+        type="info"
+        showIcon
+        style={{ fontSize: 14 }}
+      />
+    );
+
+  // Tab 3: Quy trình dịch vụ
+  const processTab = displayData.service_process ? (
+    <Row gutter={[24, 16]}>
+      {/* Process info - Left */}
+      <Col
+        xs={24}
+        lg={10}
+      >
+        <div
+          style={{
+            padding: 20,
+            backgroundColor: "#f8f9fa",
+            borderRadius: 8,
+            border: "1px solid #e9ecef",
+            height: "100%",
+          }}
+        >
+          <div style={{ marginBottom: 16 }}>
+            <Text
+              strong
+              style={{
+                fontSize: 16,
+                color: "#262626",
+                marginBottom: 8,
+                display: "block",
+              }}
+            >
+              Thông tin quy trình
+            </Text>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <Text
+              style={{
+                fontSize: 13,
+                color: "#8c8c8c",
+                marginBottom: 4,
+                display: "block",
+              }}
+            >
+              Tên quy trình
+            </Text>
+            <Text
+              strong
+              style={{ fontSize: 15, color: "#262626" }}
+            >
+              {displayData.service_process.name}
+            </Text>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <Text
+              style={{
+                fontSize: 13,
+                color: "#8c8c8c",
+                marginBottom: 4,
+                display: "block",
+              }}
+            >
+              Mã quy trình
+            </Text>
+            <Text
+              code
+              style={{
+                fontSize: 14,
+                backgroundColor: "#e6f7ff",
+                padding: "4px 8px",
+                borderRadius: 4,
+              }}
+            >
+              {displayData.service_process.code}
+            </Text>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <Text
+              style={{
+                fontSize: 13,
+                color: "#8c8c8c",
+                marginBottom: 4,
+                display: "block",
+              }}
+            >
+              Số bước thực hiện
+            </Text>
+            <Tag
+              color="blue"
+              style={{ fontSize: 14, padding: "4px 12px", borderRadius: 6 }}
+            >
+              {displayData.service_process.process_steps?.length || 0} bước
+            </Tag>
+          </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <Text
+              style={{
+                fontSize: 13,
+                color: "#8c8c8c",
+                marginBottom: 4,
+                display: "block",
+              }}
+            >
+              Trạng thái
+            </Text>
+            <Tag
+              color={displayData.service_process.is_active ? "green" : "red"}
+              style={{ fontSize: 14, padding: "4px 12px", borderRadius: 6 }}
+            >
+              {displayData.service_process.is_active
+                ? "Hoạt động"
+                : "Không hoạt động"}
+            </Tag>
+          </div>
+
+          {displayData.service_process.description && (
+            <div
+              style={{
+                marginTop: 16,
+                paddingTop: 16,
+                borderTop: "1px solid #e8e8e8",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: "#8c8c8c",
+                  marginBottom: 4,
+                  display: "block",
+                }}
+              >
+                Mô tả
+              </Text>
+              <Text style={{ fontSize: 14, color: "#595959", lineHeight: 1.5 }}>
+                <FileTextOutlined
+                  style={{ marginRight: 6, color: "#1890ff" }}
+                />
+                {displayData.service_process.description}
+              </Text>
+            </div>
+          )}
+
+          <div
+            style={{
+              marginTop: 16,
+              paddingTop: 16,
+              borderTop: "1px solid #e8e8e8",
+            }}
+          >
+            <Button
+              type="primary"
+              size="large"
+              icon={<EyeOutlined />}
+              onClick={handleViewProcess}
+              loading={loadingProcess}
+              block
+              style={{ fontSize: 14, height: 40, borderRadius: 6 }}
+            >
+              Xem chi tiết quy trình
+            </Button>
+          </div>
+        </div>
+      </Col>
+
+      {/* Process steps - Right */}
+      <Col
+        xs={24}
+        lg={14}
+      >
+        <div style={{ height: "100%" }}>
+          <div style={{ marginBottom: 16 }}>
+            <Text
+              strong
+              style={{
+                fontSize: 16,
+                color: "#262626",
+                marginBottom: 8,
+                display: "block",
+              }}
+            >
+              Các bước thực hiện
+            </Text>
+          </div>
+
+          {displayData.service_process.process_steps &&
+          displayData.service_process.process_steps.length > 0 ? (
+            <div style={{ position: "relative" }}>
+              {/* Timeline line */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: 20,
+                  top: 12,
+                  bottom: 12,
+                  width: 2,
+                  backgroundColor: "#e8e8e8",
+                  zIndex: 1,
+                }}
+              />
+
+              {displayData.service_process.process_steps.map((step, index) => (
+                <div
+                  key={step.id}
+                  style={{
+                    position: "relative",
+                    paddingLeft: 70,
+                    paddingBottom:
+                      index ===
+                      (displayData.service_process?.process_steps?.length ||
+                        0) -
+                        1
+                        ? 0
+                        : 24,
+                    zIndex: 2,
+                  }}
+                >
+                  {/* Timeline step number */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 6,
+                      top: 2,
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      backgroundColor: "#6C7BEA",
+                      border: "3px solid #ffffff",
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 16,
+                      fontWeight: "bold",
+                      color: "white",
+                      zIndex: 3,
+                    }}
+                  >
+                    {step.step_order}
+                  </div>
+
+                  {/* Step content */}
+                  <div
+                    style={{
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e8e8e8",
+                      borderRadius: 8,
+                      padding: 16,
+                      boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                      position: "relative",
+                    }}
+                  >
+                    {/* Step header */}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        marginBottom: 8,
+                      }}
+                    >
+                      <Text
+                        strong
+                        style={{ fontSize: 15, color: "#262626", flex: 1 }}
+                      >
+                        {step.name}
+                      </Text>
+                      {step.is_required && (
+                        <Tag
+                          color="red"
+                          style={{ margin: 0, fontSize: 12 }}
+                        >
+                          Bắt buộc
+                        </Tag>
+                      )}
+                    </div>
+
+                    {/* Step description */}
+                    {step.description && (
+                      <div style={{ marginTop: 8 }}>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            color: "#666",
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {step.description}
+                        </Text>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "40px 20px",
+                color: "#8c8c8c",
+                backgroundColor: "#fafafa",
+                borderRadius: 8,
+                border: "1px dashed #d9d9d9",
+              }}
+            >
+              <PlayCircleOutlined
+                style={{ fontSize: 32, marginBottom: 8, display: "block" }}
+              />
+              <Text style={{ fontSize: 14 }}>Chưa có bước quy trình nào</Text>
+            </div>
+          )}
+        </div>
+      </Col>
+    </Row>
+  ) : (
+    <Alert
+      message="Chưa có quy trình"
+      description="Dịch vụ này chưa được gán quy trình chăm sóc cụ thể"
+      type="info"
+      showIcon
+      style={{ fontSize: 14 }}
+    />
+  );
+
+  // Tab 4: Hình ảnh dịch vụ
+  const imagesTab = (
+    <ServiceImageGallery
+      serviceId={displayData.service_id}
+      editable={false}
+    />
+  );
+
+  // Define tab items
+  const tabItems = [
+    {
+      key: "1",
+      label: (
+        <span style={{ fontSize: 15, fontWeight: 500 }}>
+          <InfoCircleOutlined style={{ marginRight: 6 }} />
+          Thông tin chung
+        </span>
+      ),
+      children: generalInfoTab,
+    },
+    {
+      key: "2",
+      label: (
+        <span style={{ fontSize: 15, fontWeight: 500 }}>
+          <ShoppingCartOutlined style={{ marginRight: 6 }} />
+          Sản phẩm ({displayData.service_products?.length || 0})
+        </span>
+      ),
+      children: productsTab,
+    },
+    {
+      key: "3",
+      label: (
+        <span style={{ fontSize: 15, fontWeight: 500 }}>
+          <PlayCircleOutlined style={{ marginRight: 6 }} />
+          Quy trình
+        </span>
+      ),
+      children: processTab,
+    },
+    {
+      key: "4",
+      label: (
+        <span style={{ fontSize: 15, fontWeight: 500 }}>
+          <EyeOutlined style={{ marginRight: 6 }} />
+          Hình ảnh
+        </span>
+      ),
+      children: imagesTab,
+    },
+  ];
+
+  return (
+    <>
+      <Modal
+        title={
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              padding: "8px 0",
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                backgroundColor: "#e6f7ff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "2px solid #1890ff",
+              }}
+            >
+              <ToolOutlined style={{ color: "#1890ff", fontSize: 24 }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <Title
+                level={3}
+                style={{
+                  margin: 0,
+                  color: "#262626",
+                  fontSize: 24,
+                  fontWeight: 600,
+                }}
+              >
+                {displayData.service_name}
+              </Title>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {displayData.is_featured && (
+                <Tag
+                  color="gold"
+                  icon={<StarOutlined />}
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    padding: "4px 12px",
+                    borderRadius: 6,
+                    fontWeight: 500,
+                  }}
+                >
+                  Nổi bật
+                </Tag>
+              )}
+              <Tag
+                color={displayData.is_active ? "green" : "red"}
+                icon={
+                  displayData.is_active ? (
+                    <CheckCircleOutlined />
+                  ) : (
+                    <InfoCircleOutlined />
+                  )
+                }
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  padding: "4px 12px",
+                  borderRadius: 6,
+                  fontWeight: 500,
+                }}
+              >
+                {displayData.is_active ? "Hoạt động" : "Không hoạt động"}
+              </Tag>
+            </div>
+          </div>
+        }
+        open={visible}
+        onCancel={onCancel}
+        width="95%"
+        style={{ maxWidth: 1400 }}
+        styles={{
+          body: {
+            overflowX: "hidden",
+            maxHeight: "85vh",
+            overflowY: "auto",
+            padding: "24px",
+            backgroundColor: "#fafafa",
+          },
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={onCancel}
+            size="large"
+            style={{
+              fontSize: 16,
+              height: 40,
+              padding: "0 24px",
+              borderRadius: 8,
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+        destroyOnHidden
+      >
+        <Tabs
+          defaultActiveKey="1"
+          items={tabItems}
+          size="large"
+        />
+      </Modal>
+
+      {/* Process Detail Modal */}
+      {processDetails && (
+        <CareProcessDetailModal
+          open={processModalOpen}
+          onCancel={() => setProcessModalOpen(false)}
+          process={processDetails}
+        />
+      )}
+    </>
+  );
+};
+
+export default ServiceDetailModal;

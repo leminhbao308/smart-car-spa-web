@@ -1,0 +1,521 @@
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  Row,
+  Col,
+  Card,
+  Button,
+  Form,
+  Input,
+  Radio,
+  Typography,
+  Space,
+  Divider,
+  Alert,
+  Table,
+  Tag,
+  Select,
+  message as antdMessage,
+} from "antd";
+import {
+  ShoppingCartOutlined,
+  EnvironmentOutlined,
+  CreditCardOutlined,
+  ArrowLeftOutlined,
+  GiftOutlined,
+} from "@ant-design/icons";
+import { useCart } from "@/contexts/CartContext";
+import { useRouter } from "next/navigation";
+import { useAuth, useBranches } from "@/lib/api";
+import { useCreateCustomerOrder } from "@/lib/api/hooks/useCustomerShop";
+import { useActivePromotions } from "@/lib/api/hooks/usePromotions";
+import type { CheckoutFormData } from "@/lib/api/types/customer-order.types";
+import type { Promotion } from "@/lib/api/types/promotion.types";
+import PromotionModal from "@/components/ui/Modal/PosModal/PromotionModal";
+import {
+  calculateTotalDiscounts,
+  isPromotionApplicable,
+} from "@/lib/utils/promotion-calculator";
+import { removeFreeItemsByPromotion } from "@/components/ui/Pos/CartSection";
+
+const { Title, Text } = Typography;
+
+/**
+ * Checkout Page
+ */
+export default function CheckoutPage() {
+  const router = useRouter();
+  const [form] = Form.useForm();
+  const { isAuthenticated, user } = useAuth();
+  const { cart, cartSummary, clearCart } = useCart();
+  const { mutateAsync: createOrder, isPending: isCreatingOrder } =
+    useCreateCustomerOrder();
+
+  // Fetch branches
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>("");
+
+  // Fetch promotions
+  const { data: promotionsData } = useActivePromotions({});
+  const [selectedPromotions, setSelectedPromotions] = useState<Promotion[]>([]);
+  const [isPromotionModalVisible, setIsPromotionModalVisible] = useState(false);
+
+  const [paymentMethod] = useState<"BANK">("BANK"); // Only BANK payment
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push("/auth/login?redirect=/checkout");
+    }
+  }, [isAuthenticated, router]);
+
+  // Redirect if cart is empty
+  useEffect(() => {
+    if (cart.length === 0) {
+      router.push("/products");
+    }
+  }, [cart, router]);
+
+  // Pre-fill form with user data
+  useEffect(() => {
+    if (user) {
+      form.setFieldsValue({
+        fullName: user.full_name || "",
+        phone: user.phone || "",
+      });
+    }
+  }, [user, form]);
+
+  // Table columns for order items
+  const columns = [
+    {
+      title: "Sản phẩm",
+      dataIndex: "product",
+      key: "product",
+      render: (product: any) => (
+        <Space>
+          <Text strong>{product.product_name}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: "Đơn giá",
+      dataIndex: "unitPrice",
+      key: "unitPrice",
+      align: "right" as const,
+      render: (price: number) => `${price.toLocaleString("vi-VN")}đ`,
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "quantity",
+      key: "quantity",
+      align: "center" as const,
+    },
+    {
+      title: "Thành tiền",
+      dataIndex: "subtotal",
+      key: "subtotal",
+      align: "right" as const,
+      render: (subtotal: number) => (
+        <Text strong>{subtotal.toLocaleString("vi-VN")}đ</Text>
+      ),
+    },
+  ];
+
+  // Handle form submit
+  const handleSubmit = async (values: CheckoutFormData) => {
+    try {
+      const defaultBranch = branches?.[0];
+      if (!defaultBranch) {
+        throw new Error("Không tìm thấy chi nhánh");
+      }
+
+      // Prepare order payload
+      const orderPayload = {
+        branch_id: defaultBranch.branch_id,
+        warehouse_id: defaultBranch.branch_id, // Assuming warehouse_id same as branch_id
+        customer_id: user?.user_id,
+        lines: cart.map((item) => ({
+          product_id: item.product.product_id,
+          qty: item.quantity,
+          unit_price: item.unitPrice,
+        })),
+        payment_method: paymentMethod,
+        shipping_info: {
+          full_name: values.fullName,
+          phone: values.phone,
+          address: values.address,
+          city: values.city || "",
+          district: values.district || "",
+          ward: values.ward || "",
+          notes: values.notes,
+        },
+      };
+
+      // Create order
+      const result = await createOrder(orderPayload);
+
+      // Clear cart
+      clearCart();
+
+      // Navigate to success page
+      if (paymentMethod === "BANK" && result.paymentLink) {
+        // Redirect to payment page with order info
+        router.push(
+          `/checkout/success?orderId=${
+            result.id
+          }&paymentLink=${encodeURIComponent(result.paymentLink)}`
+        );
+      } else {
+        // For CASH payment, just show success
+        router.push(`/checkout/success?orderId=${result.id}`);
+      }
+    } catch (error: any) {
+      console.log("Checkout error:", error);
+    }
+  };
+
+  // Don't render if not authenticated or cart empty
+  if (!isAuthenticated || cart.length === 0) {
+    return null;
+  }
+
+  return (
+    <div style={{ padding: "24px", maxWidth: "1400px", margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 24 }}>
+        <Button
+          icon={<ArrowLeftOutlined />}
+          onClick={() => router.push("/cart")}
+          style={{ marginBottom: 16 }}
+        >
+          Quay lại giỏ hàng
+        </Button>
+        <Title level={2}>Thanh toán</Title>
+        <Text type="secondary">Hoàn tất đơn hàng của bạn</Text>
+      </div>
+
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        autoComplete="off"
+      >
+        <Row gutter={[24, 24]}>
+          {/* Left Column - Forms */}
+          <Col
+            xs={24}
+            lg={14}
+          >
+            <Space
+              direction="vertical"
+              size={24}
+              style={{ width: "100%" }}
+            >
+              {/* Shipping Information */}
+              <Card
+                title={
+                  <>
+                    <EnvironmentOutlined /> Thông tin giao hàng
+                  </>
+                }
+              >
+                <Row gutter={16}>
+                  <Col span={24}>
+                    <Form.Item
+                      label="Họ và tên"
+                      name="fullName"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng nhập họ và tên",
+                        },
+                      ]}
+                    >
+                      <Input
+                        placeholder="Nguyễn Văn A"
+                        size="large"
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col span={24}>
+                    <Form.Item
+                      label="Số điện thoại"
+                      name="phone"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng nhập số điện thoại",
+                        },
+                        {
+                          pattern: /^[0-9]{10,11}$/,
+                          message: "Số điện thoại không hợp lệ",
+                        },
+                      ]}
+                    >
+                      <Input
+                        placeholder="0901234567"
+                        size="large"
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col span={24}>
+                    <Form.Item
+                      label="Địa chỉ"
+                      name="address"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng nhập địa chỉ",
+                        },
+                      ]}
+                    >
+                      <Input
+                        placeholder="Số nhà, tên đường"
+                        size="large"
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col
+                    xs={24}
+                    md={8}
+                  >
+                    <Form.Item
+                      label="Phường/Xã"
+                      name="ward"
+                    >
+                      <Input
+                        placeholder="Phường 1"
+                        size="large"
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col
+                    xs={24}
+                    md={8}
+                  >
+                    <Form.Item
+                      label="Quận/Huyện"
+                      name="district"
+                    >
+                      <Input
+                        placeholder="Quận 1"
+                        size="large"
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col
+                    xs={24}
+                    md={8}
+                  >
+                    <Form.Item
+                      label="Tỉnh/Thành phố"
+                      name="city"
+                    >
+                      <Input
+                        placeholder="TP. Hồ Chí Minh"
+                        size="large"
+                      />
+                    </Form.Item>
+                  </Col>
+
+                  <Col span={24}>
+                    <Form.Item
+                      label="Ghi chú"
+                      name="notes"
+                    >
+                      <Input.TextArea
+                        placeholder="Ghi chú cho người giao hàng (tùy chọn)"
+                        rows={3}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Card>
+
+              {/* Payment Method */}
+              <Card
+                title={
+                  <>
+                    <CreditCardOutlined /> Phương thức thanh toán
+                  </>
+                }
+              >
+                <Radio.Group
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  style={{ width: "100%" }}
+                >
+                  <Space
+                    direction="vertical"
+                    size={16}
+                    style={{ width: "100%" }}
+                  >
+                    <Radio value="BANK">
+                      <Space
+                        direction="vertical"
+                        size={4}
+                      >
+                        <Text strong>Chuyển khoản ngân hàng / QR Code</Text>
+                        <Text
+                          type="secondary"
+                          style={{ fontSize: "12px" }}
+                        >
+                          Thanh toán qua PayOS với mã QR
+                        </Text>
+                      </Space>
+                    </Radio>
+
+                    <Radio value="CASH">
+                      <Space
+                        direction="vertical"
+                        size={4}
+                      >
+                        <Text strong>Thanh toán khi nhận hàng</Text>
+                        <Text
+                          type="secondary"
+                          style={{ fontSize: "12px" }}
+                        >
+                          Thanh toán bằng tiền mặt khi nhận hàng
+                        </Text>
+                      </Space>
+                    </Radio>
+                  </Space>
+                </Radio.Group>
+
+                {paymentMethod === "BANK" && (
+                  <Alert
+                    message="Bạn sẽ được chuyển đến trang thanh toán sau khi đặt hàng"
+                    type="info"
+                    showIcon
+                    style={{ marginTop: 16 }}
+                  />
+                )}
+              </Card>
+            </Space>
+          </Col>
+
+          {/* Right Column - Order Summary */}
+          <Col
+            xs={24}
+            lg={10}
+          >
+            <div style={{ position: "sticky", top: 24 }}>
+              <Card title="Đơn hàng của bạn">
+                <Space
+                  direction="vertical"
+                  size={16}
+                  style={{ width: "100%" }}
+                >
+                  {/* Order Items Table */}
+                  <Table
+                    dataSource={cart}
+                    columns={columns}
+                    pagination={false}
+                    size="small"
+                    rowKey={(item) => item.product.product_id}
+                  />
+
+                  <Divider style={{ margin: "8px 0" }} />
+
+                  {/* Summary */}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Text>Tạm tính:</Text>
+                    <Text strong>
+                      {cartSummary.subtotal.toLocaleString("vi-VN")}đ
+                    </Text>
+                  </div>
+
+                  {cartSummary.discountAmount > 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Text>Giảm giá:</Text>
+                      <Text
+                        strong
+                        style={{ color: "#52c41a" }}
+                      >
+                        -{cartSummary.discountAmount.toLocaleString("vi-VN")}đ
+                      </Text>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Text>Phí vận chuyển:</Text>
+                    <Tag color="success">Miễn phí</Tag>
+                  </div>
+
+                  <Divider style={{ margin: "8px 0" }} />
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      strong
+                      style={{ fontSize: "16px" }}
+                    >
+                      Tổng cộng:
+                    </Text>
+                    <Title
+                      level={3}
+                      style={{ margin: 0, color: "#ff4d4f" }}
+                    >
+                      {cartSummary.totalAmount.toLocaleString("vi-VN")}đ
+                    </Title>
+                  </div>
+
+                  {/* Submit Button */}
+                  <Button
+                    type="primary"
+                    size="large"
+                    block
+                    htmlType="submit"
+                    loading={isCreatingOrder}
+                    icon={<ShoppingCartOutlined />}
+                  >
+                    Đặt hàng
+                  </Button>
+
+                  <Text
+                    type="secondary"
+                    style={{
+                      fontSize: "12px",
+                      textAlign: "center",
+                      display: "block",
+                    }}
+                  >
+                    Bằng cách đặt hàng, bạn đồng ý với Điều khoản sử dụng của
+                    chúng tôi
+                  </Text>
+                </Space>
+              </Card>
+            </div>
+          </Col>
+        </Row>
+      </Form>
+    </div>
+  );
+}

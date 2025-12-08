@@ -1,0 +1,329 @@
+"use client";
+import React, { useState, useEffect } from "react";
+import { AdminTable } from "@/components/ui/Table";
+import {
+  useConfirmationModalContext,
+  CustomerModal,
+  CustomerDetailModal,
+  CustomerVehiclesModal,
+} from "@/components/ui/Modal";
+import { ColumnsType } from "antd/es/table";
+import {Tag, Avatar, App, Space, Button} from "antd";
+import {CarOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PhoneOutlined} from "@ant-design/icons";
+import {Promotion, UserManagementInfo} from "@/lib/api/types";
+import { useUserManagement } from "@/lib/api/hooks/useUserManagement";
+import { calculateAge } from "@/components/utils/helper/member.helper";
+import { useCustomerReload } from "@/hooks/useWebSocket";
+
+const MembersPage = () => {
+  const { message } = App.useApp();
+  const { showModal } = useConfirmationModalContext();
+
+  // User Management Hook
+  const {
+    users,
+    pagination,
+    isLoading,
+    error,
+    deleteUser,
+    setFilters,
+    goToPage,
+    changePageSize,
+    clearError,
+    refreshUsers,
+    searchUsers,
+  } = useUserManagement();
+
+  // Modal states
+  const [customerModalVisible, setCustomerModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [vehiclesModalVisible, setVehiclesModalVisible] = useState(false);
+  const [detailData, setDetailData] = useState<UserManagementInfo | null>(null);
+  const [editData, setEditData] = useState<UserManagementInfo | null>(null);
+
+  // Fetch customers data (users with CUSTOMER role)
+  useEffect(() => {
+    // Set filter to only show CUSTOMER users
+    setFilters({ userType: "CUSTOMER" });
+  }, [setFilters]);
+
+  // WebSocket: Subscribe to customer reload notifications for realtime updates
+  // MỤC ĐÍCH: Tự động reload danh sách khách hàng khi có thay đổi từ backend (tạo/cập nhật/xóa user, upload avatar)
+  // LÝ DO: Khi member hoặc admin khác cập nhật thông tin user, page này sẽ tự động cập nhật
+  useCustomerReload(() => {
+    console.log('[MembersPage] WebSocket: Reloading customers due to notification...');
+    refreshUsers();
+  });
+
+  // Handle error display
+  useEffect(() => {
+    if (error) {
+      message.error(error);
+      clearError();
+    }
+  }, [error, clearError]);
+
+  // Định nghĩa columns
+  const columns: ColumnsType<UserManagementInfo> = [
+    {
+      title: "Tên khách hàng",
+      key: "customer",
+      width: 300,
+      render: (_, record: UserManagementInfo) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Avatar size="large" style={{ backgroundColor: "#1890ff" }}>
+            {record.full_name.charAt(0)}
+          </Avatar>
+          <div>
+            <div style={{ fontWeight: 500, fontSize: 14 }}>
+              {record.full_name}
+            </div>
+            <div style={{ fontSize: 12, color: "#666" }}>
+              {record.gender === "MALE" ? "Nam" : "Nữ"}
+              {record.date_of_birth &&
+                ` • ${calculateAge(record.date_of_birth)} tuổi`}
+            </div>
+            <div style={{ fontSize: 11, color: "#999" }}>{record.email}</div>
+          </div>
+        </div>
+      ),
+      sorter: (a, b) => a.full_name.localeCompare(b.full_name),
+    },
+    {
+      title: "Liên hệ",
+      key: "contact",
+      width: 200,
+      render: (_, record: UserManagementInfo) => (
+        <div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              marginBottom: 2,
+            }}
+          >
+            <PhoneOutlined style={{ fontSize: 12, color: "#666" }} />
+            <span style={{ fontSize: 12 }}>{record.phone_number}</span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Ngày sinh",
+      dataIndex: "date_of_birth",
+      key: "date_of_birth",
+      width: 120,
+      render: (date: string | null) => {
+        if (!date) return "Chưa cập nhật";
+        return new Date(date).toLocaleDateString("vi-VN");
+      },
+      sorter: (a, b) => {
+        if (!a.date_of_birth && !b.date_of_birth) return 0;
+        if (!a.date_of_birth) return 1;
+        if (!b.date_of_birth) return -1;
+        return (
+          new Date(a.date_of_birth).getTime() -
+          new Date(b.date_of_birth).getTime()
+        );
+      },
+    },
+    {
+      title: "Hạng khách hàng",
+      dataIndex: "customer_rank",
+      key: "customer_rank",
+      width: 120,
+      render: (rank: string | null) => {
+        if (!rank) return <Tag color="default">Chưa xếp hạng</Tag>;
+        const rankColors: { [key: string]: string } = {
+          BRONZE: "orange",
+          SILVER: "gray",
+          GOLD: "gold",
+          PLATINUM: "blue",
+        };
+        return <Tag color={rankColors[rank] || "default"}>{rank}</Tag>;
+      },
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "is_active",
+      key: "is_active",
+      width: 100,
+      render: (isActive: boolean) => (
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Hoạt động" : "Không hoạt động"}
+        </Tag>
+      ),
+      filters: [
+        { text: "Hoạt động", value: true },
+        { text: "Không hoạt động", value: false },
+      ],
+      onFilter: (value, record: UserManagementInfo) =>
+        record.is_active === value,
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      width: 180,
+      render: (_, record: UserManagementInfo) => (
+        <Space>
+          <Button
+            type="primary"
+            icon={<EyeOutlined/>}
+            onClick={() => handleView(record)}
+            size={"small"}
+          >
+            Xem
+          </Button>
+          <Button
+            type="default"
+            icon={<EditOutlined/>}
+            onClick={() => handleEdit(record)}
+            size={"small"}
+            disabled={record.is_deleted}
+          >
+            Sửa
+          </Button>
+          <Button
+            type="default"
+            icon={<CarOutlined />}
+            onClick={() => handleViewVehicles(record)}
+            size={"small"}
+            disabled={record.is_deleted}
+          >
+            Xe của KH
+          </Button>
+          <Button
+            type="default"
+            danger
+            icon={<DeleteOutlined/>}
+            onClick={() => handleDeleteUser(record)}
+            size={"small"}
+            disabled={!record.is_active && record.is_deleted}
+          >
+            Xóa
+          </Button>
+        </Space>
+      ),
+    },
+  ];
+
+  // Handlers
+  const handleAdd = () => {
+    setEditData(null);
+    setCustomerModalVisible(true);
+  };
+
+  const handleEdit = (record: UserManagementInfo) => {
+    if (record.is_deleted) {
+      message.warning("Không thể chỉnh sửa khách hàng đã bị xóa!");
+      return;
+    }
+    setEditData(record);
+    setCustomerModalVisible(true);
+  };
+
+  const handleView = (record: UserManagementInfo) => {
+    setDetailData(record);
+    setDetailModalVisible(true);
+  };
+
+  const handleViewVehicles = (record: UserManagementInfo) => {
+    setDetailData(record);
+    setVehiclesModalVisible(true);
+  };
+
+  const handleDeleteUser = (record: UserManagementInfo) => {
+    showModal({
+      title: "Xóa khách hàng",
+      content: `Bạn có chắc chắn muốn xóa khách hàng ${record.full_name}? Hành động này không thể hoàn tác.`,
+      type: "error",
+      onConfirm: async () => {
+        try {
+          await deleteUser(record.user_id);
+          message.success(`Đã xóa khách hàng ${record.full_name} thành công`);
+        } catch (error: unknown) {
+          const errorMessage =
+            error && typeof error === "object" && "message" in error
+              ? (error as { message: string }).message
+              : "Không thể xóa khách hàng";
+          message.error(errorMessage);
+        }
+      },
+    });
+  };
+
+  const handleCustomerModalSuccess = async () => {
+    // Refresh the data after successful operation
+    try {
+      await refreshUsers();
+    } catch (error) {
+      console.log("MembersPage: Error refreshing data:", error);
+    }
+  };
+
+  return (
+    <>
+      <AdminTable
+        title="Quản lý khách hàng"
+        dataSource={users}
+        columns={columns} 
+        loading={isLoading}
+        onAdd={handleAdd}
+        addButtonText="Thêm khách hàng"
+        searchable={true}
+        searchPlaceholder="Tìm kiếm khách hàng theo tên, email, số điện thoại..."
+        searchFields={["full_name", "email", "phone_number", "address"]}
+        useServerSearch={true}
+        onSearch={searchUsers}
+        scroll={{ x: 1200 }}
+        rowKey="user_id"
+        pagination={{
+          current: pagination?.page ? pagination.page + 1 : 1,
+          pageSize: pagination?.size || 10,
+          total: pagination?.total_elements || 0,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total: number, range: [number, number]) =>
+            `${range[0]}-${range[1]} của ${total} khách hàng`,
+          pageSizeOptions: ["10", "20", "50", "100"],
+          onChange: (page: number, pageSize: number) => {
+            if (pageSize !== pagination?.size) {
+              changePageSize(pageSize || 10);
+            } else {
+              goToPage(page - 1);
+            }
+          },
+          onShowSizeChange: (current: number, size: number) => {
+            changePageSize(size);
+          },
+        }}
+      />
+
+      {/* Customer Modal */}
+      <CustomerModal
+        visible={customerModalVisible}
+        onCancel={() => setCustomerModalVisible(false)}
+        onSuccess={handleCustomerModalSuccess}
+        editData={editData}
+        title={editData ? "Chỉnh sửa khách hàng" : "Thêm khách hàng mới"}
+      />
+
+      {/* Customer Detail Modal */}
+      <CustomerDetailModal
+        visible={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        data={detailData}
+      />
+
+      {/* Customer Vehicles Modal */}
+      <CustomerVehiclesModal
+        visible={vehiclesModalVisible}
+        onCancel={() => setVehiclesModalVisible(false)}
+        customerData={detailData}
+      />
+    </>
+  );
+};
+
+export default MembersPage;

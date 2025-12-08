@@ -1,0 +1,515 @@
+/* Custom styles for sider collapse/expand */
+.ant-layout-sider {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.ant-layout-sider-collapsed {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Smooth menu item transitions */
+.ant-menu-item {
+  transition: all 0.2s ease !important;
+}
+
+.ant-menu-submenu {
+  transition: all 0.2s ease !important;
+}
+
+/* Custom scrollbar for sider */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+/* Hover effects for menu items */
+.ant-menu-item:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.ant-menu-submenu:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Selected menu item styling */
+.ant-menu-item-selected {
+  background-color: rgba(24, 144, 255, 0.1) !important;
+  border-right: 3px solid #1890ff !important;
+}
+
+.ant-menu-item-selected::after {
+  display: none !important;
+}
+
+/* Responsive behavior */
+@media (max-width: 1200px) {
+  .ant-layout-sider {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    height: 100vh;
+  }
+  
+  .ant-layout-sider-collapsed {
+    transform: translateX(-100%);
+  }
+}
+
+/* Logo transition */
+.sider-logo {
+  transition: all 0.2s ease;
+}
+
+.sider-logo.collapsed {
+  transform: scale(0.8);
+}
+
+/* Menu icon styling */
+.ant-menu-item-icon {
+  transition: all 0.2s ease;
+}
+
+.ant-menu-submenu-arrow {
+  transition: all 0.2s ease;
+}
+
+/* Menu hierarchy styling - Level 1 (Main menu items) */
+.ant-menu-item {
+  margin: 1px 0 !important;
+  border-radius: 6px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  padding: 0 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
+}
+
+/* Submenu title styling - Level 1 */
+.ant-menu-submenu-title {
+  margin: 1px 0 !important;
+  border-radius: 6px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  padding: 0 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
+}
+
+/* Menu hierarchy styling - Level 2 (First level submenu) */
+.ant-menu-submenu .ant-menu-item {
+  margin: 1px 0 !important;
+  padding-left: 32px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 0.85rem !important;
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  border-radius: 4px !important;
+}
+
+/* Menu hierarchy styling - Level 3 (Second level submenu) */
+.ant-menu-submenu .ant-menu-submenu .ant-menu-item {
+  margin: 1px 0 !important;
+  padding-left: 48px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  font-size: 0.8rem !important;
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  border-radius: 3px !important;
+  color: #666 !important;
+}
+
+/* Second level submenu title */
+.ant-menu-submenu .ant-menu-submenu-title {
+  margin: 1px 0 !important;
+  padding-left: 32px !important;
+  padding-right: 16px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  font-size: 0.85rem !important;
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Hover effects for different levels */
+.ant-menu-submenu .ant-menu-item:hover {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.ant-menu-submenu .ant-menu-submenu .ant-menu-item:hover {
+  background-color: rgba(0, 0, 0, 0.08) !important;
+  color: #333 !important;
+}
+
+/* Selected state for different levels */
+.ant-menu-submenu .ant-menu-item-selected {
+  background-color: rgba(24, 144, 255, 0.15) !important;
+  border-right: 2px solid #1890ff !important;
+  color: #1890ff !important;
+}
+
+.ant-menu-submenu .ant-menu-submenu .ant-menu-item-selected {
+  background-color: rgba(24, 144, 255, 0.2) !important;
+  border-right: 2px solid #1890ff !important;
+  color: #1890ff !important;
+}
+
+/* Icon spacing and alignment for all levels */
+.ant-menu-item-icon {
+  margin-right: 16px !important;
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+  text-align: center !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+}
+
+/* Ensure all icons are the same size and position */
+.ant-menu-item .ant-menu-item-icon,
+.ant-menu-submenu-title .ant-menu-item-icon {
+  font-size: 16px !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin-right: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+.ant-menu-submenu .ant-menu-item .ant-menu-item-icon {
+  margin-right: 12px !important;
+  font-size: 14px !important;
+  width: 14px !important;
+}
+
+.ant-menu-submenu .ant-menu-submenu .ant-menu-item .ant-menu-item-icon {
+  margin-right: 10px !important;
+  font-size: 12px !important;
+  width: 12px !important;
+}
+
+/* Text alignment */
+.ant-menu-item,
+.ant-menu-submenu-title {
+  justify-content: flex-start !important;
+}
+
+.ant-menu-item .ant-menu-title-content,
+.ant-menu-submenu-title .ant-menu-title-content {
+  flex: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* Submenu arrow positioning and styling */
+.ant-menu-submenu-arrow {
+  position: absolute !important;
+  right: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  transition: all 0.2s ease !important;
+  font-size: 12px !important;
+  color: #666 !important;
+  width: 12px !important;
+  height: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.ant-menu-submenu .ant-menu-submenu-arrow {
+  right: 32px !important;
+  font-size: 10px !important;
+  width: 10px !important;
+  height: 10px !important;
+}
+
+/* Ensure consistent padding for all menu items */
+.ant-menu-item,
+.ant-menu-submenu-title {
+  padding-right: 40px !important;
+}
+
+.ant-menu-submenu .ant-menu-submenu-title {
+  padding-right: 40px !important;
+}
+
+/* Visual hierarchy indicators */
+.ant-menu-submenu .ant-menu-item::before {
+  content: '';
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background-color: #d9d9d9;
+  border-radius: 50%;
+}
+
+.ant-menu-submenu .ant-menu-submenu .ant-menu-item::before {
+  left: 40px;
+  width: 3px;
+  height: 3px;
+  background-color: #bfbfbf;
+}
+
+/* Active state for hierarchy indicators */
+.ant-menu-submenu .ant-menu-item-selected::before {
+  background-color: #1890ff;
+}
+
+.ant-menu-submenu .ant-menu-submenu .ant-menu-item-selected::before {
+  background-color: #1890ff;
+}
+
+/* Smooth transitions for all menu elements */
+.ant-menu-item,
+.ant-menu-submenu-title,
+.ant-menu-submenu .ant-menu-item,
+.ant-menu-submenu .ant-menu-submenu .ant-menu-item {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Better spacing for collapsed state */
+.ant-menu-inline-collapsed .ant-menu-item {
+  padding: 0 16px !important;
+}
+
+.ant-menu-inline-collapsed .ant-menu-submenu-title {
+  padding: 0 16px !important;
+}
+
+/* Enhanced visual feedback */
+.ant-menu-item:active,
+.ant-menu-submenu-title:active {
+  background-color: rgba(24, 144, 255, 0.1) !important;
+}
+
+/* Improved focus states */
+.ant-menu-item:focus,
+.ant-menu-submenu-title:focus {
+  outline: 2px solid rgba(24, 144, 255, 0.2) !important;
+  outline-offset: -2px !important;
+}
+
+/* Consistent spacing and alignment for all menu items */
+.ant-menu {
+  padding: 0 !important;
+}
+
+.ant-menu-item,
+.ant-menu-submenu-title {
+  position: relative !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure consistent vertical alignment */
+.ant-menu-item > *,
+.ant-menu-submenu-title > * {
+  vertical-align: middle !important;
+}
+
+/* Fix for menu item content alignment */
+.ant-menu-item .ant-menu-item-icon + .ant-menu-title-content,
+.ant-menu-submenu-title .ant-menu-item-icon + .ant-menu-title-content {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Ensure consistent spacing between icon and text */
+.ant-menu-item .ant-menu-title-content,
+.ant-menu-submenu-title .ant-menu-title-content {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Reset and normalize all menu items */
+.ant-menu-item,
+.ant-menu-submenu-title {
+  margin: 0 !important;
+  padding: 0 16px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  border-radius: 6px !important;
+}
+
+/* Override any inherited styles that might cause misalignment */
+.ant-menu-item *,
+.ant-menu-submenu-title * {
+  box-sizing: border-box !important;
+}
+
+/* Ensure text content starts at the same position */
+.ant-menu-item .ant-menu-title-content,
+.ant-menu-submenu-title .ant-menu-title-content {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Ensure proper spacing between menu groups */
+.ant-menu-item-group-title {
+  padding: 8px 16px 4px 16px !important;
+  font-size: 12px !important;
+  color: #999 !important;
+  font-weight: 500 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Force consistent alignment for all menu items */
+.ant-menu-root {
+  padding: 0 !important;
+}
+
+.ant-menu-root > .ant-menu-item,
+.ant-menu-root > .ant-menu-submenu > .ant-menu-submenu-title {
+  margin: 1px 0 !important;
+  padding: 0 16px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  border-radius: 6px !important;
+}
+
+/* Ensure no inherited margins or paddings interfere */
+.ant-menu-root > .ant-menu-item *,
+.ant-menu-root > .ant-menu-submenu > .ant-menu-submenu-title * {
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Reset any default Ant Design styles that might cause misalignment */
+.ant-menu-item,
+.ant-menu-submenu-title {
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+}
+
+/* Remove background for submenu titles (parent items with children) */
+.ant-menu-submenu-title {
+  background: transparent !important;
+}
+
+.ant-menu-submenu-title:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+.ant-menu-submenu-title:active {
+  background: rgba(24, 144, 255, 0.1) !important;
+}
+
+/* Ensure submenu titles don't have any background by default */
+.ant-menu-submenu > .ant-menu-submenu-title {
+  background: transparent !important;
+}
+
+/* Remove any inherited background from submenu containers */
+.ant-menu-submenu {
+  background: transparent !important;
+}
+
+.ant-menu-submenu .ant-menu {
+  background: transparent !important;
+}
+
+/* Remove background for opened submenu titles */
+.ant-menu-submenu-open > .ant-menu-submenu-title {
+  background: transparent !important;
+}
+
+.ant-menu-submenu-open > .ant-menu-submenu-title:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Remove background for selected submenu titles */
+.ant-menu-submenu-selected > .ant-menu-submenu-title {
+  background: transparent !important;
+}
+
+/* Ensure no background on submenu titles in any state */
+.ant-menu-submenu-title,
+.ant-menu-submenu-open > .ant-menu-submenu-title,
+.ant-menu-submenu-selected > .ant-menu-submenu-title {
+  background: transparent !important;
+}
+
+/* Only show background on hover and active states for submenu titles */
+.ant-menu-submenu-title:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+.ant-menu-submenu-title:active {
+  background: rgba(24, 144, 255, 0.1) !important;
+}
+
+/* Keep normal hover effects for regular menu items (without submenu) */
+.ant-menu-item:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+.ant-menu-item:active {
+  background: rgba(24, 144, 255, 0.1) !important;
+}
+
+/* Ensure regular menu items have proper background on selection */
+.ant-menu-item-selected {
+  background: rgba(24, 144, 255, 0.1) !important;
+  border-right: 3px solid #1890ff !important;
+}
+
+/* Force consistent icon spacing for all menu items */
+.ant-menu-root .ant-menu-item .ant-menu-item-icon,
+.ant-menu-root .ant-menu-submenu-title .ant-menu-item-icon {
+  margin-right: 16px !important;
+}
+
+.ant-menu-root .ant-menu-submenu .ant-menu-item .ant-menu-item-icon {
+  margin-right: 12px !important;
+}
+
+.ant-menu-root .ant-menu-submenu .ant-menu-submenu .ant-menu-item .ant-menu-item-icon {
+  margin-right: 10px !important;
+}
+
+/* Ensure text starts after icon with proper spacing */
+.ant-menu-item .ant-menu-title-content,
+.ant-menu-submenu-title .ant-menu-title-content {
+  flex: 1 !important;
+  min-width: 0 !important;
+}

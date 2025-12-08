@@ -1,0 +1,323 @@
+/**
+ * useAuth Hook
+ * React hook for authentication state management
+ */
+
+"use client";
+
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useContext,
+  createContext,
+  ReactNode,
+} from "react";
+import { AuthService } from "../services/auth.service";
+import { AuthState, AuthContextType, LoginRequest, SignupRequest } from "../types";
+
+// Create Auth Context
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/**
+ * Auth Provider Component
+ * Provides authentication context to the entire app
+ */
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
+    error: null,
+  });
+
+  /**
+   * Initialize auth state from storage
+   */
+  const initializeAuth = useCallback(async () => {
+    try {
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+      // Check if user is authenticated
+      const isAuthenticated = AuthService.isAuthenticated();
+
+      if (isAuthenticated) {
+        // Get user info from storage
+        const userFromStorage = AuthService.getCurrentUserFromStorage();
+
+        if (userFromStorage) {
+          setState((prev) => ({
+            ...prev,
+            user: userFromStorage,
+            isAuthenticated: true,
+            isLoading: false,
+          }));
+
+          // Token refresh is now handled automatically by axios interceptor
+        } else {
+          // Try to get user info from API
+          try {
+            const userFromAPI = await AuthService.getCurrentUser();
+
+            if (userFromAPI) {
+              setState((prev) => ({
+                ...prev,
+                user: userFromAPI,
+                isAuthenticated: true,
+                isLoading: false,
+              }));
+
+              // Token refresh is now handled automatically by axios interceptor
+            } else {
+              // Clear auth if user info not available
+              AuthService.clearAuth();
+              setState((prev) => ({
+                ...prev,
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+              }));
+            }
+          } catch (apiError) {
+            console.log("Failed to get user from API:", apiError);
+            // If API call fails, check if we have valid tokens
+            const hasRefreshToken = AuthService.getRefreshToken();
+            if (hasRefreshToken) {
+              // Keep user authenticated, let axios interceptor handle token refresh
+              setState((prev) => ({
+                ...prev,
+                user: userFromStorage,
+                isAuthenticated: true,
+                isLoading: false,
+              }));
+            } else {
+              // No valid tokens, clear auth
+              AuthService.clearAuth();
+              setState((prev) => ({
+                ...prev,
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+              }));
+            }
+          }
+        }
+      } else {
+        setState((prev) => ({
+          ...prev,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        }));
+      }
+    } catch (error) {
+      console.log("Auth initialization error:", error);
+      setState((prev) => ({
+        ...prev,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: "Failed to initialize authentication",
+      }));
+    }
+  }, []);
+
+  /**
+   * Login function
+   */
+  const login = useCallback(
+    async (credentials: LoginRequest): Promise<void> => {
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+        const loginResponse = await AuthService.login(credentials);
+
+        setState((prev) => ({
+          ...prev,
+          user: loginResponse.user_info,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        }));
+
+        // Token refresh is now handled automatically by axios interceptor
+      } catch (error: unknown) {
+        const errorMessage =
+          error && typeof error === "object" && "message" in error
+            ? (error as { message: string }).message
+            : "Login failed";
+        setState((prev) => ({
+          ...prev,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: errorMessage,
+        }));
+        throw error;
+      }
+    },
+    []
+  );
+
+  /**
+   * Signup function
+   */
+  const signup = useCallback(
+    async (signupData: SignupRequest): Promise<void> => {
+      try {
+        setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+        const signupResponse = await AuthService.signup(signupData);
+
+        if (signupResponse.data) {
+          setState((prev) => ({
+            ...prev,
+            user: signupResponse.data!.user_info,
+            isAuthenticated: true,
+            isLoading: false,
+            error: null,
+          }));
+
+          // Token refresh is now handled automatically by axios interceptor
+        }
+      } catch (error: unknown) {
+        const errorMessage =
+          error && typeof error === "object" && "message" in error
+            ? (error as { message: string }).message
+            : "Signup failed";
+        setState((prev) => ({
+          ...prev,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: errorMessage,
+        }));
+        throw error;
+      }
+    },
+    []
+  );
+
+  /**
+   * Logout function
+   */
+  const logout = useCallback(async () => {
+    try {
+      setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+      await AuthService.logout();
+
+      // Token refresh is now handled automatically by axios interceptor
+
+      setState((prev) => ({
+        ...prev,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      }));
+    } catch (error) {
+      console.warn("Logout process completed with warnings:", error);
+      // Token refresh is now handled automatically by axios interceptor
+
+      // Always clear state even if logout API fails
+      setState((prev) => ({
+        ...prev,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      }));
+    }
+  }, []);
+
+
+  /**
+   * Verify token function
+   */
+  const verifyToken = useCallback(async (): Promise<boolean> => {
+    try {
+      const isValid = await AuthService.verifyToken();
+
+      if (!isValid) {
+        setState((prev) => ({
+          ...prev,
+          user: null,
+          isAuthenticated: false,
+          error: "Invalid session. Please login again.",
+        }));
+      }
+
+      return isValid;
+    } catch (error) {
+      console.log("Token verification error:", error);
+      setState((prev) => ({
+        ...prev,
+        user: null,
+        isAuthenticated: false,
+        error: "Session verification failed.",
+      }));
+      return false;
+    }
+  }, []);
+
+  /**
+   * Clear error function
+   */
+  const clearError = useCallback(() => {
+    setState((prev) => ({ ...prev, error: null }));
+  }, []);
+
+
+  // Initialize auth on mount
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
+  // Note: Token refresh is now handled automatically by axios interceptor
+
+  const contextValue: AuthContextType = {
+    ...state,
+    login,
+    signup,
+    logout,
+    verifyToken,
+    clearError,
+  };
+
+  return (
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+  );
+}
+
+/**
+ * useAuth Hook
+ * Hook to access authentication context
+ */
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+
+  return context;
+}
+
+/**
+ * useAuthState Hook
+ * Hook to get only authentication state (without actions)
+ */
+export function useAuthState(): AuthState {
+  const { user, isAuthenticated, isLoading, error } = useAuth();
+  return { user, isAuthenticated, isLoading, error };
+}
+
+/**
+ * useAuthActions Hook
+ * Hook to get only authentication actions
+ */
+export function useAuthActions() {
+  const { login, signup, logout, verifyToken, clearError } = useAuth();
+  return { login, signup, logout, verifyToken, clearError };
+}
