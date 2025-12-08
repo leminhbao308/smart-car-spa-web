@@ -18,12 +18,12 @@ export function getDeviceId(): string {
 
   try {
     let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-    
+
     if (!deviceId) {
       deviceId = generateDeviceId();
       localStorage.setItem(DEVICE_ID_KEY, deviceId);
     }
-    
+
     // Ensure we always return a valid device ID
     return deviceId || generateDeviceId();
   } catch (error) {
@@ -42,12 +42,12 @@ export function getDeviceName(): string {
   }
 
   let deviceName = localStorage.getItem(DEVICE_NAME_KEY);
-  
+
   if (!deviceName) {
     deviceName = detectDeviceName();
     localStorage.setItem(DEVICE_NAME_KEY, deviceName);
   }
-  
+
   return deviceName;
 }
 
@@ -84,7 +84,7 @@ function detectDeviceName(): string {
 
   const ua = navigator.userAgent;
   const platform = navigator.platform;
-  
+
   // Detect OS
   let os = "Unknown OS";
   if (ua.includes("Windows")) os = "Windows";
@@ -128,14 +128,14 @@ export function clearDeviceInfo(): void {
 function generateUUID(): string {
   try {
     // Most modern browsers (and Node) support this
-    if (typeof crypto !== "undefined" && typeof (crypto as any).randomUUID === "function") {
-      return (crypto as any).randomUUID();
+    if (typeof crypto !== "undefined" && crypto.randomUUID) {
+      return crypto.randomUUID();
     }
   } catch {}
 
   try {
     // Use Web Crypto API to construct a UUID v4
-    if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
       const bytes = new Uint8Array(16);
       crypto.getRandomValues(bytes);
       // Per RFC4122 set version and variant bits
