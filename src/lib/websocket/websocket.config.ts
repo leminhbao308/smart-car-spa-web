@@ -33,8 +33,9 @@
 export const getWebSocketUrl = (): string => {
   // Lấy API base URL từ environment variable hoặc default
   // QUAN TRỌNG: Phải match với axios baseURL trong axios.ts
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081/api';
-  
+  const apiBaseUrl =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+
   // GIỮ NGUYÊN /api prefix vì backend có context-path=/api
   // QUAN TRỌNG: KHÔNG convert http -> ws vì SockJS cần HTTP/HTTPS URL
   // QUAN TRỌNG: KHÔNG remove /api vì với context-path, endpoint là /api/ws
@@ -45,10 +46,13 @@ export const getWebSocketUrl = (): string => {
   const wsUrl = `${apiBaseUrl}/ws`;
 
   // Debug logging - luôn log trong development để debug
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[WebSocket Config] API Base URL:', apiBaseUrl);
-    console.log('[WebSocket Config] WebSocket URL (with /api prefix):', wsUrl);
-    console.log('[WebSocket Config] Current origin:', typeof window !== 'undefined' ? window.location.origin : 'server-side');
+  if (process.env.NODE_ENV === "development") {
+    console.log("[WebSocket Config] API Base URL:", apiBaseUrl);
+    console.log("[WebSocket Config] WebSocket URL (with /api prefix):", wsUrl);
+    console.log(
+      "[WebSocket Config] Current origin:",
+      typeof window !== "undefined" ? window.location.origin : "server-side"
+    );
   }
 
   return wsUrl;
@@ -73,9 +77,8 @@ export const getWebSocketUrl = (): string => {
  * - Production: false để giảm logs
  */
 export const WS_CONFIG = {
-  reconnectDelay: 5000,        // 5 seconds - delay ban đầu
-  heartbeatIncoming: 10000,    // 10 seconds - server heartbeat
-  heartbeatOutgoing: 10000,    // 10 seconds - client heartbeat
-  debug: process.env.NODE_ENV === 'development', // Debug mode trong dev
+  reconnectDelay: 5000, // 5 seconds - delay ban đầu
+  heartbeatIncoming: 10000, // 10 seconds - server heartbeat
+  heartbeatOutgoing: 10000, // 10 seconds - client heartbeat
+  debug: process.env.NODE_ENV === "development", // Debug mode trong dev
 } as const;
-
