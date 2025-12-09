@@ -895,9 +895,7 @@ const ReturnsPage = () => {
                         selectedOrderForReturn,
                         price
                       );
-                      const hasDiscount =
-                        selectedOrderForReturn.total_discount_amount &&
-                        selectedOrderForReturn.total_discount_amount > 0;
+                      const hasDiscount = selectedOrderForReturn?.total_discount_amount ? selectedOrderForReturn.total_discount_amount > 0 : false;
 
                       return (
                         <div>
@@ -945,9 +943,7 @@ const ReturnsPage = () => {
                       const lineTotal = record.quantity * discountedPrice;
                       const originalTotal =
                         record.quantity * Number(record.unit_price);
-                      const hasDiscount =
-                        selectedOrderForReturn.total_discount_amount &&
-                        selectedOrderForReturn.total_discount_amount > 0;
+                      const hasDiscount = selectedOrderForReturn?.total_discount_amount ? selectedOrderForReturn.total_discount_amount > 0 : false
 
                       return (
                         <div>
@@ -993,8 +989,7 @@ const ReturnsPage = () => {
                     ).toLocaleString()}
                   </Text>
                 </Text>
-                {selectedOrderForReturn.total_discount_amount &&
-                  selectedOrderForReturn.total_discount_amount > 0 && (
+                {selectedOrderForReturn.total_discount_amount > 0  &&
                     <div style={{ marginTop: 4 }}>
                       <Text
                         type="secondary"
@@ -1007,7 +1002,7 @@ const ReturnsPage = () => {
                         )
                       </Text>
                     </div>
-                  )}
+                  }
               </div>
             </>
           )}

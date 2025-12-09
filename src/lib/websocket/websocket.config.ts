@@ -33,8 +33,8 @@
 export const getWebSocketUrl = (): string => {
   // Lấy API base URL từ environment variable hoặc default
   // QUAN TRỌNG: Phải match với axios baseURL trong axios.ts
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081/api';
-  
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+
   // GIỮ NGUYÊN /api prefix vì backend có context-path=/api
   // QUAN TRỌNG: KHÔNG convert http -> ws vì SockJS cần HTTP/HTTPS URL
   // QUAN TRỌNG: KHÔNG remove /api vì với context-path, endpoint là /api/ws
