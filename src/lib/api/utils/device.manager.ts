@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 /**
  * Device Manager
  * Manages device identification for multi-device login support
@@ -18,12 +19,12 @@ export function getDeviceId(): string {
 
   try {
     let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-    
+
     if (!deviceId) {
       deviceId = generateDeviceId();
       localStorage.setItem(DEVICE_ID_KEY, deviceId);
     }
-    
+
     // Ensure we always return a valid device ID
     return deviceId || generateDeviceId();
   } catch (error) {
@@ -42,12 +43,12 @@ export function getDeviceName(): string {
   }
 
   let deviceName = localStorage.getItem(DEVICE_NAME_KEY);
-  
+
   if (!deviceName) {
     deviceName = detectDeviceName();
     localStorage.setItem(DEVICE_NAME_KEY, deviceName);
   }
-  
+
   return deviceName;
 }
 
@@ -69,8 +70,9 @@ function generateDeviceId(): string {
     }
   }
 
-  // Generate new UUID
-  return `web-${crypto.randomUUID()}`;
+  // Generate new UUID using library
+  const uuid = uuidv4();
+  return `web-${uuid}`;
 }
 
 /**
@@ -83,7 +85,7 @@ function detectDeviceName(): string {
 
   const ua = navigator.userAgent;
   const platform = navigator.platform;
-  
+
   // Detect OS
   let os = "Unknown OS";
   if (ua.includes("Windows")) os = "Windows";

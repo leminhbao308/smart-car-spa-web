@@ -5,24 +5,30 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   CarOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
+import { UpcomingBooking } from "@/lib/api";
 
 const { Text, Title } = Typography;
-
-interface UpcomingBooking {
-  id: number;
-  customerName: string;
-  service: string;
-  time: string;
-  date: string;
-  status: string;
-  vehicle: string;
-}
 
 interface UpcomingBookingsCardProps {
   bookings: UpcomingBooking[];
   title?: string;
+}
+
+function formatDateTime(dateTime: string) {
+  const dateObj = new Date(dateTime);
+  const optionsDate: Intl.DateTimeFormatOptions = {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  };
+  const optionsTime: Intl.DateTimeFormatOptions = {
+    hour: "2-digit",
+    minute: "2-digit",
+  };
+  const date = dateObj.toLocaleDateString("vi-VN", optionsDate);
+  const time = dateObj.toLocaleTimeString("vi-VN", optionsTime);
+  return { date, time };
 }
 
 const UpcomingBookingsCard: React.FC<UpcomingBookingsCardProps> = ({
@@ -30,7 +36,8 @@ const UpcomingBookingsCard: React.FC<UpcomingBookingsCardProps> = ({
   title = "Lịch đặt sắp tới",
 }) => {
   const getStatusColor = (status: string) => {
-    switch (status) {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
       case "confirmed":
         return "green";
       case "pending":
@@ -45,13 +52,14 @@ const UpcomingBookingsCard: React.FC<UpcomingBookingsCardProps> = ({
   };
 
   const getStatusText = (status: string) => {
-    switch (status) {
+    const statusLower = status.toLowerCase();
+    switch (statusLower) {
       case "confirmed":
         return "Đã xác nhận";
       case "pending":
         return "Chờ xác nhận";
       case "in_progress":
-        return "Đang thực hiện";
+        return "Đang xử lý";
       case "cancelled":
         return "Đã hủy";
       default:
@@ -61,7 +69,14 @@ const UpcomingBookingsCard: React.FC<UpcomingBookingsCardProps> = ({
 
   return (
     <Card
-      title={<Title level={4} style={{ margin: 0 }}>{title}</Title>}
+      title={
+        <Title
+          level={4}
+          style={{ margin: 0 }}
+        >
+          {title}
+        </Title>
+      }
       style={{
         borderRadius: 12,
         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
@@ -74,68 +89,91 @@ const UpcomingBookingsCard: React.FC<UpcomingBookingsCardProps> = ({
         },
       }}
       extra={
-        <Button type="link" size="small">
+        <Button
+          type="link"
+          size="small"
+        >
           Xem tất cả
         </Button>
       }
     >
       <List
         dataSource={bookings}
-        renderItem={(booking) => (
-          <List.Item
-            style={{
-              padding: "12px 0",
-              borderBottom: "1px solid #f0f0f0",
-            }}
-          >
-            <List.Item.Meta
-              avatar={
-                <Avatar
-                  style={{
-                    backgroundColor: "#1890ff",
-                    border: "2px solid #fff",
-                  }}
-                  icon={<CalendarOutlined />}
-                />
-              }
-              title={
-                <Space>
-                  <Text strong style={{ fontSize: 14 }}>
-                    {booking.customerName}
-                  </Text>
-                  <Tag color={getStatusColor(booking.status)} size="small">
-                    {getStatusText(booking.status)}
-                  </Tag>
-                </Space>
-              }
-              description={
-                <div>
-                  <div style={{ marginBottom: 4 }}>
-                    <Space>
-                      <CarOutlined style={{ color: "#8c8c8c" }} />
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {booking.vehicle}
-                      </Text>
-                    </Space>
-                  </div>
-                  <div style={{ marginBottom: 4 }}>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {booking.service}
+        renderItem={(booking) => {
+          const { date, time } = formatDateTime(booking.scheduledTime);
+          return (
+            <List.Item
+              style={{
+                padding: "12px 0",
+                borderBottom: "1px solid #f0f0f0",
+              }}
+            >
+              <List.Item.Meta
+                avatar={
+                  <Avatar
+                    style={{
+                      backgroundColor: "#1890ff",
+                      border: "2px solid #fff",
+                    }}
+                    icon={<CalendarOutlined />}
+                  />
+                }
+                title={
+                  <Space>
+                    <Text
+                      strong
+                      style={{ fontSize: 14 }}
+                    >
+                      {booking.customerName}
                     </Text>
-                  </div>
+                    <Tag
+                      color={getStatusColor(booking.status)}
+                    >
+                      {getStatusText(booking.status)}
+                    </Tag>
+                  </Space>
+                }
+                description={
                   <div>
-                    <Space>
-                      <ClockCircleOutlined style={{ color: "#8c8c8c" }} />
-                      <Text type="secondary" style={{ fontSize: 11 }}>
-                        {booking.date} - {booking.time}
+                    <div style={{ marginBottom: 4 }}>
+                      <Space>
+                        <CarOutlined style={{ color: "#8c8c8c" }} />
+                        <Text
+                          type="secondary"
+                          style={{ fontSize: 12 }}
+                        >
+                          {booking.vehicleInfo}
+                        </Text>
+                      </Space>
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <Text
+                        type="secondary"
+                        style={{ fontSize: 12 }}
+                      >
+                        {booking.service}
                       </Text>
-                    </Space>
+                    </div>
+                    <div>
+                      <Space>
+                        <ClockCircleOutlined style={{ color: "#8c8c8c" }} />
+                        <Text
+                          type="secondary"
+                          style={{ fontSize: 11 }}
+                        >
+                          {date} - {time}
+                        </Text>
+                      </Space>
+                    </div>
                   </div>
-                </div>
-              }
-            />
-          </List.Item>
-        )}
+                }
+              />
+            </List.Item>
+          );
+        }}
+        locale={{
+          emptyText: "Không có lịch đặt sắp tới",
+        }}
       />
     </Card>
   );

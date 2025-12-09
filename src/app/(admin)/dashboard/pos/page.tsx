@@ -949,7 +949,7 @@ const POSPage = () => {
         // Shipping address - default to branch address for POS orders
         shipping_full_name:
           selectedCustomer?.full_name || "Khách hàng tại quầy",
-        shipping_phone: selectedCustomer?.email || selectedBranch.phone,
+        shipping_phone: selectedCustomer?.phone_number || selectedBranch.phone,
         shipping_address: selectedBranch.address,
         shipping_ward: "",
         shipping_district: "",

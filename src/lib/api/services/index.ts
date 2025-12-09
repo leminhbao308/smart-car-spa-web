@@ -42,3 +42,7 @@ export * from "./product-attribute.service";
 export * from "./payment.service";
 export * from "./ai-assistant.service";
 export { AiAssistantService } from "./ai-assistant.service";
+export * from "./dashboard.service";
+export { dashboardService } from "./dashboard.service";
+export * from "./report.service";
+export { reportService } from "./report.service";
