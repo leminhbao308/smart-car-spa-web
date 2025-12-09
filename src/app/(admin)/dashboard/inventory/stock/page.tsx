@@ -60,7 +60,7 @@ const StockInventoryPage = () => {
     useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const inventoryHook = useInventoryLevels();
-  const { products } = useProducts({});
+  const { products } = useProducts({size:9999});
   const { branches, loading: branchesLoading } = useBranches({});
   const pricingHook = usePricing();
 

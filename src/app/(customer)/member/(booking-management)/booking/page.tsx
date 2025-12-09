@@ -515,6 +515,33 @@ const CustomerBookingPage = () => {
       return;
     }
 
+    // Validate booking date: cannot be today if it's already 17:00 or later
+    if (bookingDate) {
+      const now = dayjs();
+      const today = now.startOf("day");
+      const selectedDate = dayjs(bookingDate).startOf("day");
+      
+      if (selectedDate.isSame(today)) {
+        const currentTime = now.format("HH:mm");
+        if (currentTime >= "17:00") {
+          message.error({
+            content: "Đã quá 17:00, vui lòng chọn ngày từ ngày mai trở đi",
+            duration: 3,
+          });
+          return;
+        }
+      }
+      
+      // Validate: cannot select past dates
+      if (selectedDate.isBefore(today)) {
+        message.error({
+          content: "Không thể chọn ngày trong quá khứ",
+          duration: 3,
+        });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       const values = await form.validateFields();
@@ -612,6 +639,29 @@ const CustomerBookingPage = () => {
     }
   }, [authLoading, isAuthenticated, router]);
 
+  // Initialize booking date when component mounts
+  useEffect(() => {
+    if (!bookingDate) {
+      // Set default date: today if before 17:00, otherwise tomorrow
+      const now = dayjs();
+      const currentTime = now.format("HH:mm");
+      let defaultDate: dayjs.Dayjs;
+      
+      if (currentTime >= "17:00") {
+        // If it's already 17:00 or later, set default to tomorrow
+        defaultDate = now.add(1, "day");
+      } else {
+        // If before 17:00, allow today
+        defaultDate = now;
+      }
+      
+      const defaultDateStr = defaultDate.format("YYYY-MM-DD");
+      setBookingDate(defaultDateStr);
+      form.setFieldsValue({ bookingDate: defaultDate });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Handle add vehicle modal
   const handleAddVehicle = useCallback(() => {
     setCreateVehicleModalVisible(true);
@@ -705,6 +755,18 @@ const CustomerBookingPage = () => {
               layout="vertical"
               initialValues={{
                 priority: "NORMAL",
+                // Set default date: today if before 17:00, otherwise tomorrow
+                bookingDate: (() => {
+                  const now = dayjs();
+                  const currentTime = now.format("HH:mm");
+                  if (currentTime >= "17:00") {
+                    // If it's already 17:00 or later, set default to tomorrow
+                    return now.add(1, "day");
+                  } else {
+                    // If before 17:00, allow today
+                    return now;
+                  }
+                })(),
               }}
             >
               {/* Customer Info - Auto-filled */}
@@ -976,27 +1038,60 @@ const CustomerBookingPage = () => {
                       <DatePicker
                         style={{ width: "100%" }}
                         placeholder="Chọn ngày"
+                        format="DD/MM/YYYY"
                         disabledDate={(current) => {
-                          return false; // Allow all dates for testing
-
-                          // Original logic (commented out for testing):
-                          // const today = dayjs();
-                          // const currentHour = today.hour();
-                          //
-                          // // Nếu hiện tại >= 17h, disable ngày hôm nay
-                          // if (currentHour >= 17) {
-                          //   return (
-                          //     current &&
-                          //     current < today.add(1, "day").startOf("day")
-                          //   );
-                          // }
-                          //
-                          // // Nếu hiện tại < 17h, chỉ disable các ngày trong quá khứ
-                          // return current && current < today.startOf("day");
+                          if (!current) return false;
+                          
+                          const now = dayjs();
+                          const today = now.startOf("day");
+                          const currentDate = current.startOf("day");
+                          
+                          // Disable all past dates (before today)
+                          if (currentDate.isBefore(today)) {
+                            return true;
+                          }
+                          
+                          // If it's today, check if current time is 17:00 (5 PM) or later
+                          if (currentDate.isSame(today)) {
+                            const currentTime = now.format("HH:mm");
+                            const cutoffTime = "17:00";
+                            
+                            // Compare time strings: if current time >= 17:00, disable today
+                            if (currentTime >= cutoffTime) {
+                              return true; // Disable today if it's already 17:00 or later
+                            }
+                          }
+                          
+                          // Allow today (if before 17:00) and all future dates
+                          return false;
                         }}
                         onChange={(date) => {
-                          const newDate = date ? date.format("YYYY-MM-DD") : "";
+                          if (!date) {
+                            setBookingDate("");
+                            return;
+                          }
+                          
+                          const newDate = date.format("YYYY-MM-DD");
+                          
+                          // Validate: If selected date is today and it's already 17:00 or later, show warning
+                          const now = dayjs();
+                          const today = now.startOf("day");
+                          const selectedDate = date.startOf("day");
+                          
+                          if (selectedDate.isSame(today)) {
+                            const currentTime = now.format("HH:mm");
+                            if (currentTime >= "17:00") {
+                              // This shouldn't happen due to disabledDate, but add safety check
+                              message.warning({
+                                content: "Đã quá 17:00, vui lòng chọn ngày từ ngày mai trở đi",
+                                duration: 3,
+                              });
+                              return;
+                            }
+                          }
+                          
                           setBookingDate(newDate);
+                          
                           // Reset slot when date changes
                           if (selectedSlot && selectedSlot.date !== newDate) {
                             setSelectedSlot(null);
