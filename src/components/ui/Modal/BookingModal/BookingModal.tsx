@@ -628,10 +628,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
       setManualBaySelection(false);
       setTotalPrice(0);
       setTotalDuration(0);
-      // Set default date to today when modal opens
-      const today = dayjs().format("YYYY-MM-DD");
-      setBookingDate(today);
-      form.setFieldsValue({ bookingDate: dayjs(today) });
+      
+      // Set default date: today if before 17:00, otherwise tomorrow
+      const now = dayjs();
+      const currentTime = now.format("HH:mm");
+      let defaultDate: dayjs.Dayjs;
+      
+      if (currentTime >= "17:00") {
+        // If it's already 17:00 or later, set default to tomorrow
+        defaultDate = now.add(1, "day");
+      } else {
+        // If before 17:00, allow today
+        defaultDate = now;
+      }
+      
+      const defaultDateStr = defaultDate.format("YYYY-MM-DD");
+      setBookingDate(defaultDateStr);
+      form.setFieldsValue({ bookingDate: defaultDate });
     }
     // Note: form is stable (same reference) so including it won't cause re-renders
     // but it's required to keep dependency array size constant
@@ -767,6 +780,35 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
       const values = await form.validateFields();
       console.log("Form values:", values);
+
+      // Validate booking date: cannot be today if it's already 17:00 or later
+      if (bookingDate) {
+        const now = dayjs();
+        const today = now.startOf("day");
+        const selectedDate = dayjs(bookingDate).startOf("day");
+        
+        if (selectedDate.isSame(today)) {
+          const currentTime = now.format("HH:mm");
+          if (currentTime >= "17:00") {
+            notification.error({
+              message: "Không thể đặt lịch",
+              description: "Đã quá 17:00, vui lòng chọn ngày từ ngày mai trở đi",
+              placement: "topRight",
+            });
+            return;
+          }
+        }
+        
+        // Validate: cannot select past dates
+        if (selectedDate.isBefore(today)) {
+          notification.error({
+            message: "Ngày không hợp lệ",
+            description: "Không thể chọn ngày trong quá khứ",
+            placement: "topRight",
+          });
+          return;
+        }
+      }
 
       // Check if using new customer or existing customer
       const isNewCustomer = customerType === "new" && newCustomer && newVehicle;
@@ -1899,6 +1941,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
               <DatePicker
                 style={{ width: "100%" }}
                 placeholder="Chọn ngày"
+                format="DD/MM/YYYY"
                 disabledDate={(current) => {
                   if (!current) return false;
                   
@@ -1906,17 +1949,19 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   const today = now.startOf("day");
                   const currentDate = current.startOf("day");
                   
-                  // Disable all past dates
+                  // Disable all past dates (before today)
                   if (currentDate.isBefore(today)) {
                     return true;
                   }
                   
-                  // If it's today, check if current time is after 17:00 (5 PM)
+                  // If it's today, check if current time is 17:00 (5 PM) or later
                   if (currentDate.isSame(today)) {
-                    const currentHour = now.hour();
-                    // If current time is 17:00 (5 PM) or later, disable today
-                    if (currentHour >= 17) {
-                      return true;
+                    const currentTime = now.format("HH:mm");
+                    const cutoffTime = "17:00";
+                    
+                    // Compare time strings: if current time >= 17:00, disable today
+                    if (currentTime >= cutoffTime) {
+                      return true; // Disable today if it's already 17:00 or later
                     }
                   }
                   
@@ -1924,12 +1969,36 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   return false;
                 }}
                 onChange={(date) => {
-                  const newDate = date ? date.format("YYYY-MM-DD") : "";
+                  if (!date) {
+                    setBookingDate("");
+                    return;
+                  }
+                  
+                  const newDate = date.format("YYYY-MM-DD");
+                  
+                  // Validate: If selected date is today and it's already 17:00 or later, show warning
+                  const now = dayjs();
+                  const today = now.startOf("day");
+                  const selectedDate = date.startOf("day");
+                  
+                  if (selectedDate.isSame(today)) {
+                    const currentTime = now.format("HH:mm");
+                    if (currentTime >= "17:00") {
+                      // This shouldn't happen due to disabledDate, but add safety check
+                      console.warn("[BookingModal] Selected today but it's already past 17:00");
+                      return;
+                    }
+                  }
+                  
                   setBookingDate(newDate);
-                  // Reset bay recommendation when booking date changes
+                  
+                  // Reset bay recommendation and related states when booking date changes
                   setBayRecommendation(null);
                   setSelectedWalkInBay(null);
                   setManualBaySelection(false);
+                  setSelectedSlot(null);
+                  setAvailableSlots([]);
+                  setTimeRangesData(null);
                 }}
               />
             </Form.Item>
